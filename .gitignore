@@ -1,0 +1,11 @@
+/build/
+/.toolchains/
+*.o
+*.d
+*.a
+/platform/ps2/*.elf
+/platform/psp/*.elf
+/platform/psp/*.prx
+/platform/psp/*.PBP
+/platform/psp/*.SFO
+__pycache__/

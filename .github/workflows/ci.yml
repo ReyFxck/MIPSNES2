@@ -1,0 +1,42 @@
+name: Host CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  host:
+    name: Host (${{ matrix.compiler }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build and test release configuration
+        run: make CC=${{ matrix.compiler }} BUILD_DIR=build/release CFLAGS='-O2 -g -DNDEBUG' test
+      - name: Build and test with sanitizers
+        run: make CC=${{ matrix.compiler }} BUILD_DIR=build/sanitize CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer' test
+      - name: Stage host development artifact
+        run: |
+          mkdir -p dist
+          cp build/release/mipsnes2-host dist/
+          cp LICENSE dist/
+          printf '%s\n' "Commit: $GITHUB_SHA" "Foundation only; no SNES emulation." > dist/BUILD.txt
+          ${{ matrix.compiler }} --version >> dist/BUILD.txt
+          cd dist
+          sha256sum mipsnes2-host BUILD.txt LICENSE > SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mipsnes2-host-${{ matrix.compiler }}-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14

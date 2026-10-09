@@ -1,0 +1,65 @@
+name: Development prerelease
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: development-prerelease
+  cancel-in-progress: false
+jobs:
+  guard:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require reviewed main branch
+        env:
+          SELECTED_REF: ${{ github.ref }}
+        run: test "$SELECTED_REF" = refs/heads/main
+  host:
+    needs: guard
+    uses: ./.github/workflows/ci.yml
+  ps2:
+    needs: guard
+    uses: ./.github/workflows/build-ps2.yml
+  psp:
+    needs: guard
+    uses: ./.github/workflows/build-psp.yml
+  publish:
+    needs: [host, ps2, psp]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: mipsnes2-ps2-${{ github.sha }}
+          path: artifacts/ps2
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: mipsnes2-psp-${{ github.sha }}
+          path: artifacts/psp
+      - name: Verify and package same-run console builds and source
+        run: |
+          (cd artifacts/ps2 && sha256sum -c SHA256SUMS)
+          (cd artifacts/psp && sha256sum -c SHA256SUMS)
+          mkdir -p release
+          cp artifacts/ps2/mipsnes2-ps2.elf release/
+          cp artifacts/psp/EBOOT.PBP release/
+          cp LICENSE tools/toolchains.json release/
+          git archive --format=tar.gz --prefix=mipsnes2/ HEAD > release/mipsnes2-source.tar.gz
+          printf '%s\n' "Commit: $GITHUB_SHA" "Build date: $(date -u +%FT%TZ)" "Foundation only. No SNES emulation. Console runtime and speed unverified." > release/BUILD.txt
+          cp release/BUILD.txt release-notes.txt
+          cd release
+          sha256sum mipsnes2-ps2.elf EBOOT.PBP LICENSE toolchains.json mipsnes2-source.tar.gz BUILD.txt > SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - name: Publish manually requested development prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="dev-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" release/* --target "$GITHUB_SHA" --prerelease --title "Development $tag" --notes-file release-notes.txt
