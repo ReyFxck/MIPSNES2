@@ -72,8 +72,31 @@ and artifact metadata. Owner can download from the linked runs.
 Initial runs warned that v4 Actions' Node 20 runtimes were being forced to Node 24.
 The bootstrap follow-up pins current official Node 24 releases after inspecting
 actual action.yml inputs: checkout v7.0.1, upload-artifact v7.0.2, download-artifact
-v8.0.2, cache v6.1.0. Fresh execution of these pins is pending; first-run evidence
-above belongs to the prior pins. No prerelease was triggered.
+v8.0.2, cache v6.1.0. The new build-action pins were then verified in the successful
+second round below. download-artifact is used only in the undispatched prerelease
+workflow and has static/API validation only. No prerelease was triggered.
+
+### Node 24 and warm-cache verification
+
+Source commit: `21d568f937eca9b2ba0c71877e3d0f43a4fa4e8b`.
+PR merge-test SHA: `00460a6e6a53a93fcb7a65fb0f622d32a3b4c0e0`.
+
+| Workflow | Actual run | Result |
+|---|---|---|
+| Host CI | [37995297757](https://github.com/ReyFxck/MIPSNES2/actions/runs/37995297757) | GCC/Clang release and full ASan/UBSan tests passed; artifacts uploaded |
+| PS2 CI | [37995297758](https://github.com/ReyFxck/MIPSNES2/actions/runs/37995297758) | Warm cache restored; archive reverified/extracted; ELF build/checksums/upload passed |
+| PSP CI | [37995297798](https://github.com/ReyFxck/MIPSNES2/actions/runs/37995297798) | Warm cache restored; archive reverified/extracted; PBP build/checksums/upload passed |
+
+Console job logs explicitly report `Cache restored successfully`, `Reusing cached
+archive` and `Verified and extracted`, followed by all staged-file checksum OK
+lines. No Node 20 deprecation warning remains. Fresh artifact metadata was inspected:
+host GCC 11646697809, host Clang 11646253463, PS2 11646383147, PSP 11647170460.
+Artifact names contain the exact merge-test SHA. The local download restriction
+reported above still limits independent post-download inspection.
+
+These successful runs verify all unchanged executable/build content in the final
+documentation update. Final documentation is also checked by `make test`, actionlint
+and `git diff --check`; subsequent PR checks remain visible on the PR.
 
 Command-line git push lacked credentials and failed. The authenticated GitHub
 connector created the branch/tree/commit and opened the PR instead. A subsequent
@@ -217,3 +240,20 @@ service execution and issue-form activation require default-branch merge/inspect
 ROADMAP.md Phase 0 structural/docs/build/test/logging/boundary/scaffold rows now
 match verified work. Phase 0 parent/GitHub infrastructure remain unchecked while
 release and default-branch/admin validation remains outstanding.
+
+## Final local audit and remaining state
+
+- `Dependency/toolchain caching` changed from unchecked to `[x]` after both warm-cache
+  restores and digest revalidation succeeded in real Actions runs.
+- The Phase 0 parent is `[IN PROGRESS]`: repository bootstrap is review-ready, while
+  release/admin/default-branch activation gates remain unchecked. No child blocker
+  is hidden by marking the parent complete.
+- Total verified project task rows in STATUS.md: 82, excluding the notation legend.
+  No CPU, bus mapping, PPU, APU, chip, runtime, compatibility or performance row is checked.
+- STATUS.md was reread against source; required docs, directory contents, core/platform
+  boundary, TODO/FIXME/placeholder scan and the unchanged LICENSE were checked.
+- The final evidence commit changes documentation only. Host consistency/tests and
+  actionlint are rerun; console executable sources/SDK pins are unchanged from the
+  successful local and two GitHub build rounds.
+- No merge, release or repository administrative setting was changed. Exactly one
+  recommended next milestone: **65C816 foundation + minimal SNES bus + automated CPU tests**.

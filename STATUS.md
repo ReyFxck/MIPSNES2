@@ -26,7 +26,7 @@ inspection of the actual setting. Documents/structure require content/link audit
 
 ## Foundation
 
-- [ ] Phase 0 foundation fully verified — includes real Actions runs, not console runtime
+- [ ] [IN PROGRESS] Phase 0 foundation fully verified — repository bootstrap verified; release/admin activation pending
 - [x] Host build system
 - [x] Minimal host target compiles
 - [x] Minimal automated test runs
@@ -114,7 +114,7 @@ inspection of the actual setting. Documents/structure require content/link audit
 - [x] PSP CI build
 - [x] Build artifacts
 - [x] SHA-256 generation
-- [ ] Dependency/toolchain caching
+- [x] Dependency/toolchain caching
 - [ ] [BLOCKED] Development pre-release workflow end-to-end — requires reviewed main and a manual release run
 - [x] Issue templates
 - [x] Pull request template
@@ -135,8 +135,10 @@ PS2 and PSP scaffolds cross-compile using pinned archives (both cross GCC 15.2.0
 Actionlint 1.7.12 and YAML parse checks pass. No console runtime has been tested.
 Exact commands and every checkbox promotion are in docs/bootstrap-audit.md.
 First full PR CI passed at e70bca9 (GCC/Clang including full sanitizers, PS2/PSP).
-Run URLs and artifact/checksum evidence are in docs/bootstrap-audit.md. Actions pins
-were subsequently updated to Node 24 releases; verification of that update is pending.
+Node 24 Actions also passed at 21d568f, including GCC/Clang full sanitizers and
+PS2/PSP builds, artifact/checksum generation and verified warm-cache reuse. Run URLs
+and exact evidence are in docs/bootstrap-audit.md. Remaining release/admin work is
+explicitly separated below and in docs/github-setup.md.
 
 ## Current blockers and diagnostic exceptions
 
