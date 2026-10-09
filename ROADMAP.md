@@ -15,16 +15,16 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [ ] Phase 0 exit gate verified
 
-- [ ] Repository structure
-- [ ] Documentation
-- [ ] AGENTS.md
-- [ ] STATUS.md
-- [ ] Host build
-- [ ] Test framework
-- [ ] Logging
-- [ ] Core/platform boundary
-- [ ] PS2 build scaffolding
-- [ ] PSP build scaffolding
+- [x] Repository structure
+- [x] Documentation
+- [x] AGENTS.md
+- [x] STATUS.md
+- [x] Host build
+- [x] Test framework
+- [x] Logging
+- [x] Core/platform boundary
+- [x] PS2 build scaffolding
+- [x] PSP build scaffolding
 - [ ] GitHub infrastructure
 
 ## Phase 1 — 65C816 Foundation

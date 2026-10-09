@@ -108,12 +108,12 @@ inspection of the actual setting. Documents/structure require content/link audit
 - [x] Pre-release workflow file audited
 - [x] Artifact upload configuration audited
 - [x] SHA-256 workflow support audited
-- [ ] GitHub Actions host CI
-- [ ] Automated host tests in GitHub Actions
-- [ ] PS2 CI build
-- [ ] PSP CI build
-- [ ] Build artifacts
-- [ ] SHA-256 generation
+- [x] GitHub Actions host CI
+- [x] Automated host tests in GitHub Actions
+- [x] PS2 CI build
+- [x] PSP CI build
+- [x] Build artifacts
+- [x] SHA-256 generation
 - [ ] Dependency/toolchain caching
 - [ ] [BLOCKED] Development pre-release workflow end-to-end — requires reviewed main and a manual release run
 - [x] Issue templates
@@ -124,8 +124,8 @@ inspection of the actual setting. Documents/structure require content/link audit
 - [ ] [BLOCKED] Main branch ruleset configured — owner/admin must configure after checks exist
 - [ ] Labels created
 - [ ] Milestones created
-- [ ] First full CI run verified
-- [ ] Bootstrap PR opened
+- [x] First full CI run verified
+- [x] Bootstrap PR opened
 
 ## Verification snapshot
 
@@ -134,7 +134,9 @@ with local LeakSanitizer disabled because the runtime cannot inspect /proc tasks
 PS2 and PSP scaffolds cross-compile using pinned archives (both cross GCC 15.2.0).
 Actionlint 1.7.12 and YAML parse checks pass. No console runtime has been tested.
 Exact commands and every checkbox promotion are in docs/bootstrap-audit.md.
-GitHub execution evidence is pending; workflow files alone do not verify CI.
+First full PR CI passed at e70bca9 (GCC/Clang including full sanitizers, PS2/PSP).
+Run URLs and artifact/checksum evidence are in docs/bootstrap-audit.md. Actions pins
+were subsequently updated to Node 24 releases; verification of that update is pending.
 
 ## Current blockers and diagnostic exceptions
 

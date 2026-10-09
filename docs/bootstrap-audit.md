@@ -49,8 +49,36 @@ GitHub artifacts must be verified against their own published checksums.
 
 ## GitHub execution
 
-Workflow files are statically verified; real run results, artifacts and PR are still
-pending at the initial local audit. No prerelease was triggered.
+[Bootstrap PR #1](https://github.com/ReyFxck/MIPSNES2/pull/1) is open into main,
+not merged. Initial source commit: `e70bca99625dde244bae07d7eb84ac3cd97d257f`.
+GitHub PR merge-test SHA: `5a3718c2456c7bc9bf91d799668794d95aee687d`.
+
+| Workflow | Actual run | Result |
+|---|---|---|
+| Host CI | [37995060946](https://github.com/ReyFxck/MIPSNES2/actions/runs/37995060946) | GCC and Clang release + full sanitizer tests passed |
+| PS2 CI | [37995060790](https://github.com/ReyFxck/MIPSNES2/actions/runs/37995060790) | Download/checksum/extract/build/stage/upload/cache-save passed |
+| PSP CI | [37995060838](https://github.com/ReyFxck/MIPSNES2/actions/runs/37995060838) | Download/checksum/extract/build/stage/upload/cache-save passed |
+| Development prerelease | Not dispatched | Main-only gate; intentionally unverified |
+
+Artifacts were confirmed via GitHub artifact metadata: host GCC 11647195192,
+host Clang 11646019974, PS2 11646622837 and PSP 11646357988. All have nonzero sizes,
+commit-identified names and 14-day retention. CI staged files and ran checksum
+verification before upload. The PS2 log explicitly shows ELF/LICENSE/toolchains.json/
+BUILD.txt checksum OK. Artifact download API produced references, but fetching their
+signed URLs in this local runtime returned HTTP 403. No local post-download archive
+inspection is claimed; uploaded outputs are verified through successful job logs
+and artifact metadata. Owner can download from the linked runs.
+
+Initial runs warned that v4 Actions' Node 20 runtimes were being forced to Node 24.
+The bootstrap follow-up pins current official Node 24 releases after inspecting
+actual action.yml inputs: checkout v7.0.1, upload-artifact v7.0.2, download-artifact
+v8.0.2, cache v6.1.0. Fresh execution of these pins is pending; first-run evidence
+above belongs to the prior pins. No prerelease was triggered.
+
+Command-line git push lacked credentials and failed. The authenticated GitHub
+connector created the branch/tree/commit and opened the PR instead. A subsequent
+fetch confirmed remote and locally audited trees are identical:
+`be1140105373d5888b498bf177f89adc8ef5d983`. No token was requested or committed.
 
 ## Checklist verification scope
 
@@ -174,3 +202,18 @@ unchecked. Performance measurements: none; PERFORMANCE.md is TBD throughout.
 No merge, release, ruleset, label or milestone has been performed. Manual prerelease
 end-to-end verification waits for reviewed main and an owner-triggered run. Dependabot
 service execution and issue-form activation require default-branch merge/inspection.
+
+## Additional STATUS.md promotions after first GitHub verification
+
+- `GitHub Actions host CI` changed to `[x]`.
+- `Automated host tests in GitHub Actions` changed to `[x]`.
+- `PS2 CI build` changed to `[x]`.
+- `PSP CI build` changed to `[x]`.
+- `Build artifacts` changed to `[x]`.
+- `SHA-256 generation` changed to `[x]`.
+- `First full CI run verified` changed to `[x]`.
+- `Bootstrap PR opened` changed to `[x]`.
+
+ROADMAP.md Phase 0 structural/docs/build/test/logging/boundary/scaffold rows now
+match verified work. Phase 0 parent/GitHub infrastructure remain unchecked while
+release and default-branch/admin validation remains outstanding.

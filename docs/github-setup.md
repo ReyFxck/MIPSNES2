@@ -19,7 +19,9 @@ after owner review and merge. File existence is distinct from executed automatio
 
 Builds run on PRs, pushes to main, manual dispatch and reusable workflow calls.
 No unconditional continue-on-error, no pull_request_target, no default write token.
-Actions are pinned to verified upstream commit SHAs; Dependabot proposes updates.
+Actions use verified Node 24 releases pinned to commit SHAs: checkout v7.0.1,
+upload-artifact v7.0.2, download-artifact v8.0.2 and cache v6.1.0. Their official
+action.yml inputs/runtime were inspected; Dependabot proposes future updates.
 `ubuntu-24.04` is the selected runner family; its system packages can still evolve,
 so record compiler versions in evidence. Failures must fail jobs.
 
