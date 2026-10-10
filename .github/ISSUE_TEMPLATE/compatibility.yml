@@ -1,0 +1,80 @@
+name: Compatibility report
+description: Record observed PS2 or PSP behavior
+body:
+- type: markdown
+  attributes:
+    value: Do not upload commercial ROMs. A title screen is not proof of compatibility.
+      Distinguish real hardware from PCSX2/PPSSPP. Unknown measurements should say
+      unknown.
+- type: input
+  id: field-1
+  attributes:
+    label: Game title
+  validations:
+    required: true
+- type: input
+  id: field-2
+  attributes:
+    label: Region
+  validations:
+    required: true
+- type: input
+  id: field-3
+  attributes:
+    label: Enhancement chip, if known
+  validations:
+    required: false
+- type: input
+  id: field-4
+  attributes:
+    label: Platform (PS2 or PSP)
+  validations:
+    required: true
+- type: input
+  id: field-5
+  attributes:
+    label: Real hardware or emulator, model/version/settings
+  validations:
+    required: true
+- type: input
+  id: field-6
+  attributes:
+    label: Commit or version
+  validations:
+    required: true
+- type: input
+  id: field-7
+  attributes:
+    label: Boot/progress state
+  validations:
+    required: true
+- type: input
+  id: field-8
+  attributes:
+    label: Graphics
+  validations:
+    required: true
+- type: input
+  id: field-9
+  attributes:
+    label: Audio
+  validations:
+    required: true
+- type: input
+  id: field-10
+  attributes:
+    label: Performance and measurement method
+  validations:
+    required: true
+- type: input
+  id: field-11
+  attributes:
+    label: Input/timing issues
+  validations:
+    required: true
+- type: textarea
+  id: field-12
+  attributes:
+    label: Tested scenes and duration
+  validations:
+    required: true

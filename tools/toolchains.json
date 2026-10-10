@@ -1,0 +1,14 @@
+{
+  "ps2": {
+    "version": "v2.0.0",
+    "url": "https://github.com/ps2dev/ps2dev/releases/download/v2.0.0/ps2dev-ubuntu-latest.tar.gz",
+    "sha256": "c8e5dedccf62084d476894e88cd0451b57f1ed288e741eb3c1263010aaffc028",
+    "directory": "ps2dev"
+  },
+  "psp": {
+    "version": "v20261001",
+    "url": "https://github.com/pspdev/pspdev/releases/download/v20261001/pspdev-ubuntu-latest-x86_64.tar.gz",
+    "sha256": "a86efe624e770005290919617859e9df24bd8fcd3e364f4587f23ec7364b0acd",
+    "directory": "pspdev"
+  }
+}

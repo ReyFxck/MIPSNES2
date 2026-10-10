@@ -1,0 +1,47 @@
+name: PSP CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  build:
+    name: PSP scaffold build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Cache pinned upstream archive
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/mipsnes2-toolchains
+          key: toolchain-ubuntu24-x64-psp-${{ hashFiles('tools/toolchains.json') }}
+      - name: Install verified toolchain
+        run: python3 tools/setup_toolchain.py psp "$RUNNER_TEMP/mipsnes2-toolchains" "$HOME/.cache/mipsnes2-toolchains"
+      - name: Cross-compile scaffold
+        env:
+          PSPDEV: ${{ runner.temp }}/mipsnes2-toolchains/pspdev
+        run: |
+          export PATH="$PSPDEV/bin:$PATH"
+          psp-gcc --version
+          make -C platform/psp
+      - name: Stage development artifact and checksums
+        run: |
+          mkdir -p dist
+          cp platform/psp/EBOOT.PBP dist/
+          cp LICENSE tools/toolchains.json dist/
+          printf '%s\n' "Commit: $GITHUB_SHA" "Foundation only; no SNES emulation; runtime unverified." > dist/BUILD.txt
+          cd dist
+          sha256sum EBOOT.PBP LICENSE toolchains.json BUILD.txt > SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mipsnes2-psp-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
