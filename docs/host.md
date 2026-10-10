@@ -2,8 +2,12 @@
 
 The host is for compilation, unit/regression tests, future test-ROM execution,
 fuzzing, debugging and tooling only. No GUI, SDL, desktop emulator UX or desktop-led
-architecture is introduced. The binary says foundation only and rejects arguments;
-it does not load ROMs.
+architecture is introduced. The binary identifies the CPU/bus foundation and rejects
+arguments; it does not load ROMs.
+
+Future host audio work is for deterministic offline sample tests and diagnostics
+behind the common PCM contract. It remains independent of RFAuds2 and must be able to
+validate S-DSP output without any physical PS2/SPU2 device.
 
 Requirements: C99 GCC/Clang, GNU Make, Python 3.10+. No third-party C test framework.
 
@@ -21,7 +25,8 @@ must be investigated, not hidden. `make clean` removes the selected build direct
 `make check` runs only repository consistency. Tests are headless and fail with
 nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
-Current coverage: 24-bit address construction/masking across all banks and offset
-values, logging callback/context/disabled behavior, host banner/argument rejection,
-repository structure/boundaries/checklists. These do not validate 65C816 behavior.
-Future CPU/bus fixtures must remain independent of platform devices.
+Current coverage includes 24-bit address construction/masking across all banks and
+offsets; logging callback/context/disabled behavior; host banner/argument rejection;
+repository structure/boundaries/checklists; the reference bus; and the fourteen-
+opcode CPU foundation described in [65c816.md](65c816.md). It verifies only the
+implemented CPU/bus scope and remains independent of platform devices.

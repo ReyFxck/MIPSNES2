@@ -15,16 +15,18 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 
 ## Current state
 
-**Foundation only. No SNES emulation or ROM execution exists.** The host executable
-prints an explicit scaffold banner. Console entry points are build probes, not usable
-emulators. No compatibility or performance claim is made.
+**The project now has a partial 65C816/reference-bus foundation. It cannot run a SNES
+ROM.** Fourteen opcodes, reset-visible state and deterministic bus fixtures support
+host regression tests. Console entry points remain build probes, not usable emulators.
+No PPU, APU, cartridge integration, compatibility or performance claim exists.
 
-Current milestone: Phase 0 — project foundation and verified automation.
+Current milestone: Phase 1 — 65C816 foundation and minimal logical bus.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
 
-Next primary milestone: **65C816 foundation + minimal SNES bus + automated CPU tests**.
+Phase 1's foundation exit gate is verified. The next milestone is a focused 65C816
+addressing/load-store expansion with automated width, wrapping and flag regressions.
 Do not start with a dynarec, renderer or enhancement chips.
 
 ## Build and test the foundation
@@ -38,7 +40,8 @@ make test
 ```
 
 Use `make BUILD_DIR=build/clang CC=clang test` for a separate Clang build.
-These test address/logging contracts and repository consistency, not SNES behavior.
+These test the implemented CPU/bus foundation plus address/logging contracts and
+repository consistency. They do not establish complete SNES behavior.
 
 For pinned Linux x86-64 console toolchains see [GitHub setup](docs/github-setup.md).
 With an installed SDK and the documented environment:
@@ -58,6 +61,8 @@ inferred from workflow files; see STATUS.md for dated verification evidence.
 Platform backends call a shared, platform-independent SNES core. The intended core
 contains CPU, bus, cartridge, scheduler, DMA/HDMA, PPU and APU. GS/GU present frames;
 SPU2/PSP audio receive emulated audio. They do not replace SNES PPU/DSP behavior.
+RFAuds2 is the preferred future PS2 PCM transport behind a PS2-only adapter; it is
+not a core dependency and does not control emulated audio time.
 Target-specific MIPS, MMI, scratchpad, DMA, VU and VFPU paths are encouraged only
 when correct, tested and measurably beneficial on their respective hardware.
 

@@ -29,14 +29,14 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 ## Phase 1 — 65C816 Foundation
 
-- [ ] Phase 1 exit gate verified
+- [x] Phase 1 exit gate verified
 
-- [ ] Register and flag ownership
-- [ ] Logical bus fixture
-- [ ] Reset vector sequence
-- [ ] Instruction fetch harness
-- [ ] Emulation-mode reset invariants
-- [ ] First instruction stepping tests
+- [x] Register and flag ownership
+- [x] Logical bus fixture
+- [x] Reset vector sequence
+- [x] Instruction fetch harness
+- [x] Emulation-mode reset invariants
+- [x] First instruction stepping tests
 
 ## Phase 2 — Complete 65C816 Interpreter
 

@@ -3,7 +3,7 @@ ifeq ($(strip $(PS2SDK)),)
 $(error PS2SDK is unset; see docs/ps2.md)
 endif
 EE_BIN = mipsnes2-ps2.elf
-EE_OBJS = main.o log.o
+EE_OBJS = main.o log.o bus.o cpu.o
 EE_LIBS = -lc
 EE_INCS = -I../..
 EE_CFLAGS = -std=c99 -Wextra -Werror
@@ -12,6 +12,12 @@ EE_CFLAGS = -std=c99 -Wextra -Werror
 all: $(EE_BIN)
 
 log.o: ../../core/common/log.c ../../core/common/log.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+bus.o: ../../core/bus/bus.c ../../core/bus/bus.h ../../core/bus/interface.h ../../core/common/address.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+cpu.o: ../../core/cpu/65c816/cpu.c ../../core/cpu/65c816/cpu.h ../../core/bus/interface.h ../../core/common/address.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 main.o: main.c ../../core/common/log.h ../../core/common/project.h

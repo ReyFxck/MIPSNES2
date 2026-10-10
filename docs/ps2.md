@@ -6,10 +6,12 @@ when measured gains preserve correctness and isolation.
 
 ## Current scaffold and build
 
-`platform/ps2/main.c` is a small stdout build probe using the shared logger. It prints
-an honest foundation banner and returns. It does not initialize GS, input, IOP
-services or audio. Console runtime remains unverified even when cross-compilation
-succeeds. The exact verification record is in [bootstrap-audit.md](bootstrap-audit.md).
+`platform/ps2/main.c` is a small stdout build probe using the shared logger. The
+scaffold cross-build also compiles and links the reference CPU and bus so target
+compiler regressions are visible, but it does not instantiate them. It does not
+initialize GS, input, IOP services or audio. Console runtime remains unverified even
+when cross-compilation succeeds. The exact foundation verification record is in
+[bootstrap-audit.md](bootstrap-audit.md).
 
 Linux x86-64 toolchain pin: ps2dev **v2.0.0**, archive SHA-256 and URL in
 [tools/toolchains.json](../tools/toolchains.json). Despite `latest` in the asset
@@ -39,6 +41,37 @@ The inspected upstream source revision documents conventions; the archive digest
 identifies the actual SDK/toolchain used for builds. These are distinct records.
 No emulator implementation was copied. Scaffolding calls only standard C functions.
 
+## Preferred future PCM backend: RFAuds2
+
+[ReyFxck/RFAuds2](https://github.com/ReyFxck/RFAuds2) is the preferred future PS2
+PCM transport, provided continued testing shows it is suitable. The decision was
+recorded after inspecting RFAuds2 `0.1.0-alpha.1` at revision
+`f82e0967104fc96f37259e1abc124341eef6a76c` on 2026-10-10, including its README,
+API/architecture material and emulator-integration guidance.
+
+RFAuds2 is pre-1.0/experimental. Its current repository reports deterministic host
+regressions and PS2 cross-build coverage, plus audible testing in NetherSX2 inherited
+from its earlier audio path. Physical FAT/Slim PS2 validation and long emulator stress
+remain required. These facts make it a preferred candidate, not a completed MIPSNES2
+integration or a production-readiness claim.
+
+The required boundary is:
+
+```text
+SNES SPC700/S-DSP -> common emulated PCM contract -> PS2 adapter -> RFAuds2 -> IOP/SPU2
+```
+
+The emulated SPC700/S-DSP owns SNES audio timing. RFAuds2 only transports/resamples
+final PCM for the PS2 device; its 48 kHz SPU2 boundary must never set the emulated
+clock. PSP keeps a dedicated PSP audio backend, and host keeps offline/testing output.
+S-DSP/sample generation must remain testable without RFAuds2 or physical SPU2.
+
+Future integration must pin a reviewed RFAuds2 version or revision, define the
+platform audio interface and buffer ownership, retain/retry unaccepted asynchronous
+tails, and validate underrun/backpressure behavior on real PS2 hardware. Do not copy
+RFAuds2 source into unrelated `core/` directories. No runtime dependency is added by
+the current milestone.
+
 ## Dedicated optimization candidates
 
 No optimization below has been implemented or benchmarked. These are research gates.
@@ -56,6 +89,10 @@ No optimization below has been implemented or benchmarked. These are research ga
 - [ ] VU0 candidate vector kernels and synchronization-cost review
 - [ ] VU1 candidate vector kernels and synchronization-cost review
 - [ ] SPU2 final audio buffering and underrun measurement
+- [ ] Pin a reviewed RFAuds2 version/revision
+- [ ] PS2-only audio adapter for the common PCM contract
+- [ ] RFAuds2 asynchronous tail/backpressure handling
+- [ ] RFAuds2 FAT/Slim PS2 and long-duration validation
 - [ ] IOP platform services, storage and peripherals
 - [ ] Real-hardware timer calibration and subsystem profiling
 - [ ] End-to-end regression and sustained frame-time measurements

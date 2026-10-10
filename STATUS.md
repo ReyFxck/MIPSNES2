@@ -1,7 +1,9 @@
 # STATUS — canonical project state
 
-Foundation only. No emulated subsystem, ROM execution, console runtime validation,
-compatibility result or hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md).
+Project foundation plus a partial 65C816/reference-bus milestone. No ROM execution,
+complete emulated subsystem, console runtime validation, compatibility result or
+hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
+CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
 
 ## State and evidence rules
 
@@ -140,56 +142,85 @@ PS2/PSP builds, artifact/checksum generation and verified warm-cache reuse. Run 
 and exact evidence are in docs/bootstrap-audit.md. Remaining release/admin work is
 explicitly separated below and in docs/github-setup.md.
 
+The 65C816 foundation audit on 2026-10-10 passed GCC host release tests, local
+ASan+UBSan (with only LeakSanitizer disabled for the documented `/proc` runtime
+restriction), and pinned PS2/PSP cross-builds including the new CPU/bus sources.
+Local Clang was unavailable; GitHub's existing Clang/full-sanitizer job remains the
+gate. Exact commands and limitations are in docs/65c816-foundation-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
-No game-specific diagnostics or intentional emulation approximations exist.
+No game-specific diagnostics exist. The reference bus has a deterministic unmapped
+latch for tests; it is not claimed as complete SNES open-bus behavior. RESET retains
+storage fields the hardware source labels uninitialized rather than claiming values.
 Real consoles/emulators are not available in this session. SDK/CI availability and
 remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-setup.md.
 
 ## 65C816
 
-- [ ] CPU state representation
-- [ ] Reset sequence
-- [ ] Instruction fetch
-- [ ] Opcode dispatch
-- [ ] Immediate addressing
-- [ ] Absolute addressing
+- [x] CPU state representation
+- [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
+- [x] Instruction fetch
+- [ ] [IN PROGRESS] Opcode dispatch — fourteen-opcode foundation only
+- [ ] [IN PROGRESS] Immediate addressing — LDA/LDX/LDY plus REP/SEP implemented only
+- [ ] [IN PROGRESS] Absolute addressing — JMP and STA/STX/STY implemented only
 - [ ] Long addressing
 - [ ] Direct Page addressing
 - [ ] Stack-relative addressing
 - [ ] Indexed addressing
 - [ ] Indirect addressing
-- [ ] Branch instructions
-- [ ] Load/store instructions
+- [ ] [IN PROGRESS] Branch instructions — BRA implemented only
+- [ ] [IN PROGRESS] Load/store instructions — immediate loads and absolute stores implemented only
 - [ ] Arithmetic instructions
 - [ ] Logic instructions
 - [ ] Shift/rotate instructions
 - [ ] Transfer instructions
 - [ ] Stack instructions
-- [ ] Status flag behavior
-- [ ] M flag behavior
-- [ ] X flag behavior
-- [ ] Native mode
-- [ ] Emulation mode
+- [ ] [IN PROGRESS] Status flag behavior — C and load N/Z plus REP/SEP/XCE subset verified
+- [ ] [IN PROGRESS] M flag behavior — immediate accumulator width and store width verified
+- [ ] [IN PROGRESS] X flag behavior — immediate index width, store width and high-byte clearing verified
+- [ ] [IN PROGRESS] Native mode — XCE entry and implemented width subset verified
+- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants and implemented width subset verified
 - [ ] Decimal arithmetic
 - [ ] IRQ
 - [ ] NMI
-- [ ] RESET
+- [ ] [IN PROGRESS] RESET — vector and documented visible state subset only
 - [ ] BRK
 - [ ] COP
 - [ ] WAI
 - [ ] STP
-- [ ] Bank wrapping
+- [ ] [IN PROGRESS] Bank wrapping — fetch and 16-bit absolute-store wrapping verified only
 - [ ] Direct Page edge cases
-- [ ] Timing model
-- [ ] CPU automated tests
+- [ ] [IN PROGRESS] Timing model — completed-instruction base cycles for implemented subset only
+- [ ] [IN PROGRESS] CPU automated tests — all implemented foundation behavior covered; complete CPU coverage pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
+
+### Verified 65C816 foundation subset
+
+- [x] Caller-owned register/mode/bus/diagnostic state
+- [x] Reset vector fetch from logical 00:FFFC-D
+- [x] Pre-reset and unimplemented-opcode diagnostic stops
+- [x] NOP (`EA`)
+- [x] LDA immediate (`A9`)
+- [x] LDX immediate (`A2`)
+- [x] LDY immediate (`A0`)
+- [x] STA absolute (`8D`)
+- [x] STX absolute (`8E`)
+- [x] STY absolute (`8C`)
+- [x] CLC (`18`)
+- [x] SEC (`38`)
+- [x] REP (`C2`)
+- [x] SEP (`E2`)
+- [x] XCE (`FB`)
+- [x] BRA (`80`)
+- [x] JMP absolute (`4C`)
+- [x] Base-cycle accounting for the implemented subset
 
 ## Bus
 
 - [ ] WRAM allocation and mapping
-- [ ] Logical 24-bit access integration
+- [x] Logical 24-bit access integration
 - [ ] Low-bank WRAM mirrors
 - [ ] ROM fast path
 - [ ] SRAM windows
@@ -198,12 +229,20 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] APU port routing
 - [ ] DMA register routing
 - [ ] Enhancement windows
-- [ ] Open bus behavior
-- [ ] Read side effects
-- [ ] Write side effects
+- [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
+- [ ] [IN PROGRESS] Read side effects — direct/MMIO dispatch exists; SNES register effects absent
+- [ ] [IN PROGRESS] Write side effects — direct/MMIO dispatch exists; SNES register effects absent
 - [ ] Access timing
-- [ ] Mapping boundaries and mirror tests
+- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — reference-region boundaries tested; SNES mirrors absent
 - [ ] Page/block mapping benchmark
+
+### Verified logical-bus foundation subset
+
+- [x] Fixed-capacity caller-owned region table
+- [x] Direct read-write and read-only regions
+- [x] Separate MMIO callback slow path
+- [x] Range, overlap and capacity validation
+- [x] Deterministic unmapped fixture behavior
 
 ## Cartridge
 
@@ -354,6 +393,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] Sample generation pipeline
 - [ ] Deterministic sample buffering
 - [ ] Output sample format contract
+- [ ] Platform-independent PCM output interface
 - [ ] Resampling policy
 - [ ] Underflow/overflow behavior
 - [ ] Host offline audio tests
@@ -372,6 +412,10 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] SRAM persistence
 - [ ] SPU2 output
 - [ ] Audio buffering
+- [ ] Pin a reviewed RFAuds2 version/revision
+- [ ] PS2-only RFAuds2 adapter behind platform audio interface
+- [ ] RFAuds2 asynchronous accepted-tail/backpressure handling
+- [ ] RFAuds2 FAT/Slim real-hardware and long-duration validation
 - [ ] IOP service initialization
 - [ ] Error reporting
 - [ ] Memory budget enforcement
@@ -398,8 +442,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 
 ## Host testing
 
-- [ ] CPU unit harness
-- [ ] Bus unit tests
+- [x] CPU foundation unit harness
+- [x] Reference bus unit tests
 - [ ] Mapper fixtures
 - [ ] PPU logic fixtures
 - [ ] SPC700 fixtures

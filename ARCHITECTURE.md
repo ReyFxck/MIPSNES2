@@ -1,6 +1,7 @@
 # Architecture
 
-Status: foundation contracts only, not a working emulator. Read [STATUS.md](STATUS.md).
+Status: project foundation plus a partial 65C816/reference-bus milestone, not a
+working SNES emulator. Read [STATUS.md](STATUS.md).
 
 ## Dependency direction and ownership
 
@@ -11,8 +12,8 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Directory only |
-| core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Read/write callback typedefs only |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 14-opcode reference subset |
+| core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
@@ -26,10 +27,10 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
 Directories without source contain an explicit scope README, not stub functions.
-No reset, execute-frame, render or audio API pretends to work. There is no machine
-instance or ROM runner yet. The bus callback contract is provisional: its presence
-does not implement mappings, timing or a CPU. No per-access function-pointer design
-has been benchmarked or selected for final hot paths.
+There is no machine instance, ROM runner, renderer or APU. CPU reset implements only
+the documented programmer-visible foundation; complete RESET timing remains open.
+The concrete reference bus does not implement the SNES map. No per-access function-
+pointer design has been benchmarked or selected for final hot paths.
 
 ## Memory and interfaces
 
@@ -40,12 +41,17 @@ caller-supplied callback/context; the core never formats or prints output itself
 Messages are borrowed and valid only during the synchronous callback. Null sinks
 are allowed. `MIPSNES2_ENABLE_LOGGING=0` compiles the callback invocation out.
 
-Bus reads/writes operate on logical addresses. MMIO side effects and elapsed cycles
-must eventually be specified at the bus/scheduler boundary. Page/block mapping is a
-candidate, not a chosen measured implementation. Keep rare MMIO separate from common
-RAM/ROM paths. Avoid broad `#ifdef PS2/PSP` in core. State allocation, buffers and
-ownership must be documented before whole-machine integration. No implicit global
-singleton or target physical pointer belongs in CPU state.
+Bus reads/writes operate on logical addresses. The current fixed-size reference table
+separates direct storage from callback-based MMIO and uses no heap. Its deterministic
+unmapped latch is a test policy, not verified SNES open-bus behavior. MMIO side effects
+and elapsed cycles must eventually be specified at the bus/scheduler boundary.
+Page/block mapping remains a candidate. Keep rare MMIO separate from common RAM/ROM
+paths. Avoid broad `#ifdef PS2/PSP` in core. No implicit global singleton or target
+physical pointer belongs in CPU state.
+
+The CPU's `instruction_cycles` counts completed instruction base cycles only. It is
+not master time; reset timing, 5A22 memory speed, wait states and arbitration remain
+future scheduler/bus work. An unimplemented opcode enters a sticky diagnostic stop.
 
 ## Scheduler and timing proposal
 
@@ -74,6 +80,11 @@ IOP serves platform services. VU0/VU1/VIF offload must justify vector suitabilit
 communication costs. PSP has independent Allegrex/cache/MIPS/VFPU/GU/audio choices.
 Hardware acceleration must not leak GS/GU behavior into the SNES PPU model.
 
+Audio follows an emulated-PCM boundary: SPC700/S-DSP owns SNES time and produces
+samples; a platform adapter transports them. The preferred future PS2 transport is
+RFAuds2 behind a PS2-only audio interface. PSP and host retain independent backends.
+RFAuds2 never enters `core/`, and its fixed SPU2 output rate never controls SNES time.
+
 ## Cartridge and enhancement boundaries
 
 Cartridge configuration selects documented mapping/chip hardware, not game-name
@@ -97,5 +108,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-09: No machine API, fake subsystems, dynarec, assembly or acceleration yet.
 - 2026-10-09: Toolchains use upstream versioned binary archives plus SHA-256 pins;
   cache archives, not cross-PR compiler output. No custom container registry yet.
+- 2026-10-10: Reference CPU/bus foundation uses caller-owned C99 state, a replaceable
+  bus interface and completed-instruction base cycles; no optimized target path yet.
+- 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
+  platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
