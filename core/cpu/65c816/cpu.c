@@ -50,6 +50,29 @@ static uint16_t fetch16(mipsnes2_cpu *cpu)
     return (uint16_t)(low | (uint16_t)(high << 8));
 }
 
+static mipsnes2_address fetch24(mipsnes2_cpu *cpu)
+{
+    mipsnes2_address low = fetch8(cpu);
+    mipsnes2_address high = fetch8(cpu);
+    mipsnes2_address bank = fetch8(cpu);
+    return low | (high << 8) | (bank << 16);
+}
+
+static uint16_t read16_linear(const mipsnes2_cpu *cpu,
+                              mipsnes2_address address)
+{
+    uint16_t low = read8(cpu, address);
+    uint16_t high = read8(cpu, address + UINT32_C(1));
+    return (uint16_t)(low | (uint16_t)(high << 8));
+}
+
+static void write16_linear(const mipsnes2_cpu *cpu,
+                           mipsnes2_address address, uint16_t value)
+{
+    write8(cpu, address, (uint8_t)value);
+    write8(cpu, address + UINT32_C(1), (uint8_t)(value >> 8));
+}
+
 static void set_nz8(mipsnes2_cpu *cpu, uint8_t value)
 {
     cpu->p &= (uint8_t)~(MIPSNES2_CPU_FLAG_N | MIPSNES2_CPU_FLAG_Z);
@@ -100,18 +123,76 @@ static void load_index_immediate(mipsnes2_cpu *cpu, uint16_t *target)
     }
 }
 
-static void store_absolute(mipsnes2_cpu *cpu, uint16_t value, bool wide)
+static void load_accumulator_memory(mipsnes2_cpu *cpu,
+                                    mipsnes2_address address,
+                                    uint64_t base_cycles)
 {
-    uint16_t offset = fetch16(cpu);
-    write8(cpu, mipsnes2_address_make(cpu->dbr, offset), (uint8_t)value);
-    if (wide) {
-        write8(cpu, mipsnes2_address_make(cpu->dbr,
-                                          (uint16_t)(offset + UINT16_C(1))),
-               (uint8_t)(value >> 8));
-        cpu->instruction_cycles += UINT64_C(5);
+    if (accumulator_is_8_bit(cpu)) {
+        uint8_t value = read8(cpu, address);
+        cpu->a = (uint16_t)((cpu->a & UINT16_C(0xff00)) | value);
+        set_nz8(cpu, value);
+        cpu->instruction_cycles += base_cycles;
     } else {
-        cpu->instruction_cycles += UINT64_C(4);
+        cpu->a = read16_linear(cpu, address);
+        set_nz16(cpu, cpu->a);
+        cpu->instruction_cycles += base_cycles + UINT64_C(1);
     }
+}
+
+static void load_index_memory(mipsnes2_cpu *cpu, uint16_t *target,
+                              mipsnes2_address address,
+                              uint64_t base_cycles)
+{
+    if (index_is_8_bit(cpu)) {
+        uint8_t value = read8(cpu, address);
+        *target = value;
+        set_nz8(cpu, value);
+        cpu->instruction_cycles += base_cycles;
+    } else {
+        *target = read16_linear(cpu, address);
+        set_nz16(cpu, *target);
+        cpu->instruction_cycles += base_cycles + UINT64_C(1);
+    }
+}
+
+static void store_memory(mipsnes2_cpu *cpu, mipsnes2_address address,
+                         uint16_t value, bool wide, uint64_t base_cycles)
+{
+    if (wide) {
+        write16_linear(cpu, address, value);
+        cpu->instruction_cycles += base_cycles + UINT64_C(1);
+    } else {
+        write8(cpu, address, (uint8_t)value);
+        cpu->instruction_cycles += base_cycles;
+    }
+}
+
+static mipsnes2_address absolute_address(mipsnes2_cpu *cpu)
+{
+    return mipsnes2_address_make(cpu->dbr, fetch16(cpu));
+}
+
+static mipsnes2_address absolute_indexed_address(mipsnes2_cpu *cpu,
+                                                 uint16_t index,
+                                                 bool write,
+                                                 uint64_t *base_cycles)
+{
+    uint16_t base = fetch16(cpu);
+    bool page_crossed = (uint32_t)(base & UINT16_C(0x00ff)) + index >
+                        UINT32_C(0x00ff);
+    mipsnes2_address address = mipsnes2_address_make(cpu->dbr, base);
+
+    *base_cycles = UINT64_C(4);
+    if (write || !index_is_8_bit(cpu) || page_crossed) {
+        *base_cycles += UINT64_C(1);
+    }
+    return mipsnes2_address24(address + index);
+}
+
+static mipsnes2_address absolute_long_indexed_address(mipsnes2_cpu *cpu,
+                                                      uint16_t index)
+{
+    return mipsnes2_address24(fetch24(cpu) + index);
 }
 
 void mipsnes2_cpu_init(mipsnes2_cpu *cpu, mipsnes2_bus_interface bus)
@@ -161,6 +242,8 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
 {
     uint8_t operand;
     uint16_t old_pc;
+    mipsnes2_address address;
+    uint64_t base_cycles;
 
     if (cpu == NULL || cpu->bus.read8 == NULL) {
         return MIPSNES2_CPU_INVALID_BUS;
@@ -195,13 +278,54 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu->instruction_cycles += UINT64_C(1);
         }
         break;
+    case 0x8f: /* STA absolute long */
+        if (cpu->bus.write8 == NULL) {
+            cpu->stopped = true;
+            cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
+            return cpu->stop_reason;
+        }
+        address = fetch24(cpu);
+        store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
+                     UINT64_C(5));
+        break;
+    case 0x99: /* STA absolute,Y */
+        if (cpu->bus.write8 == NULL) {
+            cpu->stopped = true;
+            cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
+            return cpu->stop_reason;
+        }
+        address = absolute_indexed_address(cpu, cpu->y, true, &base_cycles);
+        store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
+                     base_cycles);
+        break;
+    case 0x9d: /* STA absolute,X */
+        if (cpu->bus.write8 == NULL) {
+            cpu->stopped = true;
+            cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
+            return cpu->stop_reason;
+        }
+        address = absolute_indexed_address(cpu, cpu->x, true, &base_cycles);
+        store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
+                     base_cycles);
+        break;
+    case 0x9f: /* STA absolute long,X */
+        if (cpu->bus.write8 == NULL) {
+            cpu->stopped = true;
+            cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
+            return cpu->stop_reason;
+        }
+        address = absolute_long_indexed_address(cpu, cpu->x);
+        store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
+                     UINT64_C(5));
+        break;
     case 0x8c: /* STY absolute */
         if (cpu->bus.write8 == NULL) {
             cpu->stopped = true;
             cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
             return cpu->stop_reason;
         }
-        store_absolute(cpu, cpu->y, !index_is_8_bit(cpu));
+        store_memory(cpu, absolute_address(cpu), cpu->y,
+                     !index_is_8_bit(cpu), UINT64_C(4));
         break;
     case 0x8d: /* STA absolute */
         if (cpu->bus.write8 == NULL) {
@@ -209,7 +333,8 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
             return cpu->stop_reason;
         }
-        store_absolute(cpu, cpu->a, !accumulator_is_8_bit(cpu));
+        store_memory(cpu, absolute_address(cpu), cpu->a,
+                     !accumulator_is_8_bit(cpu), UINT64_C(4));
         break;
     case 0x8e: /* STX absolute */
         if (cpu->bus.write8 == NULL) {
@@ -217,7 +342,8 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
             return cpu->stop_reason;
         }
-        store_absolute(cpu, cpu->x, !index_is_8_bit(cpu));
+        store_memory(cpu, absolute_address(cpu), cpu->x,
+                     !index_is_8_bit(cpu), UINT64_C(4));
         break;
     case 0xa0: /* LDY immediate */
         load_index_immediate(cpu, &cpu->y);
@@ -227,6 +353,38 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0xa9: /* LDA immediate */
         load_accumulator_immediate(cpu);
+        break;
+    case 0xac: /* LDY absolute */
+        load_index_memory(cpu, &cpu->y, absolute_address(cpu), UINT64_C(4));
+        break;
+    case 0xad: /* LDA absolute */
+        load_accumulator_memory(cpu, absolute_address(cpu), UINT64_C(4));
+        break;
+    case 0xae: /* LDX absolute */
+        load_index_memory(cpu, &cpu->x, absolute_address(cpu), UINT64_C(4));
+        break;
+    case 0xaf: /* LDA absolute long */
+        load_accumulator_memory(cpu, fetch24(cpu), UINT64_C(5));
+        break;
+    case 0xb9: /* LDA absolute,Y */
+        address = absolute_indexed_address(cpu, cpu->y, false, &base_cycles);
+        load_accumulator_memory(cpu, address, base_cycles);
+        break;
+    case 0xbc: /* LDY absolute,X */
+        address = absolute_indexed_address(cpu, cpu->x, false, &base_cycles);
+        load_index_memory(cpu, &cpu->y, address, base_cycles);
+        break;
+    case 0xbd: /* LDA absolute,X */
+        address = absolute_indexed_address(cpu, cpu->x, false, &base_cycles);
+        load_accumulator_memory(cpu, address, base_cycles);
+        break;
+    case 0xbe: /* LDX absolute,Y */
+        address = absolute_indexed_address(cpu, cpu->y, false, &base_cycles);
+        load_index_memory(cpu, &cpu->x, address, base_cycles);
+        break;
+    case 0xbf: /* LDA absolute long,X */
+        address = absolute_long_indexed_address(cpu, cpu->x);
+        load_accumulator_memory(cpu, address, UINT64_C(5));
         break;
     case 0xc2: /* REP immediate */
         operand = fetch8(cpu);

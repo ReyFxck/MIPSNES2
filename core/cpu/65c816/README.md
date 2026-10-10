@@ -1,6 +1,7 @@
 # core/cpu/65c816
 
-Contains the caller-owned reference CPU state and the deliberately partial first
-interpreter subset. Read [docs/65c816.md](../../../docs/65c816.md) for the exact
-implemented opcode list, timing contract and known limits. Do not infer complete
-65C816 support from this foundation.
+Contains the caller-owned reference CPU state and a deliberately partial 27-opcode
+interpreter subset. Immediate, absolute, absolute-indexed and absolute-long
+load/store foundations are covered. Read
+[docs/65c816.md](../../../docs/65c816.md) for the exact implemented opcode list,
+timing contract and known limits. Do not infer complete 65C816 support.

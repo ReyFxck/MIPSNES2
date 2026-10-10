@@ -6,7 +6,8 @@ Run `make test`. The contract test checks logical-address masks, all bank/offset
 combinations and logging sink semantics. A second executable compiles with logging
 disabled and verifies callbacks are absent. `test-cpu-bus` checks the reference bus,
 reset/vector foundation, every implemented opcode, widths/modes/flags, logical
-addresses, base cycles and unknown-opcode diagnostics. The host smoke script checks
+addresses, linear data bank crossing, indexed penalties, base cycles and unknown-
+opcode diagnostics. The host smoke script checks
 the honest banner and rejects ROM/unknown arguments. The repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
 pins and forbidden core includes. It is a guardrail, not proof of complete emulation.
@@ -45,7 +46,9 @@ Record date, revision or audited tree scope, command, working directory, compile
 SDK version, flags, exit code, meaningful test output, failures and unavailable
 checks. Hardware evidence includes model/settings, test duration and observations.
 Never promote `[x]` based on an agent's intention or a file's existence alone.
-The authoritative initial record is [bootstrap-audit.md](bootstrap-audit.md).
+The authoritative initial record is [bootstrap-audit.md](bootstrap-audit.md). CPU
+milestone evidence is recorded in [65c816-foundation-audit.md](65c816-foundation-audit.md)
+and [65c816-addressing-audit.md](65c816-addressing-audit.md).
 
 ## End-of-task audit
 

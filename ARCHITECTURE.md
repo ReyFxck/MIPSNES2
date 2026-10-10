@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 14-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 27-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -52,6 +52,9 @@ physical pointer belongs in CPU state.
 The CPU's `instruction_cycles` counts completed instruction base cycles only. It is
 not master time; reset timing, 5A22 memory speed, wait states and arbitration remain
 future scheduler/bus work. An unimplemented opcode enters a sticky diagnostic stop.
+Program fetch wraps PC inside PBR. Implemented data addressing is linear across the
+24-bit space: word accesses and absolute indexing may carry into the next bank. This
+distinction is owned by CPU addressing helpers rather than the generic bus.
 
 ## Scheduler and timing proposal
 
@@ -110,6 +113,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   cache archives, not cross-PR compiler output. No custom container registry yet.
 - 2026-10-10: Reference CPU/bus foundation uses caller-owned C99 state, a replaceable
   bus interface and completed-instruction base cycles; no optimized target path yet.
+- 2026-10-10: Implemented data operands use linear 24-bit increments and indexed
+  carry; instruction fetch remains bank-local through PBR:PC.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

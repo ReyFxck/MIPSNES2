@@ -12,6 +12,11 @@ Mappings reject zero length, addresses beyond `0xFFFFFF`, wrap beyond the logica
 space, overlap and more than sixteen regions. Accesses normalize to 24 bits. No heap,
 platform API or native pointer is stored as a CPU-visible address.
 
+The bus does not decide addressing-mode wrapping. The CPU emits each final logical
+address: PBR:PC fetches wrap PC within one program bank, while implemented data words
+and absolute indexes advance linearly through the 24-bit data space. The bus only
+normalizes the address it receives.
+
 This is not the SNES memory map. WRAM mirrors, cartridge ROM/SRAM, PPU/CPU/APU/DMA
 registers, enhancement windows, side effects and access timing remain unimplemented.
 
@@ -39,8 +44,9 @@ canonical open-bus task remains in progress.
 
 `tests/test_cpu_bus.c` covers direct read/write, read-only writes, MMIO routing,
 24-bit normalization, unmapped behavior, overlap/range/region-limit rejection, DBR
-data accesses and PBR instruction fetches. These tests validate the reference bus
-foundation; they do not satisfy full mapping/mirror/MMIO timing gates.
+data accesses, cross-bank data words/indexing and PBR-local instruction fetches. These
+tests validate the reference bus foundation; they do not satisfy full mapping/mirror/
+MMIO timing gates.
 
 ## Remaining design work
 

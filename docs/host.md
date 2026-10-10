@@ -27,6 +27,8 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the fourteen-
-opcode CPU foundation described in [65c816.md](65c816.md). It verifies only the
-implemented CPU/bus scope and remains independent of platform devices.
+repository structure/boundaries/checklists; the reference bus; and the 27-opcode CPU
+subset described in [65c816.md](65c816.md). CPU regressions include implemented
+8/16-bit widths, flags, cycles, absolute indexing and linear 24-bit data crossing.
+They verify only the implemented CPU/bus scope and remain independent of platform
+devices.
