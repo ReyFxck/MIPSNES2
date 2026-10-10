@@ -4,7 +4,7 @@ import sys
 
 binary = sys.argv[1]
 result = subprocess.run([binary], capture_output=True, text=True, check=True)
-if "foundation only - no SNES emulation implemented." not in result.stdout:
+if "CPU/bus foundation - ROM execution unavailable." not in result.stdout:
     raise SystemExit("host must identify itself honestly")
 for argument in ("example.sfc", "--unknown"):
     result = subprocess.run([binary, argument], capture_output=True, text=True)

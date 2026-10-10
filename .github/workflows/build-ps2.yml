@@ -36,7 +36,7 @@ jobs:
           mkdir -p dist
           cp platform/ps2/mipsnes2-ps2.elf dist/
           cp LICENSE tools/toolchains.json dist/
-          printf '%s\n' "Commit: $GITHUB_SHA" "Foundation only; no SNES emulation; runtime unverified." > dist/BUILD.txt
+          printf '%s\n' "Commit: $GITHUB_SHA" "Partial CPU/bus foundation; ROM execution unavailable; runtime unverified." > dist/BUILD.txt
           cd dist
           sha256sum mipsnes2-ps2.elf LICENSE toolchains.json BUILD.txt > SHA256SUMS
           sha256sum -c SHA256SUMS

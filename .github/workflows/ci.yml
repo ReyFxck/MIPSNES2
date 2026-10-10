@@ -29,7 +29,7 @@ jobs:
           mkdir -p dist
           cp build/release/mipsnes2-host dist/
           cp LICENSE dist/
-          printf '%s\n' "Commit: $GITHUB_SHA" "Foundation only; no SNES emulation." > dist/BUILD.txt
+          printf '%s\n' "Commit: $GITHUB_SHA" "Partial CPU/bus foundation; ROM execution unavailable." > dist/BUILD.txt
           ${{ matrix.compiler }} --version >> dist/BUILD.txt
           cd dist
           sha256sum mipsnes2-host BUILD.txt LICENSE > SHA256SUMS

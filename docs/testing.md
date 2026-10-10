@@ -1,13 +1,19 @@
 # Testing and verification
 
-## Bootstrap tests
+## Host tests
 
-Run `make test`. The C contract test checks logical-address masks, all bank/offset
+Run `make test`. The contract test checks logical-address masks, all bank/offset
 combinations and logging sink semantics. A second executable compiles with logging
-disabled and verifies callbacks are absent. The host smoke script checks the honest
-banner and rejects ROM/unknown arguments. The repository checker verifies required
-files, local Markdown links, allowed checkbox syntax, license hash, action pins and
-forbidden core includes. It is a guardrail, not a C/YAML semantic verifier.
+disabled and verifies callbacks are absent. `test-cpu-bus` checks the reference bus,
+reset/vector foundation, every implemented opcode, widths/modes/flags, logical
+addresses, base cycles and unknown-opcode diagnostics. The host smoke script checks
+the honest banner and rejects ROM/unknown arguments. The repository checker verifies
+required files, local Markdown links, allowed checkbox syntax, license hash, action
+pins and forbidden core includes. It is a guardrail, not proof of complete emulation.
+
+CPU expectations are independently authored from the WDC W65C816S March 13, 2024
+datasheet sections recorded in [65c816.md](65c816.md). No external test ROM or code
+from an emulator is included.
 
 Tests use explicit return codes so `-DNDEBUG` cannot remove checks. Host debug,
 release and sanitizer builds belong in separate directories. Cross-build success

@@ -7,8 +7,14 @@ implementation choices. Host PC and PS2 measurements do not establish PSP gains.
 ## Current scaffold and build
 
 `platform/psp/main.c` supplies SDK module metadata, a user main thread, shared logging
-and `sceKernelExitGame`. It is a build probe, not an emulator/menu. Runtime lifecycle,
-exit handling, GU, controller and audio integration remain future work.
+and `sceKernelExitGame`. The scaffold cross-build compiles and links the reference
+CPU and bus without instantiating them. It is a build probe, not an emulator/menu.
+Runtime lifecycle, exit handling, GU, controller and audio integration remain future
+work.
+
+PSP audio remains an independent platform backend behind the future common emulated
+PCM contract. It must not depend on or imitate the PS2-only RFAuds2 transport. The
+SPC700/S-DSP core owns SNES timing regardless of PSP device buffering or output rate.
 
 Linux x86-64 toolchain pin: pspdev **v20261001**, exact URL/SHA-256 in
 [tools/toolchains.json](../tools/toolchains.json). No floating latest release is used.
