@@ -50,6 +50,15 @@ Environment:
 | `make -C platform/ps2 clean all` with the pinned PS2 environment | Pass; CPU compiles and links into `mipsnes2-ps2.elf` |
 | `make -C platform/psp clean all` with the pinned PSP environment | Pass; CPU compiles and links into ELF/PRX/EBOOT.PBP |
 
+The first GitHub Actions execution for implementation commit
+`487fe6b064d2112e3f88f5c0f8b4ad48aa48ae98` also passed:
+
+| Workflow | Verified result |
+|---|---|
+| [Host CI run 38078935577](https://github.com/ReyFxck/MIPSNES2/actions/runs/38078935577) | GCC and Clang release builds/tests, sanitizer builds/tests and host artifact upload passed |
+| [PS2 CI run 38078935650](https://github.com/ReyFxck/MIPSNES2/actions/runs/38078935650) | Pinned-toolchain cross-build, artifact staging, SHA-256 generation and upload passed |
+| [PSP CI run 38078935663](https://github.com/ReyFxck/MIPSNES2/actions/runs/38078935663) | Pinned-toolchain cross-build, artifact staging, SHA-256 generation and upload passed |
+
 Clang remains unavailable locally; GitHub CI is the Clang/full-sanitizer gate. No
 PCSX2, PPSSPP, real PS2 or real PSP runtime test was performed. Cross-compilation
 does not establish runtime correctness. No performance measurement was made.

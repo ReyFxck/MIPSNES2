@@ -151,7 +151,9 @@ gate. Exact commands and limitations are in docs/65c816-foundation-audit.md.
 The addressing/load-store audit on 2026-10-10 passed GCC host debug/release tests,
 local ASan+UBSan with the same LeakSanitizer restriction, and pinned PS2/PSP
 cross-builds. It verifies 27 opcodes and corrects implemented data accesses to linear
-24-bit bank crossing. Exact evidence is in docs/65c816-addressing-audit.md.
+24-bit bank crossing. The first GitHub Actions execution passed Host GCC/Clang,
+sanitizers and pinned PS2/PSP cross-build jobs. Exact local and CI evidence is in
+docs/65c816-addressing-audit.md.
 
 ## Current blockers and diagnostic exceptions
 
