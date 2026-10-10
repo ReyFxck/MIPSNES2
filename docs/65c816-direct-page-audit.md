@@ -73,8 +73,17 @@ successfully on the first attempt:
 | [PS2 CI run 38086371661](https://github.com/ReyFxck/MIPSNES2/actions/runs/38086371661) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
 | [PSP CI run 38086371624](https://github.com/ReyFxck/MIPSNES2/actions/runs/38086371624) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
 
-The final documentation-only evidence commit is required to pass the same workflows;
-its run links are added below after inspection.
+The documentation-only evidence commit
+`1dfa4e69b83992b86c720543ae2a8e50ff8bd3c5` also passed the complete matrix:
+
+| Workflow | Result |
+|---|---|
+| [Host CI run 38086439968](https://github.com/ReyFxck/MIPSNES2/actions/runs/38086439968) | GCC and Clang release/sanitizer jobs passed; artifacts uploaded |
+| [PS2 CI run 38086439969](https://github.com/ReyFxck/MIPSNES2/actions/runs/38086439969) | Cross-build, checksums and artifact upload passed |
+| [PSP CI run 38086440028](https://github.com/ReyFxck/MIPSNES2/actions/runs/38086440028) | Cross-build, checksums and artifact upload passed |
+
+A final wording-only audit commit is verified in the PR conversation rather than
+creating an unbounded chain of commits that each records the preceding run.
 
 ## Validation limits
 
