@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 27-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 39-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -155,6 +155,12 @@ cross-builds. It verifies 27 opcodes and corrects implemented data accesses to l
 sanitizers and pinned PS2/PSP cross-build jobs. Exact local and CI evidence is in
 docs/65c816-addressing-audit.md.
 
+The Direct Page load/store audit on 2026-10-10 verifies 12 additional opcodes on
+host GCC, including bank-zero selection, E/DL wrapping, 8/16-bit data and DL/width
+cycle additions. Pinned PS2/PSP cross-builds pass; GitHub Actions remains pending
+until the branch is published. Exact evidence is in docs/65c816-direct-page-audit.md;
+this does not complete Direct Page addressing.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -168,26 +174,26 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 27-opcode subset only
+- [ ] [IN PROGRESS] Opcode dispatch — 39-opcode subset only
 - [ ] [IN PROGRESS] Immediate addressing — LDA/LDX/LDY plus REP/SEP implemented only
 - [ ] [IN PROGRESS] Absolute addressing — JMP plus LDA/LDX/LDY and STA/STX/STY implemented
 - [ ] [IN PROGRESS] Long addressing — LDA/STA absolute long and absolute long,X implemented only
-- [ ] Direct Page addressing
+- [ ] [IN PROGRESS] Direct Page addressing — direct and direct-indexed LDA/LDX/LDY/STA/STX/STY only
 - [ ] Stack-relative addressing
-- [ ] [IN PROGRESS] Indexed addressing — absolute X/Y and absolute long,X load/store subset only
+- [ ] [IN PROGRESS] Indexed addressing — direct X/Y, absolute X/Y and absolute long,X load/store subset only
 - [ ] Indirect addressing
 - [ ] [IN PROGRESS] Branch instructions — BRA implemented only
-- [ ] [IN PROGRESS] Load/store instructions — immediate, absolute, absolute-indexed and absolute-long subset only
+- [ ] [IN PROGRESS] Load/store instructions — immediate, direct, direct-indexed, absolute, absolute-indexed and absolute-long subset only
 - [ ] Arithmetic instructions
 - [ ] Logic instructions
 - [ ] Shift/rotate instructions
 - [ ] Transfer instructions
 - [ ] Stack instructions
 - [ ] [IN PROGRESS] Status flag behavior — C and implemented load N/Z plus REP/SEP/XCE subset verified
-- [ ] [IN PROGRESS] M flag behavior — implemented immediate/memory accumulator loads and stores verified at both widths
-- [ ] [IN PROGRESS] X flag behavior — implemented immediate/memory index loads, stores, indexed cycles and high-byte clearing verified
+- [ ] [IN PROGRESS] M flag behavior — implemented immediate/Direct/absolute accumulator loads and stores verified at both widths
+- [ ] [IN PROGRESS] X flag behavior — implemented immediate/Direct/absolute index loads, stores, indexed cycles and high-byte clearing verified
 - [ ] [IN PROGRESS] Native mode — XCE entry and implemented width subset verified
-- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants and implemented width subset verified
+- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths and aligned Direct Page wrapping verified for implemented subset
 - [ ] Decimal arithmetic
 - [ ] IRQ
 - [ ] NMI
@@ -196,10 +202,10 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] COP
 - [ ] WAI
 - [ ] STP
-- [ ] [IN PROGRESS] Bank wrapping — program fetch bank-local; implemented linear data words/indexed carry verified
-- [ ] Direct Page edge cases
-- [ ] [IN PROGRESS] Timing model — width, indexed page/write/X and branch penalties for implemented subset only
-- [ ] [IN PROGRESS] CPU automated tests — all 27 implemented opcodes and addressing behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] Bank wrapping — program fetch bank-local; absolute data is linear; Direct data remains in bank zero
+- [ ] [IN PROGRESS] Direct Page edge cases — E=1/DL=0 page wrap, unaligned-D carry and bank-zero word wrap verified for implemented subset
+- [ ] [IN PROGRESS] Timing model — width, Direct DL, indexed page/write/X and branch penalties for implemented subset only
+- [ ] [IN PROGRESS] CPU automated tests — all 39 implemented opcodes and addressing behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -235,9 +241,24 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] XCE (`FB`)
 - [x] BRA (`80`)
 - [x] JMP absolute (`4C`)
+- [x] STY direct (`84`)
+- [x] STA direct (`85`)
+- [x] STX direct (`86`)
+- [x] STY direct,X (`94`)
+- [x] STA direct,X (`95`)
+- [x] STX direct,Y (`96`)
+- [x] LDY direct (`A4`)
+- [x] LDA direct (`A5`)
+- [x] LDX direct (`A6`)
+- [x] LDY direct,X (`B4`)
+- [x] LDA direct,X (`B5`)
+- [x] LDX direct,Y (`B6`)
 - [x] Base-cycle accounting for the implemented subset
 - [x] Linear 24-bit word access across bank boundaries
 - [x] Absolute indexed page/write/X cycle rule for implemented opcodes
+- [x] Direct Page bank-zero address formation for implemented opcodes
+- [x] Emulation-mode aligned Direct Page wrapping for implemented opcodes
+- [x] Direct Page DL and width cycle additions for implemented opcodes
 
 ## Bus
 

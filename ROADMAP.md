@@ -49,7 +49,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Immediate addressing
 - [ ] [IN PROGRESS] Absolute addressing
 - [ ] [IN PROGRESS] Long addressing
-- [ ] Direct Page addressing
+- [ ] [IN PROGRESS] Direct Page addressing
 - [ ] Stack-relative addressing
 - [ ] [IN PROGRESS] Indexed addressing
 - [ ] Indirect addressing
@@ -74,7 +74,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] WAI
 - [ ] STP
 - [ ] [IN PROGRESS] Bank wrapping
-- [ ] Direct Page edge cases
+- [ ] [IN PROGRESS] Direct Page edge cases
 - [ ] [IN PROGRESS] Timing model
 - [ ] [IN PROGRESS] CPU automated tests
 - [ ] CPU regression tests

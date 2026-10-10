@@ -16,20 +16,20 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 ## Current state
 
 **The project has a partial 65C816 interpreter and reference bus. It cannot run a SNES
-ROM.** Twenty-seven opcodes now cover the foundation plus absolute, absolute-indexed
-and absolute-long load/store paths. Deterministic host regressions cover widths,
-flags, cycles and 24-bit bank crossing. Console entry points remain build probes,
-not usable emulators. No PPU, APU, cartridge integration, compatibility or performance
-claim exists.
+ROM.** Thirty-nine opcodes now cover the foundation plus direct, direct-indexed,
+absolute, absolute-indexed and absolute-long load/store paths. Deterministic host
+regressions cover widths, flags, cycles, Direct Page wrapping and 24-bit bank
+crossing. Console entry points remain build probes, not usable emulators. No PPU,
+APU, cartridge integration, compatibility or performance claim exists.
 
 Current milestone: Phase 2 — incremental 65C816 reference interpreter.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
 
-Phase 1's foundation exit gate is verified. The next milestone is a focused Direct
-Page load/store implementation with sourced emulation-mode wrapping, D-register and
-DL cycle-penalty tests. Do not start with a dynarec, renderer or enhancement chips.
+Phase 1's foundation exit gate is verified. The next milestone is a focused
+direct-indirect load/store subset with sourced pointer wrapping, DBR behavior and
+cycle tests. Do not start with a dynarec, renderer or enhancement chips.
 
 ## Build and test the foundation
 

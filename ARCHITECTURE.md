@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 27-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 39-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -53,8 +53,11 @@ The CPU's `instruction_cycles` counts completed instruction base cycles only. It
 not master time; reset timing, 5A22 memory speed, wait states and arbitration remain
 future scheduler/bus work. An unimplemented opcode enters a sticky diagnostic stop.
 Program fetch wraps PC inside PBR. Implemented data addressing is linear across the
-24-bit space: word accesses and absolute indexing may carry into the next bank. This
-distinction is owned by CPU addressing helpers rather than the generic bus.
+24-bit space for absolute/long forms: word accesses and absolute indexing may carry
+into the next bank. Direct and Direct-indexed forms always emit bank-zero addresses.
+With E=1 and DL=0, their effective low byte wraps within the D high-byte page;
+otherwise D, the operand and any index add across the full 16-bit bank-zero range.
+This distinction is owned by CPU addressing helpers rather than the generic bus.
 
 ## Scheduler and timing proposal
 
@@ -115,6 +118,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   bus interface and completed-instruction base cycles; no optimized target path yet.
 - 2026-10-10: Implemented data operands use linear 24-bit increments and indexed
   carry; instruction fetch remains bank-local through PBR:PC.
+- 2026-10-10: Implemented Direct Page operands remain in bank zero and follow the
+  sourced E/DL page-wrap rule; the reference bus remains addressing-mode agnostic.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

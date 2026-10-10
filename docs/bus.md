@@ -14,8 +14,10 @@ platform API or native pointer is stored as a CPU-visible address.
 
 The bus does not decide addressing-mode wrapping. The CPU emits each final logical
 address: PBR:PC fetches wrap PC within one program bank, while implemented data words
-and absolute indexes advance linearly through the 24-bit data space. The bus only
-normalizes the address it receives.
+and absolute indexes advance linearly through the 24-bit data space. Implemented
+Direct and Direct-indexed operations emit bank-zero addresses; the CPU applies the
+E/DL page-wrap rule before the bus sees them. The bus only normalizes the address it
+receives.
 
 This is not the SNES memory map. WRAM mirrors, cartridge ROM/SRAM, PPU/CPU/APU/DMA
 registers, enhancement windows, side effects and access timing remain unimplemented.
@@ -44,9 +46,9 @@ canonical open-bus task remains in progress.
 
 `tests/test_cpu_bus.c` covers direct read/write, read-only writes, MMIO routing,
 24-bit normalization, unmapped behavior, overlap/range/region-limit rejection, DBR
-data accesses, cross-bank data words/indexing and PBR-local instruction fetches. These
-tests validate the reference bus foundation; they do not satisfy full mapping/mirror/
-MMIO timing gates.
+data accesses, Direct Page bank-zero accesses, cross-bank data words/indexing and
+PBR-local instruction fetches. These tests validate the reference bus foundation;
+they do not satisfy full mapping/mirror/MMIO timing gates.
 
 ## Remaining design work
 
