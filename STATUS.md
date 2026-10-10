@@ -157,9 +157,10 @@ docs/65c816-addressing-audit.md.
 
 The Direct Page load/store audit on 2026-10-10 verifies 12 additional opcodes on
 host GCC, including bank-zero selection, E/DL wrapping, 8/16-bit data and DL/width
-cycle additions. Pinned PS2/PSP cross-builds pass; GitHub Actions remains pending
-until the branch is published. Exact evidence is in docs/65c816-direct-page-audit.md;
-this does not complete Direct Page addressing.
+cycle additions. Pinned local PS2/PSP cross-builds pass. The first GitHub Actions
+execution passed Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP
+cross-build, artifact and checksum jobs. Exact evidence is in
+docs/65c816-direct-page-audit.md; this does not complete Direct Page addressing.
 
 ## Current blockers and diagnostic exceptions
 

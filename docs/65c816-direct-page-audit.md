@@ -63,8 +63,18 @@ on real console hardware.
 
 ## GitHub Actions evidence
 
-Pending publication and workflow execution. A workflow file or prior-branch run is
-not evidence for this branch.
+The first published implementation commit was
+`384e8aa8e4c7e05c0abfef23f4181286525c5b94`. All triggered workflows completed
+successfully on the first attempt:
+
+| Workflow | Verified jobs | Result |
+|---|---|---|
+| [Host CI run 38086371675](https://github.com/ReyFxck/MIPSNES2/actions/runs/38086371675) | GCC and Clang release builds/tests; GCC and Clang sanitizer builds/tests; host artifact upload | Passed |
+| [PS2 CI run 38086371661](https://github.com/ReyFxck/MIPSNES2/actions/runs/38086371661) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+| [PSP CI run 38086371624](https://github.com/ReyFxck/MIPSNES2/actions/runs/38086371624) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+
+The final documentation-only evidence commit is required to pass the same workflows;
+its run links are added below after inspection.
 
 ## Validation limits
 
