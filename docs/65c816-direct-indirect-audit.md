@@ -63,9 +63,20 @@ on real console hardware.
 
 ## GitHub Actions evidence
 
-No workflow result is claimed until the branch commit exists remotely and the actual
-jobs have been inspected. The PR will be stacked on
-`feature/65c816-direct-page-load-store`, not merged automatically.
+The first published implementation commit was
+`6754868adfee6406a11c372bd1b74c5863c48668`. All triggered workflows completed
+successfully on the first attempt:
+
+| Workflow | Verified jobs | Result |
+|---|---|---|
+| [Host CI run 38087337175](https://github.com/ReyFxck/MIPSNES2/actions/runs/38087337175) | GCC and Clang release builds/tests; GCC and Clang sanitizer builds/tests; two host artifact uploads | Passed |
+| [PS2 CI run 38087337189](https://github.com/ReyFxck/MIPSNES2/actions/runs/38087337189) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+| [PSP CI run 38087337183](https://github.com/ReyFxck/MIPSNES2/actions/runs/38087337183) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+
+The final documentation commit is validated separately. Its resulting workflow URLs
+are recorded in the PR conversation rather than creating an unbounded chain of
+commits that each records the preceding run. The PR is stacked on
+`feature/65c816-direct-page-load-store` and is not merged automatically.
 
 ## Validation limits
 

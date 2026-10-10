@@ -165,9 +165,10 @@ docs/65c816-direct-page-audit.md; this does not complete Direct Page addressing.
 The Direct-indirect load/store milestone on 2026-10-10 verifies ten additional LDA/
 STA opcodes on host GCC. Tests distinguish regular 16-bit pointer page wrapping from
 the Direct-indirect-long linear pointer-byte exception, DBR from pointer-supplied data
-banks, pre/post indexing, 8/16-bit data and documented cycle additions. Exact local
-evidence is recorded in docs/65c816-direct-indirect-audit.md; remote CI is pending
-and indirect addressing remains incomplete.
+banks, pre/post indexing, 8/16-bit data and documented cycle additions. GitHub Host
+GCC/Clang release and sanitizer jobs plus pinned PS2/PSP cross-build, artifact and
+checksum jobs passed for the implementation commit. Exact evidence is recorded in
+docs/65c816-direct-indirect-audit.md; indirect addressing remains incomplete.
 
 ## Current blockers and diagnostic exceptions
 

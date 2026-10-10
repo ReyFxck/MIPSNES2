@@ -28,9 +28,10 @@ Current milestone: Phase 2 — incremental 65C816 reference interpreter.
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
 
-Phase 1's foundation exit gate is verified. The current focused increment is the
-Direct-indirect LDA/STA subset with sourced pointer wrapping, DBR behavior and cycle
-tests. Do not start with a dynarec, renderer or enhancement chips.
+Phase 1's foundation exit gate and the focused Direct-indirect LDA/STA increment are
+verified. The next focused milestone is a register-transfer subset with sourced
+M/X-width, high-byte and N/Z flag tests. Do not start with a dynarec, renderer or
+enhancement chips.
 
 ## Build and test the foundation
 
