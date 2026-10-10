@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 39-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 49-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -57,7 +57,11 @@ Program fetch wraps PC inside PBR. Implemented data addressing is linear across 
 into the next bank. Direct and Direct-indexed forms always emit bank-zero addresses.
 With E=1 and DL=0, their effective low byte wraps within the D high-byte page;
 otherwise D, the operand and any index add across the full 16-bit bank-zero range.
-This distinction is owned by CPU addressing helpers rather than the generic bus.
+Implemented 16-bit Direct-indirect pointers use that same page-wrap rule, then DBR
+supplies the data bank. The WDC exception for 24-bit Direct-indirect-long pointers
+instead advances the pointer-byte reads linearly in bank zero; the pointer itself
+supplies the data bank. Post-indexing advances the resulting full 24-bit address.
+These distinctions are owned by CPU addressing helpers rather than the generic bus.
 
 ## Scheduler and timing proposal
 
@@ -120,6 +124,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   carry; instruction fetch remains bank-local through PBR:PC.
 - 2026-10-10: Implemented Direct Page operands remain in bank zero and follow the
   sourced E/DL page-wrap rule; the reference bus remains addressing-mode agnostic.
+- 2026-10-10: Implemented Direct-indirect forms keep pointer reads in bank zero;
+  regular pointers follow E/DL wrapping and use DBR, while long pointers use the
+  documented linear pointer-byte exception and supply their own data bank.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

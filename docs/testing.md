@@ -9,8 +9,11 @@ reset/vector foundation, every implemented opcode, widths/modes/flags, logical
 addresses, linear data bank crossing, indexed penalties, base cycles and unknown-
 opcode diagnostics. Direct Page regressions additionally cover bank-zero selection,
 aligned emulation-mode page wrapping, unaligned-D carry, 8/16-bit transfers and the
-DL cycle penalty. The host smoke script checks
-the honest banner and rejects ROM/unknown arguments. The repository checker verifies
+DL cycle penalty. Direct-indirect regressions distinguish 16-bit pointer page wrapping
+from the 24-bit long-pointer linear-increment exception, verify DBR versus pointer-bank
+selection, pre/post indexing, full-address carry and indexed-read penalties. The host
+smoke script checks the honest banner and rejects ROM/unknown arguments. The
+repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
 pins and forbidden core includes. It is a guardrail, not proof of complete emulation.
 
@@ -52,6 +55,8 @@ The authoritative initial record is [bootstrap-audit.md](bootstrap-audit.md). CP
 milestone evidence is recorded in [65c816-foundation-audit.md](65c816-foundation-audit.md)
 and [65c816-addressing-audit.md](65c816-addressing-audit.md). Direct Page milestone
 evidence is recorded in [65c816-direct-page-audit.md](65c816-direct-page-audit.md).
+Direct-indirect milestone evidence is recorded in
+[65c816-direct-indirect-audit.md](65c816-direct-indirect-audit.md).
 
 ## End-of-task audit
 
