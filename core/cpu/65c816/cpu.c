@@ -191,6 +191,46 @@ static void exchange_accumulator_bytes(mipsnes2_cpu *cpu)
     cpu->instruction_cycles += UINT64_C(3);
 }
 
+static int16_t signed_offset8(uint8_t value)
+{
+    return (value & UINT8_C(0x80)) != 0U
+               ? (int16_t)((int16_t)value - INT16_C(0x0100))
+               : (int16_t)value;
+}
+
+static int32_t signed_offset16(uint16_t value)
+{
+    return (value & UINT16_C(0x8000)) != 0U
+               ? (int32_t)value - INT32_C(0x00010000)
+               : (int32_t)value;
+}
+
+static void branch_relative8(mipsnes2_cpu *cpu, bool condition)
+{
+    uint8_t operand = fetch8(cpu);
+    uint16_t base_pc = cpu->pc;
+
+    cpu->instruction_cycles += UINT64_C(2);
+    if (!condition) {
+        return;
+    }
+
+    cpu->pc = (uint16_t)((int32_t)base_pc + signed_offset8(operand));
+    cpu->instruction_cycles += UINT64_C(1);
+    if (cpu->emulation && (base_pc & UINT16_C(0xff00)) !=
+                              (cpu->pc & UINT16_C(0xff00))) {
+        cpu->instruction_cycles += UINT64_C(1);
+    }
+}
+
+static void branch_relative16(mipsnes2_cpu *cpu)
+{
+    uint16_t operand = fetch16(cpu);
+
+    cpu->pc = (uint16_t)((int32_t)cpu->pc + signed_offset16(operand));
+    cpu->instruction_cycles += UINT64_C(4);
+}
+
 static void load_accumulator_immediate(mipsnes2_cpu *cpu)
 {
     if (accumulator_is_8_bit(cpu)) {
@@ -431,7 +471,6 @@ mipsnes2_cpu_result mipsnes2_cpu_reset(mipsnes2_cpu *cpu)
 mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
 {
     uint8_t operand;
-    uint16_t old_pc;
     mipsnes2_address address;
     uint64_t base_cycles;
 
@@ -446,12 +485,18 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     cpu->last_opcode = fetch8(cpu);
 
     switch (cpu->last_opcode) {
+    case 0x10: /* BPL */
+        branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_N) == 0U);
+        break;
     case 0x1b: /* TCS */
         transfer_to_stack(cpu, cpu->a);
         break;
     case 0x18: /* CLC */
         cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_C;
         cpu->instruction_cycles += UINT64_C(2);
+        break;
+    case 0x30: /* BMI */
+        branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_N) != 0U);
         break;
     case 0x38: /* SEC */
         cpu->p |= MIPSNES2_CPU_FLAG_C;
@@ -464,23 +509,25 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         cpu->pc = fetch16(cpu);
         cpu->instruction_cycles += UINT64_C(3);
         break;
+    case 0x50: /* BVC */
+        branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) == 0U);
+        break;
     case 0x5b: /* TCD */
         cpu->d = cpu->a;
         set_nz16(cpu, cpu->d);
         cpu->instruction_cycles += UINT64_C(2);
         break;
+    case 0x70: /* BVS */
+        branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) != 0U);
+        break;
     case 0x7b: /* TDC */
         transfer16_to_accumulator(cpu, cpu->d);
         break;
     case 0x80: /* BRA */
-        operand = fetch8(cpu);
-        old_pc = cpu->pc;
-        cpu->pc = (uint16_t)(cpu->pc + (int8_t)operand);
-        cpu->instruction_cycles += UINT64_C(3);
-        if (cpu->emulation && (old_pc & UINT16_C(0xff00)) !=
-                                  (cpu->pc & UINT16_C(0xff00))) {
-            cpu->instruction_cycles += UINT64_C(1);
-        }
+        branch_relative8(cpu, true);
+        break;
+    case 0x82: /* BRL */
+        branch_relative16(cpu);
         break;
     case 0x81: /* STA (direct,X) */
         if (cpu->bus.write8 == NULL) {
@@ -544,6 +591,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         address = fetch24(cpu);
         store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
                      UINT64_C(5));
+        break;
+    case 0x90: /* BCC */
+        branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_C) == 0U);
         break;
     case 0x91: /* STA (direct),Y */
         if (cpu->bus.write8 == NULL) {
@@ -723,6 +773,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     case 0xaf: /* LDA absolute long */
         load_accumulator_memory(cpu, fetch24(cpu), UINT64_C(5));
         break;
+    case 0xb0: /* BCS */
+        branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U);
+        break;
     case 0xb1: /* LDA (direct),Y */
     {
         uint16_t pointer;
@@ -794,6 +847,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         apply_mode_invariants(cpu);
         cpu->instruction_cycles += UINT64_C(3);
         break;
+    case 0xd0: /* BNE */
+        branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_Z) == 0U);
+        break;
     case 0xe2: /* SEP immediate */
         operand = fetch8(cpu);
         cpu->p |= operand;
@@ -805,6 +861,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0xeb: /* XBA */
         exchange_accumulator_bytes(cpu);
+        break;
+    case 0xf0: /* BEQ */
+        branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_Z) != 0U);
         break;
     case 0xfb: { /* XCE */
         bool old_carry = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U;
