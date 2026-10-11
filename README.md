@@ -29,7 +29,7 @@ workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) con
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
 
 Phase 1's foundation exit gate and the focused A/X/Y register-transfer increment are
-verified locally. The next focused milestone should continue the transfer family with
+verified. The next focused milestone should continue the transfer family with
 sourced direct-register/stack-pointer behavior and tests. Do not start with a dynarec,
 renderer or enhancement chips.
 

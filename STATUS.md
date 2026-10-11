@@ -174,8 +174,9 @@ The A/X/Y register-transfer milestone on 2026-10-10 verifies TAX/TAY/TXA/TYA/TXY
 on host GCC. Tests cover emulation/native and mixed M/X widths, destination high-byte
 rules, full-source behavior, zero extension, N/Z, preserved status bits, PC movement
 and two-cycle timing. Pinned PS2SDK/PSPSDK cross-builds compile the changed core and
-pass; GitHub CI evidence is not yet recorded. Exact local evidence and limits are in
-docs/65c816-register-transfer-audit.md.
+pass. GitHub Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP cross-build,
+artifact and checksum jobs passed for the implementation commit. Exact evidence and
+limits are in docs/65c816-register-transfer-audit.md.
 
 ## Current blockers and diagnostic exceptions
 

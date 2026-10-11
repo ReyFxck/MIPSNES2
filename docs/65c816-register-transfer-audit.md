@@ -69,9 +69,24 @@ copies. Both cross-compilers report GCC 15.2.0.
 
 These are cross-build results only; the outputs were not executed.
 
-## Pending evidence and limits
+## GitHub Actions evidence
 
-GitHub Actions results are pending at this snapshot. No PCSX2, real PS2, PPSSPP or
-real PSP runtime test was performed. No performance, compatibility or complete-
-transfer-family claim is made. Transfer instructions and the complete interpreter
-remain in progress.
+The first published implementation commit was
+`9814f32b259932bea85881a6030097aa6a9ac51a`. All triggered workflows completed
+successfully on the first attempt:
+
+| Workflow | Verified jobs | Result |
+|---|---|---|
+| [Host CI run 38102737262](https://github.com/ReyFxck/MIPSNES2/actions/runs/38102737262) | GCC and Clang release builds/tests; GCC and Clang sanitizer builds/tests; two host artifact uploads | Passed |
+| [PS2 CI run 38102737175](https://github.com/ReyFxck/MIPSNES2/actions/runs/38102737175) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+| [PSP CI run 38102737208](https://github.com/ReyFxck/MIPSNES2/actions/runs/38102737208) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+
+The artifact API reports two nonempty host artifacts plus nonempty PS2 and PSP
+artifacts, all associated with the correct PR head. The final documentation commit is
+validated separately and its workflow URLs are recorded in the PR conversation.
+
+## Validation limits
+
+No PCSX2, real PS2, PPSSPP or real PSP runtime test was performed. No performance,
+compatibility or complete-transfer-family claim is made. Transfer instructions and
+the complete interpreter remain in progress.
