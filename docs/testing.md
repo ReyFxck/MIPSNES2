@@ -12,8 +12,10 @@ aligned emulation-mode page wrapping, unaligned-D carry, 8/16-bit transfers and 
 DL cycle penalty. Direct-indirect regressions distinguish 16-bit pointer page wrapping
 from the 24-bit long-pointer linear-increment exception, verify DBR versus pointer-bank
 selection, pre/post indexing, full-address carry and indexed-read penalties. The host
-smoke script checks the honest banner and rejects ROM/unknown arguments. The
-repository checker verifies
+register-transfer regressions cover emulation, native and mixed M/X widths, including
+destination high-byte rules, zero extension, N/Z and exact cycles. The host smoke
+script checks the honest banner and rejects ROM/unknown arguments. The repository
+checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
 pins and forbidden core includes. It is a guardrail, not proof of complete emulation.
 
@@ -57,6 +59,8 @@ and [65c816-addressing-audit.md](65c816-addressing-audit.md). Direct Page milest
 evidence is recorded in [65c816-direct-page-audit.md](65c816-direct-page-audit.md).
 Direct-indirect milestone evidence is recorded in
 [65c816-direct-indirect-audit.md](65c816-direct-indirect-audit.md).
+Register-transfer milestone evidence is recorded in
+[65c816-register-transfer-audit.md](65c816-register-transfer-audit.md).
 
 ## End-of-task audit
 

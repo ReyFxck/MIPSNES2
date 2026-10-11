@@ -58,7 +58,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Arithmetic instructions
 - [ ] Logic instructions
 - [ ] Shift/rotate instructions
-- [ ] Transfer instructions
+- [ ] [IN PROGRESS] Transfer instructions
 - [ ] Stack instructions
 - [ ] [IN PROGRESS] Status flag behavior
 - [ ] [IN PROGRESS] M flag behavior

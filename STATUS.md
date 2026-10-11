@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 49-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 55-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -170,6 +170,13 @@ GCC/Clang release and sanitizer jobs plus pinned PS2/PSP cross-build, artifact a
 checksum jobs passed for the implementation commit. Exact evidence is recorded in
 docs/65c816-direct-indirect-audit.md; indirect addressing remains incomplete.
 
+The A/X/Y register-transfer milestone on 2026-10-10 verifies TAX/TAY/TXA/TYA/TXY/TYX
+on host GCC. Tests cover emulation/native and mixed M/X widths, destination high-byte
+rules, full-source behavior, zero extension, N/Z, preserved status bits, PC movement
+and two-cycle timing. Pinned PS2SDK/PSPSDK cross-builds compile the changed core and
+pass; GitHub CI evidence is not yet recorded. Exact local evidence and limits are in
+docs/65c816-register-transfer-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -183,7 +190,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 49-opcode subset only
+- [ ] [IN PROGRESS] Opcode dispatch — 55-opcode subset only
 - [ ] [IN PROGRESS] Immediate addressing — LDA/LDX/LDY plus REP/SEP implemented only
 - [ ] [IN PROGRESS] Absolute addressing — JMP plus LDA/LDX/LDY and STA/STX/STY implemented
 - [ ] [IN PROGRESS] Long addressing — LDA/STA absolute long and absolute long,X implemented only
@@ -196,13 +203,13 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] Arithmetic instructions
 - [ ] Logic instructions
 - [ ] Shift/rotate instructions
-- [ ] Transfer instructions
+- [ ] [IN PROGRESS] Transfer instructions — TAX/TAY/TXA/TYA/TXY/TYX only
 - [ ] Stack instructions
-- [ ] [IN PROGRESS] Status flag behavior — C and implemented load N/Z plus REP/SEP/XCE subset verified
-- [ ] [IN PROGRESS] M flag behavior — implemented immediate/Direct/indirect/absolute accumulator loads and stores verified at both widths
-- [ ] [IN PROGRESS] X flag behavior — implemented immediate/Direct/absolute index loads, stores, indexed cycles and high-byte clearing verified
-- [ ] [IN PROGRESS] Native mode — XCE entry and implemented width subset verified
-- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths and Direct/indirect pointer wrapping verified for implemented subset
+- [ ] [IN PROGRESS] Status flag behavior — C and implemented load/transfer N/Z plus REP/SEP/XCE subset verified
+- [ ] [IN PROGRESS] M flag behavior — implemented accumulator loads/stores and transfer destinations verified at both widths
+- [ ] [IN PROGRESS] X flag behavior — implemented index loads/stores, transfer destinations, indexed cycles and high-byte clearing verified
+- [ ] [IN PROGRESS] Native mode — XCE entry and implemented load/store/transfer width subset verified
+- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers and Direct/indirect pointer wrapping verified for implemented subset
 - [ ] Decimal arithmetic
 - [ ] IRQ
 - [ ] NMI
@@ -213,8 +220,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] STP
 - [ ] [IN PROGRESS] Bank wrapping — program fetch bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
-- [ ] [IN PROGRESS] Timing model — width, Direct DL, indexed read/write and branch penalties for implemented subset only
-- [ ] [IN PROGRESS] CPU automated tests — all 49 implemented opcodes and addressing behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] Timing model — width, Direct DL, indexed read/write, branch and transfer timing for implemented subset only
+- [ ] [IN PROGRESS] CPU automated tests — all 55 implemented opcodes and addressing behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -255,23 +262,29 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STA direct (`85`)
 - [x] STX direct (`86`)
 - [x] STA direct-indirect-long (`87`)
+- [x] TXA (`8A`)
 - [x] STA direct-indirect-indexed,Y (`91`)
 - [x] STA direct-indirect (`92`)
 - [x] STY direct,X (`94`)
 - [x] STA direct,X (`95`)
 - [x] STX direct,Y (`96`)
 - [x] STA direct-indirect-long-indexed,Y (`97`)
+- [x] TYA (`98`)
+- [x] TXY (`9B`)
 - [x] LDA direct-indexed-indirect (`A1`)
 - [x] LDY direct (`A4`)
 - [x] LDA direct (`A5`)
 - [x] LDX direct (`A6`)
 - [x] LDA direct-indirect-long (`A7`)
+- [x] TAY (`A8`)
+- [x] TAX (`AA`)
 - [x] LDA direct-indirect-indexed,Y (`B1`)
 - [x] LDA direct-indirect (`B2`)
 - [x] LDY direct,X (`B4`)
 - [x] LDA direct,X (`B5`)
 - [x] LDX direct,Y (`B6`)
 - [x] LDA direct-indirect-long-indexed,Y (`B7`)
+- [x] TYX (`BB`)
 - [x] Base-cycle accounting for the implemented subset
 - [x] Linear 24-bit word access across bank boundaries
 - [x] Absolute indexed page/write/X cycle rule for implemented opcodes
@@ -282,6 +295,9 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Direct-indirect-long linear pointer-byte exception for implemented opcodes
 - [x] Indirect DBR versus long-pointer data-bank selection for implemented opcodes
 - [x] Direct-indirect pre/post-index and cycle rules for implemented opcodes
+- [x] Full-source and destination-selected M/X width for implemented transfers
+- [x] Mixed M/X transfer preservation, truncation and zero extension
+- [x] Register-transfer N/Z flags and two-cycle timing
 
 ## Bus
 
