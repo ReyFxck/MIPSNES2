@@ -153,6 +153,13 @@ static void transfer_to_accumulator(mipsnes2_cpu *cpu, uint16_t value)
     cpu->instruction_cycles += UINT64_C(2);
 }
 
+static void transfer16_to_accumulator(mipsnes2_cpu *cpu, uint16_t value)
+{
+    cpu->a = value;
+    set_nz16(cpu, value);
+    cpu->instruction_cycles += UINT64_C(2);
+}
+
 static void transfer_to_index(mipsnes2_cpu *cpu, uint16_t *target,
                               uint16_t value)
 {
@@ -166,6 +173,22 @@ static void transfer_to_index(mipsnes2_cpu *cpu, uint16_t *target,
         set_nz16(cpu, value);
     }
     cpu->instruction_cycles += UINT64_C(2);
+}
+
+static void transfer_to_stack(mipsnes2_cpu *cpu, uint16_t value)
+{
+    cpu->s = cpu->emulation
+                 ? (uint16_t)(UINT16_C(0x0100) |
+                              (value & UINT16_C(0x00ff)))
+                 : value;
+    cpu->instruction_cycles += UINT64_C(2);
+}
+
+static void exchange_accumulator_bytes(mipsnes2_cpu *cpu)
+{
+    cpu->a = (uint16_t)((cpu->a >> 8) | (cpu->a << 8));
+    set_nz8(cpu, (uint8_t)cpu->a);
+    cpu->instruction_cycles += UINT64_C(3);
 }
 
 static void load_accumulator_immediate(mipsnes2_cpu *cpu)
@@ -423,6 +446,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     cpu->last_opcode = fetch8(cpu);
 
     switch (cpu->last_opcode) {
+    case 0x1b: /* TCS */
+        transfer_to_stack(cpu, cpu->a);
+        break;
     case 0x18: /* CLC */
         cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_C;
         cpu->instruction_cycles += UINT64_C(2);
@@ -431,9 +457,20 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         cpu->p |= MIPSNES2_CPU_FLAG_C;
         cpu->instruction_cycles += UINT64_C(2);
         break;
+    case 0x3b: /* TSC */
+        transfer16_to_accumulator(cpu, cpu->s);
+        break;
     case 0x4c: /* JMP absolute */
         cpu->pc = fetch16(cpu);
         cpu->instruction_cycles += UINT64_C(3);
+        break;
+    case 0x5b: /* TCD */
+        cpu->d = cpu->a;
+        set_nz16(cpu, cpu->d);
+        cpu->instruction_cycles += UINT64_C(2);
+        break;
+    case 0x7b: /* TDC */
+        transfer16_to_accumulator(cpu, cpu->d);
         break;
     case 0x80: /* BRA */
         operand = fetch8(cpu);
@@ -530,6 +567,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0x98: /* TYA */
         transfer_to_accumulator(cpu, index_register_value(cpu, cpu->y));
+        break;
+    case 0x9a: /* TXS */
+        transfer_to_stack(cpu, index_register_value(cpu, cpu->x));
         break;
     case 0x99: /* STA absolute,Y */
         if (cpu->bus.write8 == NULL) {
@@ -722,6 +762,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         load_accumulator_memory(cpu, address,
                                 direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0xba: /* TSX */
+        transfer_to_index(cpu, &cpu->x, cpu->s);
+        break;
     case 0xbb: /* TYX */
         transfer_to_index(cpu, &cpu->x, index_register_value(cpu, cpu->y));
         break;
@@ -759,6 +802,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0xea: /* NOP */
         cpu->instruction_cycles += UINT64_C(2);
+        break;
+    case 0xeb: /* XBA */
+        exchange_accumulator_bytes(cpu);
         break;
     case 0xfb: { /* XCE */
         bool old_carry = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U;

@@ -27,11 +27,12 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the 55-opcode CPU
+repository structure/boundaries/checklists; the reference bus; and the 62-opcode CPU
 subset described in [65c816.md](65c816.md). CPU regressions include implemented
 8/16-bit widths, flags, cycles, Direct Page/indexed/pointer wrapping and penalties,
 regular-indirect DBR selection, long-indirect bank selection, absolute indexing and
 linear 24-bit data crossing. Register-transfer regressions cover 8/16-bit and mixed
 M/X destinations, high-byte preservation/clearing, zero extension, N/Z and cycles.
-They verify only the implemented CPU/bus scope and remain independent of platform
-devices.
+Special-transfer regressions add fixed-width C/D/S rules, emulation/native stack-high
+behavior, X-selected TSX/TXS behavior and XBA byte/flag rules. They verify only the
+implemented CPU/bus scope and remain independent of platform devices.

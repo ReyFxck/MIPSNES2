@@ -13,9 +13,10 @@ DL cycle penalty. Direct-indirect regressions distinguish 16-bit pointer page wr
 from the 24-bit long-pointer linear-increment exception, verify DBR versus pointer-bank
 selection, pre/post indexing, full-address carry and indexed-read penalties. The host
 register-transfer regressions cover emulation, native and mixed M/X widths, including
-destination high-byte rules, zero extension, N/Z and exact cycles. The host smoke
-script checks the honest banner and rejects ROM/unknown arguments. The repository
-checker verifies
+destination high-byte rules, zero extension, N/Z and exact cycles. Special-transfer
+regressions cover the fixed-width C/D/S paths, emulation/native stack-high rules,
+8/16-bit TSX/TXS and XBA byte exchange. The host smoke script checks the honest banner
+and rejects ROM/unknown arguments. The repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
 pins and forbidden core includes. It is a guardrail, not proof of complete emulation.
 
@@ -61,6 +62,8 @@ Direct-indirect milestone evidence is recorded in
 [65c816-direct-indirect-audit.md](65c816-direct-indirect-audit.md).
 Register-transfer milestone evidence is recorded in
 [65c816-register-transfer-audit.md](65c816-register-transfer-audit.md).
+Special-transfer completion evidence is recorded in
+[65c816-special-transfer-audit.md](65c816-special-transfer-audit.md).
 
 ## End-of-task audit
 

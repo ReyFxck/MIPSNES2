@@ -16,22 +16,22 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 ## Current state
 
 **The project has a partial 65C816 interpreter and reference bus. It cannot run a SNES
-ROM.** Fifty-five opcodes now cover the foundation, six A/X/Y register transfers and
-direct, direct-indexed, direct-indirect, absolute, absolute-indexed and absolute-long
-load/store paths. Deterministic host regressions cover widths, flags, cycles, Direct
-Page pointer wrapping, DBR selection and 24-bit bank crossing. Console entry points
-remain build probes, not usable emulators. No PPU, APU, cartridge integration,
-compatibility or performance claim exists.
+ROM.** Sixty-two opcodes now cover the foundation, the complete register-transfer
+family and direct, direct-indexed, direct-indirect, absolute, absolute-indexed and
+absolute-long load/store paths. Deterministic host regressions cover widths, flags,
+cycles, Direct Page pointer wrapping, DBR selection and 24-bit bank crossing. Console
+entry points remain build probes, not usable emulators. No PPU, APU, cartridge
+integration, compatibility or performance claim exists.
 
 Current milestone: Phase 2 — incremental 65C816 reference interpreter.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
 
-Phase 1's foundation exit gate and the focused A/X/Y register-transfer increment are
-verified. The next focused milestone should continue the transfer family with
-sourced direct-register/stack-pointer behavior and tests. Do not start with a dynarec,
-renderer or enhancement chips.
+Phase 1's foundation exit gate and the complete register-transfer family are verified.
+The next focused milestone should implement the conditional branch family
+and BRL with signed-offset, bank-wrap and exact-cycle tests. Do not start with a
+dynarec, renderer or enhancement chips.
 
 ## Build and test the foundation
 

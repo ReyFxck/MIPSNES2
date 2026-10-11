@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 55-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 62-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -65,6 +65,9 @@ These distinctions are owned by CPU addressing helpers rather than the generic b
 Implemented A/X/Y transfers expose the full 16-bit source register internally, then
 use the destination's M- or X-selected width for storage and N/Z. This keeps mixed
 M/X behavior in shared helpers rather than duplicating interpreter paths.
+Direct/stack transfers remain full-width where the architecture requires it. Stack
+destinations enforce `SH=01` only in emulation mode, and XBA exchanges the stored
+accumulator bytes independently of M. These rules remain in the platform-free core.
 
 ## Scheduler and timing proposal
 
@@ -132,6 +135,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   documented linear pointer-byte exception and supply their own data bank.
 - 2026-10-10: A/X/Y transfers expose the full source and apply destination-selected
   M/X width to storage and N/Z; mixed-width behavior remains platform independent.
+- 2026-10-11: Direct/stack transfers and XBA follow their fixed-width, emulation-SH
+  and byte-exchange rules in shared C; the complete register-transfer family is now
+  represented without implementing stack memory operations.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements
