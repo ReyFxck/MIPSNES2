@@ -6,8 +6,20 @@ Run `make test`. The contract test checks logical-address masks, all bank/offset
 combinations and logging sink semantics. A second executable compiles with logging
 disabled and verifies callbacks are absent. `test-cpu-bus` checks the reference bus,
 reset/vector foundation, every implemented opcode, widths/modes/flags, logical
-addresses, base cycles and unknown-opcode diagnostics. The host smoke script checks
-the honest banner and rejects ROM/unknown arguments. The repository checker verifies
+addresses, linear data bank crossing, indexed penalties, base cycles and unknown-
+opcode diagnostics. Direct Page regressions additionally cover bank-zero selection,
+aligned emulation-mode page wrapping, unaligned-D carry, 8/16-bit transfers and the
+DL cycle penalty. Direct-indirect regressions distinguish 16-bit pointer page wrapping
+from the 24-bit long-pointer linear-increment exception, verify DBR versus pointer-bank
+selection, pre/post indexing, full-address carry and indexed-read penalties. The host
+register-transfer regressions cover emulation, native and mixed M/X widths, including
+destination high-byte rules, zero extension, N/Z and exact cycles. Special-transfer
+regressions cover the fixed-width C/D/S paths, emulation/native stack-high rules,
+8/16-bit TSX/TXS and XBA byte exchange. Branch regressions execute all eight
+conditional opcodes in taken and non-taken paths plus BRA and BRL; they cover signed
+offsets, PBR-local 16-bit PC wrapping, unchanged status and exact 2/3/4-cycle rules.
+The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
+repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
 pins and forbidden core includes. It is a guardrail, not proof of complete emulation.
 
@@ -45,7 +57,18 @@ Record date, revision or audited tree scope, command, working directory, compile
 SDK version, flags, exit code, meaningful test output, failures and unavailable
 checks. Hardware evidence includes model/settings, test duration and observations.
 Never promote `[x]` based on an agent's intention or a file's existence alone.
-The authoritative initial record is [bootstrap-audit.md](bootstrap-audit.md).
+The authoritative initial record is [bootstrap-audit.md](bootstrap-audit.md). CPU
+milestone evidence is recorded in [65c816-foundation-audit.md](65c816-foundation-audit.md)
+and [65c816-addressing-audit.md](65c816-addressing-audit.md). Direct Page milestone
+evidence is recorded in [65c816-direct-page-audit.md](65c816-direct-page-audit.md).
+Direct-indirect milestone evidence is recorded in
+[65c816-direct-indirect-audit.md](65c816-direct-indirect-audit.md).
+Register-transfer milestone evidence is recorded in
+[65c816-register-transfer-audit.md](65c816-register-transfer-audit.md).
+Special-transfer completion evidence is recorded in
+[65c816-special-transfer-audit.md](65c816-special-transfer-audit.md).
+Branch-family completion evidence is recorded in
+[65c816-branch-audit.md](65c816-branch-audit.md).
 
 ## End-of-task audit
 

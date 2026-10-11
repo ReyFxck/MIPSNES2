@@ -42,41 +42,41 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [ ] Phase 2 exit gate verified
 
-- [ ] CPU state representation
-- [ ] Reset sequence
-- [ ] Instruction fetch
-- [ ] Opcode dispatch
-- [ ] Immediate addressing
-- [ ] Absolute addressing
-- [ ] Long addressing
-- [ ] Direct Page addressing
+- [x] CPU state representation
+- [ ] [IN PROGRESS] Reset sequence
+- [x] Instruction fetch
+- [ ] [IN PROGRESS] Opcode dispatch
+- [ ] [IN PROGRESS] Immediate addressing
+- [ ] [IN PROGRESS] Absolute addressing
+- [ ] [IN PROGRESS] Long addressing
+- [ ] [IN PROGRESS] Direct Page addressing
 - [ ] Stack-relative addressing
-- [ ] Indexed addressing
-- [ ] Indirect addressing
-- [ ] Branch instructions
-- [ ] Load/store instructions
+- [ ] [IN PROGRESS] Indexed addressing
+- [ ] [IN PROGRESS] Indirect addressing
+- [x] Branch instructions
+- [ ] [IN PROGRESS] Load/store instructions
 - [ ] Arithmetic instructions
 - [ ] Logic instructions
 - [ ] Shift/rotate instructions
-- [ ] Transfer instructions
+- [x] Transfer instructions
 - [ ] Stack instructions
-- [ ] Status flag behavior
-- [ ] M flag behavior
-- [ ] X flag behavior
-- [ ] Native mode
-- [ ] Emulation mode
+- [ ] [IN PROGRESS] Status flag behavior
+- [ ] [IN PROGRESS] M flag behavior
+- [ ] [IN PROGRESS] X flag behavior
+- [ ] [IN PROGRESS] Native mode
+- [ ] [IN PROGRESS] Emulation mode
 - [ ] Decimal arithmetic
 - [ ] IRQ
 - [ ] NMI
-- [ ] RESET
+- [ ] [IN PROGRESS] RESET
 - [ ] BRK
 - [ ] COP
 - [ ] WAI
 - [ ] STP
-- [ ] Bank wrapping
-- [ ] Direct Page edge cases
-- [ ] Timing model
-- [ ] CPU automated tests
+- [ ] [IN PROGRESS] Bank wrapping
+- [ ] [IN PROGRESS] Direct Page edge cases
+- [ ] [IN PROGRESS] Timing model
+- [ ] [IN PROGRESS] CPU automated tests
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 

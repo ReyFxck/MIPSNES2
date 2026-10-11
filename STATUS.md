@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 71-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -148,6 +148,53 @@ restriction), and pinned PS2/PSP cross-builds including the new CPU/bus sources.
 Local Clang was unavailable; GitHub's existing Clang/full-sanitizer job remains the
 gate. Exact commands and limitations are in docs/65c816-foundation-audit.md.
 
+The addressing/load-store audit on 2026-10-10 passed GCC host debug/release tests,
+local ASan+UBSan with the same LeakSanitizer restriction, and pinned PS2/PSP
+cross-builds. It verifies 27 opcodes and corrects implemented data accesses to linear
+24-bit bank crossing. The first GitHub Actions execution passed Host GCC/Clang,
+sanitizers and pinned PS2/PSP cross-build jobs. Exact local and CI evidence is in
+docs/65c816-addressing-audit.md.
+
+The Direct Page load/store audit on 2026-10-10 verifies 12 additional opcodes on
+host GCC, including bank-zero selection, E/DL wrapping, 8/16-bit data and DL/width
+cycle additions. Pinned local PS2/PSP cross-builds pass. The first GitHub Actions
+execution passed Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP
+cross-build, artifact and checksum jobs. Exact evidence is in
+docs/65c816-direct-page-audit.md; this does not complete Direct Page addressing.
+
+The Direct-indirect load/store milestone on 2026-10-10 verifies ten additional LDA/
+STA opcodes on host GCC. Tests distinguish regular 16-bit pointer page wrapping from
+the Direct-indirect-long linear pointer-byte exception, DBR from pointer-supplied data
+banks, pre/post indexing, 8/16-bit data and documented cycle additions. GitHub Host
+GCC/Clang release and sanitizer jobs plus pinned PS2/PSP cross-build, artifact and
+checksum jobs passed for the implementation commit. Exact evidence is recorded in
+docs/65c816-direct-indirect-audit.md; indirect addressing remains incomplete.
+
+The A/X/Y register-transfer milestone on 2026-10-10 verifies TAX/TAY/TXA/TYA/TXY/TYX
+on host GCC. Tests cover emulation/native and mixed M/X widths, destination high-byte
+rules, full-source behavior, zero extension, N/Z, preserved status bits, PC movement
+and two-cycle timing. Pinned PS2SDK/PSPSDK cross-builds compile the changed core and
+pass. GitHub Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP cross-build,
+artifact and checksum jobs passed for the implementation commit. Exact evidence and
+limits are in docs/65c816-register-transfer-audit.md.
+
+The special-transfer milestone on 2026-10-11 verifies TCS/TSC/TCD/TDC/TXS/TSX/XBA
+on host GCC debug, release and ASan+UBSan builds. Tests cover fixed-width C/D/S
+transfers, native/emulation stack-high rules, X-selected TSX/TXS behavior, XBA flags,
+PC movement and exact base cycles. Pinned PS2SDK/PSPSDK cross-builds compile the
+changed core and pass. GitHub Host GCC/Clang release and sanitizer jobs plus pinned
+PS2/PSP cross-build, artifact and checksum jobs passed for the implementation commit.
+Exact evidence and limits are in docs/65c816-special-transfer-audit.md.
+
+The branch-family milestone on 2026-10-11 verifies BPL/BMI/BVC/BVS/BCC/BCS/BNE/BEQ,
+BRA and BRL on host GCC debug, release and ASan+UBSan builds. Tests cover taken and
+non-taken conditions, signed 8/16-bit offsets, unchanged status, PBR-local PC
+wrapping, and exact 2/3/4-cycle behavior in native and emulation modes. Pinned
+PS2SDK/PSPSDK cross-builds compile the changed core and pass. GitHub Host GCC/Clang
+release and sanitizer jobs plus pinned PS2/PSP cross-build, artifact and checksum
+jobs passed for the implementation commit. Exact evidence and validation limits are
+in docs/65c816-branch-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -161,26 +208,26 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — fourteen-opcode foundation only
+- [ ] [IN PROGRESS] Opcode dispatch — 71-opcode subset only
 - [ ] [IN PROGRESS] Immediate addressing — LDA/LDX/LDY plus REP/SEP implemented only
-- [ ] [IN PROGRESS] Absolute addressing — JMP and STA/STX/STY implemented only
-- [ ] Long addressing
-- [ ] Direct Page addressing
+- [ ] [IN PROGRESS] Absolute addressing — JMP plus LDA/LDX/LDY and STA/STX/STY implemented
+- [ ] [IN PROGRESS] Long addressing — LDA/STA absolute long and absolute long,X implemented only
+- [ ] [IN PROGRESS] Direct Page addressing — direct/indexed loads/stores plus ten LDA/STA indirect forms only
 - [ ] Stack-relative addressing
-- [ ] Indexed addressing
-- [ ] Indirect addressing
-- [ ] [IN PROGRESS] Branch instructions — BRA implemented only
-- [ ] [IN PROGRESS] Load/store instructions — immediate loads and absolute stores implemented only
+- [ ] [IN PROGRESS] Indexed addressing — direct, absolute, long and Direct-indirect load/store subset only
+- [ ] [IN PROGRESS] Indirect addressing — LDA/STA `(direct,X)`, `(direct)`, `(direct),Y`, `[direct]` and `[direct],Y` only
+- [x] Branch instructions
+- [ ] [IN PROGRESS] Load/store instructions — immediate, direct/indirect, absolute, indexed and long subset only
 - [ ] Arithmetic instructions
 - [ ] Logic instructions
 - [ ] Shift/rotate instructions
-- [ ] Transfer instructions
+- [x] Transfer instructions
 - [ ] Stack instructions
-- [ ] [IN PROGRESS] Status flag behavior — C and load N/Z plus REP/SEP/XCE subset verified
-- [ ] [IN PROGRESS] M flag behavior — immediate accumulator width and store width verified
-- [ ] [IN PROGRESS] X flag behavior — immediate index width, store width and high-byte clearing verified
-- [ ] [IN PROGRESS] Native mode — XCE entry and implemented width subset verified
-- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants and implemented width subset verified
+- [ ] [IN PROGRESS] Status flag behavior — C and implemented load/transfer/XBA N/Z plus REP/SEP/XCE subset verified
+- [ ] [IN PROGRESS] M flag behavior — implemented accumulator loads/stores and transfer destinations verified at both widths
+- [ ] [IN PROGRESS] X flag behavior — implemented index loads/stores, transfer destinations, indexed cycles and high-byte clearing verified
+- [ ] [IN PROGRESS] Native mode — XCE entry, implemented widths/transfers and branch timing subset verified
+- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers, Direct/indirect pointer wrapping and branch timing verified for implemented subset
 - [ ] Decimal arithmetic
 - [ ] IRQ
 - [ ] NMI
@@ -189,10 +236,10 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] COP
 - [ ] WAI
 - [ ] STP
-- [ ] [IN PROGRESS] Bank wrapping — fetch and 16-bit absolute-store wrapping verified only
-- [ ] Direct Page edge cases
-- [ ] [IN PROGRESS] Timing model — completed-instruction base cycles for implemented subset only
-- [ ] [IN PROGRESS] CPU automated tests — all implemented foundation behavior covered; complete CPU coverage pending
+- [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
+- [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
+- [ ] [IN PROGRESS] Timing model — width, Direct DL, indexed read/write, complete branch-family and transfer timing verified for implemented subset only
+- [ ] [IN PROGRESS] CPU automated tests — all 71 implemented opcodes and addressing behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -201,6 +248,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Caller-owned register/mode/bus/diagnostic state
 - [x] Reset vector fetch from logical 00:FFFC-D
 - [x] Pre-reset and unimplemented-opcode diagnostic stops
+- [x] BPL (`10`)
+- [x] TCS (`1B`)
 - [x] NOP (`EA`)
 - [x] LDA immediate (`A9`)
 - [x] LDX immediate (`A2`)
@@ -208,14 +257,89 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STA absolute (`8D`)
 - [x] STX absolute (`8E`)
 - [x] STY absolute (`8C`)
+- [x] STA absolute long (`8F`)
+- [x] STA absolute,Y (`99`)
+- [x] STA absolute,X (`9D`)
+- [x] STA absolute long,X (`9F`)
+- [x] LDY absolute (`AC`)
+- [x] LDA absolute (`AD`)
+- [x] LDX absolute (`AE`)
+- [x] LDA absolute long (`AF`)
+- [x] LDA absolute,Y (`B9`)
+- [x] LDY absolute,X (`BC`)
+- [x] LDA absolute,X (`BD`)
+- [x] LDX absolute,Y (`BE`)
+- [x] LDA absolute long,X (`BF`)
 - [x] CLC (`18`)
+- [x] BMI (`30`)
 - [x] SEC (`38`)
+- [x] TSC (`3B`)
 - [x] REP (`C2`)
 - [x] SEP (`E2`)
 - [x] XCE (`FB`)
-- [x] BRA (`80`)
 - [x] JMP absolute (`4C`)
+- [x] BVC (`50`)
+- [x] TCD (`5B`)
+- [x] BVS (`70`)
+- [x] TDC (`7B`)
+- [x] BRA (`80`)
+- [x] BRL (`82`)
+- [x] STA direct-indexed-indirect (`81`)
+- [x] STY direct (`84`)
+- [x] STA direct (`85`)
+- [x] STX direct (`86`)
+- [x] STA direct-indirect-long (`87`)
+- [x] TXA (`8A`)
+- [x] BCC (`90`)
+- [x] STA direct-indirect-indexed,Y (`91`)
+- [x] STA direct-indirect (`92`)
+- [x] STY direct,X (`94`)
+- [x] STA direct,X (`95`)
+- [x] STX direct,Y (`96`)
+- [x] STA direct-indirect-long-indexed,Y (`97`)
+- [x] TYA (`98`)
+- [x] TXS (`9A`)
+- [x] TXY (`9B`)
+- [x] LDA direct-indexed-indirect (`A1`)
+- [x] LDY direct (`A4`)
+- [x] LDA direct (`A5`)
+- [x] LDX direct (`A6`)
+- [x] LDA direct-indirect-long (`A7`)
+- [x] TAY (`A8`)
+- [x] TAX (`AA`)
+- [x] BCS (`B0`)
+- [x] LDA direct-indirect-indexed,Y (`B1`)
+- [x] LDA direct-indirect (`B2`)
+- [x] LDY direct,X (`B4`)
+- [x] LDA direct,X (`B5`)
+- [x] LDX direct,Y (`B6`)
+- [x] LDA direct-indirect-long-indexed,Y (`B7`)
+- [x] TSX (`BA`)
+- [x] TYX (`BB`)
+- [x] BNE (`D0`)
+- [x] XBA (`EB`)
+- [x] BEQ (`F0`)
 - [x] Base-cycle accounting for the implemented subset
+- [x] Linear 24-bit word access across bank boundaries
+- [x] Absolute indexed page/write/X cycle rule for implemented opcodes
+- [x] Direct Page bank-zero address formation for implemented opcodes
+- [x] Emulation-mode aligned Direct Page wrapping for implemented opcodes
+- [x] Direct Page DL and width cycle additions for implemented opcodes
+- [x] Regular 16-bit Direct-indirect pointer wrapping for implemented opcodes
+- [x] Direct-indirect-long linear pointer-byte exception for implemented opcodes
+- [x] Indirect DBR versus long-pointer data-bank selection for implemented opcodes
+- [x] Direct-indirect pre/post-index and cycle rules for implemented opcodes
+- [x] Full-source and destination-selected M/X width for implemented transfers
+- [x] Mixed M/X transfer preservation, truncation and zero extension
+- [x] Register-transfer N/Z flags and two-cycle timing
+- [x] Fixed-width C/D/S transfer behavior and 16-bit N/Z
+- [x] Native/emulation TCS/TXS stack-high behavior
+- [x] XBA byte exchange, 8-bit N/Z and three-cycle timing
+- [x] Conditional branch taken/not-taken flag selection and status preservation
+- [x] Signed 8-bit and 16-bit relative offsets from the advanced PC
+- [x] Relative and relative-long PC wrapping within unchanged PBR
+- [x] Conditional/BRA taken and emulation-only page-cross cycle additions
+- [x] BRL fixed four-cycle timing
 
 ## Bus
 

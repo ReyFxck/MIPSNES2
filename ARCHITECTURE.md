@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 14-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 71-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -52,6 +52,26 @@ physical pointer belongs in CPU state.
 The CPU's `instruction_cycles` counts completed instruction base cycles only. It is
 not master time; reset timing, 5A22 memory speed, wait states and arbitration remain
 future scheduler/bus work. An unimplemented opcode enters a sticky diagnostic stop.
+Program fetch wraps PC inside PBR. Implemented data addressing is linear across the
+24-bit space for absolute/long forms: word accesses and absolute indexing may carry
+into the next bank. Direct and Direct-indexed forms always emit bank-zero addresses.
+With E=1 and DL=0, their effective low byte wraps within the D high-byte page;
+otherwise D, the operand and any index add across the full 16-bit bank-zero range.
+Implemented 16-bit Direct-indirect pointers use that same page-wrap rule, then DBR
+supplies the data bank. The WDC exception for 24-bit Direct-indirect-long pointers
+instead advances the pointer-byte reads linearly in bank zero; the pointer itself
+supplies the data bank. Post-indexing advances the resulting full 24-bit address.
+These distinctions are owned by CPU addressing helpers rather than the generic bus.
+Implemented A/X/Y transfers expose the full 16-bit source register internally, then
+use the destination's M- or X-selected width for storage and N/Z. This keeps mixed
+M/X behavior in shared helpers rather than duplicating interpreter paths.
+Direct/stack transfers remain full-width where the architecture requires it. Stack
+destinations enforce `SH=01` only in emulation mode, and XBA exchanges the stored
+accumulator bytes independently of M. These rules remain in the platform-free core.
+Relative branches sign-extend their encoded displacement without host-dependent
+signed casts, add it to the already-advanced 16-bit PC and never change PBR. The
+shared branch helper owns taken and emulation-only page-cross cycle additions; BRL
+uses a separate fixed four-cycle signed-16-bit path.
 
 ## Scheduler and timing proposal
 
@@ -110,6 +130,21 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   cache archives, not cross-PR compiler output. No custom container registry yet.
 - 2026-10-10: Reference CPU/bus foundation uses caller-owned C99 state, a replaceable
   bus interface and completed-instruction base cycles; no optimized target path yet.
+- 2026-10-10: Implemented data operands use linear 24-bit increments and indexed
+  carry; instruction fetch remains bank-local through PBR:PC.
+- 2026-10-10: Implemented Direct Page operands remain in bank zero and follow the
+  sourced E/DL page-wrap rule; the reference bus remains addressing-mode agnostic.
+- 2026-10-10: Implemented Direct-indirect forms keep pointer reads in bank zero;
+  regular pointers follow E/DL wrapping and use DBR, while long pointers use the
+  documented linear pointer-byte exception and supply their own data bank.
+- 2026-10-10: A/X/Y transfers expose the full source and apply destination-selected
+  M/X width to storage and N/Z; mixed-width behavior remains platform independent.
+- 2026-10-11: Direct/stack transfers and XBA follow their fixed-width, emulation-SH
+  and byte-exchange rules in shared C; the complete register-transfer family is now
+  represented without implementing stack memory operations.
+- 2026-10-11: Relative branch targets remain within PBR, signed displacements use
+  explicit portable sign extension, and the complete branch family shares tested
+  taken/page-cross timing rules in the platform-independent interpreter.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements
