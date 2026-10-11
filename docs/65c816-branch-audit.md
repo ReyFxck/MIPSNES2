@@ -75,8 +75,19 @@ These are cross-build results only; the outputs were not executed.
 
 ## GitHub Actions evidence
 
-Pending publication and inspection of the Host, PS2 and PSP workflow runs for the
-reviewable implementation commit.
+The first published implementation commit was
+`12b0df63c8f78847190e8ddad356da70a4442151`. All triggered workflows completed
+successfully on the first attempt:
+
+| Workflow | Verified jobs | Result |
+|---|---|---|
+| [Host CI run 38151490216](https://github.com/ReyFxck/MIPSNES2/actions/runs/38151490216) | GCC and Clang release builds/tests; GCC and Clang sanitizer builds/tests; two host artifact uploads | Passed |
+| [PS2 CI run 38151490189](https://github.com/ReyFxck/MIPSNES2/actions/runs/38151490189) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+| [PSP CI run 38151490206](https://github.com/ReyFxck/MIPSNES2/actions/runs/38151490206) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+
+The artifact API reports two nonempty host artifacts plus nonempty PS2 and PSP
+artifacts, all associated with the correct PR head. The final documentation commit
+is validated separately and its workflow URLs are recorded in the PR conversation.
 
 ## Validation limits
 

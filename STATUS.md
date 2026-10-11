@@ -190,8 +190,10 @@ The branch-family milestone on 2026-10-11 verifies BPL/BMI/BVC/BVS/BCC/BCS/BNE/B
 BRA and BRL on host GCC debug, release and ASan+UBSan builds. Tests cover taken and
 non-taken conditions, signed 8/16-bit offsets, unchanged status, PBR-local PC
 wrapping, and exact 2/3/4-cycle behavior in native and emulation modes. Pinned
-PS2SDK/PSPSDK cross-builds compile the changed core and pass. Exact evidence and
-validation limits are in docs/65c816-branch-audit.md.
+PS2SDK/PSPSDK cross-builds compile the changed core and pass. GitHub Host GCC/Clang
+release and sanitizer jobs plus pinned PS2/PSP cross-build, artifact and checksum
+jobs passed for the implementation commit. Exact evidence and validation limits are
+in docs/65c816-branch-audit.md.
 
 ## Current blockers and diagnostic exceptions
 
