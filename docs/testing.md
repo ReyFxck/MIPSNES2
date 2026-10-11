@@ -15,8 +15,11 @@ selection, pre/post indexing, full-address carry and indexed-read penalties. The
 register-transfer regressions cover emulation, native and mixed M/X widths, including
 destination high-byte rules, zero extension, N/Z and exact cycles. Special-transfer
 regressions cover the fixed-width C/D/S paths, emulation/native stack-high rules,
-8/16-bit TSX/TXS and XBA byte exchange. The host smoke script checks the honest banner
-and rejects ROM/unknown arguments. The repository checker verifies
+8/16-bit TSX/TXS and XBA byte exchange. Branch regressions execute all eight
+conditional opcodes in taken and non-taken paths plus BRA and BRL; they cover signed
+offsets, PBR-local 16-bit PC wrapping, unchanged status and exact 2/3/4-cycle rules.
+The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
+repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
 pins and forbidden core includes. It is a guardrail, not proof of complete emulation.
 
@@ -64,6 +67,8 @@ Register-transfer milestone evidence is recorded in
 [65c816-register-transfer-audit.md](65c816-register-transfer-audit.md).
 Special-transfer completion evidence is recorded in
 [65c816-special-transfer-audit.md](65c816-special-transfer-audit.md).
+Branch-family completion evidence is recorded in
+[65c816-branch-audit.md](65c816-branch-audit.md).
 
 ## End-of-task audit
 

@@ -53,7 +53,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Stack-relative addressing
 - [ ] [IN PROGRESS] Indexed addressing
 - [ ] [IN PROGRESS] Indirect addressing
-- [ ] [IN PROGRESS] Branch instructions
+- [x] Branch instructions
 - [ ] [IN PROGRESS] Load/store instructions
 - [ ] Arithmetic instructions
 - [ ] Logic instructions
