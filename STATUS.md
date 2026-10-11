@@ -200,8 +200,9 @@ on host GCC debug, release and ASan+UBSan builds. Tests cover exact D/I/V change
 unrelated-status and register preservation, one-byte PC movement, fixed two-cycle
 timing and identical behavior in emulation/native modes. Pinned PS2SDK/PSPSDK
 cross-builds compile the changed core and pass. Exact evidence and validation limits
-are in docs/65c816-status-control-audit.md; GitHub CI remains required for the
-published commit.
+are in docs/65c816-status-control-audit.md. GitHub Host GCC/Clang release and
+sanitizer jobs plus pinned PS2/PSP cross-build, artifact and checksum jobs passed for
+the implementation commit.
 
 ## Current blockers and diagnostic exceptions
 

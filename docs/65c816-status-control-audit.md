@@ -69,8 +69,22 @@ is not console execution.
 
 ## GitHub Actions evidence
 
-Pending publication. The PR must pass Host GCC/Clang, sanitizer, pinned PS2/PSP
-cross-build, artifact and checksum jobs before this milestone is review-ready.
+The published implementation commit is
+`7a23b892fd52cfefa1af9074a2558ac1d4d24a9f`. All triggered workflows completed
+successfully:
+
+| Workflow | Verified jobs | Result |
+|---|---|---|
+| [Host CI run 38178044963](https://github.com/ReyFxck/MIPSNES2/actions/runs/38178044963) | GCC and Clang release builds/tests; GCC and Clang sanitizer builds/tests; two host artifact uploads | Passed |
+| [PS2 CI run 38178044932](https://github.com/ReyFxck/MIPSNES2/actions/runs/38178044932) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+| [PSP CI run 38178044938](https://github.com/ReyFxck/MIPSNES2/actions/runs/38178044938) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+
+The artifact API reports two nonempty Host archives (18,302 and 17,779 bytes), one
+nonempty PS2 archive (410,973 bytes) and one nonempty PSP archive (92,337 bytes).
+Each workflow identifies the implementation head SHA. GitHub checks out a synthetic
+PR merge commit for artifact naming; this does not change the recorded branch head.
+The final documentation commit is validated separately and its workflow URLs are
+recorded in the PR conversation.
 
 ## Validation limits
 
