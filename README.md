@@ -28,8 +28,8 @@ Current milestone: Phase 2 — incremental 65C816 reference interpreter.
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
 
-Phase 1's foundation exit gate and the complete register-transfer family are verified
-locally. The next focused milestone should implement the conditional branch family
+Phase 1's foundation exit gate and the complete register-transfer family are verified.
+The next focused milestone should implement the conditional branch family
 and BRL with signed-offset, bank-wrap and exact-cycle tests. Do not start with a
 dynarec, renderer or enhancement chips.
 

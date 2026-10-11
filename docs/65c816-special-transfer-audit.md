@@ -75,8 +75,19 @@ are cross-build results only; the outputs were not executed.
 
 ## GitHub Actions evidence
 
-Pending publication. Workflow success, artifacts and checksums are not claimed by
-the existence of local files or workflow YAML.
+The first published implementation commit was
+`71a3f04e8add9b733f2247db9d6f88f65bfb3b59`. All triggered workflows completed
+successfully on the first attempt:
+
+| Workflow | Verified jobs | Result |
+|---|---|---|
+| [Host CI run 38104019383](https://github.com/ReyFxck/MIPSNES2/actions/runs/38104019383) | GCC and Clang release builds/tests; GCC and Clang sanitizer builds/tests; two host artifact uploads | Passed |
+| [PS2 CI run 38104019341](https://github.com/ReyFxck/MIPSNES2/actions/runs/38104019341) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+| [PSP CI run 38104019378](https://github.com/ReyFxck/MIPSNES2/actions/runs/38104019378) | Pinned toolchain install, cross-build, artifact/checksum staging and upload | Passed |
+
+The artifact API reports two nonempty host artifacts plus nonempty PS2 and PSP
+artifacts, all associated with the correct PR head. The final documentation commit is
+validated separately and its workflow URLs are recorded in the PR conversation.
 
 ## Validation limits
 

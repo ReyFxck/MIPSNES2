@@ -182,8 +182,9 @@ The special-transfer milestone on 2026-10-11 verifies TCS/TSC/TCD/TDC/TXS/TSX/XB
 on host GCC debug, release and ASan+UBSan builds. Tests cover fixed-width C/D/S
 transfers, native/emulation stack-high rules, X-selected TSX/TXS behavior, XBA flags,
 PC movement and exact base cycles. Pinned PS2SDK/PSPSDK cross-builds compile the
-changed core and pass. GitHub execution remains a separate gate until the branch is
-published. Exact evidence and limits are in docs/65c816-special-transfer-audit.md.
+changed core and pass. GitHub Host GCC/Clang release and sanitizer jobs plus pinned
+PS2/PSP cross-build, artifact and checksum jobs passed for the implementation commit.
+Exact evidence and limits are in docs/65c816-special-transfer-audit.md.
 
 ## Current blockers and diagnostic exceptions
 
