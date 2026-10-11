@@ -1533,6 +1533,93 @@ static int test_xba_width_independence(void)
     return 0;
 }
 
+static int test_status_control_instructions(void)
+{
+    static const uint8_t program[] = {
+        0xd8, /* CLD */
+        0x58, /* CLI */
+        0xb8, /* CLV */
+        0xf8, /* SED */
+        0x78  /* SEI */
+    };
+    cpu_fixture fixture;
+    mipsnes2_cpu *cpu = &fixture.cpu;
+    uint16_t initial_a;
+    uint16_t initial_x;
+    uint16_t initial_y;
+    uint16_t initial_s;
+    uint16_t initial_d;
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x93a0)) == 0);
+    (void)memcpy(&bank7e[0x93a0], program, sizeof(program));
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->dbr = UINT8_C(0x45);
+    cpu->a = UINT16_C(0x1234);
+    cpu->x = UINT16_C(0x0056);
+    cpu->y = UINT16_C(0x0078);
+    cpu->s = UINT16_C(0x019a);
+    cpu->d = UINT16_C(0xbcde);
+    cpu->p = UINT8_C(0xff);
+    initial_a = cpu->a;
+    initial_x = cpu->x;
+    initial_y = cpu->y;
+    initial_s = cpu->s;
+    initial_d = cpu->d;
+
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->p == UINT8_C(0xf7));
+    CHECK(cpu->pc == UINT16_C(0x93a1));
+    CHECK(cpu->instruction_cycles == UINT64_C(2));
+
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->p == UINT8_C(0xf3));
+    CHECK(cpu->pc == UINT16_C(0x93a2));
+    CHECK(cpu->instruction_cycles == UINT64_C(4));
+
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->p == UINT8_C(0xb3));
+    CHECK(cpu->pc == UINT16_C(0x93a3));
+    CHECK(cpu->instruction_cycles == UINT64_C(6));
+
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->p == UINT8_C(0xbb));
+    CHECK(cpu->pc == UINT16_C(0x93a4));
+    CHECK(cpu->instruction_cycles == UINT64_C(8));
+
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->p == UINT8_C(0xbf));
+    CHECK(cpu->pc == UINT16_C(0x93a5));
+    CHECK(cpu->instruction_cycles == UINT64_C(10));
+    CHECK(cpu->emulation);
+    CHECK(cpu->pbr == UINT8_C(0x7e));
+    CHECK(cpu->dbr == UINT8_C(0x45));
+    CHECK(cpu->a == initial_a);
+    CHECK(cpu->x == initial_x);
+    CHECK(cpu->y == initial_y);
+    CHECK(cpu->s == initial_s);
+    CHECK(cpu->d == initial_d);
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x93b0)) == 0);
+    (void)memcpy(&bank7e[0x93b0], program, sizeof(program));
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->emulation = false;
+    cpu->p = MIPSNES2_CPU_FLAG_N | MIPSNES2_CPU_FLAG_V |
+             MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X |
+             MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_I |
+             MIPSNES2_CPU_FLAG_Z | MIPSNES2_CPU_FLAG_C;
+
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(!cpu->emulation);
+    CHECK(cpu->p == UINT8_C(0xbf));
+    CHECK(cpu->pc == UINT16_C(0x93b5));
+    CHECK(cpu->instruction_cycles == UINT64_C(10));
+    return 0;
+}
+
 static int test_control_flow_and_faults(void)
 {
     cpu_fixture fixture;
@@ -1836,11 +1923,12 @@ int main(void)
     CHECK(test_special_transfers_native_mode() == 0);
     CHECK(test_stack_transfers_native_8_bit_index() == 0);
     CHECK(test_xba_width_independence() == 0);
+    CHECK(test_status_control_instructions() == 0);
     CHECK(test_control_flow_and_faults() == 0);
     CHECK(test_conditional_branches() == 0);
     CHECK(test_branch_timing_and_program_bank() == 0);
     CHECK(test_branch_relative_long() == 0);
     CHECK(test_rep_in_emulation() == 0);
-    (void)puts("PASS: logical bus and 65C816 branch subset");
+    (void)puts("PASS: logical bus and 65C816 status-control subset");
     return 0;
 }

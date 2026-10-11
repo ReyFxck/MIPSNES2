@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 71-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 76-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -72,6 +72,9 @@ Relative branches sign-extend their encoded displacement without host-dependent
 signed casts, add it to the already-advanced 16-bit PC and never change PBR. The
 shared branch helper owns taken and emulation-only page-cross cycle additions; BRL
 uses a separate fixed four-cycle signed-16-bit path.
+Implied CLD/SED, CLI/SEI and CLV modify only their documented P bit, advance PC by
+one byte and take two processor cycles in either emulation or native mode. They do
+not invoke width/mode normalization or touch registers.
 
 ## Scheduler and timing proposal
 
@@ -145,6 +148,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-11: Relative branch targets remain within PBR, signed displacements use
   explicit portable sign extension, and the complete branch family shares tested
   taken/page-cross timing rules in the platform-independent interpreter.
+- 2026-10-11: Implied decimal, interrupt-disable and overflow status controls change
+  only their documented P bit with fixed two-cycle timing in both CPU modes.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements
