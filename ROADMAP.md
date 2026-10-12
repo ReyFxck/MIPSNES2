@@ -55,7 +55,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Indirect addressing
 - [x] Branch instructions
 - [ ] [IN PROGRESS] Load/store instructions
-- [ ] Arithmetic instructions
+- [ ] [IN PROGRESS] Arithmetic instructions — accumulator/index register increment-decrement subset only
 - [ ] Logic instructions
 - [ ] Shift/rotate instructions
 - [x] Transfer instructions

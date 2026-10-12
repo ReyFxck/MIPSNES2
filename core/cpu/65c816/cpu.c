@@ -191,6 +191,41 @@ static void exchange_accumulator_bytes(mipsnes2_cpu *cpu)
     cpu->instruction_cycles += UINT64_C(3);
 }
 
+static void change_accumulator(mipsnes2_cpu *cpu, bool increment)
+{
+    if (accumulator_is_8_bit(cpu)) {
+        uint8_t value = (uint8_t)cpu->a;
+
+        value = increment ? (uint8_t)(value + UINT8_C(1))
+                          : (uint8_t)(value - UINT8_C(1));
+        cpu->a = (uint16_t)((cpu->a & UINT16_C(0xff00)) | value);
+        set_nz8(cpu, value);
+    } else {
+        cpu->a = increment ? (uint16_t)(cpu->a + UINT16_C(1))
+                           : (uint16_t)(cpu->a - UINT16_C(1));
+        set_nz16(cpu, cpu->a);
+    }
+    cpu->instruction_cycles += UINT64_C(2);
+}
+
+static void change_index(mipsnes2_cpu *cpu, uint16_t *target,
+                         bool increment)
+{
+    if (index_is_8_bit(cpu)) {
+        uint8_t value = (uint8_t)*target;
+
+        value = increment ? (uint8_t)(value + UINT8_C(1))
+                          : (uint8_t)(value - UINT8_C(1));
+        *target = value;
+        set_nz8(cpu, value);
+    } else {
+        *target = increment ? (uint16_t)(*target + UINT16_C(1))
+                            : (uint16_t)(*target - UINT16_C(1));
+        set_nz16(cpu, *target);
+    }
+    cpu->instruction_cycles += UINT64_C(2);
+}
+
 static int16_t signed_offset8(uint8_t value)
 {
     return (value & UINT8_C(0x80)) != 0U
@@ -495,12 +530,18 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_C;
         cpu->instruction_cycles += UINT64_C(2);
         break;
+    case 0x1a: /* INC accumulator */
+        change_accumulator(cpu, true);
+        break;
     case 0x30: /* BMI */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_N) != 0U);
         break;
     case 0x38: /* SEC */
         cpu->p |= MIPSNES2_CPU_FLAG_C;
         cpu->instruction_cycles += UINT64_C(2);
+        break;
+    case 0x3a: /* DEC accumulator */
+        change_accumulator(cpu, false);
         break;
     case 0x3b: /* TSC */
         transfer16_to_accumulator(cpu, cpu->s);
@@ -586,6 +627,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         address = direct_indirect_long_address(cpu, 0U);
         store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
                      direct_penalized_cycles(cpu, UINT64_C(6)));
+        break;
+    case 0x88: /* DEY */
+        change_index(cpu, &cpu->y, false);
         break;
     case 0x8a: /* TXA */
         transfer_to_accumulator(cpu, index_register_value(cpu, cpu->x));
@@ -859,6 +903,12 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         apply_mode_invariants(cpu);
         cpu->instruction_cycles += UINT64_C(3);
         break;
+    case 0xc8: /* INY */
+        change_index(cpu, &cpu->y, true);
+        break;
+    case 0xca: /* DEX */
+        change_index(cpu, &cpu->x, false);
+        break;
     case 0xd0: /* BNE */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_Z) == 0U);
         break;
@@ -871,6 +921,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         cpu->p |= operand;
         apply_mode_invariants(cpu);
         cpu->instruction_cycles += UINT64_C(3);
+        break;
+    case 0xe8: /* INX */
+        change_index(cpu, &cpu->x, true);
         break;
     case 0xea: /* NOP */
         cpu->instruction_cycles += UINT64_C(2);
