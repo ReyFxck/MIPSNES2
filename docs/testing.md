@@ -40,6 +40,10 @@ Stack-relative accumulator load/store regressions execute all four LDA/STA forms
 both M widths. They cover 8-bit B preservation, LDA N/Z isolation, STA status
 preservation, bank-zero 16-bit load/store wrap, DBR plus Y carry, emulation-mode full
 S addressing, PC movement and exact 4/7-cycle bases plus the M=0 width cycle.
+Binary immediate arithmetic regressions execute ADC/SBC at both M widths. They cover
+carry/borrow input, carry/no-borrow output, signed overflow in both directions,
+selected-width N/Z, B and unrelated-status preservation, PC/cycles, and the explicit
+sticky D=1 diagnostic stop before operand fetch.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -105,6 +109,8 @@ Stack-relative accumulator-ALU evidence is recorded in
 [65c816-stack-relative-audit.md](65c816-stack-relative-audit.md).
 Stack-relative LDA/STA evidence is recorded in
 [65c816-stack-relative-load-store-audit.md](65c816-stack-relative-load-store-audit.md).
+Binary immediate ADC/SBC evidence is recorded in
+[65c816-binary-arithmetic-audit.md](65c816-binary-arithmetic-audit.md).
 
 ## End-of-task audit
 

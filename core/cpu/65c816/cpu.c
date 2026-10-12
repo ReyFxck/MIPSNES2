@@ -307,6 +307,65 @@ static void compare_value(mipsnes2_cpu *cpu, uint16_t left,
     }
 }
 
+static void arithmetic_accumulator_binary(mipsnes2_cpu *cpu,
+                                          uint16_t operand,
+                                          bool subtract,
+                                          uint64_t base_cycles)
+{
+    bool wide = !accumulator_is_8_bit(cpu);
+    uint32_t mask = wide ? UINT32_C(0xffff) : UINT32_C(0x00ff);
+    uint32_t sign = wide ? UINT32_C(0x8000) : UINT32_C(0x0080);
+    uint32_t left = cpu->a & mask;
+    uint32_t right = operand & mask;
+    uint32_t result;
+    bool carry;
+    bool overflow;
+
+    if (subtract) {
+        uint32_t borrow = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U ? 0U : 1U;
+        uint32_t subtrahend = right + borrow;
+
+        result = (left - subtrahend) & mask;
+        carry = left >= subtrahend;
+        overflow = ((left ^ right) & (left ^ result) & sign) != 0U;
+    } else {
+        uint32_t carry_in = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U ? 1U : 0U;
+        uint32_t sum = left + right + carry_in;
+
+        result = sum & mask;
+        carry = sum > mask;
+        overflow = ((~(left ^ right) & (left ^ result)) & sign) != 0U;
+    }
+
+    cpu->p &= (uint8_t)~(MIPSNES2_CPU_FLAG_V | MIPSNES2_CPU_FLAG_C);
+    if (wide) {
+        cpu->a = (uint16_t)result;
+        set_nz16(cpu, cpu->a);
+    } else {
+        cpu->a = (uint16_t)((cpu->a & UINT16_C(0xff00)) |
+                            (uint16_t)result);
+        set_nz8(cpu, (uint8_t)result);
+    }
+    if (overflow) {
+        cpu->p |= MIPSNES2_CPU_FLAG_V;
+    }
+    if (carry) {
+        cpu->p |= MIPSNES2_CPU_FLAG_C;
+    }
+    cpu->instruction_cycles += base_cycles + (wide ? UINT64_C(1)
+                                                    : UINT64_C(0));
+}
+
+static bool stop_for_unimplemented_decimal_arithmetic(mipsnes2_cpu *cpu)
+{
+    if ((cpu->p & MIPSNES2_CPU_FLAG_D) == 0U) {
+        return false;
+    }
+    cpu->stopped = true;
+    cpu->stop_reason = MIPSNES2_CPU_UNIMPLEMENTED_DECIMAL_ARITHMETIC;
+    return true;
+}
+
 static void test_bits(mipsnes2_cpu *cpu, uint16_t operand,
                       bool immediate, uint64_t base_cycles)
 {
@@ -1089,6 +1148,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(5));
         break;
+    case 0x69: /* ADC immediate, binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        arithmetic_accumulator_binary(cpu, fetch_accumulator_operand(cpu),
+                                      false, UINT64_C(2));
+        break;
     case 0x70: /* BVS */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) != 0U);
         break;
@@ -1615,6 +1681,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0xe8: /* INX */
         change_index(cpu, &cpu->x, true);
+        break;
+    case 0xe9: /* SBC immediate, binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        arithmetic_accumulator_binary(cpu, fetch_accumulator_operand(cpu),
+                                      true, UINT64_C(2));
         break;
     case 0xea: /* NOP */
         cpu->instruction_cycles += UINT64_C(2);
