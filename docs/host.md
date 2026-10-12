@@ -27,7 +27,7 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the 76-opcode CPU
+repository structure/boundaries/checklists; the reference bus; and the 82-opcode CPU
 subset described in [65c816.md](65c816.md). CPU regressions include implemented
 8/16-bit widths, flags, cycles, Direct Page/indexed/pointer wrapping and penalties,
 regular-indirect DBR selection, long-indirect bank selection, absolute indexing and
@@ -40,3 +40,5 @@ regressions cover every conditional opcode plus BRA/BRL, taken and non-taken pat
 signed 8/16-bit offsets, PBR-local PC wrapping, flag preservation and exact native/
 emulation cycle differences. Status-control regressions cover isolated D/I/V changes,
 unrelated-state preservation and exact two-cycle behavior in both CPU modes.
+Register increment/decrement regressions cover M/X-selected 8/16-bit wrapping, B
+preservation, index zero extension, isolated N/Z changes and fixed two-cycle timing.

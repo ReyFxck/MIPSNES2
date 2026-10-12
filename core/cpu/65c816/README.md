@@ -1,9 +1,9 @@
 # core/cpu/65c816
 
-Contains the caller-owned reference CPU state and a deliberately partial 76-opcode
+Contains the caller-owned reference CPU state and a deliberately partial 82-opcode
 interpreter subset. Immediate, Direct Page, Direct-indexed, Direct-indirect,
 absolute, absolute-indexed and absolute-long load/store foundations plus the complete
-register-transfer and branch families and implied single-flag status controls are
-covered. Read
+register-transfer and branch families, implied single-flag status controls and
+accumulator/index register increment-decrement operations are covered. Read
 [docs/65c816.md](../../../docs/65c816.md) for the exact implemented opcode list,
 timing contract and known limits. Do not infer complete 65C816 support.
