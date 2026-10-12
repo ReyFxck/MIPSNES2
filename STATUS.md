@@ -277,9 +277,10 @@ tests cover carry input and borrow convention, carry out/no-borrow, signed overf
 N/Z, wrap, 8-bit B preservation, operand length and exact 2/3-cycle timing. D=1 stops
 before operand fetch with `MIPSNES2_CPU_UNIMPLEMENTED_DECIMAL_ARITHMETIC`; decimal
 behavior is not approximated. Pinned PS2 and PSP cross-builds compile and produce
-nonempty artifacts. GitHub workflow evidence remains pending and is tracked in
-docs/65c816-binary-arithmetic-audit.md. All other ADC/SBC forms and decimal arithmetic
-remain incomplete.
+nonempty artifacts. GitHub Host GCC/Clang plus pinned PS2/PSP jobs passed for the
+implementation commit, and downloaded artifacts plus archive/internal checksums were
+inspected. Exact evidence is in docs/65c816-binary-arithmetic-audit.md. All other
+ADC/SBC forms and decimal arithmetic remain incomplete.
 
 ## Current blockers and diagnostic exceptions
 

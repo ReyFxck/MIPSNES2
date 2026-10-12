@@ -65,9 +65,27 @@ installed locally, so the GitHub Clang job remains required.
 | `make -f Makefile.psp clean all` | Passed with the pinned PSP toolchain v20261001 / GCC 15.2.0; produced a nonempty 184,082-byte `EBOOT.PBP` |
 | `python3 tools/check_repository.py` | Passed after the implementation and documentation updates |
 
-The PS2 and PSP SDKs were reused from the locally cached pinned toolchains. GitHub
-GCC/Clang, cross-build and artifact/checksum evidence remains pending until this
-branch is published and its workflows finish.
+The PS2 and PSP SDKs were reused from the locally cached pinned toolchains.
+Cross-build success is not console execution. GitHub Actions evidence is recorded
+below.
+
+## GitHub Actions evidence
+
+Implementation commit: `f7a74d054fa6016233286df5fbdc3aa2309bde0d`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38271749149](https://github.com/ReyFxck/MIPSNES2/actions/runs/38271749149) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38271749145](https://github.com/ReyFxck/MIPSNES2/actions/runs/38271749145) | Passed pinned cross-build and checksum job | 1,400,384-byte MIPS ELF |
+| PSP CI | [38271749189](https://github.com/ReyFxck/MIPSNES2/actions/runs/38271749189) | Passed pinned cross-build and checksum job | 184,082-byte `EBOOT.PBP` |
+
+All four downloaded artifact archives are nonempty and unexpired. Each downloaded
+archive digest matches GitHub artifact metadata, and every embedded `SHA256SUMS`
+entry validates. Artifact metadata identifies branch head
+`f7a74d054fa6016233286df5fbdc3aa2309bde0d`; artifact names and `BUILD.txt` use the
+pull request's synthetic merge commit
+`513c8f3a753fce6ba8bdbb1fffaa32f0711564e1`. The final documentation-only commit is
+verified separately and recorded in the pull request conversation.
 
 ## Validation limits
 
