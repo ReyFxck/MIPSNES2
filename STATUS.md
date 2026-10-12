@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 145-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 153-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -246,6 +246,18 @@ is recorded in docs/65c816-eor-cmp-audit.md. GitHub Host GCC/Clang plus pinned
 PS2/PSP jobs passed for the implementation commit, and downloaded artifacts plus
 archive/internal checksums were inspected.
 
+The stack-relative accumulator-ALU milestone on 2026-10-12 adds eight verified
+opcodes and completes the ORA/AND/EOR/CMP instruction families. Host GCC debug,
+release and ASan+UBSan tests cover both M widths, full 16-bit `S + offset` formation,
+bank-zero operand/pointer wrapping, DBR plus Y 24-bit carry, native/emulation
+behavior, flags and exact 4/7-cycle bases without Direct Page, page-cross or X-width
+penalties. Pinned PS2SDK/PSPSDK cross-builds compile the 153-opcode core and produce
+nonempty target artifacts. Exact local evidence and the initial expired-temporary-
+path setup failure are recorded in docs/65c816-stack-relative-audit.md. GitHub
+Actions execution and artifact inspection remain pending publication. Stack-relative
+addressing as a whole remains in progress because ADC/SBC/LDA/STA forms are not
+implemented.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -259,18 +271,18 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 145-opcode subset only
+- [ ] [IN PROGRESS] Opcode dispatch — 153-opcode subset only
 - [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP and base logic/compare forms only
 - [ ] [IN PROGRESS] Absolute addressing — JMP, loads/stores and base logic/compare/BIT forms only
 - [ ] [IN PROGRESS] Long addressing — LDA/STA plus ORA/AND/EOR/CMP absolute long and absolute long,X implemented only
 - [ ] [IN PROGRESS] Direct Page addressing — loads/stores, ORA/AND/EOR/CMP non-stack families and CPX/CPY/BIT forms only
-- [ ] Stack-relative addressing
-- [ ] [IN PROGRESS] Indexed addressing — load/store subset, non-stack ORA/AND/EOR/CMP forms and Direct-X/absolute-X BIT only
-- [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP `(direct,X)`, `(direct)`, `(direct),Y`, `[direct]` and `[direct],Y` only
+- [ ] [IN PROGRESS] Stack-relative addressing — ORA/AND/EOR/CMP forms only; ADC/SBC/LDA/STA absent
+- [ ] [IN PROGRESS] Indexed addressing — load/store subset, complete ORA/AND/EOR/CMP forms and Direct-X/absolute-X BIT only
+- [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP Direct-indirect forms plus ORA/AND/EOR/CMP `(stack-relative),Y` only
 - [x] Branch instructions
 - [ ] [IN PROGRESS] Load/store instructions — immediate, direct/indirect, absolute, indexed and long subset only
-- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, CMP complete except stack-relative forms, and complete CPX/CPY subsets only
-- [ ] [IN PROGRESS] Logic instructions — ORA/AND/EOR complete except stack-relative forms; complete BIT family implemented
+- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC and complete CMP/CPX/CPY families only
+- [ ] [IN PROGRESS] Logic instructions — complete ORA/AND/EOR/BIT families; TSB/TRB and shifts remain
 - [ ] Shift/rotate instructions
 - [x] Transfer instructions
 - [ ] Stack instructions
@@ -290,7 +302,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
 - [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, logic/compare and register INC/DEC timing only
-- [ ] [IN PROGRESS] CPU automated tests — all 145 implemented opcodes and addressing behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] CPU automated tests — all 153 implemented opcodes and addressing behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -382,6 +394,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] BEQ (`F0`)
 - [x] SED (`F8`)
 - [x] ORA direct-indexed-indirect (`01`)
+- [x] ORA stack-relative (`03`)
 - [x] ORA direct (`05`)
 - [x] ORA direct-indirect-long (`07`)
 - [x] ORA immediate (`09`)
@@ -389,12 +402,14 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] ORA absolute long (`0F`)
 - [x] ORA direct-indirect-indexed,Y (`11`)
 - [x] ORA direct-indirect (`12`)
+- [x] ORA stack-relative-indirect-indexed,Y (`13`)
 - [x] ORA direct,X (`15`)
 - [x] ORA direct-indirect-long-indexed,Y (`17`)
 - [x] ORA absolute,Y (`19`)
 - [x] ORA absolute,X (`1D`)
 - [x] ORA absolute long,X (`1F`)
 - [x] AND direct-indexed-indirect (`21`)
+- [x] AND stack-relative (`23`)
 - [x] BIT direct (`24`)
 - [x] AND direct (`25`)
 - [x] AND direct-indirect-long (`27`)
@@ -404,6 +419,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] AND absolute long (`2F`)
 - [x] AND direct-indirect-indexed,Y (`31`)
 - [x] AND direct-indirect (`32`)
+- [x] AND stack-relative-indirect-indexed,Y (`33`)
 - [x] BIT direct,X (`34`)
 - [x] AND direct,X (`35`)
 - [x] AND direct-indirect-long-indexed,Y (`37`)
@@ -412,6 +428,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] AND absolute,X (`3D`)
 - [x] AND absolute long,X (`3F`)
 - [x] EOR direct-indexed-indirect (`41`)
+- [x] EOR stack-relative (`43`)
 - [x] EOR direct (`45`)
 - [x] EOR direct-indirect-long (`47`)
 - [x] EOR immediate (`49`)
@@ -419,6 +436,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] EOR absolute long (`4F`)
 - [x] EOR direct-indirect-indexed,Y (`51`)
 - [x] EOR direct-indirect (`52`)
+- [x] EOR stack-relative-indirect-indexed,Y (`53`)
 - [x] EOR direct,X (`55`)
 - [x] EOR direct-indirect-long-indexed,Y (`57`)
 - [x] EOR absolute,Y (`59`)
@@ -427,6 +445,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] BIT immediate (`89`)
 - [x] CPY immediate (`C0`)
 - [x] CMP direct-indexed-indirect (`C1`)
+- [x] CMP stack-relative (`C3`)
 - [x] CPY direct (`C4`)
 - [x] CMP direct (`C5`)
 - [x] CMP direct-indirect-long (`C7`)
@@ -436,6 +455,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CMP absolute long (`CF`)
 - [x] CMP direct-indirect-indexed,Y (`D1`)
 - [x] CMP direct-indirect (`D2`)
+- [x] CMP stack-relative-indirect-indexed,Y (`D3`)
 - [x] CMP direct,X (`D5`)
 - [x] CMP direct-indirect-long-indexed,Y (`D7`)
 - [x] CMP absolute,Y (`D9`)
@@ -471,6 +491,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Non-stack ORA/AND indexed, indirect and long address/cycle behavior
 - [x] Base CMP and complete CPX/CPY selected-width N/Z/C behavior
 - [x] Non-stack EOR/CMP indexed, indirect and long address/cycle behavior
+- [x] Stack-relative ORA/AND/EOR/CMP bank-zero address, pointer, DBR/Y and cycle behavior
 - [x] Complete BIT selected-width Z, memory N/V and immediate N/V-preservation behavior
 
 ## Bus

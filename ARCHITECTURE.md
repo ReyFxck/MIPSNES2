@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 145-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 153-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -82,9 +82,11 @@ ORA, AND and EOR use M-selected accumulator width, preserve B in 8-bit mode and
 update only N/Z. CMP uses M while CPX/CPY use X; comparisons preserve operands and
 set N/Z from the selected-width subtraction plus C for no borrow. BIT uses M, never
 changes A, and sets Z from A AND operand. Memory BIT also copies the operand's top
-two selected-width bits into N/V; immediate BIT preserves N/V. ORA, AND, EOR and CMP reuse the
-same Direct, indexed, indirect and long address helpers as LDA/STA; their stack-
-relative forms remain unimplemented rather than introducing a premature stack path.
+two selected-width bits into N/V; immediate BIT preserves N/V. ORA, AND, EOR and CMP
+reuse the same Direct, indexed, indirect and long address helpers as LDA/STA. Their
+stack-relative forms use explicit bank-zero `S + offset` addressing; indirect-indexed
+forms read a bank-zero 16-bit pointer, apply DBR and then add Y across the 24-bit
+space. Stack-relative ADC/SBC/LDA/STA and stack push/pull behavior remain separate.
 
 ## Scheduler and timing proposal
 
@@ -168,6 +170,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-12: ORA, AND, EOR and CMP share the established non-stack Direct,
   indexed, indirect and long address paths; stack-relative modes remain a separate
   explicit milestone rather than being approximated through unrelated helpers.
+- 2026-10-12: Stack-relative accumulator ALU paths use full 16-bit bank-zero
+  `S + offset` formation and a distinct bank-zero pointer reader; `(d,S),Y` applies
+  DBR before full 24-bit Y indexing and has no Direct Page or index-width penalty.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

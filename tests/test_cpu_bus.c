@@ -1988,10 +1988,6 @@ static int test_accumulator_extended_addressing(void)
         {UINT8_C(0xdd), OPERATION_CMP, LOGIC_ABSOLUTE_X},
         {UINT8_C(0xdf), OPERATION_CMP, LOGIC_ABSOLUTE_LONG_X}
     };
-    static const uint8_t excluded_stack_opcodes[] = {
-        UINT8_C(0x03), UINT8_C(0x13), UINT8_C(0x23), UINT8_C(0x33),
-        UINT8_C(0x43), UINT8_C(0x53), UINT8_C(0xc3), UINT8_C(0xd3)
-    };
     const uint8_t preserved = MIPSNES2_CPU_FLAG_I |
                               MIPSNES2_CPU_FLAG_D |
                               MIPSNES2_CPU_FLAG_X |
@@ -2232,21 +2228,172 @@ static int test_accumulator_extended_addressing(void)
     CHECK(cpu->pc == UINT16_C(0x9742));
     CHECK(cpu->instruction_cycles == UINT64_C(6));
 
-    for (index = 0U;
-         index < sizeof(excluded_stack_opcodes) /
-                     sizeof(excluded_stack_opcodes[0]);
-         ++index) {
-        CHECK(reset_fixture(&fixture, UINT16_C(0x9750)) == 0);
-        cpu->pbr = UINT8_C(0x7e);
-        bank7e[0x9750] = excluded_stack_opcodes[index];
-        CHECK(mipsnes2_cpu_step(cpu) ==
-              MIPSNES2_CPU_UNIMPLEMENTED_OPCODE);
-        CHECK(cpu->stopped);
-        CHECK(cpu->last_opcode == excluded_stack_opcodes[index]);
-        CHECK(cpu->last_opcode_address == UINT32_C(0x7e9750));
-        CHECK(cpu->pc == UINT16_C(0x9751));
-        CHECK(cpu->instruction_cycles == 0U);
+    return 0;
+}
+
+static int test_stack_relative_accumulator_alu(void)
+{
+    enum accumulator_operation {
+        OPERATION_ORA,
+        OPERATION_AND,
+        OPERATION_EOR,
+        OPERATION_CMP
+    };
+    static const struct {
+        uint8_t opcode;
+        enum accumulator_operation operation;
+        bool indirect_indexed;
+    } cases[] = {
+        {UINT8_C(0x03), OPERATION_ORA, false},
+        {UINT8_C(0x13), OPERATION_ORA, true},
+        {UINT8_C(0x23), OPERATION_AND, false},
+        {UINT8_C(0x33), OPERATION_AND, true},
+        {UINT8_C(0x43), OPERATION_EOR, false},
+        {UINT8_C(0x53), OPERATION_EOR, true},
+        {UINT8_C(0xc3), OPERATION_CMP, false},
+        {UINT8_C(0xd3), OPERATION_CMP, true}
+    };
+    const uint8_t preserved = MIPSNES2_CPU_FLAG_I |
+                              MIPSNES2_CPU_FLAG_D |
+                              MIPSNES2_CPU_FLAG_X |
+                              MIPSNES2_CPU_FLAG_V;
+    cpu_fixture fixture;
+    mipsnes2_cpu *cpu = &fixture.cpu;
+    size_t index;
+    unsigned wide;
+
+    for (index = 0U; index < sizeof(cases) / sizeof(cases[0]); ++index) {
+        for (wide = 0U; wide < 2U; ++wide) {
+            bool is_compare = cases[index].operation == OPERATION_CMP;
+            uint16_t before;
+            uint16_t operand;
+            uint16_t expected;
+            uint8_t expected_flags;
+
+            switch (cases[index].operation) {
+            case OPERATION_ORA:
+                before = wide != 0U ? UINT16_C(0x4000)
+                                     : UINT16_C(0xab50);
+                operand = wide != 0U ? UINT16_C(0x8001)
+                                      : UINT16_C(0x008f);
+                expected = wide != 0U ? UINT16_C(0xc001)
+                                       : UINT16_C(0xabdf);
+                expected_flags = MIPSNES2_CPU_FLAG_N;
+                break;
+            case OPERATION_AND:
+                before = wide != 0U ? UINT16_C(0xf0f0)
+                                     : UINT16_C(0xabf0);
+                operand = wide != 0U ? UINT16_C(0x0ff0)
+                                      : UINT16_C(0x000f);
+                expected = wide != 0U ? UINT16_C(0x00f0)
+                                       : UINT16_C(0xab00);
+                expected_flags = wide != 0U ? 0U : MIPSNES2_CPU_FLAG_Z;
+                break;
+            case OPERATION_EOR:
+                before = wide != 0U ? UINT16_C(0xffff)
+                                     : UINT16_C(0xab7f);
+                operand = wide != 0U ? UINT16_C(0xffff)
+                                      : UINT16_C(0x00ff);
+                expected = wide != 0U ? UINT16_C(0x0000)
+                                       : UINT16_C(0xab80);
+                expected_flags = wide != 0U ? MIPSNES2_CPU_FLAG_Z
+                                             : MIPSNES2_CPU_FLAG_N;
+                break;
+            case OPERATION_CMP:
+                before = wide != 0U ? UINT16_C(0x1000)
+                                     : UINT16_C(0xab44);
+                operand = wide != 0U ? UINT16_C(0x2000)
+                                      : UINT16_C(0x0044);
+                expected = before;
+                expected_flags = wide != 0U
+                                     ? MIPSNES2_CPU_FLAG_N
+                                     : MIPSNES2_CPU_FLAG_Z |
+                                           MIPSNES2_CPU_FLAG_C;
+                break;
+            default:
+                return 1;
+            }
+
+            CHECK(reset_fixture(&fixture, UINT16_C(0x9760)) == 0);
+            cpu->pbr = UINT8_C(0x7e);
+            cpu->dbr = UINT8_C(0x7f);
+            cpu->s = UINT16_C(0xfff0);
+            cpu->y = UINT16_C(0x0020);
+            cpu->a = before;
+            cpu->emulation = false;
+            cpu->p = (uint8_t)(preserved |
+                               MIPSNES2_CPU_FLAG_C |
+                               (wide != 0U ? 0U : MIPSNES2_CPU_FLAG_M) |
+                               MIPSNES2_CPU_FLAG_N |
+                               MIPSNES2_CPU_FLAG_Z);
+            bank7e[0x9760] = cases[index].opcode;
+            bank7e[0x9761] = UINT8_C(0x0f);
+
+            if (cases[index].indirect_indexed) {
+                bank00[0xffff] = UINT8_C(0xf0);
+                bank00[0x0000] = UINT8_C(0xff);
+                bank80[0x0010] = (uint8_t)operand;
+                bank80[0x0011] = (uint8_t)(operand >> 8);
+            } else {
+                bank00[0xffff] = (uint8_t)operand;
+                bank00[0x0000] = (uint8_t)(operand >> 8);
+            }
+
+            CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+            CHECK(cpu->a == expected);
+            CHECK(cpu->p == (uint8_t)(preserved |
+                                      (wide != 0U
+                                           ? 0U
+                                           : MIPSNES2_CPU_FLAG_M) |
+                                      (is_compare
+                                           ? 0U
+                                           : MIPSNES2_CPU_FLAG_C) |
+                                      expected_flags));
+            CHECK(cpu->pc == UINT16_C(0x9762));
+            CHECK(cpu->instruction_cycles ==
+                  (cases[index].indirect_indexed ? UINT64_C(7)
+                                                 : UINT64_C(4)) + wide);
+            CHECK(cpu->s == UINT16_C(0xfff0));
+            CHECK(cpu->y == UINT16_C(0x0020));
+            CHECK(cpu->dbr == UINT8_C(0x7f));
+            CHECK(cpu->pbr == UINT8_C(0x7e));
+            CHECK(!cpu->emulation);
+        }
     }
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x9770)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->s = UINT16_C(0x01f0);
+    cpu->a = UINT16_C(0xab50);
+    bank7e[0x9770] = UINT8_C(0x03);
+    bank7e[0x9771] = UINT8_C(0x30);
+    bank00[0x0120] = UINT8_C(0xff);
+    bank00[0x0220] = UINT8_C(0x0f);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->a == UINT16_C(0xab5f));
+    CHECK(cpu->pc == UINT16_C(0x9772));
+    CHECK(cpu->instruction_cycles == UINT64_C(4));
+    CHECK(cpu->emulation);
+    CHECK(cpu->s == UINT16_C(0x01f0));
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x9780)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->dbr = UINT8_C(0x7f);
+    cpu->s = UINT16_C(0x1200);
+    cpu->y = UINT16_C(0x0020);
+    cpu->a = UINT16_C(0xab50);
+    cpu->emulation = false;
+    cpu->p = MIPSNES2_CPU_FLAG_M;
+    bank7e[0x9780] = UINT8_C(0x13);
+    bank7e[0x9781] = UINT8_C(0x34);
+    bank00[0x1234] = UINT8_C(0xf0);
+    bank00[0x1235] = UINT8_C(0xff);
+    bank80[0x0010] = UINT8_C(0x0f);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->a == UINT16_C(0xab5f));
+    CHECK(cpu->pc == UINT16_C(0x9782));
+    CHECK(cpu->instruction_cycles == UINT64_C(7));
+    CHECK((cpu->p & MIPSNES2_CPU_FLAG_X) == 0U);
     return 0;
 }
 
@@ -2810,6 +2957,7 @@ int main(void)
     CHECK(test_index_increment_decrement() == 0);
     CHECK(test_logic_foundation() == 0);
     CHECK(test_accumulator_extended_addressing() == 0);
+    CHECK(test_stack_relative_accumulator_alu() == 0);
     CHECK(test_compare_foundation() == 0);
     CHECK(test_bit_foundation() == 0);
     CHECK(test_control_flow_and_faults() == 0);

@@ -27,7 +27,7 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the 145-opcode CPU
+repository structure/boundaries/checklists; the reference bus; and the 153-opcode CPU
 subset described in [65c816.md](65c816.md). CPU regressions include implemented
 8/16-bit widths, flags, cycles, Direct Page/indexed/pointer wrapping and penalties,
 regular-indirect DBR selection, long-indirect bank selection, absolute indexing and
@@ -48,5 +48,9 @@ indexed BIT timing and linear word reads across a bank boundary.
 Extended accumulator-ALU regressions cover every non-stack-relative indexed, indirect
 and long ORA/AND/EOR/CMP form at both M widths, Direct Page and index-width penalties,
 page/bank carry, pointer-bank selection, emulation-mode Direct-X wrapping, result/
-comparison flags, operand preservation and explicit rejection of all eight still-
-unimplemented stack-relative forms.
+comparison flags and operand preservation.
+Stack-relative accumulator-ALU regressions cover all eight ORA/AND/EOR/CMP forms at
+both M widths, full 16-bit `S + offset` formation, bank-zero word/pointer wrapping,
+DBR plus Y 24-bit carry, native/emulation behavior and fixed 4/7-cycle bases without
+Direct Page, page-cross or X-width penalties. ADC/SBC/LDA/STA stack-relative modes
+remain unimplemented.

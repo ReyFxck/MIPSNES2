@@ -30,8 +30,12 @@ operands; N/Z/C/V isolation; Direct Page DL penalties; indexed BIT penalties; an
 Extended accumulator-ALU regressions exercise all 40 non-stack-relative indexed,
 indirect and long ORA/AND/EOR/CMP opcodes at both M widths. They verify DBR versus
 long-pointer banks, pre/post indexing, Direct-X emulation wrapping, page and bank
-carry, DL/M/X cycle additions, PC lengths, B/flag/operand preservation and diagnostic
-stops for all eight still-unimplemented stack-relative forms.
+carry, DL/M/X cycle additions, PC lengths and B/flag/operand preservation.
+Stack-relative accumulator-ALU regressions execute those eight ORA/AND/EOR/CMP
+opcodes at both M widths. They cover full 16-bit `S + offset` formation in native and
+emulation modes, bank-zero operand and pointer wrapping, DBR plus Y carry across a
+bank boundary, result/compare flags, operand preservation, exact 4/7-cycle bases and
+the absence of Direct Page, page-cross or X-width penalties.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -93,6 +97,8 @@ Extended ORA/AND addressing evidence is recorded in
 [65c816-ora-and-audit.md](65c816-ora-and-audit.md).
 Extended EOR/CMP addressing evidence is recorded in
 [65c816-eor-cmp-audit.md](65c816-eor-cmp-audit.md).
+Stack-relative accumulator-ALU evidence is recorded in
+[65c816-stack-relative-audit.md](65c816-stack-relative-audit.md).
 
 ## End-of-task audit
 
