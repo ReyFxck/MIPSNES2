@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 153-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 157-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -78,15 +78,19 @@ not invoke width/mode normalization or touch registers.
 Accumulator INC/DEC apply the M-selected width and preserve B in 8-bit mode. INX,
 DEX, INY and DEY apply the X-selected width and leave an 8-bit index zero-extended.
 All six wrap at their selected width, update only N/Z, and take two cycles.
-ORA, AND and EOR use M-selected accumulator width, preserve B in 8-bit mode and
+LDA, STA, ORA, AND and EOR use M-selected accumulator width; 8-bit LDA and logic
+operations preserve B, while STA writes only the selected accumulator width. ORA,
+AND and EOR
 update only N/Z. CMP uses M while CPX/CPY use X; comparisons preserve operands and
 set N/Z from the selected-width subtraction plus C for no borrow. BIT uses M, never
 changes A, and sets Z from A AND operand. Memory BIT also copies the operand's top
 two selected-width bits into N/V; immediate BIT preserves N/V. ORA, AND, EOR and CMP
-reuse the same Direct, indexed, indirect and long address helpers as LDA/STA. Their
-stack-relative forms use explicit bank-zero `S + offset` addressing; indirect-indexed
+reuse the same Direct, indexed, indirect, long and stack-relative address helpers as
+LDA/STA. Stack-relative forms use explicit bank-zero `S + offset` addressing; indirect-indexed
 forms read a bank-zero 16-bit pointer, apply DBR and then add Y across the 24-bit
-space. Stack-relative ADC/SBC/LDA/STA and stack push/pull behavior remain separate.
+space. Sixteen-bit direct stack-relative data accesses wrap within bank zero, while
+indirect-indexed data accesses advance linearly from their 24-bit effective address.
+Stack-relative ADC/SBC and stack push/pull behavior remain separate.
 
 ## Scheduler and timing proposal
 
@@ -173,6 +177,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-12: Stack-relative accumulator ALU paths use full 16-bit bank-zero
   `S + offset` formation and a distinct bank-zero pointer reader; `(d,S),Y` applies
   DBR before full 24-bit Y indexing and has no Direct Page or index-width penalty.
+- 2026-10-12: Stack-relative LDA/STA reuse those effective-address rules while
+  direct 16-bit data reads/writes explicitly wrap inside bank zero; indirect-indexed
+  data remains linear at the final 24-bit address.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

@@ -36,6 +36,10 @@ opcodes at both M widths. They cover full 16-bit `S + offset` formation in nativ
 emulation modes, bank-zero operand and pointer wrapping, DBR plus Y carry across a
 bank boundary, result/compare flags, operand preservation, exact 4/7-cycle bases and
 the absence of Direct Page, page-cross or X-width penalties.
+Stack-relative accumulator load/store regressions execute all four LDA/STA forms at
+both M widths. They cover 8-bit B preservation, LDA N/Z isolation, STA status
+preservation, bank-zero 16-bit load/store wrap, DBR plus Y carry, emulation-mode full
+S addressing, PC movement and exact 4/7-cycle bases plus the M=0 width cycle.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -99,6 +103,8 @@ Extended EOR/CMP addressing evidence is recorded in
 [65c816-eor-cmp-audit.md](65c816-eor-cmp-audit.md).
 Stack-relative accumulator-ALU evidence is recorded in
 [65c816-stack-relative-audit.md](65c816-stack-relative-audit.md).
+Stack-relative LDA/STA evidence is recorded in
+[65c816-stack-relative-load-store-audit.md](65c816-stack-relative-load-store-audit.md).
 
 ## End-of-task audit
 

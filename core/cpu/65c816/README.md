@@ -1,8 +1,8 @@
 # core/cpu/65c816
 
-Contains the caller-owned reference CPU state and a deliberately partial 153-opcode
+Contains the caller-owned reference CPU state and a deliberately partial 157-opcode
 interpreter subset. Immediate, Direct Page, Direct-indexed, Direct-indirect,
-absolute, absolute-indexed and absolute-long load/store foundations plus the complete
+absolute, absolute-indexed, absolute-long and stack-relative LDA/STA families plus the complete
 register-transfer and branch families, implied single-flag status controls and
 accumulator/index register increment-decrement operations, complete BIT/CPX/CPY
 families and every ORA/AND/EOR/CMP form, including their two stack-relative modes,

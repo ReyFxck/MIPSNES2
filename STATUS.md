@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 153-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 157-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -256,8 +256,19 @@ nonempty target artifacts. Exact local evidence and the initial expired-temporar
 path setup failure are recorded in docs/65c816-stack-relative-audit.md. GitHub Host
 GCC/Clang plus pinned PS2/PSP jobs passed for the implementation commit, and
 downloaded artifacts plus archive/internal checksums were inspected. Stack-relative
-addressing as a whole remains in progress because ADC/SBC/LDA/STA forms are not
-implemented.
+addressing at that milestone remained in progress because ADC/SBC/LDA/STA forms were
+not yet implemented; the following milestone advances that state.
+
+The stack-relative accumulator load/store milestone on 2026-10-12 adds four verified
+opcodes and completes the LDA/STA instruction families. Host GCC debug tests cover
+both M widths, 8-bit B preservation, LDA N/Z isolation, STA status preservation,
+bank-zero word wrap, DBR plus Y 24-bit carry, native/emulation behavior and exact
+4/7-cycle bases without Direct Page, page-cross or X-width penalties. Host GCC
+release and ASan+UBSan tests pass; pinned PS2SDK/PSPSDK cross-builds compile the
+157-opcode core and produce nonempty target artifacts. Exact local evidence is in
+docs/65c816-stack-relative-load-store-audit.md. GitHub Actions and downloaded
+artifact inspection remain pending publication. Stack-relative addressing remains
+in progress because ADC/SBC forms are not implemented.
 
 ## Current blockers and diagnostic exceptions
 
@@ -272,16 +283,16 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 153-opcode subset only
+- [ ] [IN PROGRESS] Opcode dispatch — 157-opcode subset only
 - [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP and base logic/compare forms only
 - [ ] [IN PROGRESS] Absolute addressing — JMP, loads/stores and base logic/compare/BIT forms only
 - [ ] [IN PROGRESS] Long addressing — LDA/STA plus ORA/AND/EOR/CMP absolute long and absolute long,X implemented only
 - [ ] [IN PROGRESS] Direct Page addressing — loads/stores, ORA/AND/EOR/CMP non-stack families and CPX/CPY/BIT forms only
-- [ ] [IN PROGRESS] Stack-relative addressing — ORA/AND/EOR/CMP forms only; ADC/SBC/LDA/STA absent
+- [ ] [IN PROGRESS] Stack-relative addressing — LDA/STA/ORA/AND/EOR/CMP complete; ADC/SBC absent
 - [ ] [IN PROGRESS] Indexed addressing — load/store subset, complete ORA/AND/EOR/CMP forms and Direct-X/absolute-X BIT only
-- [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP Direct-indirect forms plus ORA/AND/EOR/CMP `(stack-relative),Y` only
+- [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP Direct-indirect and `(stack-relative),Y` forms only
 - [x] Branch instructions
-- [ ] [IN PROGRESS] Load/store instructions — immediate, direct/indirect, absolute, indexed and long subset only
+- [ ] [IN PROGRESS] Load/store instructions — LDA/STA families complete; LDX/LDY/STX/STY implemented, remaining store/move instructions pending
 - [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC and complete CMP/CPX/CPY families only
 - [ ] [IN PROGRESS] Logic instructions — complete ORA/AND/EOR/BIT families; TSB/TRB and shifts remain
 - [ ] Shift/rotate instructions
@@ -303,7 +314,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
 - [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, logic/compare and register INC/DEC timing only
-- [ ] [IN PROGRESS] CPU automated tests — all 153 implemented opcodes and addressing behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] CPU automated tests — all 157 implemented opcodes and addressing behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -353,6 +364,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] BRA (`80`)
 - [x] BRL (`82`)
 - [x] STA direct-indexed-indirect (`81`)
+- [x] STA stack-relative (`83`)
 - [x] STY direct (`84`)
 - [x] STA direct (`85`)
 - [x] STX direct (`86`)
@@ -362,6 +374,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] BCC (`90`)
 - [x] STA direct-indirect-indexed,Y (`91`)
 - [x] STA direct-indirect (`92`)
+- [x] STA stack-relative-indirect-indexed,Y (`93`)
 - [x] STY direct,X (`94`)
 - [x] STA direct,X (`95`)
 - [x] STX direct,Y (`96`)
@@ -370,6 +383,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] TXS (`9A`)
 - [x] TXY (`9B`)
 - [x] LDA direct-indexed-indirect (`A1`)
+- [x] LDA stack-relative (`A3`)
 - [x] LDY direct (`A4`)
 - [x] LDA direct (`A5`)
 - [x] LDX direct (`A6`)
@@ -379,6 +393,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] BCS (`B0`)
 - [x] LDA direct-indirect-indexed,Y (`B1`)
 - [x] LDA direct-indirect (`B2`)
+- [x] LDA stack-relative-indirect-indexed,Y (`B3`)
 - [x] LDY direct,X (`B4`)
 - [x] LDA direct,X (`B5`)
 - [x] LDX direct,Y (`B6`)
@@ -493,6 +508,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Base CMP and complete CPX/CPY selected-width N/Z/C behavior
 - [x] Non-stack EOR/CMP indexed, indirect and long address/cycle behavior
 - [x] Stack-relative ORA/AND/EOR/CMP bank-zero address, pointer, DBR/Y and cycle behavior
+- [x] Stack-relative LDA/STA bank-zero data wrap, pointer, DBR/Y, flag and cycle behavior
 - [x] Complete BIT selected-width Z, memory N/V and immediate N/V-preservation behavior
 
 ## Bus

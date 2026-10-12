@@ -74,6 +74,14 @@ static uint16_t read16_bank_zero(const mipsnes2_cpu *cpu, uint16_t address)
     return (uint16_t)(low | (uint16_t)(high << 8));
 }
 
+static void write16_bank_zero(const mipsnes2_cpu *cpu, uint16_t address,
+                              uint16_t value)
+{
+    write8(cpu, address, (uint8_t)value);
+    write8(cpu, (uint16_t)(address + UINT16_C(1)),
+           (uint8_t)(value >> 8));
+}
+
 static void write16_linear(const mipsnes2_cpu *cpu,
                            mipsnes2_address address, uint16_t value)
 {
@@ -501,6 +509,33 @@ static uint16_t read_accumulator_stack_operand(const mipsnes2_cpu *cpu,
 {
     return accumulator_is_8_bit(cpu) ? read8(cpu, address)
                                      : read16_bank_zero(cpu, address);
+}
+
+static void load_accumulator_stack(mipsnes2_cpu *cpu, uint16_t address,
+                                   uint64_t base_cycles)
+{
+    if (accumulator_is_8_bit(cpu)) {
+        uint8_t value = read8(cpu, address);
+        cpu->a = (uint16_t)((cpu->a & UINT16_C(0xff00)) | value);
+        set_nz8(cpu, value);
+        cpu->instruction_cycles += base_cycles;
+    } else {
+        cpu->a = read16_bank_zero(cpu, address);
+        set_nz16(cpu, cpu->a);
+        cpu->instruction_cycles += base_cycles + UINT64_C(1);
+    }
+}
+
+static void store_stack(mipsnes2_cpu *cpu, uint16_t address, uint16_t value,
+                        bool wide, uint64_t base_cycles)
+{
+    if (wide) {
+        write16_bank_zero(cpu, address, value);
+        cpu->instruction_cycles += base_cycles + UINT64_C(1);
+    } else {
+        write8(cpu, address, (uint8_t)value);
+        cpu->instruction_cycles += base_cycles;
+    }
 }
 
 static uint16_t fetch_index_operand(mipsnes2_cpu *cpu)
@@ -1080,6 +1115,16 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
                      direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0x83: /* STA stack-relative */
+        if (cpu->bus.write8 == NULL) {
+            cpu->stopped = true;
+            cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
+            return cpu->stop_reason;
+        }
+        address = stack_relative_address(cpu);
+        store_stack(cpu, (uint16_t)address, cpu->a,
+                    !accumulator_is_8_bit(cpu), UINT64_C(4));
+        break;
     case 0x84: /* STY direct */
         if (cpu->bus.write8 == NULL) {
             cpu->stopped = true;
@@ -1161,6 +1206,16 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         address = direct_indirect_address(cpu, 0U, 0U, NULL);
         store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
                      direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
+    case 0x93: /* STA (stack-relative),Y */
+        if (cpu->bus.write8 == NULL) {
+            cpu->stopped = true;
+            cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
+            return cpu->stop_reason;
+        }
+        address = stack_relative_indirect_indexed_address(cpu);
+        store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
+                     UINT64_C(7));
         break;
     case 0x98: /* TYA */
         transfer_to_accumulator(cpu, index_register_value(cpu, cpu->y));
@@ -1279,6 +1334,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     case 0xa2: /* LDX immediate */
         load_index_immediate(cpu, &cpu->x);
         break;
+    case 0xa3: /* LDA stack-relative */
+        address = stack_relative_address(cpu);
+        load_accumulator_stack(cpu, (uint16_t)address, UINT64_C(4));
+        break;
     case 0xa4: /* LDY direct */
         address = direct_address(cpu, 0U);
         load_index_direct(cpu, &cpu->y, address,
@@ -1341,6 +1400,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         address = direct_indirect_address(cpu, 0U, 0U, NULL);
         load_accumulator_memory(cpu, address,
                                 direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
+    case 0xb3: /* LDA (stack-relative),Y */
+        address = stack_relative_indirect_indexed_address(cpu);
+        load_accumulator_memory(cpu, address, UINT64_C(7));
         break;
     case 0xb4: /* LDY direct,X */
         address = direct_address(cpu, cpu->x);

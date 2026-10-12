@@ -16,11 +16,11 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 ## Current state
 
 **The project has a partial 65C816 interpreter and reference bus. It cannot run a SNES
-ROM.** One hundred fifty-three opcodes now cover the foundation, the complete register-
+ROM.** One hundred fifty-seven opcodes now cover the foundation, the complete register-
 transfer and branch families, implied single-flag status controls, accumulator/index
 register increment-decrement operations, complete ORA/AND/EOR/CMP address families,
-a stack-relative foundation, a logic/compare foundation, and direct, direct-indexed, direct-indirect,
-absolute, absolute-indexed and absolute-long load/store paths. Deterministic host regressions
+a stack-relative foundation, a logic/compare foundation, and complete LDA/STA address
+families alongside the implemented index-register load/store paths. Deterministic host regressions
 cover widths, flags, cycles, signed branch offsets, program-bank-local PC wrapping,
 Direct Page pointer wrapping, DBR selection and 24-bit bank crossing. Console entry
 points remain build probes, not usable emulators. No PPU, APU, cartridge integration,
@@ -34,9 +34,10 @@ commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future wo
 Phase 1's foundation exit gate, the complete register-transfer and branch families,
 the implied single-flag status controls, accumulator/index register increment-
 decrement operations and the complete BIT/CPX/CPY/ORA/AND/EOR/CMP families are
-verified. Stack-relative addressing remains incomplete outside those accumulator-ALU
-families. The next focused milestone should add the four stack-relative LDA/STA forms
-and complete their accumulator load/store families. Do not start with a dynarec,
+verified. The LDA/STA families are also complete, including both stack-relative modes.
+Stack-relative addressing remains incomplete only for ADC/SBC. The next focused
+milestone should establish binary ADC/SBC arithmetic with deterministic flag tests.
+Do not start with a dynarec,
 renderer or enhancement chips.
 
 ## Build and test the foundation
