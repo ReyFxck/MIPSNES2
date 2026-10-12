@@ -242,7 +242,9 @@ ASan+UBSan tests cover both M widths, EOR result/B behavior, CMP operand/N/Z/C
 behavior, Direct Page/index penalties, regular versus long pointer banks, emulation
 Direct-X wrapping and 24-bit page/bank carry. Pinned PS2SDK/PSPSDK cross-builds
 compile the 145-opcode core and produce nonempty target artifacts. Local evidence
-and pending GitHub validation are recorded in docs/65c816-eor-cmp-audit.md.
+is recorded in docs/65c816-eor-cmp-audit.md. GitHub Host GCC/Clang plus pinned
+PS2/PSP jobs passed for the implementation commit, and downloaded artifacts plus
+archive/internal checksums were inspected.
 
 ## Current blockers and diagnostic exceptions
 

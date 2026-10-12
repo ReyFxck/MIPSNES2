@@ -89,8 +89,26 @@ reused. Both target compilers report GCC 15.2.0.
 | documented `PS2DEV`/`PS2SDK`/`PATH` plus `make -C platform/ps2 clean all` | Passed; produced a nonempty 1,376,820-byte, 32-bit little-endian N32 MIPS-III ELF |
 | documented `PSPDEV`/`PATH` plus `make -C platform/psp clean all` | Passed; produced MIPS ELF/PRX and a nonempty 181,138-byte `EBOOT.PBP` |
 
-Cross-build success is not console execution. GitHub Actions evidence remains to be
-recorded after the implementation revision is published.
+Cross-build success is not console execution. GitHub Actions evidence is recorded
+below.
+
+## GitHub Actions evidence
+
+Implementation commit: `5fe4d4410829689ae4c0293d0915edbb5abed8ee`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38200874485](https://github.com/ReyFxck/MIPSNES2/actions/runs/38200874485) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38200874580](https://github.com/ReyFxck/MIPSNES2/actions/runs/38200874580) | Passed pinned cross-build and checksum job | 1,376,944-byte MIPS ELF |
+| PSP CI | [38200874506](https://github.com/ReyFxck/MIPSNES2/actions/runs/38200874506) | Passed pinned cross-build and checksum job | 181,138-byte `EBOOT.PBP` |
+
+All four downloaded artifact archives are nonempty and unexpired. Each downloaded
+archive digest matches GitHub artifact metadata, and every embedded `SHA256SUMS`
+entry validates. Artifact metadata identifies branch head
+`5fe4d4410829689ae4c0293d0915edbb5abed8ee`; artifact names and `BUILD.txt` use the
+pull request's synthetic merge commit
+`75374939d841083161c81296d27616570dc40dfc`. The final documentation-only commit is
+verified separately and recorded in the pull request conversation.
 
 ## Validation limits
 
