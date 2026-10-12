@@ -76,9 +76,26 @@ repository setup helper then restored the pinned archives in a fresh milestone-
 specific directory; the final PS2 and PSP builds above passed. This environmental
 setup failure did not identify a source defect.
 
-GitHub Actions execution and artifact inspection remain pending until the branch is
-published. Their results will be recorded before the pull request is described as
-fully verified.
+Cross-build success is not console execution. GitHub Actions evidence is recorded
+below.
+
+## GitHub Actions evidence
+
+Implementation commit: `a708c2714432a002b06321f3d2896a3be4b490cc`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38267856088](https://github.com/ReyFxck/MIPSNES2/actions/runs/38267856088) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38267856089](https://github.com/ReyFxck/MIPSNES2/actions/runs/38267856089) | Passed pinned cross-build and checksum job | 1,390,976-byte MIPS ELF |
+| PSP CI | [38267856195](https://github.com/ReyFxck/MIPSNES2/actions/runs/38267856195) | Passed pinned cross-build and checksum job | 182,922-byte `EBOOT.PBP` |
+
+All four downloaded artifact archives are nonempty and unexpired. Each downloaded
+archive digest matches GitHub artifact metadata, and every embedded `SHA256SUMS`
+entry validates. Artifact metadata identifies branch head
+`a708c2714432a002b06321f3d2896a3be4b490cc`; artifact names and `BUILD.txt` use the
+pull request's synthetic merge commit
+`e0fcbe5c0cc281c789b815f0679eb110795599de`. The final documentation-only commit is
+verified separately and recorded in the pull request conversation.
 
 ## Validation limits
 

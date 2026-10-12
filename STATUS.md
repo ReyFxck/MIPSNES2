@@ -253,8 +253,9 @@ bank-zero operand/pointer wrapping, DBR plus Y 24-bit carry, native/emulation
 behavior, flags and exact 4/7-cycle bases without Direct Page, page-cross or X-width
 penalties. Pinned PS2SDK/PSPSDK cross-builds compile the 153-opcode core and produce
 nonempty target artifacts. Exact local evidence and the initial expired-temporary-
-path setup failure are recorded in docs/65c816-stack-relative-audit.md. GitHub
-Actions execution and artifact inspection remain pending publication. Stack-relative
+path setup failure are recorded in docs/65c816-stack-relative-audit.md. GitHub Host
+GCC/Clang plus pinned PS2/PSP jobs passed for the implementation commit, and
+downloaded artifacts plus archive/internal checksums were inspected. Stack-relative
 addressing as a whole remains in progress because ADC/SBC/LDA/STA forms are not
 implemented.
 
