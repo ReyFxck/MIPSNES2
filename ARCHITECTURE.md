@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 105-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 125-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -82,7 +82,9 @@ ORA, AND and EOR use M-selected accumulator width, preserve B in 8-bit mode and
 update only N/Z. CMP uses M while CPX/CPY use X; comparisons preserve operands and
 set N/Z from the selected-width subtraction plus C for no borrow. BIT uses M, never
 changes A, and sets Z from A AND operand. Memory BIT also copies the operand's top
-two selected-width bits into N/V; immediate BIT preserves N/V.
+two selected-width bits into N/V; immediate BIT preserves N/V. ORA and AND reuse the
+same Direct, indexed, indirect and long address helpers as LDA/STA; their stack-
+relative forms remain unimplemented rather than introducing a premature stack path.
 
 ## Scheduler and timing proposal
 

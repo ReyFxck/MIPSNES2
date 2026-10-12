@@ -56,7 +56,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Branch instructions
 - [ ] [IN PROGRESS] Load/store instructions
 - [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, base CMP and complete CPX/CPY subsets only
-- [ ] [IN PROGRESS] Logic instructions — base ORA/AND/EOR forms and complete BIT family only
+- [ ] [IN PROGRESS] Logic instructions — ORA/AND complete except stack-relative forms; base EOR and complete BIT family implemented
 - [ ] Shift/rotate instructions
 - [x] Transfer instructions
 - [ ] Stack instructions

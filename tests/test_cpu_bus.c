@@ -1918,6 +1918,273 @@ static int test_logic_foundation(void)
     return 0;
 }
 
+static int test_logic_extended_addressing(void)
+{
+    enum logic_kind {
+        LOGIC_ORA,
+        LOGIC_AND
+    };
+    enum logic_address_mode {
+        LOGIC_DIRECT_INDEXED_INDIRECT,
+        LOGIC_DIRECT_INDIRECT_LONG,
+        LOGIC_ABSOLUTE_LONG,
+        LOGIC_DIRECT_INDIRECT_INDEXED,
+        LOGIC_DIRECT_INDIRECT,
+        LOGIC_DIRECT_X,
+        LOGIC_DIRECT_INDIRECT_LONG_INDEXED,
+        LOGIC_ABSOLUTE_Y,
+        LOGIC_ABSOLUTE_X,
+        LOGIC_ABSOLUTE_LONG_X
+    };
+    static const struct {
+        uint8_t opcode;
+        enum logic_kind kind;
+        enum logic_address_mode mode;
+    } cases[] = {
+        {UINT8_C(0x01), LOGIC_ORA, LOGIC_DIRECT_INDEXED_INDIRECT},
+        {UINT8_C(0x07), LOGIC_ORA, LOGIC_DIRECT_INDIRECT_LONG},
+        {UINT8_C(0x0f), LOGIC_ORA, LOGIC_ABSOLUTE_LONG},
+        {UINT8_C(0x11), LOGIC_ORA, LOGIC_DIRECT_INDIRECT_INDEXED},
+        {UINT8_C(0x12), LOGIC_ORA, LOGIC_DIRECT_INDIRECT},
+        {UINT8_C(0x15), LOGIC_ORA, LOGIC_DIRECT_X},
+        {UINT8_C(0x17), LOGIC_ORA,
+         LOGIC_DIRECT_INDIRECT_LONG_INDEXED},
+        {UINT8_C(0x19), LOGIC_ORA, LOGIC_ABSOLUTE_Y},
+        {UINT8_C(0x1d), LOGIC_ORA, LOGIC_ABSOLUTE_X},
+        {UINT8_C(0x1f), LOGIC_ORA, LOGIC_ABSOLUTE_LONG_X},
+        {UINT8_C(0x21), LOGIC_AND, LOGIC_DIRECT_INDEXED_INDIRECT},
+        {UINT8_C(0x27), LOGIC_AND, LOGIC_DIRECT_INDIRECT_LONG},
+        {UINT8_C(0x2f), LOGIC_AND, LOGIC_ABSOLUTE_LONG},
+        {UINT8_C(0x31), LOGIC_AND, LOGIC_DIRECT_INDIRECT_INDEXED},
+        {UINT8_C(0x32), LOGIC_AND, LOGIC_DIRECT_INDIRECT},
+        {UINT8_C(0x35), LOGIC_AND, LOGIC_DIRECT_X},
+        {UINT8_C(0x37), LOGIC_AND,
+         LOGIC_DIRECT_INDIRECT_LONG_INDEXED},
+        {UINT8_C(0x39), LOGIC_AND, LOGIC_ABSOLUTE_Y},
+        {UINT8_C(0x3d), LOGIC_AND, LOGIC_ABSOLUTE_X},
+        {UINT8_C(0x3f), LOGIC_AND, LOGIC_ABSOLUTE_LONG_X}
+    };
+    const uint8_t preserved = MIPSNES2_CPU_FLAG_C |
+                              MIPSNES2_CPU_FLAG_I |
+                              MIPSNES2_CPU_FLAG_D |
+                              MIPSNES2_CPU_FLAG_X |
+                              MIPSNES2_CPU_FLAG_V;
+    cpu_fixture fixture;
+    mipsnes2_cpu *cpu = &fixture.cpu;
+    size_t index;
+    unsigned wide;
+
+    for (index = 0U; index < sizeof(cases) / sizeof(cases[0]); ++index) {
+        for (wide = 0U; wide < 2U; ++wide) {
+            bool is_ora = cases[index].kind == LOGIC_ORA;
+            uint16_t before = is_ora
+                                  ? (wide != 0U ? UINT16_C(0x4000)
+                                                : UINT16_C(0xab50))
+                                  : (wide != 0U ? UINT16_C(0xf0f0)
+                                                : UINT16_C(0xabf0));
+            uint16_t operand = is_ora
+                                   ? (wide != 0U ? UINT16_C(0x8001)
+                                                 : UINT16_C(0x008f))
+                                   : (wide != 0U ? UINT16_C(0x0ff0)
+                                                 : UINT16_C(0x000f));
+            uint16_t expected = is_ora
+                                    ? (wide != 0U ? UINT16_C(0xc001)
+                                                  : UINT16_C(0xabdf))
+                                    : (wide != 0U ? UINT16_C(0x00f0)
+                                                  : UINT16_C(0xab00));
+            uint8_t expected_nz = is_ora
+                                      ? MIPSNES2_CPU_FLAG_N
+                                      : (wide != 0U
+                                             ? 0U
+                                             : MIPSNES2_CPU_FLAG_Z);
+            uint16_t expected_pc;
+            uint64_t expected_cycles;
+
+            CHECK(reset_fixture(&fixture, UINT16_C(0x9700)) == 0);
+            cpu->pbr = UINT8_C(0x7e);
+            cpu->dbr = UINT8_C(0x7f);
+            cpu->d = UINT16_C(0x1201);
+            cpu->emulation = false;
+            cpu->p = (uint8_t)(preserved |
+                               (wide != 0U ? 0U : MIPSNES2_CPU_FLAG_M) |
+                               MIPSNES2_CPU_FLAG_N |
+                               MIPSNES2_CPU_FLAG_Z);
+            cpu->a = before;
+            cpu->x = UINT16_C(0x0020);
+            cpu->y = UINT16_C(0x0020);
+            bank7e[0x9700] = cases[index].opcode;
+
+            switch (cases[index].mode) {
+            case LOGIC_DIRECT_INDEXED_INDIRECT:
+                bank7e[0x9701] = UINT8_C(0x30);
+                bank00[0x1251] = UINT8_C(0xf0);
+                bank00[0x1252] = UINT8_C(0xff);
+                bank7f[0xfff0] = (uint8_t)operand;
+                bank7f[0xfff1] = (uint8_t)(operand >> 8);
+                expected_pc = UINT16_C(0x9702);
+                expected_cycles = UINT64_C(7) + wide;
+                break;
+            case LOGIC_DIRECT_INDIRECT_LONG:
+                bank7e[0x9701] = UINT8_C(0x34);
+                bank00[0x1235] = UINT8_C(0xff);
+                bank00[0x1236] = UINT8_C(0xff);
+                bank00[0x1237] = UINT8_C(0x7f);
+                bank7f[0xffff] = (uint8_t)operand;
+                bank80[0x0000] = (uint8_t)(operand >> 8);
+                expected_pc = UINT16_C(0x9702);
+                expected_cycles = UINT64_C(7) + wide;
+                break;
+            case LOGIC_ABSOLUTE_LONG:
+                bank7e[0x9701] = UINT8_C(0xff);
+                bank7e[0x9702] = UINT8_C(0xff);
+                bank7e[0x9703] = UINT8_C(0x7f);
+                bank7f[0xffff] = (uint8_t)operand;
+                bank80[0x0000] = (uint8_t)(operand >> 8);
+                expected_pc = UINT16_C(0x9704);
+                expected_cycles = UINT64_C(5) + wide;
+                break;
+            case LOGIC_DIRECT_INDIRECT_INDEXED:
+                bank7e[0x9701] = UINT8_C(0x34);
+                bank00[0x1235] = UINT8_C(0xf0);
+                bank00[0x1236] = UINT8_C(0xff);
+                bank80[0x0010] = (uint8_t)operand;
+                bank80[0x0011] = (uint8_t)(operand >> 8);
+                expected_pc = UINT16_C(0x9702);
+                expected_cycles = UINT64_C(7) + wide;
+                break;
+            case LOGIC_DIRECT_INDIRECT:
+                bank7e[0x9701] = UINT8_C(0x34);
+                bank00[0x1235] = UINT8_C(0xff);
+                bank00[0x1236] = UINT8_C(0xff);
+                bank7f[0xffff] = (uint8_t)operand;
+                bank80[0x0000] = (uint8_t)(operand >> 8);
+                expected_pc = UINT16_C(0x9702);
+                expected_cycles = UINT64_C(6) + wide;
+                break;
+            case LOGIC_DIRECT_X:
+                bank7e[0x9701] = UINT8_C(0x30);
+                bank00[0x1251] = (uint8_t)operand;
+                bank00[0x1252] = (uint8_t)(operand >> 8);
+                expected_pc = UINT16_C(0x9702);
+                expected_cycles = UINT64_C(5) + wide;
+                break;
+            case LOGIC_DIRECT_INDIRECT_LONG_INDEXED:
+                bank7e[0x9701] = UINT8_C(0x34);
+                bank00[0x1235] = UINT8_C(0xf0);
+                bank00[0x1236] = UINT8_C(0xff);
+                bank00[0x1237] = UINT8_C(0x7f);
+                bank80[0x0010] = (uint8_t)operand;
+                bank80[0x0011] = (uint8_t)(operand >> 8);
+                expected_pc = UINT16_C(0x9702);
+                expected_cycles = UINT64_C(7) + wide;
+                break;
+            case LOGIC_ABSOLUTE_Y:
+            case LOGIC_ABSOLUTE_X:
+                bank7e[0x9701] = UINT8_C(0xf0);
+                bank7e[0x9702] = UINT8_C(0xff);
+                bank80[0x0010] = (uint8_t)operand;
+                bank80[0x0011] = (uint8_t)(operand >> 8);
+                expected_pc = UINT16_C(0x9703);
+                expected_cycles = UINT64_C(5) + wide;
+                break;
+            case LOGIC_ABSOLUTE_LONG_X:
+                bank7e[0x9701] = UINT8_C(0xf0);
+                bank7e[0x9702] = UINT8_C(0xff);
+                bank7e[0x9703] = UINT8_C(0x7f);
+                bank80[0x0010] = (uint8_t)operand;
+                bank80[0x0011] = (uint8_t)(operand >> 8);
+                expected_pc = UINT16_C(0x9704);
+                expected_cycles = UINT64_C(5) + wide;
+                break;
+            default:
+                return 1;
+            }
+
+            CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+            CHECK(cpu->a == expected);
+            CHECK(cpu->p == (uint8_t)(preserved |
+                                      (wide != 0U
+                                           ? 0U
+                                           : MIPSNES2_CPU_FLAG_M) |
+                                      expected_nz));
+            CHECK(cpu->pc == expected_pc);
+            CHECK(cpu->instruction_cycles == expected_cycles);
+            CHECK(cpu->x == UINT16_C(0x0020));
+            CHECK(cpu->y == UINT16_C(0x0020));
+            CHECK(cpu->d == UINT16_C(0x1201));
+            CHECK(cpu->dbr == UINT8_C(0x7f));
+            CHECK(cpu->pbr == UINT8_C(0x7e));
+            CHECK(!cpu->emulation);
+        }
+    }
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x9720)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->dbr = UINT8_C(0x7f);
+    cpu->d = UINT16_C(0x1200);
+    cpu->x = UINT16_C(0x0020);
+    cpu->a = UINT16_C(0xabf0);
+    bank7e[0x9720] = UINT8_C(0x35);
+    bank7e[0x9721] = UINT8_C(0xf0);
+    bank00[0x1210] = UINT8_C(0x0f);
+    bank00[0x1310] = UINT8_C(0xff);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->a == UINT16_C(0xab00));
+    CHECK((cpu->p & (MIPSNES2_CPU_FLAG_N | MIPSNES2_CPU_FLAG_Z)) ==
+          MIPSNES2_CPU_FLAG_Z);
+    CHECK(cpu->pc == UINT16_C(0x9722));
+    CHECK(cpu->instruction_cycles == UINT64_C(4));
+    CHECK(cpu->emulation);
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x9730)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->dbr = UINT8_C(0x7f);
+    cpu->emulation = false;
+    cpu->p = MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_I;
+    cpu->x = UINT16_C(0x0001);
+    cpu->a = UINT16_C(0xab50);
+    bank7e[0x9730] = UINT8_C(0x1d);
+    bank7e[0x9731] = UINT8_C(0x00);
+    bank7e[0x9732] = UINT8_C(0x20);
+    bank7f[0x2001] = UINT8_C(0x0f);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->a == UINT16_C(0xab5f));
+    CHECK(cpu->p == (MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_I));
+    CHECK(cpu->pc == UINT16_C(0x9733));
+    CHECK(cpu->instruction_cycles == UINT64_C(5));
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x9740)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->dbr = UINT8_C(0x7f);
+    cpu->d = UINT16_C(0x1200);
+    cpu->emulation = false;
+    cpu->p = MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_I;
+    cpu->y = UINT16_C(0x0001);
+    cpu->a = UINT16_C(0xabf0);
+    bank7e[0x9740] = UINT8_C(0x31);
+    bank7e[0x9741] = UINT8_C(0x34);
+    bank00[0x1234] = UINT8_C(0x00);
+    bank00[0x1235] = UINT8_C(0x20);
+    bank7f[0x2001] = UINT8_C(0x0f);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->a == UINT16_C(0xab00));
+    CHECK(cpu->p == (MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_I |
+                     MIPSNES2_CPU_FLAG_Z));
+    CHECK(cpu->pc == UINT16_C(0x9742));
+    CHECK(cpu->instruction_cycles == UINT64_C(6));
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x9750)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    bank7e[0x9750] = UINT8_C(0x03);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_UNIMPLEMENTED_OPCODE);
+    CHECK(cpu->stopped);
+    CHECK(cpu->last_opcode == UINT8_C(0x03));
+    CHECK(cpu->last_opcode_address == UINT32_C(0x7e9750));
+    CHECK(cpu->pc == UINT16_C(0x9751));
+    CHECK(cpu->instruction_cycles == 0U);
+    return 0;
+}
+
 static int test_compare_foundation(void)
 {
     enum compare_target {
@@ -2477,6 +2744,7 @@ int main(void)
     CHECK(test_accumulator_increment_decrement() == 0);
     CHECK(test_index_increment_decrement() == 0);
     CHECK(test_logic_foundation() == 0);
+    CHECK(test_logic_extended_addressing() == 0);
     CHECK(test_compare_foundation() == 0);
     CHECK(test_bit_foundation() == 0);
     CHECK(test_control_flow_and_faults() == 0);
@@ -2484,6 +2752,6 @@ int main(void)
     CHECK(test_branch_timing_and_program_bank() == 0);
     CHECK(test_branch_relative_long() == 0);
     CHECK(test_rep_in_emulation() == 0);
-    (void)puts("PASS: logical bus and 65C816 logic/compare subset");
+    (void)puts("PASS: logical bus and 65C816 ORA/AND addressing subset");
     return 0;
 }
