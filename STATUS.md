@@ -231,8 +231,9 @@ ASan+UBSan tests cover both M widths, N/Z and B preservation, Direct Page/index
 penalties, regular versus long pointer banks, emulation Direct-X wrapping and 24-bit
 page/bank carry. Pinned PS2SDK/PSPSDK cross-builds compile the 125-opcode core and
 produce nonempty target artifacts. Exact local evidence and validation limits are
-in docs/65c816-ora-and-audit.md. GitHub Actions execution remains pending until this
-stacked branch is published.
+in docs/65c816-ora-and-audit.md. GitHub Host GCC/Clang plus pinned PS2/PSP jobs
+passed for the implementation commit, and downloaded artifacts plus archive/internal
+checksums were inspected.
 
 ## Current blockers and diagnostic exceptions
 

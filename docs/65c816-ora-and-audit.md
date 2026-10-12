@@ -91,8 +91,21 @@ console execution.
 
 ## GitHub Actions evidence
 
-Pending branch publication and workflow execution. A workflow file or local result
-is not recorded as successful GitHub CI.
+Implementation commit: `6c03dabef36728184aa430ee4043bb32d3ad983a`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38199978254](https://github.com/ReyFxck/MIPSNES2/actions/runs/38199978254) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38199978255](https://github.com/ReyFxck/MIPSNES2/actions/runs/38199978255) | Passed pinned cross-build and checksum job | 1,347,360-byte MIPS ELF |
+| PSP CI | [38199978233](https://github.com/ReyFxck/MIPSNES2/actions/runs/38199978233) | Passed pinned cross-build and checksum job | 177,106-byte `EBOOT.PBP` |
+
+All four downloaded artifact archives are nonempty and unexpired. The archive
+digests match GitHub artifact metadata, and their embedded `SHA256SUMS` files validate
+every packaged binary and provenance file. Artifact metadata identifies branch head
+`6c03dabef36728184aa430ee4043bb32d3ad983a`; artifact names and `BUILD.txt` use the
+pull request's synthetic merge commit `4468fa226d7f35481e2d8fd23d76fdad68ddab1d`.
+The final documentation-only commit is verified separately and recorded in the pull
+request conversation.
 
 ## Validation limits
 
