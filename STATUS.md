@@ -266,9 +266,10 @@ bank-zero word wrap, DBR plus Y 24-bit carry, native/emulation behavior and exac
 4/7-cycle bases without Direct Page, page-cross or X-width penalties. Host GCC
 release and ASan+UBSan tests pass; pinned PS2SDK/PSPSDK cross-builds compile the
 157-opcode core and produce nonempty target artifacts. Exact local evidence is in
-docs/65c816-stack-relative-load-store-audit.md. GitHub Actions and downloaded
-artifact inspection remain pending publication. Stack-relative addressing remains
-in progress because ADC/SBC forms are not implemented.
+docs/65c816-stack-relative-load-store-audit.md. GitHub Host GCC/Clang plus pinned
+PS2/PSP jobs passed for the implementation commit, and downloaded artifacts plus
+archive/internal checksums were inspected. Stack-relative addressing remains in
+progress because ADC/SBC forms are not implemented.
 
 ## Current blockers and diagnostic exceptions
 

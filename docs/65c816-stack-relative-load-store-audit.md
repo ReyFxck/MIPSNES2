@@ -69,9 +69,26 @@ v20261001; both report cross GCC 15.2.0.
 | `make clean && make all` in `platform/psp` with pinned `PSPDEV` | Passed; produced a 183,474-byte `EBOOT.PBP` |
 | `python3 tools/check_repository.py` | Passed required-file, license, identity, link, checkbox, boundary and action-pin checks |
 
-GitHub Actions execution and artifact inspection remain pending until the branch is
-published. Their results will be recorded before the pull request is described as
-fully verified.
+Cross-build success is not console execution. GitHub Actions evidence is recorded
+below.
+
+## GitHub Actions evidence
+
+Implementation commit: `530a437a271aa129dbd507e267d833d52d4e3d9f`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38269923552](https://github.com/ReyFxck/MIPSNES2/actions/runs/38269923552) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38269923788](https://github.com/ReyFxck/MIPSNES2/actions/runs/38269923788) | Passed pinned cross-build and checksum job | 1,396,740-byte MIPS ELF |
+| PSP CI | [38269923665](https://github.com/ReyFxck/MIPSNES2/actions/runs/38269923665) | Passed pinned cross-build and checksum job | 183,474-byte `EBOOT.PBP` |
+
+All four downloaded artifact archives are nonempty and unexpired. Each downloaded
+archive digest matches GitHub artifact metadata, and every embedded `SHA256SUMS`
+entry validates. Artifact metadata identifies branch head
+`530a437a271aa129dbd507e267d833d52d4e3d9f`; artifact names and `BUILD.txt` use the
+pull request's synthetic merge commit
+`2e39bf978ad2b1a173173676e47272826b84f112`. The final documentation-only commit is
+verified separately and recorded in the pull request conversation.
 
 ## Validation limits
 
