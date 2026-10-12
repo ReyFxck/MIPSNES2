@@ -27,7 +27,7 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the 125-opcode CPU
+repository structure/boundaries/checklists; the reference bus; and the 145-opcode CPU
 subset described in [65c816.md](65c816.md). CPU regressions include implemented
 8/16-bit widths, flags, cycles, Direct Page/indexed/pointer wrapping and penalties,
 regular-indirect DBR selection, long-indirect bank selection, absolute indexing and
@@ -45,7 +45,8 @@ preservation, index zero extension, isolated N/Z changes and fixed two-cycle tim
 Logic/compare regressions cover all 23 base-group opcodes at 8/16-bit widths,
 selected-width N/Z/C/V behavior, preserved operands/flags, Direct Page penalties,
 indexed BIT timing and linear word reads across a bank boundary.
-Extended ORA/AND regressions cover every non-stack-relative indexed, indirect and
-long form at both M widths, Direct Page and index-width penalties, page/bank carry,
-pointer-bank selection, emulation-mode Direct-X wrapping and explicit rejection of
-the still-unimplemented stack-relative family.
+Extended accumulator-ALU regressions cover every non-stack-relative indexed, indirect
+and long ORA/AND/EOR/CMP form at both M widths, Direct Page and index-width penalties,
+page/bank carry, pointer-bank selection, emulation-mode Direct-X wrapping, result/
+comparison flags, operand preservation and explicit rejection of all eight still-
+unimplemented stack-relative forms.

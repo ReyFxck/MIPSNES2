@@ -877,12 +877,26 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_AND, UINT64_C(5));
         break;
+    case 0x41: /* EOR (direct,X) */
+        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, false),
+                          ACCUMULATOR_LOGIC_XOR,
+                          direct_penalized_cycles(cpu, UINT64_C(6)));
+        break;
     case 0x45: /* EOR direct */
         address = direct_address(cpu, 0U);
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, true),
                           ACCUMULATOR_LOGIC_XOR,
                           direct_base_cycles(cpu, false));
+        break;
+    case 0x47: /* EOR [direct] */
+        address = direct_indirect_long_address(cpu, 0U);
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, false),
+                          ACCUMULATOR_LOGIC_XOR,
+                          direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
     case 0x49: /* EOR immediate */
         logic_accumulator(cpu, fetch_accumulator_operand(cpu),
@@ -898,17 +912,80 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(4));
         break;
+    case 0x4f: /* EOR absolute long */
+        address = fetch24(cpu);
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, false),
+                          ACCUMULATOR_LOGIC_XOR, UINT64_C(5));
+        break;
     case 0x50: /* BVC */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) == 0U);
+        break;
+    case 0x51: /* EOR (direct),Y */
+    {
+        uint16_t pointer;
+
+        address = direct_indirect_address(cpu, 0U, cpu->y, &pointer);
+        base_cycles = direct_penalized_cycles(cpu, UINT64_C(5));
+        if (!index_is_8_bit(cpu) ||
+            (uint32_t)(pointer & UINT16_C(0x00ff)) + cpu->y >
+                UINT32_C(0x00ff)) {
+            base_cycles += UINT64_C(1);
+        }
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, false),
+                          ACCUMULATOR_LOGIC_XOR, base_cycles);
+        break;
+    }
+    case 0x52: /* EOR (direct) */
+        address = direct_indirect_address(cpu, 0U, 0U, NULL);
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, false),
+                          ACCUMULATOR_LOGIC_XOR,
+                          direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
+    case 0x55: /* EOR direct,X */
+        address = direct_address(cpu, cpu->x);
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, true),
+                          ACCUMULATOR_LOGIC_XOR,
+                          direct_base_cycles(cpu, true));
+        break;
+    case 0x57: /* EOR [direct],Y */
+        address = direct_indirect_long_address(cpu, cpu->y);
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, false),
+                          ACCUMULATOR_LOGIC_XOR,
+                          direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
     case 0x58: /* CLI */
         cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_I;
         cpu->instruction_cycles += UINT64_C(2);
         break;
+    case 0x59: /* EOR absolute,Y */
+        address = absolute_indexed_address(cpu, cpu->y, false,
+                                           &base_cycles);
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, false),
+                          ACCUMULATOR_LOGIC_XOR, base_cycles);
+        break;
     case 0x5b: /* TCD */
         cpu->d = cpu->a;
         set_nz16(cpu, cpu->d);
         cpu->instruction_cycles += UINT64_C(2);
+        break;
+    case 0x5d: /* EOR absolute,X */
+        address = absolute_indexed_address(cpu, cpu->x, false,
+                                           &base_cycles);
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, false),
+                          ACCUMULATOR_LOGIC_XOR, base_cycles);
+        break;
+    case 0x5f: /* EOR absolute long,X */
+        address = absolute_long_indexed_address(cpu, cpu->x);
+        logic_accumulator(cpu,
+                          read_accumulator_operand(cpu, address, false),
+                          ACCUMULATOR_LOGIC_XOR, UINT64_C(5));
         break;
     case 0x70: /* BVS */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) != 0U);
@@ -1252,6 +1329,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         compare_value(cpu, cpu->y, fetch_index_operand(cpu),
                       !index_is_8_bit(cpu), UINT64_C(2));
         break;
+    case 0xc1: /* CMP (direct,X) */
+        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, false),
+                      !accumulator_is_8_bit(cpu),
+                      direct_penalized_cycles(cpu, UINT64_C(6)));
+        break;
     case 0xc2: /* REP immediate */
         operand = fetch8(cpu);
         cpu->p &= (uint8_t)~operand;
@@ -1270,6 +1354,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                       read_accumulator_operand(cpu, address, true),
                       !accumulator_is_8_bit(cpu),
                       direct_base_cycles(cpu, false));
+        break;
+    case 0xc7: /* CMP [direct] */
+        address = direct_indirect_long_address(cpu, 0U);
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, false),
+                      !accumulator_is_8_bit(cpu),
+                      direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
     case 0xc8: /* INY */
         change_index(cpu, &cpu->y, true);
@@ -1293,12 +1384,75 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                       read_accumulator_operand(cpu, address, false),
                       !accumulator_is_8_bit(cpu), UINT64_C(4));
         break;
+    case 0xcf: /* CMP absolute long */
+        address = fetch24(cpu);
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, false),
+                      !accumulator_is_8_bit(cpu), UINT64_C(5));
+        break;
     case 0xd0: /* BNE */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_Z) == 0U);
+        break;
+    case 0xd1: /* CMP (direct),Y */
+    {
+        uint16_t pointer;
+
+        address = direct_indirect_address(cpu, 0U, cpu->y, &pointer);
+        base_cycles = direct_penalized_cycles(cpu, UINT64_C(5));
+        if (!index_is_8_bit(cpu) ||
+            (uint32_t)(pointer & UINT16_C(0x00ff)) + cpu->y >
+                UINT32_C(0x00ff)) {
+            base_cycles += UINT64_C(1);
+        }
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, false),
+                      !accumulator_is_8_bit(cpu), base_cycles);
+        break;
+    }
+    case 0xd2: /* CMP (direct) */
+        address = direct_indirect_address(cpu, 0U, 0U, NULL);
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, false),
+                      !accumulator_is_8_bit(cpu),
+                      direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
+    case 0xd5: /* CMP direct,X */
+        address = direct_address(cpu, cpu->x);
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, true),
+                      !accumulator_is_8_bit(cpu),
+                      direct_base_cycles(cpu, true));
+        break;
+    case 0xd7: /* CMP [direct],Y */
+        address = direct_indirect_long_address(cpu, cpu->y);
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, false),
+                      !accumulator_is_8_bit(cpu),
+                      direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
     case 0xd8: /* CLD */
         cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_D;
         cpu->instruction_cycles += UINT64_C(2);
+        break;
+    case 0xd9: /* CMP absolute,Y */
+        address = absolute_indexed_address(cpu, cpu->y, false,
+                                           &base_cycles);
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, false),
+                      !accumulator_is_8_bit(cpu), base_cycles);
+        break;
+    case 0xdd: /* CMP absolute,X */
+        address = absolute_indexed_address(cpu, cpu->x, false,
+                                           &base_cycles);
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, false),
+                      !accumulator_is_8_bit(cpu), base_cycles);
+        break;
+    case 0xdf: /* CMP absolute long,X */
+        address = absolute_long_indexed_address(cpu, cpu->x);
+        compare_value(cpu, cpu->a,
+                      read_accumulator_operand(cpu, address, false),
+                      !accumulator_is_8_bit(cpu), UINT64_C(5));
         break;
     case 0xe0: /* CPX immediate */
         compare_value(cpu, cpu->x, fetch_index_operand(cpu),

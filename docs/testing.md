@@ -27,10 +27,11 @@ Logic/compare regressions cover ORA/AND/EOR/CMP immediate, Direct and absolute f
 all CPX/CPY and BIT opcodes; native 8/16-bit and an emulation-width case; M/X-selected
 operands; N/Z/C/V isolation; Direct Page DL penalties; indexed BIT penalties; and
 16-bit data reads crossing a bank boundary.
-Extended ORA/AND regressions exercise all 20 non-stack-relative indexed, indirect and
-long opcodes at both M widths. They verify DBR versus long-pointer banks, pre/post
-indexing, Direct-X emulation wrapping, page and bank carry, DL/M/X cycle additions,
-PC lengths, B/flag preservation and a representative stack-relative diagnostic stop.
+Extended accumulator-ALU regressions exercise all 40 non-stack-relative indexed,
+indirect and long ORA/AND/EOR/CMP opcodes at both M widths. They verify DBR versus
+long-pointer banks, pre/post indexing, Direct-X emulation wrapping, page and bank
+carry, DL/M/X cycle additions, PC lengths, B/flag/operand preservation and diagnostic
+stops for all eight still-unimplemented stack-relative forms.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -90,6 +91,8 @@ Logic/compare foundation evidence is recorded in
 [65c816-logic-compare-audit.md](65c816-logic-compare-audit.md).
 Extended ORA/AND addressing evidence is recorded in
 [65c816-ora-and-audit.md](65c816-ora-and-audit.md).
+Extended EOR/CMP addressing evidence is recorded in
+[65c816-eor-cmp-audit.md](65c816-eor-cmp-audit.md).
 
 ## End-of-task audit
 

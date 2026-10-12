@@ -1918,11 +1918,13 @@ static int test_logic_foundation(void)
     return 0;
 }
 
-static int test_logic_extended_addressing(void)
+static int test_accumulator_extended_addressing(void)
 {
-    enum logic_kind {
-        LOGIC_ORA,
-        LOGIC_AND
+    enum accumulator_operation {
+        OPERATION_ORA,
+        OPERATION_AND,
+        OPERATION_EOR,
+        OPERATION_CMP
     };
     enum logic_address_mode {
         LOGIC_DIRECT_INDEXED_INDIRECT,
@@ -1938,34 +1940,59 @@ static int test_logic_extended_addressing(void)
     };
     static const struct {
         uint8_t opcode;
-        enum logic_kind kind;
+        enum accumulator_operation operation;
         enum logic_address_mode mode;
     } cases[] = {
-        {UINT8_C(0x01), LOGIC_ORA, LOGIC_DIRECT_INDEXED_INDIRECT},
-        {UINT8_C(0x07), LOGIC_ORA, LOGIC_DIRECT_INDIRECT_LONG},
-        {UINT8_C(0x0f), LOGIC_ORA, LOGIC_ABSOLUTE_LONG},
-        {UINT8_C(0x11), LOGIC_ORA, LOGIC_DIRECT_INDIRECT_INDEXED},
-        {UINT8_C(0x12), LOGIC_ORA, LOGIC_DIRECT_INDIRECT},
-        {UINT8_C(0x15), LOGIC_ORA, LOGIC_DIRECT_X},
-        {UINT8_C(0x17), LOGIC_ORA,
+        {UINT8_C(0x01), OPERATION_ORA, LOGIC_DIRECT_INDEXED_INDIRECT},
+        {UINT8_C(0x07), OPERATION_ORA, LOGIC_DIRECT_INDIRECT_LONG},
+        {UINT8_C(0x0f), OPERATION_ORA, LOGIC_ABSOLUTE_LONG},
+        {UINT8_C(0x11), OPERATION_ORA, LOGIC_DIRECT_INDIRECT_INDEXED},
+        {UINT8_C(0x12), OPERATION_ORA, LOGIC_DIRECT_INDIRECT},
+        {UINT8_C(0x15), OPERATION_ORA, LOGIC_DIRECT_X},
+        {UINT8_C(0x17), OPERATION_ORA,
          LOGIC_DIRECT_INDIRECT_LONG_INDEXED},
-        {UINT8_C(0x19), LOGIC_ORA, LOGIC_ABSOLUTE_Y},
-        {UINT8_C(0x1d), LOGIC_ORA, LOGIC_ABSOLUTE_X},
-        {UINT8_C(0x1f), LOGIC_ORA, LOGIC_ABSOLUTE_LONG_X},
-        {UINT8_C(0x21), LOGIC_AND, LOGIC_DIRECT_INDEXED_INDIRECT},
-        {UINT8_C(0x27), LOGIC_AND, LOGIC_DIRECT_INDIRECT_LONG},
-        {UINT8_C(0x2f), LOGIC_AND, LOGIC_ABSOLUTE_LONG},
-        {UINT8_C(0x31), LOGIC_AND, LOGIC_DIRECT_INDIRECT_INDEXED},
-        {UINT8_C(0x32), LOGIC_AND, LOGIC_DIRECT_INDIRECT},
-        {UINT8_C(0x35), LOGIC_AND, LOGIC_DIRECT_X},
-        {UINT8_C(0x37), LOGIC_AND,
+        {UINT8_C(0x19), OPERATION_ORA, LOGIC_ABSOLUTE_Y},
+        {UINT8_C(0x1d), OPERATION_ORA, LOGIC_ABSOLUTE_X},
+        {UINT8_C(0x1f), OPERATION_ORA, LOGIC_ABSOLUTE_LONG_X},
+        {UINT8_C(0x21), OPERATION_AND, LOGIC_DIRECT_INDEXED_INDIRECT},
+        {UINT8_C(0x27), OPERATION_AND, LOGIC_DIRECT_INDIRECT_LONG},
+        {UINT8_C(0x2f), OPERATION_AND, LOGIC_ABSOLUTE_LONG},
+        {UINT8_C(0x31), OPERATION_AND, LOGIC_DIRECT_INDIRECT_INDEXED},
+        {UINT8_C(0x32), OPERATION_AND, LOGIC_DIRECT_INDIRECT},
+        {UINT8_C(0x35), OPERATION_AND, LOGIC_DIRECT_X},
+        {UINT8_C(0x37), OPERATION_AND,
          LOGIC_DIRECT_INDIRECT_LONG_INDEXED},
-        {UINT8_C(0x39), LOGIC_AND, LOGIC_ABSOLUTE_Y},
-        {UINT8_C(0x3d), LOGIC_AND, LOGIC_ABSOLUTE_X},
-        {UINT8_C(0x3f), LOGIC_AND, LOGIC_ABSOLUTE_LONG_X}
+        {UINT8_C(0x39), OPERATION_AND, LOGIC_ABSOLUTE_Y},
+        {UINT8_C(0x3d), OPERATION_AND, LOGIC_ABSOLUTE_X},
+        {UINT8_C(0x3f), OPERATION_AND, LOGIC_ABSOLUTE_LONG_X},
+        {UINT8_C(0x41), OPERATION_EOR, LOGIC_DIRECT_INDEXED_INDIRECT},
+        {UINT8_C(0x47), OPERATION_EOR, LOGIC_DIRECT_INDIRECT_LONG},
+        {UINT8_C(0x4f), OPERATION_EOR, LOGIC_ABSOLUTE_LONG},
+        {UINT8_C(0x51), OPERATION_EOR, LOGIC_DIRECT_INDIRECT_INDEXED},
+        {UINT8_C(0x52), OPERATION_EOR, LOGIC_DIRECT_INDIRECT},
+        {UINT8_C(0x55), OPERATION_EOR, LOGIC_DIRECT_X},
+        {UINT8_C(0x57), OPERATION_EOR,
+         LOGIC_DIRECT_INDIRECT_LONG_INDEXED},
+        {UINT8_C(0x59), OPERATION_EOR, LOGIC_ABSOLUTE_Y},
+        {UINT8_C(0x5d), OPERATION_EOR, LOGIC_ABSOLUTE_X},
+        {UINT8_C(0x5f), OPERATION_EOR, LOGIC_ABSOLUTE_LONG_X},
+        {UINT8_C(0xc1), OPERATION_CMP, LOGIC_DIRECT_INDEXED_INDIRECT},
+        {UINT8_C(0xc7), OPERATION_CMP, LOGIC_DIRECT_INDIRECT_LONG},
+        {UINT8_C(0xcf), OPERATION_CMP, LOGIC_ABSOLUTE_LONG},
+        {UINT8_C(0xd1), OPERATION_CMP, LOGIC_DIRECT_INDIRECT_INDEXED},
+        {UINT8_C(0xd2), OPERATION_CMP, LOGIC_DIRECT_INDIRECT},
+        {UINT8_C(0xd5), OPERATION_CMP, LOGIC_DIRECT_X},
+        {UINT8_C(0xd7), OPERATION_CMP,
+         LOGIC_DIRECT_INDIRECT_LONG_INDEXED},
+        {UINT8_C(0xd9), OPERATION_CMP, LOGIC_ABSOLUTE_Y},
+        {UINT8_C(0xdd), OPERATION_CMP, LOGIC_ABSOLUTE_X},
+        {UINT8_C(0xdf), OPERATION_CMP, LOGIC_ABSOLUTE_LONG_X}
     };
-    const uint8_t preserved = MIPSNES2_CPU_FLAG_C |
-                              MIPSNES2_CPU_FLAG_I |
+    static const uint8_t excluded_stack_opcodes[] = {
+        UINT8_C(0x03), UINT8_C(0x13), UINT8_C(0x23), UINT8_C(0x33),
+        UINT8_C(0x43), UINT8_C(0x53), UINT8_C(0xc3), UINT8_C(0xd3)
+    };
+    const uint8_t preserved = MIPSNES2_CPU_FLAG_I |
                               MIPSNES2_CPU_FLAG_D |
                               MIPSNES2_CPU_FLAG_X |
                               MIPSNES2_CPU_FLAG_V;
@@ -1976,29 +2003,57 @@ static int test_logic_extended_addressing(void)
 
     for (index = 0U; index < sizeof(cases) / sizeof(cases[0]); ++index) {
         for (wide = 0U; wide < 2U; ++wide) {
-            bool is_ora = cases[index].kind == LOGIC_ORA;
-            uint16_t before = is_ora
-                                  ? (wide != 0U ? UINT16_C(0x4000)
-                                                : UINT16_C(0xab50))
-                                  : (wide != 0U ? UINT16_C(0xf0f0)
-                                                : UINT16_C(0xabf0));
-            uint16_t operand = is_ora
-                                   ? (wide != 0U ? UINT16_C(0x8001)
-                                                 : UINT16_C(0x008f))
-                                   : (wide != 0U ? UINT16_C(0x0ff0)
-                                                 : UINT16_C(0x000f));
-            uint16_t expected = is_ora
-                                    ? (wide != 0U ? UINT16_C(0xc001)
-                                                  : UINT16_C(0xabdf))
-                                    : (wide != 0U ? UINT16_C(0x00f0)
-                                                  : UINT16_C(0xab00));
-            uint8_t expected_nz = is_ora
-                                      ? MIPSNES2_CPU_FLAG_N
-                                      : (wide != 0U
-                                             ? 0U
-                                             : MIPSNES2_CPU_FLAG_Z);
+            bool is_compare = cases[index].operation == OPERATION_CMP;
+            uint16_t before;
+            uint16_t operand;
+            uint16_t expected;
+            uint8_t expected_flags;
             uint16_t expected_pc;
             uint64_t expected_cycles;
+
+            switch (cases[index].operation) {
+            case OPERATION_ORA:
+                before = wide != 0U ? UINT16_C(0x4000)
+                                     : UINT16_C(0xab50);
+                operand = wide != 0U ? UINT16_C(0x8001)
+                                      : UINT16_C(0x008f);
+                expected = wide != 0U ? UINT16_C(0xc001)
+                                       : UINT16_C(0xabdf);
+                expected_flags = MIPSNES2_CPU_FLAG_N;
+                break;
+            case OPERATION_AND:
+                before = wide != 0U ? UINT16_C(0xf0f0)
+                                     : UINT16_C(0xabf0);
+                operand = wide != 0U ? UINT16_C(0x0ff0)
+                                      : UINT16_C(0x000f);
+                expected = wide != 0U ? UINT16_C(0x00f0)
+                                       : UINT16_C(0xab00);
+                expected_flags = wide != 0U ? 0U : MIPSNES2_CPU_FLAG_Z;
+                break;
+            case OPERATION_EOR:
+                before = wide != 0U ? UINT16_C(0xffff)
+                                     : UINT16_C(0xab7f);
+                operand = wide != 0U ? UINT16_C(0xffff)
+                                      : UINT16_C(0x00ff);
+                expected = wide != 0U ? UINT16_C(0x0000)
+                                       : UINT16_C(0xab80);
+                expected_flags = wide != 0U ? MIPSNES2_CPU_FLAG_Z
+                                             : MIPSNES2_CPU_FLAG_N;
+                break;
+            case OPERATION_CMP:
+                before = wide != 0U ? UINT16_C(0x1000)
+                                     : UINT16_C(0xab44);
+                operand = wide != 0U ? UINT16_C(0x2000)
+                                      : UINT16_C(0x0044);
+                expected = before;
+                expected_flags = wide != 0U
+                                     ? MIPSNES2_CPU_FLAG_N
+                                     : MIPSNES2_CPU_FLAG_Z |
+                                           MIPSNES2_CPU_FLAG_C;
+                break;
+            default:
+                return 1;
+            }
 
             CHECK(reset_fixture(&fixture, UINT16_C(0x9700)) == 0);
             cpu->pbr = UINT8_C(0x7e);
@@ -2006,6 +2061,7 @@ static int test_logic_extended_addressing(void)
             cpu->d = UINT16_C(0x1201);
             cpu->emulation = false;
             cpu->p = (uint8_t)(preserved |
+                               MIPSNES2_CPU_FLAG_C |
                                (wide != 0U ? 0U : MIPSNES2_CPU_FLAG_M) |
                                MIPSNES2_CPU_FLAG_N |
                                MIPSNES2_CPU_FLAG_Z);
@@ -2106,7 +2162,10 @@ static int test_logic_extended_addressing(void)
                                       (wide != 0U
                                            ? 0U
                                            : MIPSNES2_CPU_FLAG_M) |
-                                      expected_nz));
+                                      (is_compare
+                                           ? 0U
+                                           : MIPSNES2_CPU_FLAG_C) |
+                                      expected_flags));
             CHECK(cpu->pc == expected_pc);
             CHECK(cpu->instruction_cycles == expected_cycles);
             CHECK(cpu->x == UINT16_C(0x0020));
@@ -2173,15 +2232,21 @@ static int test_logic_extended_addressing(void)
     CHECK(cpu->pc == UINT16_C(0x9742));
     CHECK(cpu->instruction_cycles == UINT64_C(6));
 
-    CHECK(reset_fixture(&fixture, UINT16_C(0x9750)) == 0);
-    cpu->pbr = UINT8_C(0x7e);
-    bank7e[0x9750] = UINT8_C(0x03);
-    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_UNIMPLEMENTED_OPCODE);
-    CHECK(cpu->stopped);
-    CHECK(cpu->last_opcode == UINT8_C(0x03));
-    CHECK(cpu->last_opcode_address == UINT32_C(0x7e9750));
-    CHECK(cpu->pc == UINT16_C(0x9751));
-    CHECK(cpu->instruction_cycles == 0U);
+    for (index = 0U;
+         index < sizeof(excluded_stack_opcodes) /
+                     sizeof(excluded_stack_opcodes[0]);
+         ++index) {
+        CHECK(reset_fixture(&fixture, UINT16_C(0x9750)) == 0);
+        cpu->pbr = UINT8_C(0x7e);
+        bank7e[0x9750] = excluded_stack_opcodes[index];
+        CHECK(mipsnes2_cpu_step(cpu) ==
+              MIPSNES2_CPU_UNIMPLEMENTED_OPCODE);
+        CHECK(cpu->stopped);
+        CHECK(cpu->last_opcode == excluded_stack_opcodes[index]);
+        CHECK(cpu->last_opcode_address == UINT32_C(0x7e9750));
+        CHECK(cpu->pc == UINT16_C(0x9751));
+        CHECK(cpu->instruction_cycles == 0U);
+    }
     return 0;
 }
 
@@ -2744,7 +2809,7 @@ int main(void)
     CHECK(test_accumulator_increment_decrement() == 0);
     CHECK(test_index_increment_decrement() == 0);
     CHECK(test_logic_foundation() == 0);
-    CHECK(test_logic_extended_addressing() == 0);
+    CHECK(test_accumulator_extended_addressing() == 0);
     CHECK(test_compare_foundation() == 0);
     CHECK(test_bit_foundation() == 0);
     CHECK(test_control_flow_and_faults() == 0);
@@ -2752,6 +2817,6 @@ int main(void)
     CHECK(test_branch_timing_and_program_bank() == 0);
     CHECK(test_branch_relative_long() == 0);
     CHECK(test_rep_in_emulation() == 0);
-    (void)puts("PASS: logical bus and 65C816 ORA/AND addressing subset");
+    (void)puts("PASS: logical bus and 65C816 accumulator ALU addressing subset");
     return 0;
 }

@@ -16,11 +16,11 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 ## Current state
 
 **The project has a partial 65C816 interpreter and reference bus. It cannot run a SNES
-ROM.** One hundred twenty-five opcodes now cover the foundation, the complete register-
+ROM.** One hundred forty-five opcodes now cover the foundation, the complete register-
 transfer and branch families, implied single-flag status controls, accumulator/index
-register increment-decrement operations, complete non-stack-relative ORA/AND address
-families, a logic/compare foundation, and direct, direct-indexed, direct-indirect, absolute,
-absolute-indexed and absolute-long load/store paths. Deterministic host regressions
+register increment-decrement operations, complete non-stack-relative ORA/AND/EOR/CMP
+address families, a logic/compare foundation, and direct, direct-indexed, direct-indirect,
+absolute, absolute-indexed and absolute-long load/store paths. Deterministic host regressions
 cover widths, flags, cycles, signed branch offsets, program-bank-local PC wrapping,
 Direct Page pointer wrapping, DBR selection and 24-bit bank crossing. Console entry
 points remain build probes, not usable emulators. No PPU, APU, cartridge integration,
@@ -33,11 +33,10 @@ commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future wo
 
 Phase 1's foundation exit gate, the complete register-transfer and branch families,
 the implied single-flag status controls, accumulator/index register increment-
-decrement operations, complete BIT/CPX/CPY families and the base ORA/AND/EOR/CMP
-forms are verified. ORA and AND additionally cover every indexed, indirect and long
-form that does not require the still-unimplemented stack-relative modes. The next
-focused milestone should extend EOR and CMP through those same already-supported
-address modes. Do not start with a dynarec, renderer or enhancement chips.
+decrement operations, complete BIT/CPX/CPY families and every non-stack-relative
+ORA/AND/EOR/CMP form are verified. The next focused milestone should establish
+stack-relative addressing with the eight remaining ORA/AND/EOR/CMP forms. Do not
+start with a dynarec, renderer or enhancement chips.
 
 ## Build and test the foundation
 
