@@ -27,7 +27,7 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the 82-opcode CPU
+repository structure/boundaries/checklists; the reference bus; and the 105-opcode CPU
 subset described in [65c816.md](65c816.md). CPU regressions include implemented
 8/16-bit widths, flags, cycles, Direct Page/indexed/pointer wrapping and penalties,
 regular-indirect DBR selection, long-indirect bank selection, absolute indexing and
@@ -42,3 +42,6 @@ emulation cycle differences. Status-control regressions cover isolated D/I/V cha
 unrelated-state preservation and exact two-cycle behavior in both CPU modes.
 Register increment/decrement regressions cover M/X-selected 8/16-bit wrapping, B
 preservation, index zero extension, isolated N/Z changes and fixed two-cycle timing.
+Logic/compare regressions cover all 23 base-group opcodes at 8/16-bit widths,
+selected-width N/Z/C/V behavior, preserved operands/flags, Direct Page penalties,
+indexed BIT timing and linear word reads across a bank boundary.
