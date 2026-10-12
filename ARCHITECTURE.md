@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 82-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 105-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -78,6 +78,11 @@ not invoke width/mode normalization or touch registers.
 Accumulator INC/DEC apply the M-selected width and preserve B in 8-bit mode. INX,
 DEX, INY and DEY apply the X-selected width and leave an 8-bit index zero-extended.
 All six wrap at their selected width, update only N/Z, and take two cycles.
+ORA, AND and EOR use M-selected accumulator width, preserve B in 8-bit mode and
+update only N/Z. CMP uses M while CPX/CPY use X; comparisons preserve operands and
+set N/Z from the selected-width subtraction plus C for no borrow. BIT uses M, never
+changes A, and sets Z from A AND operand. Memory BIT also copies the operand's top
+two selected-width bits into N/V; immediate BIT preserves N/V.
 
 ## Scheduler and timing proposal
 
@@ -155,6 +160,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   only their documented P bit with fixed two-cycle timing in both CPU modes.
 - 2026-10-11: Accumulator/index register increment and decrement operations wrap at
   M/X-selected width, update only N/Z and retain fixed two-cycle timing.
+- 2026-10-11: Base immediate/Direct/absolute ORA, AND, EOR and CMP paths share
+  selected-width ALU helpers; the complete BIT, CPX and CPY families establish their
+  distinct M/X and N/V/C flag contracts without decimal arithmetic.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

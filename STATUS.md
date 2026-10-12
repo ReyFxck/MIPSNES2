@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 82-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 105-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -214,6 +214,16 @@ are in docs/65c816-increment-decrement-audit.md. GitHub Host GCC/Clang release a
 sanitizer jobs plus pinned PS2/PSP cross-build, artifact and checksum jobs passed for
 the implementation commit.
 
+The logic/compare foundation milestone on 2026-10-11 adds 23 verified opcodes: base
+immediate/Direct/absolute ORA, AND, EOR and CMP forms plus every CPX, CPY and BIT
+form. Host GCC debug, release and ASan+UBSan tests cover 8/16-bit M/X selection,
+N/Z/C/V isolation, preserved operands/B, Direct Page penalties, indexed BIT timing
+and linear word reads across a bank boundary. Pinned PS2SDK/PSPSDK cross-builds
+compile the 105-opcode core and produce nonempty target artifacts. Exact local
+evidence and validation limits are in docs/65c816-logic-compare-audit.md. GitHub
+Host GCC/Clang plus pinned PS2/PSP jobs passed, and downloaded artifacts/checksums
+were inspected for the implementation commit.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -227,24 +237,24 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 82-opcode subset only
-- [ ] [IN PROGRESS] Immediate addressing — LDA/LDX/LDY plus REP/SEP implemented only
-- [ ] [IN PROGRESS] Absolute addressing — JMP plus LDA/LDX/LDY and STA/STX/STY implemented
+- [ ] [IN PROGRESS] Opcode dispatch — 105-opcode subset only
+- [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP and base logic/compare forms only
+- [ ] [IN PROGRESS] Absolute addressing — JMP, loads/stores and base logic/compare/BIT forms only
 - [ ] [IN PROGRESS] Long addressing — LDA/STA absolute long and absolute long,X implemented only
-- [ ] [IN PROGRESS] Direct Page addressing — direct/indexed loads/stores plus ten LDA/STA indirect forms only
+- [ ] [IN PROGRESS] Direct Page addressing — loads/stores, base logic/compare/BIT and ten LDA/STA indirect forms only
 - [ ] Stack-relative addressing
-- [ ] [IN PROGRESS] Indexed addressing — direct, absolute, long and Direct-indirect load/store subset only
+- [ ] [IN PROGRESS] Indexed addressing — load/store subset plus Direct-X/absolute-X BIT only
 - [ ] [IN PROGRESS] Indirect addressing — LDA/STA `(direct,X)`, `(direct)`, `(direct),Y`, `[direct]` and `[direct],Y` only
 - [x] Branch instructions
 - [ ] [IN PROGRESS] Load/store instructions — immediate, direct/indirect, absolute, indexed and long subset only
-- [ ] [IN PROGRESS] Arithmetic instructions — accumulator/index register increment-decrement subset only
-- [ ] Logic instructions
+- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, base CMP and complete CPX/CPY subsets only
+- [ ] [IN PROGRESS] Logic instructions — base ORA/AND/EOR forms and complete BIT family only
 - [ ] Shift/rotate instructions
 - [x] Transfer instructions
 - [ ] Stack instructions
-- [ ] [IN PROGRESS] Status flag behavior — implied C/D/I/V controls and implemented load/transfer/register-arithmetic N/Z plus REP/SEP/XCE subset verified
-- [ ] [IN PROGRESS] M flag behavior — implemented accumulator loads/stores, transfers and register INC/DEC verified at both widths
-- [ ] [IN PROGRESS] X flag behavior — implemented index loads/stores, transfers, register INC/DEC, indexed cycles and high-byte clearing verified
+- [ ] [IN PROGRESS] Status flag behavior — controls plus implemented load/transfer/logic/compare/register-arithmetic flag effects verified
+- [ ] [IN PROGRESS] M flag behavior — implemented accumulator data, transfer, logic, compare, BIT and register INC/DEC paths verified at both widths
+- [ ] [IN PROGRESS] X flag behavior — implemented index data, transfer, compare, register INC/DEC and indexed cycles verified
 - [ ] [IN PROGRESS] Native mode — XCE entry, implemented widths/transfers, branches, status controls and register INC/DEC verified
 - [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers, Direct/indirect pointer wrapping, branches, status controls and register INC/DEC verified for implemented subset
 - [ ] Decimal arithmetic
@@ -257,8 +267,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] STP
 - [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
-- [ ] [IN PROGRESS] Timing model — width, Direct DL, indexed read/write, complete branch/transfer, status-control and register INC/DEC timing verified for implemented subset only
-- [ ] [IN PROGRESS] CPU automated tests — all 82 implemented opcodes and addressing behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, logic/compare and register INC/DEC timing only
+- [ ] [IN PROGRESS] CPU automated tests — all 105 implemented opcodes and addressing behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -349,6 +359,29 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] XBA (`EB`)
 - [x] BEQ (`F0`)
 - [x] SED (`F8`)
+- [x] ORA direct (`05`)
+- [x] ORA immediate (`09`)
+- [x] ORA absolute (`0D`)
+- [x] BIT direct (`24`)
+- [x] AND direct (`25`)
+- [x] AND immediate (`29`)
+- [x] BIT absolute (`2C`)
+- [x] AND absolute (`2D`)
+- [x] BIT direct,X (`34`)
+- [x] BIT absolute,X (`3C`)
+- [x] EOR direct (`45`)
+- [x] EOR immediate (`49`)
+- [x] EOR absolute (`4D`)
+- [x] BIT immediate (`89`)
+- [x] CPY immediate (`C0`)
+- [x] CPY direct (`C4`)
+- [x] CMP direct (`C5`)
+- [x] CMP immediate (`C9`)
+- [x] CPY absolute (`CC`)
+- [x] CMP absolute (`CD`)
+- [x] CPX immediate (`E0`)
+- [x] CPX direct (`E4`)
+- [x] CPX absolute (`EC`)
 - [x] Base-cycle accounting for the implemented subset
 - [x] Linear 24-bit word access across bank boundaries
 - [x] Absolute indexed page/write/X cycle rule for implemented opcodes
@@ -372,6 +405,9 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] BRL fixed four-cycle timing
 - [x] Implied D/I/V status-control isolation and two-cycle timing
 - [x] Accumulator/index increment-decrement width, wrap, N/Z isolation and two-cycle timing
+- [x] Base ORA/AND/EOR selected-width result, N/Z and B-preservation behavior
+- [x] Base CMP and complete CPX/CPY selected-width N/Z/C behavior
+- [x] Complete BIT selected-width Z, memory N/V and immediate N/V-preservation behavior
 
 ## Bus
 

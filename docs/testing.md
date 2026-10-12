@@ -23,6 +23,10 @@ modes, including exact unrelated-flag preservation, PC movement and two-cycle ti
 Register increment/decrement regressions cover accumulator and both index registers
 at 8/16-bit widths, wraparound, B preservation, index zero extension, N/Z isolation,
 PC movement and exact two-cycle timing.
+Logic/compare regressions cover ORA/AND/EOR/CMP immediate, Direct and absolute forms;
+all CPX/CPY and BIT opcodes; native 8/16-bit and an emulation-width case; M/X-selected
+operands; N/Z/C/V isolation; Direct Page DL penalties; indexed BIT penalties; and
+16-bit data reads crossing a bank boundary.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -78,6 +82,8 @@ Status-control milestone evidence is recorded in
 [65c816-status-control-audit.md](65c816-status-control-audit.md).
 Register increment/decrement milestone evidence is recorded in
 [65c816-increment-decrement-audit.md](65c816-increment-decrement-audit.md).
+Logic/compare foundation evidence is recorded in
+[65c816-logic-compare-audit.md](65c816-logic-compare-audit.md).
 
 ## End-of-task audit
 

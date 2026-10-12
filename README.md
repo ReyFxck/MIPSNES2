@@ -16,9 +16,9 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 ## Current state
 
 **The project has a partial 65C816 interpreter and reference bus. It cannot run a SNES
-ROM.** Eighty-two opcodes now cover the foundation, the complete register-transfer
-and branch families, implied single-flag status controls, accumulator/index register
-increment-decrement operations, and direct,
+ROM.** One hundred five opcodes now cover the foundation, the complete register-
+transfer and branch families, implied single-flag status controls, accumulator/index
+register increment-decrement operations, a logic/compare foundation, and direct,
 direct-indexed, direct-indirect, absolute,
 absolute-indexed and absolute-long load/store paths. Deterministic host regressions
 cover widths, flags, cycles, signed branch offsets, program-bank-local PC wrapping,
@@ -32,10 +32,11 @@ workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) con
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
 
 Phase 1's foundation exit gate, the complete register-transfer and branch families,
-the implied single-flag status controls and accumulator/index register increment-
-decrement operations are verified. The next focused milestone should implement the
-immediate ORA/AND/EOR group with exact M-width, N/Z and cycle tests. Do not start with
-a dynarec, renderer or enhancement chips.
+the implied single-flag status controls, accumulator/index register increment-
+decrement operations, complete BIT/CPX/CPY families and the base ORA/AND/EOR/CMP
+forms are verified. The next focused milestone should extend ORA and AND through the
+already-supported indexed, indirect and long address modes. Do not start with a
+dynarec, renderer or enhancement chips.
 
 ## Build and test the foundation
 
