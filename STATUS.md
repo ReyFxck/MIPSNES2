@@ -220,8 +220,9 @@ form. Host GCC debug, release and ASan+UBSan tests cover 8/16-bit M/X selection,
 N/Z/C/V isolation, preserved operands/B, Direct Page penalties, indexed BIT timing
 and linear word reads across a bank boundary. Pinned PS2SDK/PSPSDK cross-builds
 compile the 105-opcode core and produce nonempty target artifacts. Exact local
-evidence and validation limits are in docs/65c816-logic-compare-audit.md; GitHub
-Actions evidence must be added after the branch workflows execute.
+evidence and validation limits are in docs/65c816-logic-compare-audit.md. GitHub
+Host GCC/Clang plus pinned PS2/PSP jobs passed, and downloaded artifacts/checksums
+were inspected for the implementation commit.
 
 ## Current blockers and diagnostic exceptions
 

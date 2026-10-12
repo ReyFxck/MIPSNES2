@@ -87,6 +87,23 @@ a zero-byte output, so that attempt was rejected. A sequential `clean all` rebui
 was run, returned zero and produced the valid ELF described above. Cross-build
 success is not console execution.
 
+## GitHub Actions evidence
+
+Implementation commit: `ef737f3c6816b9b467cb8f1da2210342b295a6d9`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38197728449](https://github.com/ReyFxck/MIPSNES2/actions/runs/38197728449) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38197728331](https://github.com/ReyFxck/MIPSNES2/actions/runs/38197728331) | Passed pinned cross-build and checksum job | 1,320,232-byte MIPS ELF |
+| PSP CI | [38197728330](https://github.com/ReyFxck/MIPSNES2/actions/runs/38197728330) | Passed pinned cross-build and checksum job | 173,426-byte `EBOOT.PBP` |
+
+All four downloaded artifact archives are nonempty and unexpired. Their embedded
+`SHA256SUMS` files validate every packaged binary and provenance file. GitHub artifact
+metadata identifies branch head `ef737f3c6816b9b467cb8f1da2210342b295a6d9`;
+artifact names and `BUILD.txt` use the pull request's synthetic merge commit
+`4efaa84918014f568da3862eec4cd62a23a9949a`. The final documentation-only commit is
+verified separately and recorded in the pull request conversation.
+
 ## Validation limits
 
 Host unit tests do not establish complete CPU correctness. No PCSX2, real PS2,
