@@ -18,6 +18,8 @@ regressions cover the fixed-width C/D/S paths, emulation/native stack-high rules
 8/16-bit TSX/TXS and XBA byte exchange. Branch regressions execute all eight
 conditional opcodes in taken and non-taken paths plus BRA and BRL; they cover signed
 offsets, PBR-local 16-bit PC wrapping, unchanged status and exact 2/3/4-cycle rules.
+Status-control regressions cover CLD/SED, CLI/SEI and CLV in emulation and native
+modes, including exact unrelated-flag preservation, PC movement and two-cycle timing.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -69,6 +71,8 @@ Special-transfer completion evidence is recorded in
 [65c816-special-transfer-audit.md](65c816-special-transfer-audit.md).
 Branch-family completion evidence is recorded in
 [65c816-branch-audit.md](65c816-branch-audit.md).
+Status-control milestone evidence is recorded in
+[65c816-status-control-audit.md](65c816-status-control-audit.md).
 
 ## End-of-task audit
 

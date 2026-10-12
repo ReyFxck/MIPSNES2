@@ -512,6 +512,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     case 0x50: /* BVC */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) == 0U);
         break;
+    case 0x58: /* CLI */
+        cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_I;
+        cpu->instruction_cycles += UINT64_C(2);
+        break;
     case 0x5b: /* TCD */
         cpu->d = cpu->a;
         set_nz16(cpu, cpu->d);
@@ -519,6 +523,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0x70: /* BVS */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) != 0U);
+        break;
+    case 0x78: /* SEI */
+        cpu->p |= MIPSNES2_CPU_FLAG_I;
+        cpu->instruction_cycles += UINT64_C(2);
         break;
     case 0x7b: /* TDC */
         transfer16_to_accumulator(cpu, cpu->d);
@@ -815,6 +823,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         load_accumulator_memory(cpu, address,
                                 direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0xb8: /* CLV */
+        cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_V;
+        cpu->instruction_cycles += UINT64_C(2);
+        break;
     case 0xba: /* TSX */
         transfer_to_index(cpu, &cpu->x, cpu->s);
         break;
@@ -850,6 +862,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     case 0xd0: /* BNE */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_Z) == 0U);
         break;
+    case 0xd8: /* CLD */
+        cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_D;
+        cpu->instruction_cycles += UINT64_C(2);
+        break;
     case 0xe2: /* SEP immediate */
         operand = fetch8(cpu);
         cpu->p |= operand;
@@ -864,6 +880,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0xf0: /* BEQ */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_Z) != 0U);
+        break;
+    case 0xf8: /* SED */
+        cpu->p |= MIPSNES2_CPU_FLAG_D;
+        cpu->instruction_cycles += UINT64_C(2);
         break;
     case 0xfb: { /* XCE */
         bool old_carry = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U;

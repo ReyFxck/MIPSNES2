@@ -16,8 +16,9 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 ## Current state
 
 **The project has a partial 65C816 interpreter and reference bus. It cannot run a SNES
-ROM.** Seventy-one opcodes now cover the foundation, the complete register-transfer
-and branch families, and direct, direct-indexed, direct-indirect, absolute,
+ROM.** Seventy-six opcodes now cover the foundation, the complete register-transfer
+and branch families, the implied single-flag status controls, and direct,
+direct-indexed, direct-indirect, absolute,
 absolute-indexed and absolute-long load/store paths. Deterministic host regressions
 cover widths, flags, cycles, signed branch offsets, program-bank-local PC wrapping,
 Direct Page pointer wrapping, DBR selection and 24-bit bank crossing. Console entry
@@ -29,10 +30,10 @@ Current milestone: Phase 2 — incremental 65C816 reference interpreter.
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
 
-Phase 1's foundation exit gate plus the complete register-transfer and branch families
-are verified. The next focused milestone should complete the implied status-control
-family with CLD, SED, CLI, SEI and CLV plus exact flag/cycle tests. Do not start with
-a dynarec, renderer or enhancement chips.
+Phase 1's foundation exit gate, the complete register-transfer and branch families,
+and the implied single-flag status controls are verified. The next focused milestone
+should implement the accumulator/index increment-decrement family with exact width,
+N/Z and cycle tests. Do not start with a dynarec, renderer or enhancement chips.
 
 ## Build and test the foundation
 
