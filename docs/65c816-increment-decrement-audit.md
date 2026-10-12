@@ -73,8 +73,18 @@ Cross-build success is not console execution.
 
 ## GitHub Actions evidence
 
-Pending publication. The PR must pass Host GCC/Clang, sanitizer, pinned PS2/PSP
-cross-build, artifact and checksum jobs before this milestone is review-ready.
+Implementation commit: `4a3fb02deef308992b7621707d3b4e5b6d381645`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38187823622](https://github.com/ReyFxck/MIPSNES2/actions/runs/38187823622) | Passed GCC/Clang release, sanitizer and tests | GCC 18,301 bytes; Clang 17,778 bytes |
+| PS2 CI | [38187823661](https://github.com/ReyFxck/MIPSNES2/actions/runs/38187823661) | Passed pinned cross-build and checksum jobs | 412,339 bytes |
+| PSP CI | [38187823645](https://github.com/ReyFxck/MIPSNES2/actions/runs/38187823645) | Passed pinned cross-build and checksum jobs | 92,610 bytes |
+
+All inspected artifacts are nonempty, unexpired and identify the correct head branch
+and implementation SHA. Artifact names use GitHub's synthetic pull-request merge SHA,
+while artifact metadata records the actual branch head SHA. The final documentation-
+only commit is verified by its own workflow runs and recorded in the PR conversation.
 
 ## Validation limits
 

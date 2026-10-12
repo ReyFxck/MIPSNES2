@@ -210,8 +210,9 @@ Deterministic regressions cover emulation and native modes, M/X-selected 8/16-bi
 wraparound, accumulator B preservation, 8-bit index zero extension, isolated N/Z
 changes, one-byte PC movement and fixed two-cycle timing. Pinned PS2SDK/PSPSDK
 cross-builds compile the changed core and pass. Exact evidence and validation limits
-are in docs/65c816-increment-decrement-audit.md; GitHub CI remains required for the
-published commit.
+are in docs/65c816-increment-decrement-audit.md. GitHub Host GCC/Clang release and
+sanitizer jobs plus pinned PS2/PSP cross-build, artifact and checksum jobs passed for
+the implementation commit.
 
 ## Current blockers and diagnostic exceptions
 
