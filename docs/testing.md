@@ -53,6 +53,11 @@ both M widths. They cover bank-zero Direct wrap, nonzero-DL timing, absolute pag
 bank carry, the shared page-cross-or-16-bit-index cycle, selected-width flags/B,
 PC/cycles and the pre-operand decimal diagnostic stop across all twelve recognized
 ADC/SBC forms.
+Binary stack-relative arithmetic regressions execute ADC/SBC `offset,S` and
+`(offset,S),Y` at both M widths. They cover full 16-bit S-based address formation,
+bank-zero word/pointer wrap, DBR plus Y carry, native/emulation behavior,
+selected-width flags/B, fixed 4/7-cycle bases and the pre-operand decimal diagnostic
+stop across all sixteen recognized ADC/SBC forms.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -124,6 +129,8 @@ Binary Direct Page/absolute ADC/SBC evidence is recorded in
 [65c816-binary-direct-absolute-audit.md](65c816-binary-direct-absolute-audit.md).
 Binary indexed ADC/SBC evidence is recorded in
 [65c816-binary-indexed-audit.md](65c816-binary-indexed-audit.md).
+Binary stack-relative ADC/SBC evidence is recorded in
+[65c816-binary-stack-relative-audit.md](65c816-binary-stack-relative-audit.md).
 
 ## End-of-task audit
 

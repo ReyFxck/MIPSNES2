@@ -27,7 +27,7 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the 169-opcode CPU
+repository structure/boundaries/checklists; the reference bus; and the 173-opcode CPU
 subset described in [65c816.md](65c816.md). CPU regressions include implemented
 8/16-bit widths, flags, cycles, Direct Page/indexed/pointer wrapping and penalties,
 regular-indirect DBR selection, long-indirect bank selection, absolute indexing and
@@ -54,7 +54,7 @@ both M widths, full 16-bit `S + offset` formation, bank-zero word/pointer wrappi
 DBR plus Y 24-bit carry, native/emulation behavior and fixed 4/7-cycle bases without
 Direct Page, page-cross or X-width penalties. Stack-relative LDA/STA regressions add
 8/16-bit reads and writes, B/N/Z/status behavior and bank-zero word wrap for their
-four forms. ADC/SBC stack-relative modes remain unimplemented.
+four forms.
 Binary immediate arithmetic regressions cover ADC/SBC at both M widths, carry and
 borrow inputs, unsigned carry/no-borrow, signed overflow, N/Z, 8-bit B preservation
 and exact timing. D=1 is verified as a sticky pre-operand unsupported-decimal stop;
@@ -66,4 +66,9 @@ forms retain the pre-operand decimal diagnostic stop.
 Binary indexed arithmetic regressions add ADC/SBC Direct-X and absolute-X/Y at both
 M widths, Direct Page wrap/DL timing, absolute page and bank carry, the shared page-
 cross-or-16-bit-index cycle, PC length and exact width cycles. All twelve recognized
+ADC/SBC forms retain the pre-operand decimal diagnostic stop.
+Binary stack-relative arithmetic regressions add ADC/SBC `offset,S` and
+`(offset,S),Y` at both M widths, full 16-bit S-based address formation, bank-zero
+word/pointer wrap, DBR plus Y carry, emulation-mode stack addressing, exact 4/7-cycle
+bases and the absence of Direct Page/page/index penalties. All sixteen recognized
 ADC/SBC forms retain the pre-operand decimal diagnostic stop.
