@@ -299,8 +299,10 @@ The binary indexed arithmetic milestone on 2026-10-15 adds ADC `75/79/7D` and SB
 DL timing, absolute-X/Y DBR selection, page crossing, 16-bit index timing, linear
 24-bit bank carry, C/V/N/Z, B preservation, PC and exact cycles. All twelve recognized
 ADC/SBC opcodes stop before operand/address fetch when D=1. Local host and cross-build
-evidence is recorded in docs/65c816-binary-indexed-audit.md. Indirect, long,
-stack-relative and decimal ADC/SBC remain incomplete.
+tests pass. GitHub Host GCC/Clang plus pinned PS2/PSP jobs passed for the implementation
+commit, and downloaded artifacts plus archive/internal checksums were inspected. Exact
+evidence is in docs/65c816-binary-indexed-audit.md. Indirect, long, stack-relative
+and decimal ADC/SBC remain incomplete.
 
 ## Current blockers and diagnostic exceptions
 

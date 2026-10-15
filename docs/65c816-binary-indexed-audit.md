@@ -70,8 +70,29 @@ against the SHA-256 values recorded by the repository setup script.
 | `python3 tools/check_repository.py` | Passed required-file, license, identity, link, checkbox, boundary and action-pin checks |
 
 Cross-build success is compilation evidence only and never console execution.
-GitHub Actions and artifact evidence remain pending until the implementation commit
-is published.
+
+## GitHub Actions evidence
+
+Implementation commit: `8ad1dea1e79e22cecdc61cfcb453100b769a25f9`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38822863810](https://github.com/ReyFxck/MIPSNES2/actions/runs/38822863810) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38822863565](https://github.com/ReyFxck/MIPSNES2/actions/runs/38822863565) | Passed pinned cross-build and checksum job | 1,407,192-byte MIPS ELF |
+| PSP CI | [38822863667](https://github.com/ReyFxck/MIPSNES2/actions/runs/38822863667) | Passed pinned cross-build and checksum job | 185,434-byte `EBOOT.PBP` |
+
+The downloaded archive digests match GitHub artifact metadata:
+
+- host GCC: `c994af1dd491c3bf6df459569d6df7a4014d1398e52bfa0dceb63097e76d29ec`;
+- host Clang: `2697476bea4c8c20f8888e37fd1364abd0597eaa3724db614c1b9d0e31e4d282`;
+- PS2: `14be0e1295ad58d36ac676bca38e0dedb339e12aeb33200e3eb5b212b3141941`;
+- PSP: `561592afafce7154d33d21eb1c46b6568a33672fbb9e430594a10635ecd752a3`.
+
+Every embedded `SHA256SUMS` entry validates. Artifact metadata identifies branch head
+`8ad1dea1e79e22cecdc61cfcb453100b769a25f9`; artifact names and `BUILD.txt` identify
+the pull request's synthetic merge commit
+`ffba1be6a5d08a6ada0744f02d40b8611711d164`. The final documentation-only commit is
+verified separately and recorded in the pull request conversation.
 
 ## Validation limits
 
