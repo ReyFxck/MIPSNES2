@@ -48,6 +48,11 @@ Binary Direct Page/absolute arithmetic regressions execute all four new opcodes 
 both M widths. They cover bank-zero Direct word wrap, aligned/nonzero-DL timing,
 absolute DBR and linear bank crossing, selected-width flags/B, PC/cycles and the
 pre-operand decimal diagnostic stop across all recognized ADC/SBC forms.
+Binary indexed arithmetic regressions execute ADC/SBC Direct-X and absolute-X/Y at
+both M widths. They cover bank-zero Direct wrap, nonzero-DL timing, absolute page and
+bank carry, the shared page-cross-or-16-bit-index cycle, selected-width flags/B,
+PC/cycles and the pre-operand decimal diagnostic stop across all twelve recognized
+ADC/SBC forms.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -117,6 +122,8 @@ Binary immediate ADC/SBC evidence is recorded in
 [65c816-binary-arithmetic-audit.md](65c816-binary-arithmetic-audit.md).
 Binary Direct Page/absolute ADC/SBC evidence is recorded in
 [65c816-binary-direct-absolute-audit.md](65c816-binary-direct-absolute-audit.md).
+Binary indexed ADC/SBC evidence is recorded in
+[65c816-binary-indexed-audit.md](65c816-binary-indexed-audit.md).
 
 ## End-of-task audit
 
