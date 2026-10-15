@@ -310,8 +310,10 @@ LDA/STA/ORA/AND/EOR/CMP/ADC/SBC. Deterministic host tests cover both M widths, f
 16-bit `S + offset`, bank-zero word/pointer wrap, DBR plus Y 24-bit carry, native and
 emulation modes, C/V/N/Z, B preservation, PC and exact 4/7-cycle bases. All sixteen
 recognized ADC/SBC opcodes stop before operand/address fetch when D=1. Local evidence
-is recorded in docs/65c816-binary-stack-relative-audit.md. Direct-indirect, long and
-decimal ADC/SBC remain incomplete.
+and GitHub Host GCC/Clang plus pinned PS2/PSP jobs pass. Downloaded artifacts and
+archive/internal checksums were inspected. Exact evidence is in
+docs/65c816-binary-stack-relative-audit.md. Direct-indirect, long and decimal ADC/SBC
+remain incomplete.
 
 ## Current blockers and diagnostic exceptions
 
