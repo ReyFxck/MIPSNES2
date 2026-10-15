@@ -288,9 +288,11 @@ word wrapping, aligned and `DL != 0` cycle bases, absolute DBR selection, linear
 absolute word reads across a bank boundary, C/V/N/Z, B preservation, PC and exact
 cycles. All six recognized ADC/SBC opcodes stop before operand/address fetch when
 D=1. Host GCC debug, release and ASan+UBSan tests pass; freshly SHA-256-verified pinned
-PS2/PSP toolchains cross-compile nonempty target artifacts. GitHub workflow evidence
-remains pending and is tracked in docs/65c816-binary-direct-absolute-audit.md. Indexed,
-indirect, long, stack-relative and decimal ADC/SBC remain incomplete.
+PS2/PSP toolchains cross-compile nonempty target artifacts. GitHub Host GCC/Clang plus
+pinned PS2/PSP jobs passed for the implementation commit, and downloaded artifacts
+plus archive/internal checksums were inspected. Exact evidence is in
+docs/65c816-binary-direct-absolute-audit.md. Indexed, indirect, long, stack-relative
+and decimal ADC/SBC remain incomplete.
 
 ## Current blockers and diagnostic exceptions
 

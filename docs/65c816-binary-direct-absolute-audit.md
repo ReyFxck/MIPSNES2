@@ -67,8 +67,25 @@ installed locally, so the GitHub Clang job remains required.
 The old temporary SDK extraction was no longer present, so both official archives
 were downloaded again through `tools/setup_toolchain.py`, matched their pinned
 SHA-256 digests and were extracted into a fresh directory. Cross-build success is not
-console execution. GitHub GCC/Clang, cross-build and downloaded artifact/checksum
-evidence remains pending until publication.
+console execution. GitHub Actions evidence is recorded below.
+
+## GitHub Actions evidence
+
+Implementation commit: `38e00db0e8c80fbb9b42ab959c2ac8889e3f4ac8`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38821918059](https://github.com/ReyFxck/MIPSNES2/actions/runs/38821918059) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38821917672](https://github.com/ReyFxck/MIPSNES2/actions/runs/38821917672) | Passed pinned cross-build and checksum job | 1,404,444-byte MIPS ELF |
+| PSP CI | [38821917797](https://github.com/ReyFxck/MIPSNES2/actions/runs/38821917797) | Passed pinned cross-build and checksum job | 184,722-byte `EBOOT.PBP` |
+
+All four downloaded artifact archives are nonempty and unexpired. Each downloaded
+archive digest matches GitHub artifact metadata, and every embedded `SHA256SUMS`
+entry validates. Artifact metadata identifies branch head
+`38e00db0e8c80fbb9b42ab959c2ac8889e3f4ac8`; artifact names and `BUILD.txt` use the
+pull request's synthetic merge commit
+`568f7d5321805bcdd443add8e8da8c5198719043`. The final documentation-only commit is
+verified separately and recorded in the pull request conversation.
 
 ## Validation limits
 
