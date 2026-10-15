@@ -71,8 +71,39 @@ against the SHA-256 values recorded by the repository setup script.
 | `python3 tools/check_repository.py` | Passed required-file, license, identity, link, checkbox, boundary and action-pin checks |
 
 Cross-build success is compilation evidence only and never console execution.
-GitHub Actions and artifact evidence remain pending until the implementation commit
-is published.
+
+## GitHub publication correction
+
+The first API publication truncated `tests/test_cpu_bus.c`. The mismatch was detected
+before accepting CI evidence because the remote blob SHA differed from the local Git
+blob and the pull request showed implausible line counts. The complete 150,067-byte
+file was republished in chunks; its remote blob SHA then matched local SHA
+`c1c8522d5402090b16bb3762ee3431606132e435`. The corrected pull request diff is 383
+additions and 25 deletions across ten files. Only CI for the corrected commit is
+accepted below.
+
+## GitHub Actions evidence
+
+Corrected implementation head: `4558b2e0cad64c3522ca787ddff27ce6e8747161`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38824295981](https://github.com/ReyFxck/MIPSNES2/actions/runs/38824295981) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38824295964](https://github.com/ReyFxck/MIPSNES2/actions/runs/38824295964) | Passed pinned cross-build and checksum job | 1,414,480-byte MIPS ELF |
+| PSP CI | [38824296012](https://github.com/ReyFxck/MIPSNES2/actions/runs/38824296012) | Passed pinned cross-build and checksum job | 187,018-byte `EBOOT.PBP` |
+
+The downloaded archive digests match GitHub artifact metadata:
+
+- host GCC: `f158ef9fa8a6453dc4306e3e7e5c49f97e5fda397be3cb304586b66eccce606a`;
+- host Clang: `ac59d04cc1af827d68906e30400bf9524e00fdd148920f817fdfa9b9516f0c9f`;
+- PS2: `9b872e7e06f9e2cb227a5f805f61107cc0575b0a6b85501a8475f330b9695cfd`;
+- PSP: `58214d8582dd9979e3872ab58ee1e4d36ce525a1fa64d1d173af4d040e827044`.
+
+Every embedded `SHA256SUMS` entry validates. Artifact metadata identifies corrected
+branch head `4558b2e0cad64c3522ca787ddff27ce6e8747161`; artifact names and `BUILD.txt`
+identify pull request synthetic merge commit
+`1e044026f2140457a2ffb5db1757e9bb2bc54c2d`. The final documentation-only commit is
+verified separately and recorded in the pull request conversation.
 
 ## Validation limits
 

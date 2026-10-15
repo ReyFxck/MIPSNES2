@@ -321,7 +321,9 @@ bank-zero pointer wrap, DBR selection, X pre-indexing, Y post-indexing and 24-bi
 carry, aligned/nonzero-DL timing, the shared page-cross-or-16-bit-index cycle,
 C/V/N/Z, B preservation, PC and exact cycles. All twenty-two recognized ADC/SBC
 opcodes stop before operand/address fetch when D=1. Local evidence is recorded in
-docs/65c816-binary-direct-indirect-audit.md. Direct-indirect-long, absolute-long and
+docs/65c816-binary-direct-indirect-audit.md. GitHub Host GCC/Clang plus pinned PS2/PSP
+jobs pass for the corrected published implementation, and downloaded artifacts plus
+archive/internal checksums were inspected. Direct-indirect-long, absolute-long and
 decimal ADC/SBC remain incomplete.
 
 ## Current blockers and diagnostic exceptions
