@@ -27,7 +27,7 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the 173-opcode CPU
+repository structure/boundaries/checklists; the reference bus; and the 179-opcode CPU
 subset described in [65c816.md](65c816.md). CPU regressions include implemented
 8/16-bit widths, flags, cycles, Direct Page/indexed/pointer wrapping and penalties,
 regular-indirect DBR selection, long-indirect bank selection, absolute indexing and
@@ -67,6 +67,11 @@ Binary indexed arithmetic regressions add ADC/SBC Direct-X and absolute-X/Y at b
 M widths, Direct Page wrap/DL timing, absolute page and bank carry, the shared page-
 cross-or-16-bit-index cycle, PC length and exact width cycles. All twelve recognized
 ADC/SBC forms retain the pre-operand decimal diagnostic stop.
+Binary regular Direct-indirect arithmetic regressions add ADC/SBC `(direct,X)`,
+`(direct),Y` and `(direct)` at both M widths. They cover bank-zero pointer wrap, DBR
+selection, X pre-indexing, Y post-indexing and bank carry, aligned/nonzero-DL timing,
+the shared page-cross-or-16-bit-index cycle and exact 5/6-cycle bases. All twenty-two
+recognized ADC/SBC forms retain the pre-operand decimal diagnostic stop.
 Binary stack-relative arithmetic regressions add ADC/SBC `offset,S` and
 `(offset,S),Y` at both M widths, full 16-bit S-based address formation, bank-zero
 word/pointer wrap, DBR plus Y carry, emulation-mode stack addressing, exact 4/7-cycle

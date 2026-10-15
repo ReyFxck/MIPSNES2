@@ -1148,6 +1148,15 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(5));
         break;
+    case 0x61: /* ADC (direct,X), binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, false), false,
+            direct_penalized_cycles(cpu, UINT64_C(6)));
+        break;
     case 0x63: /* ADC stack-relative, binary mode */
         if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
             return cpu->stop_reason;
@@ -1184,6 +1193,34 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0x70: /* BVS */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) != 0U);
+        break;
+    case 0x71: /* ADC (direct),Y, binary mode */
+    {
+        uint16_t pointer;
+
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_indirect_address(cpu, 0U, cpu->y, &pointer);
+        base_cycles = direct_penalized_cycles(cpu, UINT64_C(5));
+        if (!index_is_8_bit(cpu) ||
+            (uint32_t)(pointer & UINT16_C(0x00ff)) + cpu->y >
+                UINT32_C(0x00ff)) {
+            base_cycles += UINT64_C(1);
+        }
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, false), false,
+            base_cycles);
+        break;
+    }
+    case 0x72: /* ADC (direct), binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_indirect_address(cpu, 0U, 0U, NULL);
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, false), false,
+            direct_penalized_cycles(cpu, UINT64_C(5)));
         break;
     case 0x73: /* ADC (stack-relative),Y, binary mode */
         if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
@@ -1732,6 +1769,15 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         compare_value(cpu, cpu->x, fetch_index_operand(cpu),
                       !index_is_8_bit(cpu), UINT64_C(2));
         break;
+    case 0xe1: /* SBC (direct,X), binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, false), true,
+            direct_penalized_cycles(cpu, UINT64_C(6)));
+        break;
     case 0xe2: /* SEP immediate */
         operand = fetch8(cpu);
         cpu->p |= operand;
@@ -1795,6 +1841,34 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0xf0: /* BEQ */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_Z) != 0U);
+        break;
+    case 0xf1: /* SBC (direct),Y, binary mode */
+    {
+        uint16_t pointer;
+
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_indirect_address(cpu, 0U, cpu->y, &pointer);
+        base_cycles = direct_penalized_cycles(cpu, UINT64_C(5));
+        if (!index_is_8_bit(cpu) ||
+            (uint32_t)(pointer & UINT16_C(0x00ff)) + cpu->y >
+                UINT32_C(0x00ff)) {
+            base_cycles += UINT64_C(1);
+        }
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, false), true,
+            base_cycles);
+        break;
+    }
+    case 0xf2: /* SBC (direct), binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_indirect_address(cpu, 0U, 0U, NULL);
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, false), true,
+            direct_penalized_cycles(cpu, UINT64_C(5)));
         break;
     case 0xf3: /* SBC (stack-relative),Y, binary mode */
         if (stop_for_unimplemented_decimal_arithmetic(cpu)) {

@@ -52,10 +52,10 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Direct Page addressing — includes binary ADC/SBC Direct and Direct-X reads
 - [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
 - [ ] [IN PROGRESS] Indexed addressing — includes binary ADC/SBC Direct-X and absolute-X/Y reads
-- [ ] [IN PROGRESS] Indirect addressing
+- [ ] [IN PROGRESS] Indirect addressing — includes regular Direct-indirect binary ADC/SBC forms; long forms pending
 - [x] Branch instructions
 - [ ] [IN PROGRESS] Load/store instructions — complete LDA/STA families plus implemented LDX/LDY/STX/STY; remaining store/move instructions pending
-- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, compare families and binary ADC/SBC immediate/Direct/absolute/indexed/stack-relative subset
+- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, compare families and binary ADC/SBC non-long subset
 - [ ] [IN PROGRESS] Logic instructions — complete ORA/AND/EOR/BIT families; TSB/TRB and shifts remain
 - [ ] Shift/rotate instructions
 - [x] Transfer instructions
