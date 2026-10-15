@@ -47,15 +47,15 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Instruction fetch
 - [ ] [IN PROGRESS] Opcode dispatch
 - [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary ADC/SBC subset
-- [ ] [IN PROGRESS] Absolute addressing
+- [ ] [IN PROGRESS] Absolute addressing — includes binary ADC/SBC reads
 - [ ] [IN PROGRESS] Long addressing
-- [ ] [IN PROGRESS] Direct Page addressing
+- [ ] [IN PROGRESS] Direct Page addressing — includes binary ADC/SBC reads
 - [ ] [IN PROGRESS] Stack-relative addressing — LDA/STA/ORA/AND/EOR/CMP complete; ADC/SBC absent
 - [ ] [IN PROGRESS] Indexed addressing
 - [ ] [IN PROGRESS] Indirect addressing
 - [x] Branch instructions
 - [ ] [IN PROGRESS] Load/store instructions — complete LDA/STA families plus implemented LDX/LDY/STX/STY; remaining store/move instructions pending
-- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, compare families and binary immediate ADC/SBC only
+- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, compare families and binary ADC/SBC immediate/Direct/absolute only
 - [ ] [IN PROGRESS] Logic instructions — complete ORA/AND/EOR/BIT families; TSB/TRB and shifts remain
 - [ ] Shift/rotate instructions
 - [x] Transfer instructions
@@ -65,7 +65,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] X flag behavior
 - [ ] [IN PROGRESS] Native mode
 - [ ] [IN PROGRESS] Emulation mode
-- [ ] Decimal arithmetic — ADC/SBC currently stop with an explicit diagnostic when D=1
+- [ ] Decimal arithmetic — implemented ADC/SBC opcodes stop with an explicit diagnostic when D=1
 - [ ] IRQ
 - [ ] NMI
 - [ ] [IN PROGRESS] RESET

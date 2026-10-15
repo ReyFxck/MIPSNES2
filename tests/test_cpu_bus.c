@@ -2516,7 +2516,7 @@ static int test_stack_relative_accumulator_load_store(void)
     return 0;
 }
 
-static int test_binary_arithmetic_immediate(void)
+static int test_binary_arithmetic_foundation(void)
 {
     static const struct {
         uint8_t opcode;
@@ -2564,8 +2564,20 @@ static int test_binary_arithmetic_immediate(void)
          true, UINT16_C(0x0000),
          MIPSNES2_CPU_FLAG_Z | MIPSNES2_CPU_FLAG_C}
     };
+    static const struct {
+        uint8_t opcode;
+        bool subtract;
+        bool direct;
+        bool direct_penalty;
+    } memory_cases[] = {
+        {UINT8_C(0x65), false, true, false},
+        {UINT8_C(0x6d), false, false, false},
+        {UINT8_C(0xe5), true, true, true},
+        {UINT8_C(0xed), true, false, false}
+    };
     static const uint8_t decimal_opcodes[] = {
-        UINT8_C(0x69), UINT8_C(0xe9)
+        UINT8_C(0x65), UINT8_C(0x69), UINT8_C(0x6d),
+        UINT8_C(0xe5), UINT8_C(0xe9), UINT8_C(0xed)
     };
     const uint8_t preserved = MIPSNES2_CPU_FLAG_I |
                               MIPSNES2_CPU_FLAG_X;
@@ -2612,6 +2624,94 @@ static int test_binary_arithmetic_immediate(void)
         CHECK(cpu->last_opcode == cases[index].opcode);
         CHECK(cpu->last_opcode_address == UINT32_C(0x7e97b0));
         CHECK(!cpu->emulation);
+    }
+
+    for (index = 0U;
+         index < sizeof(memory_cases) / sizeof(memory_cases[0]);
+         ++index) {
+        unsigned wide;
+
+        for (wide = 0U; wide < 2U; ++wide) {
+            uint16_t accumulator = memory_cases[index].subtract
+                                       ? (wide != 0U
+                                              ? UINT16_C(0x8000)
+                                              : UINT16_C(0x0080))
+                                       : (wide != 0U
+                                              ? UINT16_C(0x7fff)
+                                              : UINT16_C(0x007f));
+            uint16_t expected = memory_cases[index].subtract
+                                    ? (wide != 0U
+                                           ? UINT16_C(0x7fff)
+                                           : UINT16_C(0x007f))
+                                    : (wide != 0U
+                                           ? UINT16_C(0x8000)
+                                           : UINT16_C(0x0080));
+            uint8_t arithmetic_flags = memory_cases[index].subtract
+                                           ? MIPSNES2_CPU_FLAG_V |
+                                                 MIPSNES2_CPU_FLAG_C
+                                           : MIPSNES2_CPU_FLAG_N |
+                                                 MIPSNES2_CPU_FLAG_V;
+            uint8_t width_flag = wide != 0U ? 0U
+                                             : MIPSNES2_CPU_FLAG_M;
+
+            CHECK(reset_fixture(&fixture, UINT16_C(0x97d0)) == 0);
+            cpu->pbr = UINT8_C(0x7e);
+            cpu->dbr = UINT8_C(0x7f);
+            cpu->d = memory_cases[index].direct_penalty
+                         ? UINT16_C(0xfff0)
+                         : UINT16_C(0xff00);
+            cpu->emulation = false;
+            cpu->a = wide != 0U
+                         ? accumulator
+                         : (uint16_t)(UINT16_C(0xab00) | accumulator);
+            cpu->p = (uint8_t)(preserved | width_flag |
+                               MIPSNES2_CPU_FLAG_N |
+                               MIPSNES2_CPU_FLAG_V |
+                               MIPSNES2_CPU_FLAG_Z |
+                               (memory_cases[index].subtract
+                                    ? MIPSNES2_CPU_FLAG_C
+                                    : 0U));
+            bank7e[0x97d0] = memory_cases[index].opcode;
+            bank7e[0x97d1] = UINT8_C(0xff);
+            bank7e[0x97d2] = UINT8_C(0xff);
+
+            if (memory_cases[index].direct) {
+                bank7e[0x97d1] = memory_cases[index].direct_penalty
+                                     ? UINT8_C(0x0f)
+                                     : UINT8_C(0xff);
+                bank00[0xffff] = UINT8_C(0x01);
+                bank00[0x0000] = UINT8_C(0x00);
+            } else {
+                bank7f[0xffff] = UINT8_C(0x01);
+                bank80[0x0000] = UINT8_C(0x00);
+            }
+
+            CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+            CHECK(cpu->a ==
+                  (wide != 0U
+                       ? expected
+                       : (uint16_t)(UINT16_C(0xab00) | expected)));
+            CHECK(cpu->p == (uint8_t)(preserved | width_flag |
+                                      arithmetic_flags));
+            CHECK(cpu->pc ==
+                  (memory_cases[index].direct ? UINT16_C(0x97d2)
+                                              : UINT16_C(0x97d3)));
+            CHECK(cpu->instruction_cycles ==
+                  (memory_cases[index].direct
+                       ? UINT64_C(3) +
+                             (memory_cases[index].direct_penalty
+                                  ? UINT64_C(1)
+                                  : UINT64_C(0))
+                       : UINT64_C(4)) + wide);
+            CHECK(cpu->d ==
+                  (memory_cases[index].direct_penalty
+                       ? UINT16_C(0xfff0)
+                       : UINT16_C(0xff00)));
+            CHECK(cpu->dbr == UINT8_C(0x7f));
+            CHECK(cpu->pbr == UINT8_C(0x7e));
+            CHECK(!cpu->stopped);
+            CHECK(!cpu->emulation);
+        }
     }
 
     for (index = 0U;
@@ -3219,7 +3319,7 @@ int main(void)
     CHECK(test_accumulator_extended_addressing() == 0);
     CHECK(test_stack_relative_accumulator_alu() == 0);
     CHECK(test_stack_relative_accumulator_load_store() == 0);
-    CHECK(test_binary_arithmetic_immediate() == 0);
+    CHECK(test_binary_arithmetic_foundation() == 0);
     CHECK(test_compare_foundation() == 0);
     CHECK(test_bit_foundation() == 0);
     CHECK(test_control_flow_and_faults() == 0);

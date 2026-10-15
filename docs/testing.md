@@ -44,6 +44,10 @@ Binary immediate arithmetic regressions execute ADC/SBC at both M widths. They c
 carry/borrow input, carry/no-borrow output, signed overflow in both directions,
 selected-width N/Z, B and unrelated-status preservation, PC/cycles, and the explicit
 sticky D=1 diagnostic stop before operand fetch.
+Binary Direct Page/absolute arithmetic regressions execute all four new opcodes at
+both M widths. They cover bank-zero Direct word wrap, aligned/nonzero-DL timing,
+absolute DBR and linear bank crossing, selected-width flags/B, PC/cycles and the
+pre-operand decimal diagnostic stop across all recognized ADC/SBC forms.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -111,6 +115,8 @@ Stack-relative LDA/STA evidence is recorded in
 [65c816-stack-relative-load-store-audit.md](65c816-stack-relative-load-store-audit.md).
 Binary immediate ADC/SBC evidence is recorded in
 [65c816-binary-arithmetic-audit.md](65c816-binary-arithmetic-audit.md).
+Binary Direct Page/absolute ADC/SBC evidence is recorded in
+[65c816-binary-direct-absolute-audit.md](65c816-binary-direct-absolute-audit.md).
 
 ## End-of-task audit
 

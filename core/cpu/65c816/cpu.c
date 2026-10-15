@@ -1148,12 +1148,30 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(5));
         break;
+    case 0x65: /* ADC direct, binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, true), false,
+            direct_base_cycles(cpu, false));
+        break;
     case 0x69: /* ADC immediate, binary mode */
         if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
             return cpu->stop_reason;
         }
         arithmetic_accumulator_binary(cpu, fetch_accumulator_operand(cpu),
                                       false, UINT64_C(2));
+        break;
+    case 0x6d: /* ADC absolute, binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, false), false,
+            UINT64_C(4));
         break;
     case 0x70: /* BVS */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) != 0U);
@@ -1679,6 +1697,15 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                       !index_is_8_bit(cpu),
                       direct_base_cycles(cpu, false));
         break;
+    case 0xe5: /* SBC direct, binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, true), true,
+            direct_base_cycles(cpu, false));
+        break;
     case 0xe8: /* INX */
         change_index(cpu, &cpu->x, true);
         break;
@@ -1700,6 +1727,15 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         compare_value(cpu, cpu->x,
                       read_index_operand(cpu, address, false),
                       !index_is_8_bit(cpu), UINT64_C(4));
+        break;
+    case 0xed: /* SBC absolute, binary mode */
+        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        arithmetic_accumulator_binary(
+            cpu, read_accumulator_operand(cpu, address, false), true,
+            UINT64_C(4));
         break;
     case 0xf0: /* BEQ */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_Z) != 0U);

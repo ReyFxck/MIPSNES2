@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 159-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 163-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -91,10 +91,11 @@ forms read a bank-zero 16-bit pointer, apply DBR and then add Y across the 24-bi
 space. Sixteen-bit direct stack-relative data accesses wrap within bank zero, while
 indirect-indexed data accesses advance linearly from their 24-bit effective address.
 Stack-relative ADC/SBC and stack push/pull behavior remain separate.
-Binary immediate ADC/SBC share one M-selected arithmetic helper. It preserves B for
-8-bit accumulator results and derives C/V/N/Z at the selected width. Decimal-mode
-ADC/SBC stops with an explicit diagnostic before operand fetch; binary arithmetic is
-never silently substituted for unimplemented decimal behavior.
+Binary ADC/SBC immediate, Direct Page and absolute forms share one M-selected
+arithmetic helper. It preserves B for 8-bit accumulator results and derives C/V/N/Z
+at the selected width. Address formation remains in the existing mode helpers.
+Decimal-mode ADC/SBC stops with an explicit diagnostic before operand fetch; binary
+arithmetic is never silently substituted for unimplemented decimal behavior.
 
 ## Scheduler and timing proposal
 
@@ -184,9 +185,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-12: Stack-relative LDA/STA reuse those effective-address rules while
   direct 16-bit data reads/writes explicitly wrap inside bank zero; indirect-indexed
   data remains linear at the final 24-bit address.
-- 2026-10-12: Immediate ADC/SBC establish a shared binary M-width arithmetic helper;
-  D=1 is an explicit sticky unsupported-decimal stop until decimal behavior is
-  implemented and verified.
+- 2026-10-15: ADC/SBC immediate, Direct Page and absolute forms share a binary
+  M-width arithmetic helper; D=1 is an explicit sticky unsupported-decimal stop
+  before operand/address fetch until decimal behavior is implemented and verified.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

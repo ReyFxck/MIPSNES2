@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 159-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 163-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -279,8 +279,18 @@ before operand fetch with `MIPSNES2_CPU_UNIMPLEMENTED_DECIMAL_ARITHMETIC`; decim
 behavior is not approximated. Pinned PS2 and PSP cross-builds compile and produce
 nonempty artifacts. GitHub Host GCC/Clang plus pinned PS2/PSP jobs passed for the
 implementation commit, and downloaded artifacts plus archive/internal checksums were
-inspected. Exact evidence is in docs/65c816-binary-arithmetic-audit.md. All other
-ADC/SBC forms and decimal arithmetic remain incomplete.
+inspected. Exact evidence is in docs/65c816-binary-arithmetic-audit.md. At that
+milestone all other ADC/SBC forms and decimal arithmetic remained incomplete.
+
+The binary Direct Page/absolute arithmetic milestone on 2026-10-15 adds ADC `65/6D`
+and SBC `E5/ED`. Deterministic host tests cover both M widths, Direct Page bank-zero
+word wrapping, aligned and `DL != 0` cycle bases, absolute DBR selection, linear
+absolute word reads across a bank boundary, C/V/N/Z, B preservation, PC and exact
+cycles. All six recognized ADC/SBC opcodes stop before operand/address fetch when
+D=1. Host GCC debug, release and ASan+UBSan tests pass; freshly SHA-256-verified pinned
+PS2/PSP toolchains cross-compile nonempty target artifacts. GitHub workflow evidence
+remains pending and is tracked in docs/65c816-binary-direct-absolute-audit.md. Indexed,
+indirect, long, stack-relative and decimal ADC/SBC remain incomplete.
 
 ## Current blockers and diagnostic exceptions
 
@@ -295,17 +305,17 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 159-opcode subset only
+- [ ] [IN PROGRESS] Opcode dispatch — 163-opcode subset only
 - [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary ADC/SBC forms only
-- [ ] [IN PROGRESS] Absolute addressing — JMP, loads/stores and base logic/compare/BIT forms only
+- [ ] [IN PROGRESS] Absolute addressing — JMP, loads/stores, logic/compare/BIT and binary ADC/SBC forms only
 - [ ] [IN PROGRESS] Long addressing — LDA/STA plus ORA/AND/EOR/CMP absolute long and absolute long,X implemented only
-- [ ] [IN PROGRESS] Direct Page addressing — loads/stores, ORA/AND/EOR/CMP non-stack families and CPX/CPY/BIT forms only
+- [ ] [IN PROGRESS] Direct Page addressing — loads/stores, ORA/AND/EOR/CMP, CPX/CPY/BIT and binary ADC/SBC forms only
 - [ ] [IN PROGRESS] Stack-relative addressing — LDA/STA/ORA/AND/EOR/CMP complete; ADC/SBC absent
 - [ ] [IN PROGRESS] Indexed addressing — load/store subset, complete ORA/AND/EOR/CMP forms and Direct-X/absolute-X BIT only
 - [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP Direct-indirect and `(stack-relative),Y` forms only
 - [x] Branch instructions
 - [ ] [IN PROGRESS] Load/store instructions — LDA/STA families complete; LDX/LDY/STX/STY implemented, remaining store/move instructions pending
-- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, complete compare families and binary immediate ADC/SBC only
+- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, complete compare families and binary ADC/SBC immediate/Direct/absolute only
 - [ ] [IN PROGRESS] Logic instructions — complete ORA/AND/EOR/BIT families; TSB/TRB and shifts remain
 - [ ] Shift/rotate instructions
 - [x] Transfer instructions
@@ -315,7 +325,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] X flag behavior — implemented index data, transfer, compare, register INC/DEC and accumulator-ALU indexed cycles verified
 - [ ] [IN PROGRESS] Native mode — XCE entry, implemented widths/transfers/logic, branches, status controls and register INC/DEC verified
 - [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers/logic, Direct/indirect pointer wrapping, branches, status controls and register INC/DEC verified for implemented subset
-- [ ] Decimal arithmetic — immediate ADC/SBC stop explicitly when D=1; calculation unimplemented
+- [ ] Decimal arithmetic — implemented ADC/SBC opcodes stop explicitly when D=1; calculation unimplemented
 - [ ] IRQ
 - [ ] NMI
 - [ ] [IN PROGRESS] RESET — vector and documented visible state subset only
@@ -325,8 +335,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] STP
 - [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
-- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, logic/compare and register INC/DEC timing only
-- [ ] [IN PROGRESS] CPU automated tests — all 159 dispatch opcodes and implemented behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, logic/compare, binary arithmetic and register INC/DEC timing only
+- [ ] [IN PROGRESS] CPU automated tests — all 163 dispatch opcodes and implemented behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -470,7 +480,9 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] EOR absolute,Y (`59`)
 - [x] EOR absolute,X (`5D`)
 - [x] EOR absolute long,X (`5F`)
+- [x] ADC direct, binary mode (`65`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC immediate, binary mode (`69`); D=1 is an explicit unsupported-decimal stop
+- [x] ADC absolute, binary mode (`6D`); D=1 is an explicit unsupported-decimal stop
 - [x] BIT immediate (`89`)
 - [x] CPY immediate (`C0`)
 - [x] CMP direct-indexed-indirect (`C1`)
@@ -492,8 +504,10 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CMP absolute long,X (`DF`)
 - [x] CPX immediate (`E0`)
 - [x] CPX direct (`E4`)
+- [x] SBC direct, binary mode (`E5`); D=1 is an explicit unsupported-decimal stop
 - [x] SBC immediate, binary mode (`E9`); D=1 is an explicit unsupported-decimal stop
 - [x] CPX absolute (`EC`)
+- [x] SBC absolute, binary mode (`ED`); D=1 is an explicit unsupported-decimal stop
 - [x] Base-cycle accounting for the implemented subset
 - [x] Linear 24-bit word access across bank boundaries
 - [x] Absolute indexed page/write/X cycle rule for implemented opcodes
@@ -524,6 +538,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Stack-relative ORA/AND/EOR/CMP bank-zero address, pointer, DBR/Y and cycle behavior
 - [x] Stack-relative LDA/STA bank-zero data wrap, pointer, DBR/Y, flag and cycle behavior
 - [x] Binary immediate ADC/SBC carry, overflow, N/Z, B preservation and width behavior
+- [x] Binary Direct Page/absolute ADC/SBC address, bank-wrap, flag, width and cycle behavior
 - [x] Decimal ADC/SBC explicit pre-operand diagnostic stop for implemented opcodes
 - [x] Complete BIT selected-width Z, memory N/V and immediate N/V-preservation behavior
 
