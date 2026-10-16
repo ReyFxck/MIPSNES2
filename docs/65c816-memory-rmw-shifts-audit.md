@@ -4,6 +4,8 @@ Date: 2026-10-16
 
 Branch: `feature/65c816-memory-rmw-shifts`
 
+Pull request: [#24](https://github.com/ReyFxck/MIPSNES2/pull/24)
+
 Stacked base: pull request #23, remote commit
 `ce9d96b43bec22be91bfa4460bb1232bc3861cc3`
 
@@ -81,8 +83,23 @@ Environment: GCC 13.3.0, GNU Make 4.3 and Python 3.12.14.
 
 ## GitHub Actions
 
-Publication and GitHub Host/PS2/PSP workflow evidence are pending. No cross-build,
-artifact or remote CI success is claimed for this branch yet.
+Implementation head: `7649664d488687436daeac1a41969cd8af402610`.
+
+- Host CI run `38978604614` — passed GCC/Clang release, sanitizer, tests and artifact jobs.
+- PS2 CI run `38978604587` — passed the pinned PS2SDK cross-build and artifact job.
+- PSP CI run `38978604610` — passed the pinned PSPSDK cross-build and artifact job.
+
+GitHub reported these artifact records:
+
+- Host Clang `12079862204`, 17,777-byte archive, SHA-256 `e8d45899429bd4b04b3be9c9c260c62a237df16c904a22f8993d7421dfe04c83`.
+- Host GCC `12079842304`, 18,300-byte archive, SHA-256 `41243398ca63f24b3b842c184cbc7c4d4415d70e29d5ebc3f8a9050c7b0f0bb9`.
+- PS2 `12079803122`, 473,052-byte archive, SHA-256 `edf96d3646ccee2852469d728e314e4a3ac3554a6f8fc8a516b4246f4a55f5b6`.
+- PSP `12079443942`, 98,982-byte archive, SHA-256 `18b159764555f934a04ad53c79f689bffaf36a59909df572a74b31007f1ab2d1`.
+
+The artifact records and GitHub-reported digests were inspected, but repeated HTTP
+502 responses prevented downloading the ZIPs in this session. Therefore their
+internal `SHA256SUMS` files and executable/package sizes are not claimed as inspected.
+Cross-build success is compilation evidence only, not console execution.
 
 ## Deliberate limits
 

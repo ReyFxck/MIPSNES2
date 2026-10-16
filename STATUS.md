@@ -355,7 +355,10 @@ semantics, B and unrelated-state preservation, Direct Page bank/DL rules, absolu
 and indexed 24-bit carry, 16-bit memory access, exact aggregate cycles and missing
 write-bus diagnostics. W65C816 bus-cycle dummy writes and lock signaling remain
 outside the current instruction-level timing contract. Local evidence is in
-docs/65c816-memory-rmw-shifts-audit.md; GitHub workflow evidence is pending publication.
+docs/65c816-memory-rmw-shifts-audit.md. GitHub Host GCC/Clang and pinned PS2/PSP
+cross-build workflows passed for implementation head
+`7649664d488687436daeac1a41969cd8af402610`; artifact metadata/digests were inspected,
+but archive download inspection was blocked by repeated HTTP 502 responses.
 
 ## Current blockers and diagnostic exceptions
 
