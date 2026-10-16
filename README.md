@@ -6,6 +6,8 @@
 
 > **DO NOT TURN THIS PROJECT INTO A SNES9X PORT.**
 
+> **THIS PROJECT DOES NOT USE ANY OTHER EMULATOR FOR REFERENCES, IT WILL ALSO ONLY USE RELIABLE SITES TO HELP CREATE EACH CHIP AND PROCESSOR. IT IS NOT ALLOWED TO PORT THIS CORE WITHOUT MY AUTHORIZATION.**
+
 > Accuracy is a tool, not the final objective. Compatibility and sustained full-speed operation on real PS2 and PSP hardware are the primary objectives.
 
 SNES emulator dedicated to MIPS for PS2/PSP hardware. PS2 is the primary target;
