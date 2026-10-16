@@ -6,6 +6,8 @@ Branch: `feature/65c816-memory-rmw-shifts`
 
 Pull request: [#24](https://github.com/ReyFxck/MIPSNES2/pull/24)
 
+Integration target: `main` (the cumulative reviewed stack through this milestone).
+
 Stacked base: pull request #23, remote commit
 `ce9d96b43bec22be91bfa4460bb1232bc3861cc3`
 
