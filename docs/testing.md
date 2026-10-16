@@ -27,6 +27,35 @@ Logic/compare regressions cover ORA/AND/EOR/CMP immediate, Direct and absolute f
 all CPX/CPY and BIT opcodes; native 8/16-bit and an emulation-width case; M/X-selected
 operands; N/Z/C/V isolation; Direct Page DL penalties; indexed BIT penalties; and
 16-bit data reads crossing a bank boundary.
+Extended accumulator-ALU regressions exercise all 40 non-stack-relative indexed,
+indirect and long ORA/AND/EOR/CMP opcodes at both M widths. They verify DBR versus
+long-pointer banks, pre/post indexing, Direct-X emulation wrapping, page and bank
+carry, DL/M/X cycle additions, PC lengths and B/flag/operand preservation.
+Stack-relative accumulator-ALU regressions execute those eight ORA/AND/EOR/CMP
+opcodes at both M widths. They cover full 16-bit `S + offset` formation in native and
+emulation modes, bank-zero operand and pointer wrapping, DBR plus Y carry across a
+bank boundary, result/compare flags, operand preservation, exact 4/7-cycle bases and
+the absence of Direct Page, page-cross or X-width penalties.
+Stack-relative accumulator load/store regressions execute all four LDA/STA forms at
+both M widths. They cover 8-bit B preservation, LDA N/Z isolation, STA status
+preservation, bank-zero 16-bit load/store wrap, DBR plus Y carry, emulation-mode full
+S addressing, PC movement and exact 4/7-cycle bases plus the M=0 width cycle.
+ADC/SBC regressions execute all thirty addressing forms at both M widths. They cover
+carry/borrow input, carry/no-borrow output, signed overflow, selected-width N/Z, B
+and unrelated-status preservation, Direct Page and stack-relative bank-zero rules,
+DBR and long-pointer bank selection, pre/post indexing, 24-bit carry, PC movement and
+exact width/DL/indexed cycle additions.
+Decimal regressions exhaust 40,000 valid 8-bit packed-BCD ADC/SBC operand/carry
+combinations, add targeted 16-bit and invalid-digit cases, and execute all thirty
+addressing forms at both M widths with D=1. A separate read-only audit compares the
+algorithm's result and C/V/N/Z behavior against 19,970 decimal immediate vectors
+from a pinned MIT-licensed SingleStepTests revision.
+Read-modify-write regressions execute all 36 ASL/LSR/ROL/ROR accumulator/memory,
+memory INC/DEC, TSB/TRB and STZ opcodes at both M widths. They verify selected-width
+results, C/N/Z and unrelated-flag isolation, B preservation, original-operand
+TSB/TRB Z behavior, Direct Page bank/DL rules, DBR and 24-bit indexed carry, 16-bit
+writes, aggregate timing and missing-write-bus diagnostics. Bus-cycle dummy writes
+and MLB signaling remain outside the current contract.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -35,6 +64,8 @@ pins and forbidden core includes. It is a guardrail, not proof of complete emula
 CPU expectations are independently authored from the WDC W65C816S March 13, 2024
 datasheet sections recorded in [65c816.md](65c816.md). No external test ROM or code
 from an emulator is included.
+Use the source hierarchy and provenance rules in [references.md](references.md)
+before adopting additional hardware documentation, vectors or test ROMs.
 
 Tests use explicit return codes so `-DNDEBUG` cannot remove checks. Host debug,
 release and sanitizer builds belong in separate directories. Cross-build success
@@ -84,6 +115,30 @@ Register increment/decrement milestone evidence is recorded in
 [65c816-increment-decrement-audit.md](65c816-increment-decrement-audit.md).
 Logic/compare foundation evidence is recorded in
 [65c816-logic-compare-audit.md](65c816-logic-compare-audit.md).
+Extended ORA/AND addressing evidence is recorded in
+[65c816-ora-and-audit.md](65c816-ora-and-audit.md).
+Extended EOR/CMP addressing evidence is recorded in
+[65c816-eor-cmp-audit.md](65c816-eor-cmp-audit.md).
+Stack-relative accumulator-ALU evidence is recorded in
+[65c816-stack-relative-audit.md](65c816-stack-relative-audit.md).
+Stack-relative LDA/STA evidence is recorded in
+[65c816-stack-relative-load-store-audit.md](65c816-stack-relative-load-store-audit.md).
+Binary immediate ADC/SBC evidence is recorded in
+[65c816-binary-arithmetic-audit.md](65c816-binary-arithmetic-audit.md).
+Binary Direct Page/absolute ADC/SBC evidence is recorded in
+[65c816-binary-direct-absolute-audit.md](65c816-binary-direct-absolute-audit.md).
+Binary indexed ADC/SBC evidence is recorded in
+[65c816-binary-indexed-audit.md](65c816-binary-indexed-audit.md).
+Binary stack-relative ADC/SBC evidence is recorded in
+[65c816-binary-stack-relative-audit.md](65c816-binary-stack-relative-audit.md).
+Binary regular Direct-indirect ADC/SBC evidence is recorded in
+[65c816-binary-direct-indirect-audit.md](65c816-binary-direct-indirect-audit.md).
+Binary long ADC/SBC evidence is recorded in
+[65c816-binary-long-audit.md](65c816-binary-long-audit.md).
+Decimal ADC/SBC evidence is recorded in
+[65c816-decimal-arithmetic-audit.md](65c816-decimal-arithmetic-audit.md).
+Memory RMW and shift/rotate evidence is recorded in
+[65c816-memory-rmw-shifts-audit.md](65c816-memory-rmw-shifts-audit.md).
 
 ## End-of-task audit
 

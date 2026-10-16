@@ -18,6 +18,7 @@ Before modifying this repository read:
 4. ROADMAP.md
 5. PERFORMANCE.md if touching performance-sensitive code
 6. Relevant docs/ subsystem documentation
+7. docs/references.md before researching hardware behavior or SDK APIs
 
 ## Binding rules
 

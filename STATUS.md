@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 105-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 223-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -68,6 +68,7 @@ inspection of the actual setting. Documents/structure require content/link audit
 - [x] docs/testing.md
 - [x] docs/debugging.md
 - [x] docs/github-setup.md
+- [x] docs/references.md — curated non-emulator hardware, independent-test and SDK sources
 
 ## Repository Structure
 
@@ -224,6 +225,141 @@ evidence and validation limits are in docs/65c816-logic-compare-audit.md. GitHub
 Host GCC/Clang plus pinned PS2/PSP jobs passed, and downloaded artifacts/checksums
 were inspected for the implementation commit.
 
+The extended ORA/AND addressing milestone on 2026-10-12 adds 20 verified opcodes,
+covering every indexed, indirect and long ORA/AND form that does not require the
+still-unimplemented stack-relative address paths. Host GCC debug, release and
+ASan+UBSan tests cover both M widths, N/Z and B preservation, Direct Page/index
+penalties, regular versus long pointer banks, emulation Direct-X wrapping and 24-bit
+page/bank carry. Pinned PS2SDK/PSPSDK cross-builds compile the 125-opcode core and
+produce nonempty target artifacts. Exact local evidence and validation limits are
+in docs/65c816-ora-and-audit.md. GitHub Host GCC/Clang plus pinned PS2/PSP jobs
+passed for the implementation commit, and downloaded artifacts plus archive/internal
+checksums were inspected.
+
+The extended EOR/CMP addressing milestone on 2026-10-12 adds 20 verified opcodes,
+covering every indexed, indirect and long EOR/CMP form that does not require the
+still-unimplemented stack-relative address paths. Host GCC debug, release and
+ASan+UBSan tests cover both M widths, EOR result/B behavior, CMP operand/N/Z/C
+behavior, Direct Page/index penalties, regular versus long pointer banks, emulation
+Direct-X wrapping and 24-bit page/bank carry. Pinned PS2SDK/PSPSDK cross-builds
+compile the 145-opcode core and produce nonempty target artifacts. Local evidence
+is recorded in docs/65c816-eor-cmp-audit.md. GitHub Host GCC/Clang plus pinned
+PS2/PSP jobs passed for the implementation commit, and downloaded artifacts plus
+archive/internal checksums were inspected.
+
+The stack-relative accumulator-ALU milestone on 2026-10-12 adds eight verified
+opcodes and completes the ORA/AND/EOR/CMP instruction families. Host GCC debug,
+release and ASan+UBSan tests cover both M widths, full 16-bit `S + offset` formation,
+bank-zero operand/pointer wrapping, DBR plus Y 24-bit carry, native/emulation
+behavior, flags and exact 4/7-cycle bases without Direct Page, page-cross or X-width
+penalties. Pinned PS2SDK/PSPSDK cross-builds compile the 153-opcode core and produce
+nonempty target artifacts. Exact local evidence and the initial expired-temporary-
+path setup failure are recorded in docs/65c816-stack-relative-audit.md. GitHub Host
+GCC/Clang plus pinned PS2/PSP jobs passed for the implementation commit, and
+downloaded artifacts plus archive/internal checksums were inspected. Stack-relative
+addressing at that milestone remained in progress because ADC/SBC/LDA/STA forms were
+not yet implemented; the following milestone advances that state.
+
+The stack-relative accumulator load/store milestone on 2026-10-12 adds four verified
+opcodes and completes the LDA/STA instruction families. Host GCC debug tests cover
+both M widths, 8-bit B preservation, LDA N/Z isolation, STA status preservation,
+bank-zero word wrap, DBR plus Y 24-bit carry, native/emulation behavior and exact
+4/7-cycle bases without Direct Page, page-cross or X-width penalties. Host GCC
+release and ASan+UBSan tests pass; pinned PS2SDK/PSPSDK cross-builds compile the
+157-opcode core and produce nonempty target artifacts. Exact local evidence is in
+docs/65c816-stack-relative-load-store-audit.md. GitHub Host GCC/Clang plus pinned
+PS2/PSP jobs passed for the implementation commit, and downloaded artifacts plus
+archive/internal checksums were inspected. Stack-relative addressing remains in
+progress because ADC/SBC forms are not implemented.
+
+The binary immediate arithmetic milestone on 2026-10-12 adds ADC `69` and SBC `E9`
+for M-selected 8/16-bit binary operation. Host GCC debug, release and ASan+UBSan
+tests cover carry input and borrow convention, carry out/no-borrow, signed overflow,
+N/Z, wrap, 8-bit B preservation, operand length and exact 2/3-cycle timing. D=1 stops
+before operand fetch with `MIPSNES2_CPU_UNIMPLEMENTED_DECIMAL_ARITHMETIC`; decimal
+behavior is not approximated. Pinned PS2 and PSP cross-builds compile and produce
+nonempty artifacts. GitHub Host GCC/Clang plus pinned PS2/PSP jobs passed for the
+implementation commit, and downloaded artifacts plus archive/internal checksums were
+inspected. Exact evidence is in docs/65c816-binary-arithmetic-audit.md. At that
+milestone all other ADC/SBC forms and decimal arithmetic remained incomplete.
+
+The binary Direct Page/absolute arithmetic milestone on 2026-10-15 adds ADC `65/6D`
+and SBC `E5/ED`. Deterministic host tests cover both M widths, Direct Page bank-zero
+word wrapping, aligned and `DL != 0` cycle bases, absolute DBR selection, linear
+absolute word reads across a bank boundary, C/V/N/Z, B preservation, PC and exact
+cycles. All six recognized ADC/SBC opcodes stop before operand/address fetch when
+D=1. Host GCC debug, release and ASan+UBSan tests pass; freshly SHA-256-verified pinned
+PS2/PSP toolchains cross-compile nonempty target artifacts. GitHub Host GCC/Clang plus
+pinned PS2/PSP jobs passed for the implementation commit, and downloaded artifacts
+plus archive/internal checksums were inspected. Exact evidence is in
+docs/65c816-binary-direct-absolute-audit.md. Indexed, indirect, long, stack-relative
+and decimal ADC/SBC remain incomplete.
+
+The binary indexed arithmetic milestone on 2026-10-15 adds ADC `75/79/7D` and SBC
+`F5/F9/FD`. Deterministic host tests cover both M widths, Direct-X bank-zero wrap and
+DL timing, absolute-X/Y DBR selection, page crossing, 16-bit index timing, linear
+24-bit bank carry, C/V/N/Z, B preservation, PC and exact cycles. All twelve recognized
+ADC/SBC opcodes stop before operand/address fetch when D=1. Local host and cross-build
+tests pass. GitHub Host GCC/Clang plus pinned PS2/PSP jobs passed for the implementation
+commit, and downloaded artifacts plus archive/internal checksums were inspected. Exact
+evidence is in docs/65c816-binary-indexed-audit.md. Indirect, long, stack-relative
+and decimal ADC/SBC remain incomplete.
+
+The binary stack-relative arithmetic milestone on 2026-10-15 adds ADC `63/73` and
+SBC `E3/F3`, completing both stack-relative accumulator addressing forms across
+LDA/STA/ORA/AND/EOR/CMP/ADC/SBC. Deterministic host tests cover both M widths, full
+16-bit `S + offset`, bank-zero word/pointer wrap, DBR plus Y 24-bit carry, native and
+emulation modes, C/V/N/Z, B preservation, PC and exact 4/7-cycle bases. All sixteen
+recognized ADC/SBC opcodes stop before operand/address fetch when D=1. Local evidence
+and GitHub Host GCC/Clang plus pinned PS2/PSP jobs pass. Downloaded artifacts and
+archive/internal checksums were inspected. Exact evidence is in
+docs/65c816-binary-stack-relative-audit.md. Direct-indirect, long and decimal ADC/SBC
+remain incomplete.
+
+The binary regular Direct-indirect arithmetic milestone on 2026-10-15 adds ADC
+`61/71/72` and SBC `E1/F1/F2`. Deterministic host tests cover both M widths,
+bank-zero pointer wrap, DBR selection, X pre-indexing, Y post-indexing and 24-bit
+carry, aligned/nonzero-DL timing, the shared page-cross-or-16-bit-index cycle,
+C/V/N/Z, B preservation, PC and exact cycles. All twenty-two recognized ADC/SBC
+opcodes stop before operand/address fetch when D=1. Local evidence is recorded in
+docs/65c816-binary-direct-indirect-audit.md. GitHub Host GCC/Clang plus pinned PS2/PSP
+jobs pass for the corrected published implementation, and downloaded artifacts plus
+archive/internal checksums were inspected. Direct-indirect-long, absolute-long and
+decimal ADC/SBC remain incomplete.
+
+The binary long arithmetic milestone on 2026-10-16 adds ADC `67/6F/77/7F` and SBC
+`E7/EF/F7/FF`, completing every architectural ADC/SBC addressing form for binary
+operation. Deterministic host tests cover both M widths, Direct-indirect-long pointer
+bytes wrapping in bank zero, pointer-bank selection independent of DBR, absolute-long
+operand fetch, full 24-bit indexed carry, C/V/N/Z, B preservation, PC and exact
+cycles without page-cross or X-width penalties. All thirty ADC/SBC opcodes stop
+before operand/address fetch when D=1. Local evidence and successful GitHub Host
+GCC/Clang plus pinned PS2/PSP cross-builds are recorded in
+docs/65c816-binary-long-audit.md; downloaded artifacts and all checksums were
+inspected. Decimal ADC/SBC calculation remains incomplete.
+
+The decimal arithmetic milestone on 2026-10-16 implements packed-BCD calculation
+for all thirty ADC/SBC opcodes at both M widths without changing addressing or cycle
+rules. Repository tests exhaust 40,000 valid 8-bit operand/carry combinations and
+cover targeted 16-bit and invalid-digit cases. The arithmetic algorithm was also
+audited against 19,970 decimal-mode immediate ADC/SBC cases from a pinned,
+MIT-licensed SingleStepTests revision with zero C/V/N/Z/result mismatches. Local
+evidence is in docs/65c816-decimal-arithmetic-audit.md; GitHub workflow evidence is
+verified for Host GCC/Clang plus pinned PS2/PSP cross-builds, and all downloaded
+artifact archives and internal checksums were inspected.
+
+The memory read-modify-write and shift/rotate milestone on 2026-10-16 adds all
+thirty-six ASL/LSR/ROL/ROR accumulator/memory, memory INC/DEC, TSB/TRB and STZ
+opcodes. Host regressions cover both M widths, C/N/Z isolation, TSB/TRB overlap
+semantics, B and unrelated-state preservation, Direct Page bank/DL rules, absolute
+and indexed 24-bit carry, 16-bit memory access, exact aggregate cycles and missing
+write-bus diagnostics. W65C816 bus-cycle dummy writes and lock signaling remain
+outside the current instruction-level timing contract. Local evidence is in
+docs/65c816-memory-rmw-shifts-audit.md. GitHub Host GCC/Clang and pinned PS2/PSP
+cross-build workflows passed for implementation head
+`7649664d488687436daeac1a41969cd8af402610`; artifact metadata/digests were inspected,
+but archive download inspection was blocked by repeated HTTP 502 responses.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -237,27 +373,27 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 105-opcode subset only
-- [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP and base logic/compare forms only
-- [ ] [IN PROGRESS] Absolute addressing — JMP, loads/stores and base logic/compare/BIT forms only
-- [ ] [IN PROGRESS] Long addressing — LDA/STA absolute long and absolute long,X implemented only
-- [ ] [IN PROGRESS] Direct Page addressing — loads/stores, base logic/compare/BIT and ten LDA/STA indirect forms only
-- [ ] Stack-relative addressing
-- [ ] [IN PROGRESS] Indexed addressing — load/store subset plus Direct-X/absolute-X BIT only
-- [ ] [IN PROGRESS] Indirect addressing — LDA/STA `(direct,X)`, `(direct)`, `(direct),Y`, `[direct]` and `[direct],Y` only
+- [ ] [IN PROGRESS] Opcode dispatch — 223-opcode subset only
+- [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary/decimal ADC/SBC forms only
+- [ ] [IN PROGRESS] Absolute addressing — JMP, scalar loads/stores, logic/compare, binary/decimal ADC/SBC and read-modify-write forms only
+- [ ] [IN PROGRESS] Long addressing — LDA/STA, ORA/AND/EOR/CMP and binary/decimal ADC/SBC long forms implemented; unrelated long/control forms pending
+- [ ] [IN PROGRESS] Direct Page addressing — scalar loads/stores, logic/compare, binary/decimal ADC/SBC and read-modify-write forms only
+- [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
+- [ ] [IN PROGRESS] Indexed addressing — scalar load/store, logic/compare, binary/decimal ADC/SBC and Direct-X/absolute-X read-modify-write forms
+- [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP plus every binary/decimal ADC/SBC indirect form and `(stack-relative),Y`; indirect control flow pending
 - [x] Branch instructions
-- [ ] [IN PROGRESS] Load/store instructions — immediate, direct/indirect, absolute, indexed and long subset only
-- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, base CMP and complete CPX/CPY subsets only
-- [ ] [IN PROGRESS] Logic instructions — base ORA/AND/EOR forms and complete BIT family only
-- [ ] Shift/rotate instructions
+- [ ] [IN PROGRESS] Load/store instructions — scalar LDA/LDX/LDY/STA/STX/STY/STZ families complete; block moves pending
+- [x] Arithmetic instructions — complete ADC/SBC, compare and register/memory INC/DEC families
+- [x] Logic instructions — complete ORA/AND/EOR/BIT/TSB/TRB families
+- [x] Shift/rotate instructions — complete ASL/LSR/ROL/ROR accumulator and memory families
 - [x] Transfer instructions
 - [ ] Stack instructions
-- [ ] [IN PROGRESS] Status flag behavior — controls plus implemented load/transfer/logic/compare/register-arithmetic flag effects verified
-- [ ] [IN PROGRESS] M flag behavior — implemented accumulator data, transfer, logic, compare, BIT and register INC/DEC paths verified at both widths
-- [ ] [IN PROGRESS] X flag behavior — implemented index data, transfer, compare, register INC/DEC and indexed cycles verified
-- [ ] [IN PROGRESS] Native mode — XCE entry, implemented widths/transfers, branches, status controls and register INC/DEC verified
-- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers, Direct/indirect pointer wrapping, branches, status controls and register INC/DEC verified for implemented subset
-- [ ] Decimal arithmetic
+- [ ] [IN PROGRESS] Status flag behavior — controls plus implemented load/transfer/logic/compare/arithmetic/read-modify-write flag effects verified
+- [ ] [IN PROGRESS] M flag behavior — implemented accumulator data, transfer, ALU, store and read-modify-write paths verified at both widths
+- [ ] [IN PROGRESS] X flag behavior — implemented index data, transfer, compare, register INC/DEC and accumulator-ALU indexed cycles verified
+- [ ] [IN PROGRESS] Native mode — XCE entry, implemented widths/transfers/logic, branches, status controls and register INC/DEC verified
+- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers/logic, Direct/indirect pointer wrapping, branches, status controls and register INC/DEC verified for implemented subset
+- [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
 - [ ] IRQ
 - [ ] NMI
 - [ ] [IN PROGRESS] RESET — vector and documented visible state subset only
@@ -267,8 +403,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] STP
 - [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
-- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, logic/compare and register INC/DEC timing only
-- [ ] [IN PROGRESS] CPU automated tests — all 105 implemented opcodes and addressing behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, ALU and aggregate read-modify-write timing only
+- [ ] [IN PROGRESS] CPU automated tests — all 223 dispatch opcodes and implemented behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -277,6 +413,42 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Caller-owned register/mode/bus/diagnostic state
 - [x] Reset vector fetch from logical 00:FFFC-D
 - [x] Pre-reset and unimplemented-opcode diagnostic stops
+- [x] TSB direct (`04`)
+- [x] ASL direct (`06`)
+- [x] ASL accumulator (`0A`)
+- [x] TSB absolute (`0C`)
+- [x] ASL absolute (`0E`)
+- [x] TRB direct (`14`)
+- [x] ASL direct,X (`16`)
+- [x] TRB absolute (`1C`)
+- [x] ASL absolute,X (`1E`)
+- [x] ROL direct (`26`)
+- [x] ROL accumulator (`2A`)
+- [x] ROL absolute (`2E`)
+- [x] ROL direct,X (`36`)
+- [x] ROL absolute,X (`3E`)
+- [x] LSR direct (`46`)
+- [x] LSR accumulator (`4A`)
+- [x] LSR absolute (`4E`)
+- [x] LSR direct,X (`56`)
+- [x] LSR absolute,X (`5E`)
+- [x] STZ direct (`64`)
+- [x] ROR direct (`66`)
+- [x] ROR accumulator (`6A`)
+- [x] ROR absolute (`6E`)
+- [x] STZ direct,X (`74`)
+- [x] ROR direct,X (`76`)
+- [x] ROR absolute,X (`7E`)
+- [x] STZ absolute (`9C`)
+- [x] STZ absolute,X (`9E`)
+- [x] DEC direct (`C6`)
+- [x] DEC absolute (`CE`)
+- [x] DEC direct,X (`D6`)
+- [x] DEC absolute,X (`DE`)
+- [x] INC direct (`E6`)
+- [x] INC absolute (`EE`)
+- [x] INC direct,X (`F6`)
+- [x] INC absolute,X (`FE`)
 - [x] BPL (`10`)
 - [x] TCS (`1B`)
 - [x] NOP (`EA`)
@@ -318,6 +490,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] BRA (`80`)
 - [x] BRL (`82`)
 - [x] STA direct-indexed-indirect (`81`)
+- [x] STA stack-relative (`83`)
 - [x] STY direct (`84`)
 - [x] STA direct (`85`)
 - [x] STX direct (`86`)
@@ -327,6 +500,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] BCC (`90`)
 - [x] STA direct-indirect-indexed,Y (`91`)
 - [x] STA direct-indirect (`92`)
+- [x] STA stack-relative-indirect-indexed,Y (`93`)
 - [x] STY direct,X (`94`)
 - [x] STA direct,X (`95`)
 - [x] STX direct,Y (`96`)
@@ -335,6 +509,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] TXS (`9A`)
 - [x] TXY (`9B`)
 - [x] LDA direct-indexed-indirect (`A1`)
+- [x] LDA stack-relative (`A3`)
 - [x] LDY direct (`A4`)
 - [x] LDA direct (`A5`)
 - [x] LDX direct (`A6`)
@@ -344,6 +519,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] BCS (`B0`)
 - [x] LDA direct-indirect-indexed,Y (`B1`)
 - [x] LDA direct-indirect (`B2`)
+- [x] LDA stack-relative-indirect-indexed,Y (`B3`)
 - [x] LDY direct,X (`B4`)
 - [x] LDA direct,X (`B5`)
 - [x] LDX direct,Y (`B6`)
@@ -359,29 +535,107 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] XBA (`EB`)
 - [x] BEQ (`F0`)
 - [x] SED (`F8`)
+- [x] ORA direct-indexed-indirect (`01`)
+- [x] ORA stack-relative (`03`)
 - [x] ORA direct (`05`)
+- [x] ORA direct-indirect-long (`07`)
 - [x] ORA immediate (`09`)
 - [x] ORA absolute (`0D`)
+- [x] ORA absolute long (`0F`)
+- [x] ORA direct-indirect-indexed,Y (`11`)
+- [x] ORA direct-indirect (`12`)
+- [x] ORA stack-relative-indirect-indexed,Y (`13`)
+- [x] ORA direct,X (`15`)
+- [x] ORA direct-indirect-long-indexed,Y (`17`)
+- [x] ORA absolute,Y (`19`)
+- [x] ORA absolute,X (`1D`)
+- [x] ORA absolute long,X (`1F`)
+- [x] AND direct-indexed-indirect (`21`)
+- [x] AND stack-relative (`23`)
 - [x] BIT direct (`24`)
 - [x] AND direct (`25`)
+- [x] AND direct-indirect-long (`27`)
 - [x] AND immediate (`29`)
 - [x] BIT absolute (`2C`)
 - [x] AND absolute (`2D`)
+- [x] AND absolute long (`2F`)
+- [x] AND direct-indirect-indexed,Y (`31`)
+- [x] AND direct-indirect (`32`)
+- [x] AND stack-relative-indirect-indexed,Y (`33`)
 - [x] BIT direct,X (`34`)
+- [x] AND direct,X (`35`)
+- [x] AND direct-indirect-long-indexed,Y (`37`)
+- [x] AND absolute,Y (`39`)
 - [x] BIT absolute,X (`3C`)
+- [x] AND absolute,X (`3D`)
+- [x] AND absolute long,X (`3F`)
+- [x] EOR direct-indexed-indirect (`41`)
+- [x] EOR stack-relative (`43`)
 - [x] EOR direct (`45`)
+- [x] EOR direct-indirect-long (`47`)
 - [x] EOR immediate (`49`)
 - [x] EOR absolute (`4D`)
+- [x] EOR absolute long (`4F`)
+- [x] EOR direct-indirect-indexed,Y (`51`)
+- [x] EOR direct-indirect (`52`)
+- [x] EOR stack-relative-indirect-indexed,Y (`53`)
+- [x] EOR direct,X (`55`)
+- [x] EOR direct-indirect-long-indexed,Y (`57`)
+- [x] EOR absolute,Y (`59`)
+- [x] EOR absolute,X (`5D`)
+- [x] EOR absolute long,X (`5F`)
+- [x] ADC direct-indexed-indirect, binary and decimal modes (`61`)
+- [x] ADC stack-relative, binary and decimal modes (`63`)
+- [x] ADC direct, binary and decimal modes (`65`)
+- [x] ADC direct-indirect-long, binary and decimal modes (`67`)
+- [x] ADC immediate, binary and decimal modes (`69`)
+- [x] ADC absolute, binary and decimal modes (`6D`)
+- [x] ADC absolute long, binary and decimal modes (`6F`)
+- [x] ADC direct-indirect-indexed,Y, binary and decimal modes (`71`)
+- [x] ADC direct-indirect, binary and decimal modes (`72`)
+- [x] ADC stack-relative-indirect-indexed,Y, binary and decimal modes (`73`)
+- [x] ADC direct,X, binary and decimal modes (`75`)
+- [x] ADC direct-indirect-long-indexed,Y, binary and decimal modes (`77`)
+- [x] ADC absolute,Y, binary and decimal modes (`79`)
+- [x] ADC absolute,X, binary and decimal modes (`7D`)
+- [x] ADC absolute long,X, binary and decimal modes (`7F`)
 - [x] BIT immediate (`89`)
 - [x] CPY immediate (`C0`)
+- [x] CMP direct-indexed-indirect (`C1`)
+- [x] CMP stack-relative (`C3`)
 - [x] CPY direct (`C4`)
 - [x] CMP direct (`C5`)
+- [x] CMP direct-indirect-long (`C7`)
 - [x] CMP immediate (`C9`)
 - [x] CPY absolute (`CC`)
 - [x] CMP absolute (`CD`)
+- [x] CMP absolute long (`CF`)
+- [x] CMP direct-indirect-indexed,Y (`D1`)
+- [x] CMP direct-indirect (`D2`)
+- [x] CMP stack-relative-indirect-indexed,Y (`D3`)
+- [x] CMP direct,X (`D5`)
+- [x] CMP direct-indirect-long-indexed,Y (`D7`)
+- [x] CMP absolute,Y (`D9`)
+- [x] CMP absolute,X (`DD`)
+- [x] CMP absolute long,X (`DF`)
 - [x] CPX immediate (`E0`)
+- [x] SBC direct-indexed-indirect, binary and decimal modes (`E1`)
+- [x] SBC stack-relative, binary and decimal modes (`E3`)
 - [x] CPX direct (`E4`)
+- [x] SBC direct, binary and decimal modes (`E5`)
+- [x] SBC direct-indirect-long, binary and decimal modes (`E7`)
+- [x] SBC immediate, binary and decimal modes (`E9`)
 - [x] CPX absolute (`EC`)
+- [x] SBC absolute, binary and decimal modes (`ED`)
+- [x] SBC absolute long, binary and decimal modes (`EF`)
+- [x] SBC direct-indirect-indexed,Y, binary and decimal modes (`F1`)
+- [x] SBC direct-indirect, binary and decimal modes (`F2`)
+- [x] SBC stack-relative-indirect-indexed,Y, binary and decimal modes (`F3`)
+- [x] SBC direct,X, binary and decimal modes (`F5`)
+- [x] SBC direct-indirect-long-indexed,Y, binary and decimal modes (`F7`)
+- [x] SBC absolute,Y, binary and decimal modes (`F9`)
+- [x] SBC absolute,X, binary and decimal modes (`FD`)
+- [x] SBC absolute long,X, binary and decimal modes (`FF`)
 - [x] Base-cycle accounting for the implemented subset
 - [x] Linear 24-bit word access across bank boundaries
 - [x] Absolute indexed page/write/X cycle rule for implemented opcodes
@@ -406,8 +660,24 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Implied D/I/V status-control isolation and two-cycle timing
 - [x] Accumulator/index increment-decrement width, wrap, N/Z isolation and two-cycle timing
 - [x] Base ORA/AND/EOR selected-width result, N/Z and B-preservation behavior
+- [x] Non-stack ORA/AND indexed, indirect and long address/cycle behavior
 - [x] Base CMP and complete CPX/CPY selected-width N/Z/C behavior
+- [x] Non-stack EOR/CMP indexed, indirect and long address/cycle behavior
+- [x] Stack-relative ORA/AND/EOR/CMP bank-zero address, pointer, DBR/Y and cycle behavior
+- [x] Stack-relative LDA/STA bank-zero data wrap, pointer, DBR/Y, flag and cycle behavior
+- [x] Binary immediate ADC/SBC carry, overflow, N/Z, B preservation and width behavior
+- [x] Binary Direct Page/absolute ADC/SBC address, bank-wrap, flag, width and cycle behavior
+- [x] Binary Direct-X/absolute-X/Y ADC/SBC address, page/index timing, bank-carry, flag, width and cycle behavior
+- [x] Binary stack-relative ADC/SBC bank-zero data/pointer wrap, DBR/Y carry, flags, width and cycle behavior
+- [x] Binary regular Direct-indirect ADC/SBC pointer wrap, DBR, pre/post-index, flag, width and cycle behavior
+- [x] Binary long ADC/SBC pointer-bank, bank-zero wrap, 24-bit carry, flag, width and cycle behavior
+- [x] Decimal ADC/SBC packed-BCD correction, C/V/N/Z, width, addressing and cycle behavior
 - [x] Complete BIT selected-width Z, memory N/V and immediate N/V-preservation behavior
+- [x] Complete ASL/LSR/ROL/ROR accumulator width, B preservation, C/N/Z and two-cycle behavior
+- [x] Complete ASL/LSR/ROL/ROR memory Direct/Direct-X/absolute/absolute-X address, width, flag and cycle behavior
+- [x] Complete memory INC/DEC wrap, N/Z isolation, address, width and cycle behavior
+- [x] Complete TSB/TRB memory update, original-operand Z, address, width and cycle behavior
+- [x] Complete STZ Direct/Direct-X/absolute/absolute-X width, address, flag-preservation and cycle behavior
 
 ## Bus
 

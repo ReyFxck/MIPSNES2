@@ -46,18 +46,18 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Reset sequence
 - [x] Instruction fetch
 - [ ] [IN PROGRESS] Opcode dispatch
-- [ ] [IN PROGRESS] Immediate addressing
-- [ ] [IN PROGRESS] Absolute addressing
-- [ ] [IN PROGRESS] Long addressing
-- [ ] [IN PROGRESS] Direct Page addressing
-- [ ] Stack-relative addressing
-- [ ] [IN PROGRESS] Indexed addressing
-- [ ] [IN PROGRESS] Indirect addressing
+- [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary/decimal ADC/SBC subset
+- [ ] [IN PROGRESS] Absolute addressing — includes binary/decimal ADC/SBC, scalar load/store and read-modify-write forms
+- [ ] [IN PROGRESS] Long addressing — includes complete binary/decimal ADC/SBC long forms
+- [ ] [IN PROGRESS] Direct Page addressing — includes binary/decimal ADC/SBC, scalar load/store and read-modify-write forms
+- [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
+- [ ] [IN PROGRESS] Indexed addressing — includes binary/decimal ADC/SBC plus Direct-X/absolute-X read-modify-write forms
+- [ ] [IN PROGRESS] Indirect addressing — includes complete binary/decimal ADC/SBC regular/long forms; indirect control flow pending
 - [x] Branch instructions
-- [ ] [IN PROGRESS] Load/store instructions
-- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, base CMP and complete CPX/CPY subsets only
-- [ ] [IN PROGRESS] Logic instructions — base ORA/AND/EOR forms and complete BIT family only
-- [ ] Shift/rotate instructions
+- [ ] [IN PROGRESS] Load/store instructions — scalar LDA/LDX/LDY/STA/STX/STY/STZ families complete; block moves pending
+- [x] Arithmetic instructions — complete ADC/SBC, compare and register/memory INC/DEC families
+- [x] Logic instructions — complete ORA/AND/EOR/BIT/TSB/TRB families
+- [x] Shift/rotate instructions — complete ASL/LSR/ROL/ROR accumulator and memory families
 - [x] Transfer instructions
 - [ ] Stack instructions
 - [ ] [IN PROGRESS] Status flag behavior
@@ -65,7 +65,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] X flag behavior
 - [ ] [IN PROGRESS] Native mode
 - [ ] [IN PROGRESS] Emulation mode
-- [ ] Decimal arithmetic
+- [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
 - [ ] IRQ
 - [ ] NMI
 - [ ] [IN PROGRESS] RESET
