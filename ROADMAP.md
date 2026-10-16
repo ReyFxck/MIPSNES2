@@ -47,17 +47,17 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Instruction fetch
 - [ ] [IN PROGRESS] Opcode dispatch
 - [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary/decimal ADC/SBC subset
-- [ ] [IN PROGRESS] Absolute addressing — includes binary/decimal ADC/SBC reads and X/Y indexed reads
+- [ ] [IN PROGRESS] Absolute addressing — includes binary/decimal ADC/SBC, scalar load/store and read-modify-write forms
 - [ ] [IN PROGRESS] Long addressing — includes complete binary/decimal ADC/SBC long forms
-- [ ] [IN PROGRESS] Direct Page addressing — includes binary/decimal ADC/SBC Direct and Direct-X reads
+- [ ] [IN PROGRESS] Direct Page addressing — includes binary/decimal ADC/SBC, scalar load/store and read-modify-write forms
 - [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
-- [ ] [IN PROGRESS] Indexed addressing — includes binary/decimal ADC/SBC Direct-X and absolute-X/Y reads
+- [ ] [IN PROGRESS] Indexed addressing — includes binary/decimal ADC/SBC plus Direct-X/absolute-X read-modify-write forms
 - [ ] [IN PROGRESS] Indirect addressing — includes complete binary/decimal ADC/SBC regular/long forms; indirect control flow pending
 - [x] Branch instructions
-- [ ] [IN PROGRESS] Load/store instructions — complete LDA/STA families plus implemented LDX/LDY/STX/STY; remaining store/move instructions pending
-- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, compare families and complete binary/decimal ADC/SBC; memory arithmetic pending
-- [ ] [IN PROGRESS] Logic instructions — complete ORA/AND/EOR/BIT families; TSB/TRB and shifts remain
-- [ ] Shift/rotate instructions
+- [ ] [IN PROGRESS] Load/store instructions — scalar LDA/LDX/LDY/STA/STX/STY/STZ families complete; block moves pending
+- [x] Arithmetic instructions — complete ADC/SBC, compare and register/memory INC/DEC families
+- [x] Logic instructions — complete ORA/AND/EOR/BIT/TSB/TRB families
+- [x] Shift/rotate instructions — complete ASL/LSR/ROL/ROR accumulator and memory families
 - [x] Transfer instructions
 - [ ] Stack instructions
 - [ ] [IN PROGRESS] Status flag behavior

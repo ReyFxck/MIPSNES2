@@ -50,6 +50,12 @@ combinations, add targeted 16-bit and invalid-digit cases, and execute all thirt
 addressing forms at both M widths with D=1. A separate read-only audit compares the
 algorithm's result and C/V/N/Z behavior against 19,970 decimal immediate vectors
 from a pinned MIT-licensed SingleStepTests revision.
+Read-modify-write regressions execute all 36 ASL/LSR/ROL/ROR accumulator/memory,
+memory INC/DEC, TSB/TRB and STZ opcodes at both M widths. They verify selected-width
+results, C/N/Z and unrelated-flag isolation, B preservation, original-operand
+TSB/TRB Z behavior, Direct Page bank/DL rules, DBR and 24-bit indexed carry, 16-bit
+writes, aggregate timing and missing-write-bus diagnostics. Bus-cycle dummy writes
+and MLB signaling remain outside the current contract.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -58,6 +64,8 @@ pins and forbidden core includes. It is a guardrail, not proof of complete emula
 CPU expectations are independently authored from the WDC W65C816S March 13, 2024
 datasheet sections recorded in [65c816.md](65c816.md). No external test ROM or code
 from an emulator is included.
+Use the source hierarchy and provenance rules in [references.md](references.md)
+before adopting additional hardware documentation, vectors or test ROMs.
 
 Tests use explicit return codes so `-DNDEBUG` cannot remove checks. Host debug,
 release and sanitizer builds belong in separate directories. Cross-build success
@@ -129,6 +137,8 @@ Binary long ADC/SBC evidence is recorded in
 [65c816-binary-long-audit.md](65c816-binary-long-audit.md).
 Decimal ADC/SBC evidence is recorded in
 [65c816-decimal-arithmetic-audit.md](65c816-decimal-arithmetic-audit.md).
+Memory RMW and shift/rotate evidence is recorded in
+[65c816-memory-rmw-shifts-audit.md](65c816-memory-rmw-shifts-audit.md).
 
 ## End-of-task audit
 

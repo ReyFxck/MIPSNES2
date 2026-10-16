@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 187-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 223-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -68,6 +68,7 @@ inspection of the actual setting. Documents/structure require content/link audit
 - [x] docs/testing.md
 - [x] docs/debugging.md
 - [x] docs/github-setup.md
+- [x] docs/references.md — curated non-emulator hardware, independent-test and SDK sources
 
 ## Repository Structure
 
@@ -347,6 +348,15 @@ evidence is in docs/65c816-decimal-arithmetic-audit.md; GitHub workflow evidence
 verified for Host GCC/Clang plus pinned PS2/PSP cross-builds, and all downloaded
 artifact archives and internal checksums were inspected.
 
+The memory read-modify-write and shift/rotate milestone on 2026-10-16 adds all
+thirty-six ASL/LSR/ROL/ROR accumulator/memory, memory INC/DEC, TSB/TRB and STZ
+opcodes. Host regressions cover both M widths, C/N/Z isolation, TSB/TRB overlap
+semantics, B and unrelated-state preservation, Direct Page bank/DL rules, absolute
+and indexed 24-bit carry, 16-bit memory access, exact aggregate cycles and missing
+write-bus diagnostics. W65C816 bus-cycle dummy writes and lock signaling remain
+outside the current instruction-level timing contract. Local evidence is in
+docs/65c816-memory-rmw-shifts-audit.md; GitHub workflow evidence is pending publication.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -360,23 +370,23 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 187-opcode subset only
+- [ ] [IN PROGRESS] Opcode dispatch — 223-opcode subset only
 - [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary/decimal ADC/SBC forms only
-- [ ] [IN PROGRESS] Absolute addressing — JMP, loads/stores, logic/compare/BIT and binary/decimal ADC/SBC base/indexed forms only
+- [ ] [IN PROGRESS] Absolute addressing — JMP, scalar loads/stores, logic/compare, binary/decimal ADC/SBC and read-modify-write forms only
 - [ ] [IN PROGRESS] Long addressing — LDA/STA, ORA/AND/EOR/CMP and binary/decimal ADC/SBC long forms implemented; unrelated long/control forms pending
-- [ ] [IN PROGRESS] Direct Page addressing — loads/stores, ORA/AND/EOR/CMP, CPX/CPY/BIT and binary/decimal ADC/SBC Direct/Direct-X forms only
+- [ ] [IN PROGRESS] Direct Page addressing — scalar loads/stores, logic/compare, binary/decimal ADC/SBC and read-modify-write forms only
 - [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
-- [ ] [IN PROGRESS] Indexed addressing — load/store subset, complete ORA/AND/EOR/CMP forms, BIT subset and binary/decimal ADC/SBC Direct-X/absolute-X/Y
+- [ ] [IN PROGRESS] Indexed addressing — scalar load/store, logic/compare, binary/decimal ADC/SBC and Direct-X/absolute-X read-modify-write forms
 - [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP plus every binary/decimal ADC/SBC indirect form and `(stack-relative),Y`; indirect control flow pending
 - [x] Branch instructions
-- [ ] [IN PROGRESS] Load/store instructions — LDA/STA families complete; LDX/LDY/STX/STY implemented, remaining store/move instructions pending
-- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, complete compare families and every binary/decimal ADC/SBC addressing form; memory arithmetic pending
-- [ ] [IN PROGRESS] Logic instructions — complete ORA/AND/EOR/BIT families; TSB/TRB and shifts remain
-- [ ] Shift/rotate instructions
+- [ ] [IN PROGRESS] Load/store instructions — scalar LDA/LDX/LDY/STA/STX/STY/STZ families complete; block moves pending
+- [x] Arithmetic instructions — complete ADC/SBC, compare and register/memory INC/DEC families
+- [x] Logic instructions — complete ORA/AND/EOR/BIT/TSB/TRB families
+- [x] Shift/rotate instructions — complete ASL/LSR/ROL/ROR accumulator and memory families
 - [x] Transfer instructions
 - [ ] Stack instructions
-- [ ] [IN PROGRESS] Status flag behavior — controls plus implemented load/transfer/logic/compare/register-arithmetic flag effects verified
-- [ ] [IN PROGRESS] M flag behavior — implemented accumulator data, transfer, logic, compare, BIT and register INC/DEC paths verified at both widths
+- [ ] [IN PROGRESS] Status flag behavior — controls plus implemented load/transfer/logic/compare/arithmetic/read-modify-write flag effects verified
+- [ ] [IN PROGRESS] M flag behavior — implemented accumulator data, transfer, ALU, store and read-modify-write paths verified at both widths
 - [ ] [IN PROGRESS] X flag behavior — implemented index data, transfer, compare, register INC/DEC and accumulator-ALU indexed cycles verified
 - [ ] [IN PROGRESS] Native mode — XCE entry, implemented widths/transfers/logic, branches, status controls and register INC/DEC verified
 - [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers/logic, Direct/indirect pointer wrapping, branches, status controls and register INC/DEC verified for implemented subset
@@ -390,8 +400,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] STP
 - [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
-- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, logic/compare, binary/decimal arithmetic and register INC/DEC timing only
-- [ ] [IN PROGRESS] CPU automated tests — all 187 dispatch opcodes and implemented behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, ALU and aggregate read-modify-write timing only
+- [ ] [IN PROGRESS] CPU automated tests — all 223 dispatch opcodes and implemented behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -400,6 +410,42 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Caller-owned register/mode/bus/diagnostic state
 - [x] Reset vector fetch from logical 00:FFFC-D
 - [x] Pre-reset and unimplemented-opcode diagnostic stops
+- [x] TSB direct (`04`)
+- [x] ASL direct (`06`)
+- [x] ASL accumulator (`0A`)
+- [x] TSB absolute (`0C`)
+- [x] ASL absolute (`0E`)
+- [x] TRB direct (`14`)
+- [x] ASL direct,X (`16`)
+- [x] TRB absolute (`1C`)
+- [x] ASL absolute,X (`1E`)
+- [x] ROL direct (`26`)
+- [x] ROL accumulator (`2A`)
+- [x] ROL absolute (`2E`)
+- [x] ROL direct,X (`36`)
+- [x] ROL absolute,X (`3E`)
+- [x] LSR direct (`46`)
+- [x] LSR accumulator (`4A`)
+- [x] LSR absolute (`4E`)
+- [x] LSR direct,X (`56`)
+- [x] LSR absolute,X (`5E`)
+- [x] STZ direct (`64`)
+- [x] ROR direct (`66`)
+- [x] ROR accumulator (`6A`)
+- [x] ROR absolute (`6E`)
+- [x] STZ direct,X (`74`)
+- [x] ROR direct,X (`76`)
+- [x] ROR absolute,X (`7E`)
+- [x] STZ absolute (`9C`)
+- [x] STZ absolute,X (`9E`)
+- [x] DEC direct (`C6`)
+- [x] DEC absolute (`CE`)
+- [x] DEC direct,X (`D6`)
+- [x] DEC absolute,X (`DE`)
+- [x] INC direct (`E6`)
+- [x] INC absolute (`EE`)
+- [x] INC direct,X (`F6`)
+- [x] INC absolute,X (`FE`)
 - [x] BPL (`10`)
 - [x] TCS (`1B`)
 - [x] NOP (`EA`)
@@ -624,6 +670,11 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Binary long ADC/SBC pointer-bank, bank-zero wrap, 24-bit carry, flag, width and cycle behavior
 - [x] Decimal ADC/SBC packed-BCD correction, C/V/N/Z, width, addressing and cycle behavior
 - [x] Complete BIT selected-width Z, memory N/V and immediate N/V-preservation behavior
+- [x] Complete ASL/LSR/ROL/ROR accumulator width, B preservation, C/N/Z and two-cycle behavior
+- [x] Complete ASL/LSR/ROL/ROR memory Direct/Direct-X/absolute/absolute-X address, width, flag and cycle behavior
+- [x] Complete memory INC/DEC wrap, N/Z isolation, address, width and cycle behavior
+- [x] Complete TSB/TRB memory update, original-operand Z, address, width and cycle behavior
+- [x] Complete STZ Direct/Direct-X/absolute/absolute-X width, address, flag-preservation and cycle behavior
 
 ## Bus
 

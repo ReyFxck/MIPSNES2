@@ -36,6 +36,16 @@ static void write8(const mipsnes2_cpu *cpu, mipsnes2_address address,
     cpu->bus.write8(cpu->bus.context, mipsnes2_address24(address), value);
 }
 
+static bool require_write_bus(mipsnes2_cpu *cpu)
+{
+    if (cpu->bus.write8 != NULL) {
+        return true;
+    }
+    cpu->stopped = true;
+    cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
+    return false;
+}
+
 static uint8_t fetch8(mipsnes2_cpu *cpu)
 {
     uint8_t value = read8(cpu, mipsnes2_address_make(cpu->pbr, cpu->pc));
@@ -240,6 +250,123 @@ static void change_index(mipsnes2_cpu *cpu, uint16_t *target,
         set_nz16(cpu, *target);
     }
     cpu->instruction_cycles += UINT64_C(2);
+}
+
+typedef enum {
+    SHIFT_LEFT,
+    ROTATE_LEFT,
+    SHIFT_RIGHT,
+    ROTATE_RIGHT
+} shift_operation;
+
+static uint16_t shift_value(mipsnes2_cpu *cpu, uint16_t value, bool wide,
+                            shift_operation operation)
+{
+    uint16_t mask = wide ? UINT16_MAX : UINT8_MAX;
+    uint16_t sign = wide ? UINT16_C(0x8000) : UINT16_C(0x0080);
+    bool carry_in = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U;
+    bool carry_out;
+    uint16_t result;
+
+    value &= mask;
+    switch (operation) {
+    case SHIFT_LEFT:
+        carry_out = (value & sign) != 0U;
+        result = (uint16_t)((value << 1) & mask);
+        break;
+    case ROTATE_LEFT:
+        carry_out = (value & sign) != 0U;
+        result = (uint16_t)(((value << 1) |
+                             (carry_in ? UINT16_C(1) : UINT16_C(0))) &
+                            mask);
+        break;
+    case SHIFT_RIGHT:
+        carry_out = (value & UINT16_C(1)) != 0U;
+        result = (uint16_t)(value >> 1);
+        break;
+    case ROTATE_RIGHT:
+        carry_out = (value & UINT16_C(1)) != 0U;
+        result = (uint16_t)((value >> 1) | (carry_in ? sign : 0U));
+        break;
+    default:
+        return value;
+    }
+
+    cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_C;
+    if (carry_out) {
+        cpu->p |= MIPSNES2_CPU_FLAG_C;
+    }
+    if (wide) {
+        set_nz16(cpu, result);
+    } else {
+        set_nz8(cpu, (uint8_t)result);
+    }
+    return result;
+}
+
+static void shift_accumulator(mipsnes2_cpu *cpu, shift_operation operation)
+{
+    bool wide = !accumulator_is_8_bit(cpu);
+    uint16_t result = shift_value(cpu, cpu->a, wide, operation);
+
+    cpu->a = wide ? result
+                  : (uint16_t)((cpu->a & UINT16_C(0xff00)) | result);
+    cpu->instruction_cycles += UINT64_C(2);
+}
+
+typedef enum {
+    MEMORY_ASL,
+    MEMORY_ROL,
+    MEMORY_LSR,
+    MEMORY_ROR,
+    MEMORY_DEC,
+    MEMORY_INC,
+    MEMORY_TSB,
+    MEMORY_TRB
+} memory_modify_operation;
+
+static uint16_t modify_memory_value(mipsnes2_cpu *cpu, uint16_t value,
+                                    bool wide,
+                                    memory_modify_operation operation)
+{
+    uint16_t mask = wide ? UINT16_MAX : UINT8_MAX;
+    uint16_t result;
+
+    value &= mask;
+    switch (operation) {
+    case MEMORY_ASL:
+        return shift_value(cpu, value, wide, SHIFT_LEFT);
+    case MEMORY_ROL:
+        return shift_value(cpu, value, wide, ROTATE_LEFT);
+    case MEMORY_LSR:
+        return shift_value(cpu, value, wide, SHIFT_RIGHT);
+    case MEMORY_ROR:
+        return shift_value(cpu, value, wide, ROTATE_RIGHT);
+    case MEMORY_DEC:
+        result = (uint16_t)((value - UINT16_C(1)) & mask);
+        break;
+    case MEMORY_INC:
+        result = (uint16_t)((value + UINT16_C(1)) & mask);
+        break;
+    case MEMORY_TSB:
+    case MEMORY_TRB:
+        cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_Z;
+        if (((cpu->a & mask) & value) == 0U) {
+            cpu->p |= MIPSNES2_CPU_FLAG_Z;
+        }
+        return operation == MEMORY_TSB
+                   ? (uint16_t)((value | cpu->a) & mask)
+                   : (uint16_t)((value & (uint16_t)~cpu->a) & mask);
+    default:
+        return value;
+    }
+
+    if (wide) {
+        set_nz16(cpu, result);
+    } else {
+        set_nz8(cpu, (uint8_t)result);
+    }
+    return result;
 }
 
 typedef enum {
@@ -606,6 +733,27 @@ static uint16_t read_accumulator_operand(const mipsnes2_cpu *cpu,
                   : read16_linear(cpu, address);
 }
 
+static void modify_memory(mipsnes2_cpu *cpu, mipsnes2_address address,
+                          bool direct, memory_modify_operation operation,
+                          uint64_t base_cycles)
+{
+    bool wide = !accumulator_is_8_bit(cpu);
+    uint16_t value = read_accumulator_operand(cpu, address, direct);
+    uint16_t result = modify_memory_value(cpu, value, wide, operation);
+
+    if (wide) {
+        if (direct) {
+            write16_direct(cpu, address, result);
+        } else {
+            write16_linear(cpu, address, result);
+        }
+    } else {
+        write8(cpu, address, (uint8_t)result);
+    }
+    cpu->instruction_cycles += base_cycles + (wide ? UINT64_C(2)
+                                                    : UINT64_C(0));
+}
+
 static uint16_t read_accumulator_stack_operand(const mipsnes2_cpu *cpu,
                                                uint16_t address)
 {
@@ -823,12 +971,28 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu, read_accumulator_stack_operand(cpu, (uint16_t)address),
             ACCUMULATOR_LOGIC_OR, UINT64_C(4));
         break;
+    case 0x04: /* TSB direct */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        modify_memory(cpu, address, true, MEMORY_TSB,
+                      direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
     case 0x05: /* ORA direct */
         address = direct_address(cpu, 0U);
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, true),
                           ACCUMULATOR_LOGIC_OR,
                           direct_base_cycles(cpu, false));
+        break;
+    case 0x06: /* ASL direct */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        modify_memory(cpu, address, true, MEMORY_ASL,
+                      direct_penalized_cycles(cpu, UINT64_C(5)));
         break;
     case 0x07: /* ORA [direct] */
         address = direct_indirect_long_address(cpu, 0U);
@@ -841,11 +1005,28 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         logic_accumulator(cpu, fetch_accumulator_operand(cpu),
                           ACCUMULATOR_LOGIC_OR, UINT64_C(2));
         break;
+    case 0x0a: /* ASL accumulator */
+        shift_accumulator(cpu, SHIFT_LEFT);
+        break;
+    case 0x0c: /* TSB absolute */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        modify_memory(cpu, address, false, MEMORY_TSB, UINT64_C(6));
+        break;
     case 0x0d: /* ORA absolute */
         address = absolute_address(cpu);
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_OR, UINT64_C(4));
+        break;
+    case 0x0e: /* ASL absolute */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        modify_memory(cpu, address, false, MEMORY_ASL, UINT64_C(6));
         break;
     case 0x0f: /* ORA absolute long */
         address = fetch24(cpu);
@@ -885,12 +1066,28 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_OR, UINT64_C(7));
         break;
+    case 0x14: /* TRB direct */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        modify_memory(cpu, address, true, MEMORY_TRB,
+                      direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
     case 0x15: /* ORA direct,X */
         address = direct_address(cpu, cpu->x);
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, true),
                           ACCUMULATOR_LOGIC_OR,
                           direct_base_cycles(cpu, true));
+        break;
+    case 0x16: /* ASL direct,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, cpu->x);
+        modify_memory(cpu, address, true, MEMORY_ASL,
+                      direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
     case 0x17: /* ORA [direct],Y */
         address = direct_indirect_long_address(cpu, cpu->y);
@@ -916,12 +1113,27 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     case 0x1b: /* TCS */
         transfer_to_stack(cpu, cpu->a);
         break;
+    case 0x1c: /* TRB absolute */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        modify_memory(cpu, address, false, MEMORY_TRB, UINT64_C(6));
+        break;
     case 0x1d: /* ORA absolute,X */
         address = absolute_indexed_address(cpu, cpu->x, false,
                                            &base_cycles);
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_OR, base_cycles);
+        break;
+    case 0x1e: /* ASL absolute,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_indexed_address(cpu, cpu->x, true,
+                                           &base_cycles);
+        modify_memory(cpu, address, false, MEMORY_ASL, UINT64_C(7));
         break;
     case 0x1f: /* ORA absolute long,X */
         address = absolute_long_indexed_address(cpu, cpu->x);
@@ -954,6 +1166,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_AND,
                           direct_base_cycles(cpu, false));
         break;
+    case 0x26: /* ROL direct */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        modify_memory(cpu, address, true, MEMORY_ROL,
+                      direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
     case 0x27: /* AND [direct] */
         address = direct_indirect_long_address(cpu, 0U);
         logic_accumulator(cpu,
@@ -965,6 +1185,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         logic_accumulator(cpu, fetch_accumulator_operand(cpu),
                           ACCUMULATOR_LOGIC_AND, UINT64_C(2));
         break;
+    case 0x2a: /* ROL accumulator */
+        shift_accumulator(cpu, ROTATE_LEFT);
+        break;
     case 0x2c: /* BIT absolute */
         address = absolute_address(cpu);
         test_bits(cpu, read_accumulator_operand(cpu, address, false), false,
@@ -975,6 +1198,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_AND, UINT64_C(4));
+        break;
+    case 0x2e: /* ROL absolute */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        modify_memory(cpu, address, false, MEMORY_ROL, UINT64_C(6));
         break;
     case 0x2f: /* AND absolute long */
         address = fetch24(cpu);
@@ -1026,6 +1256,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_AND,
                           direct_base_cycles(cpu, true));
         break;
+    case 0x36: /* ROL direct,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, cpu->x);
+        modify_memory(cpu, address, true, MEMORY_ROL,
+                      direct_penalized_cycles(cpu, UINT64_C(6)));
+        break;
     case 0x37: /* AND [direct],Y */
         address = direct_indirect_long_address(cpu, cpu->y);
         logic_accumulator(cpu,
@@ -1063,6 +1301,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_AND, base_cycles);
         break;
+    case 0x3e: /* ROL absolute,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_indexed_address(cpu, cpu->x, true,
+                                           &base_cycles);
+        modify_memory(cpu, address, false, MEMORY_ROL, UINT64_C(7));
+        break;
     case 0x3f: /* AND absolute long,X */
         address = absolute_long_indexed_address(cpu, cpu->x);
         logic_accumulator(cpu,
@@ -1089,6 +1335,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_XOR,
                           direct_base_cycles(cpu, false));
         break;
+    case 0x46: /* LSR direct */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        modify_memory(cpu, address, true, MEMORY_LSR,
+                      direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
     case 0x47: /* EOR [direct] */
         address = direct_indirect_long_address(cpu, 0U);
         logic_accumulator(cpu,
@@ -1100,6 +1354,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         logic_accumulator(cpu, fetch_accumulator_operand(cpu),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(2));
         break;
+    case 0x4a: /* LSR accumulator */
+        shift_accumulator(cpu, SHIFT_RIGHT);
+        break;
     case 0x4c: /* JMP absolute */
         cpu->pc = fetch16(cpu);
         cpu->instruction_cycles += UINT64_C(3);
@@ -1109,6 +1366,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(4));
+        break;
+    case 0x4e: /* LSR absolute */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        modify_memory(cpu, address, false, MEMORY_LSR, UINT64_C(6));
         break;
     case 0x4f: /* EOR absolute long */
         address = fetch24(cpu);
@@ -1155,6 +1419,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_XOR,
                           direct_base_cycles(cpu, true));
         break;
+    case 0x56: /* LSR direct,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, cpu->x);
+        modify_memory(cpu, address, true, MEMORY_LSR,
+                      direct_penalized_cycles(cpu, UINT64_C(6)));
+        break;
     case 0x57: /* EOR [direct],Y */
         address = direct_indirect_long_address(cpu, cpu->y);
         logic_accumulator(cpu,
@@ -1185,6 +1457,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, base_cycles);
         break;
+    case 0x5e: /* LSR absolute,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_indexed_address(cpu, cpu->x, true,
+                                           &base_cycles);
+        modify_memory(cpu, address, false, MEMORY_LSR, UINT64_C(7));
+        break;
     case 0x5f: /* EOR absolute long,X */
         address = absolute_long_indexed_address(cpu, cpu->x);
         logic_accumulator(cpu,
@@ -1203,11 +1483,27 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu, read_accumulator_stack_operand(cpu, (uint16_t)address),
             false, UINT64_C(4));
         break;
+    case 0x64: /* STZ direct */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        store_direct(cpu, address, 0U, !accumulator_is_8_bit(cpu),
+                     direct_base_cycles(cpu, false));
+        break;
     case 0x65: /* ADC direct, binary/decimal modes */
         address = direct_address(cpu, 0U);
         arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, true), false,
             direct_base_cycles(cpu, false));
+        break;
+    case 0x66: /* ROR direct */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        modify_memory(cpu, address, true, MEMORY_ROR,
+                      direct_penalized_cycles(cpu, UINT64_C(5)));
         break;
     case 0x67: /* ADC [direct], binary/decimal modes */
         address = direct_indirect_long_address(cpu, 0U);
@@ -1219,11 +1515,21 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         arithmetic_accumulator(cpu, fetch_accumulator_operand(cpu),
                                       false, UINT64_C(2));
         break;
+    case 0x6a: /* ROR accumulator */
+        shift_accumulator(cpu, ROTATE_RIGHT);
+        break;
     case 0x6d: /* ADC absolute, binary/decimal modes */
         address = absolute_address(cpu);
         arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             UINT64_C(4));
+        break;
+    case 0x6e: /* ROR absolute */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        modify_memory(cpu, address, false, MEMORY_ROR, UINT64_C(6));
         break;
     case 0x6f: /* ADC absolute long, binary/decimal modes */
         address = fetch24(cpu);
@@ -1262,11 +1568,27 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu, read_accumulator_operand(cpu, address, false), false,
             UINT64_C(7));
         break;
+    case 0x74: /* STZ direct,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, cpu->x);
+        store_direct(cpu, address, 0U, !accumulator_is_8_bit(cpu),
+                     direct_base_cycles(cpu, true));
+        break;
     case 0x75: /* ADC direct,X, binary/decimal modes */
         address = direct_address(cpu, cpu->x);
         arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, true), false,
             direct_base_cycles(cpu, true));
+        break;
+    case 0x76: /* ROR direct,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, cpu->x);
+        modify_memory(cpu, address, true, MEMORY_ROR,
+                      direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
     case 0x77: /* ADC [direct],Y, binary/decimal modes */
         address = direct_indirect_long_address(cpu, cpu->y);
@@ -1294,6 +1616,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             base_cycles);
+        break;
+    case 0x7e: /* ROR absolute,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_indexed_address(cpu, cpu->x, true,
+                                           &base_cycles);
+        modify_memory(cpu, address, false, MEMORY_ROR, UINT64_C(7));
         break;
     case 0x7f: /* ADC absolute long,X, binary/decimal modes */
         address = absolute_long_indexed_address(cpu, cpu->x);
@@ -1445,6 +1775,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
                      base_cycles);
         break;
+    case 0x9e: /* STZ absolute,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_indexed_address(cpu, cpu->x, true, &base_cycles);
+        store_memory(cpu, address, 0U, !accumulator_is_8_bit(cpu),
+                     base_cycles);
+        break;
     case 0x9f: /* STA absolute long,X */
         if (cpu->bus.write8 == NULL) {
             cpu->stopped = true;
@@ -1457,6 +1795,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0x9b: /* TXY */
         transfer_to_index(cpu, &cpu->y, index_register_value(cpu, cpu->x));
+        break;
+    case 0x9c: /* STZ absolute */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        store_memory(cpu, absolute_address(cpu), 0U,
+                     !accumulator_is_8_bit(cpu), UINT64_C(4));
         break;
     case 0x8c: /* STY absolute */
         if (cpu->bus.write8 == NULL) {
@@ -1694,6 +2039,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                       !accumulator_is_8_bit(cpu),
                       direct_base_cycles(cpu, false));
         break;
+    case 0xc6: /* DEC direct */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        modify_memory(cpu, address, true, MEMORY_DEC,
+                      direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
     case 0xc7: /* CMP [direct] */
         address = direct_indirect_long_address(cpu, 0U);
         compare_value(cpu, cpu->a,
@@ -1722,6 +2075,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         compare_value(cpu, cpu->a,
                       read_accumulator_operand(cpu, address, false),
                       !accumulator_is_8_bit(cpu), UINT64_C(4));
+        break;
+    case 0xce: /* DEC absolute */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        modify_memory(cpu, address, false, MEMORY_DEC, UINT64_C(6));
         break;
     case 0xcf: /* CMP absolute long */
         address = fetch24(cpu);
@@ -1768,6 +2128,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                       !accumulator_is_8_bit(cpu),
                       direct_base_cycles(cpu, true));
         break;
+    case 0xd6: /* DEC direct,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, cpu->x);
+        modify_memory(cpu, address, true, MEMORY_DEC,
+                      direct_penalized_cycles(cpu, UINT64_C(6)));
+        break;
     case 0xd7: /* CMP [direct],Y */
         address = direct_indirect_long_address(cpu, cpu->y);
         compare_value(cpu, cpu->a,
@@ -1792,6 +2160,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         compare_value(cpu, cpu->a,
                       read_accumulator_operand(cpu, address, false),
                       !accumulator_is_8_bit(cpu), base_cycles);
+        break;
+    case 0xde: /* DEC absolute,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_indexed_address(cpu, cpu->x, true,
+                                           &base_cycles);
+        modify_memory(cpu, address, false, MEMORY_DEC, UINT64_C(7));
         break;
     case 0xdf: /* CMP absolute long,X */
         address = absolute_long_indexed_address(cpu, cpu->x);
@@ -1833,6 +2209,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu, read_accumulator_operand(cpu, address, true), true,
             direct_base_cycles(cpu, false));
         break;
+    case 0xe6: /* INC direct */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        modify_memory(cpu, address, true, MEMORY_INC,
+                      direct_penalized_cycles(cpu, UINT64_C(5)));
+        break;
     case 0xe7: /* SBC [direct], binary/decimal modes */
         address = direct_indirect_long_address(cpu, 0U);
         arithmetic_accumulator(
@@ -1863,6 +2247,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             UINT64_C(4));
+        break;
+    case 0xee: /* INC absolute */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_address(cpu);
+        modify_memory(cpu, address, false, MEMORY_INC, UINT64_C(6));
         break;
     case 0xef: /* SBC absolute long, binary/decimal modes */
         address = fetch24(cpu);
@@ -1907,6 +2298,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu, read_accumulator_operand(cpu, address, true), true,
             direct_base_cycles(cpu, true));
         break;
+    case 0xf6: /* INC direct,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, cpu->x);
+        modify_memory(cpu, address, true, MEMORY_INC,
+                      direct_penalized_cycles(cpu, UINT64_C(6)));
+        break;
     case 0xf7: /* SBC [direct],Y, binary/decimal modes */
         address = direct_indirect_long_address(cpu, cpu->y);
         arithmetic_accumulator(
@@ -1943,6 +2342,14 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             base_cycles);
+        break;
+    case 0xfe: /* INC absolute,X */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = absolute_indexed_address(cpu, cpu->x, true,
+                                           &base_cycles);
+        modify_memory(cpu, address, false, MEMORY_INC, UINT64_C(7));
         break;
     case 0xff: /* SBC absolute long,X, binary/decimal modes */
         address = absolute_long_indexed_address(cpu, cpu->x);

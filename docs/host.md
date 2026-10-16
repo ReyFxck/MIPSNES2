@@ -27,7 +27,7 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the 187-opcode CPU
+repository structure/boundaries/checklists; the reference bus; and the 223-opcode CPU
 subset described in [65c816.md](65c816.md). CPU regressions include implemented
 8/16-bit widths, flags, cycles, Direct Page/indexed/pointer wrapping and penalties,
 regular-indirect DBR selection, long-indirect bank selection, absolute indexing and
@@ -65,3 +65,9 @@ operand/carry combinations, add targeted 16-bit and invalid-digit cases, and exe
 all thirty addressing forms at both M widths with D=1. A separate read-only audit
 compares result and C/V/N/Z behavior against 19,970 decimal immediate vectors from
 a pinned MIT-licensed SingleStepTests revision.
+Read-modify-write regressions execute all 36 ASL/LSR/ROL/ROR accumulator/memory,
+memory INC/DEC, TSB/TRB and STZ opcodes at both M widths. They cover result and flag
+isolation, B preservation, Direct Page bank/DL rules, DBR addressing, linear word
+and indexed 24-bit carry, adjacent-byte preservation, aggregate cycles and a missing
+write bus that stops before operand fetch. They do not claim bus-cycle dummy writes
+or MLB signaling.
