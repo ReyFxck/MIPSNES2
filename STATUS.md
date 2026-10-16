@@ -344,7 +344,8 @@ cover targeted 16-bit and invalid-digit cases. The arithmetic algorithm was also
 audited against 19,970 decimal-mode immediate ADC/SBC cases from a pinned,
 MIT-licensed SingleStepTests revision with zero C/V/N/Z/result mismatches. Local
 evidence is in docs/65c816-decimal-arithmetic-audit.md; GitHub workflow evidence is
-pending publication.
+verified for Host GCC/Clang plus pinned PS2/PSP cross-builds, and all downloaded
+artifact archives and internal checksums were inspected.
 
 ## Current blockers and diagnostic exceptions
 

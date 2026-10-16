@@ -79,7 +79,25 @@ The pinned GitHub workflows remain the cross-build and Clang verification gates.
 
 ## GitHub Actions
 
-Pending publication. A workflow file existing is not counted as a successful run.
+The implementation commit is
+`2711cc2625c7cd847c5f4e53debba0b42e6c729c`. GitHub tested the pull request's
+synthetic merge `a941bef03fd4acb594c38b9fea51555bab1fb48c`.
+
+- Host CI run `38936209822` — passed GCC and Clang release, sanitizer, test and artifact jobs.
+- PS2 CI run `38936209553` — passed the pinned PS2SDK scaffold cross-build and artifact job.
+- PSP CI run `38936209445` — passed the pinned PSPSDK scaffold cross-build and artifact job.
+
+Downloaded artifact archives were inspected and their GitHub-reported SHA-256
+digests matched locally:
+
+- Host GCC artifact `12061596491`: `a0633d9c75ee3da485dd28ddac8c6a09aed062bc180c0a5b0b6f9aeede3925d1`; host binary 21,472 bytes.
+- Host Clang artifact `12060373804`: `a0a9a253eae57bc19938c8d3d468e7a8eb713bbbeb389e81c5d414784375a9e2`; host binary 20,552 bytes.
+- PS2 artifact `12060937922`: `9ceceade8594de543ed6b6f1a9ad053285f3a754966d065ef2dca236d6c760ae`; ELF 1,424,124 bytes.
+- PSP artifact `12060568151`: `8b0fe1815e31e4f49dae7d3346f7a6313f0730538425c7af4a55dea8c5879f4e`; EBOOT 187,314 bytes.
+
+Every archive's `SHA256SUMS` validated its executable/package, build metadata,
+license and pinned toolchain metadata where present. These are build results only;
+they are not console runtime validation.
 
 ## Limits
 
