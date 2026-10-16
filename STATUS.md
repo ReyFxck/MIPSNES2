@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 179-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 187-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -326,6 +326,16 @@ jobs pass for the corrected published implementation, and downloaded artifacts p
 archive/internal checksums were inspected. Direct-indirect-long, absolute-long and
 decimal ADC/SBC remain incomplete.
 
+The binary long arithmetic milestone on 2026-10-16 adds ADC `67/6F/77/7F` and SBC
+`E7/EF/F7/FF`, completing every architectural ADC/SBC addressing form for binary
+operation. Deterministic host tests cover both M widths, Direct-indirect-long pointer
+bytes wrapping in bank zero, pointer-bank selection independent of DBR, absolute-long
+operand fetch, full 24-bit indexed carry, C/V/N/Z, B preservation, PC and exact
+cycles without page-cross or X-width penalties. All thirty ADC/SBC opcodes stop
+before operand/address fetch when D=1. Local evidence is recorded in
+docs/65c816-binary-long-audit.md; GitHub workflow and artifact inspection is pending.
+Decimal ADC/SBC calculation remains incomplete.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -339,17 +349,17 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 179-opcode subset only
+- [ ] [IN PROGRESS] Opcode dispatch — 187-opcode subset only
 - [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary ADC/SBC forms only
 - [ ] [IN PROGRESS] Absolute addressing — JMP, loads/stores, logic/compare/BIT and binary ADC/SBC base/indexed forms only
-- [ ] [IN PROGRESS] Long addressing — LDA/STA plus ORA/AND/EOR/CMP absolute long and absolute long,X implemented only
+- [ ] [IN PROGRESS] Long addressing — LDA/STA, ORA/AND/EOR/CMP and binary ADC/SBC long forms implemented; unrelated long/control forms pending
 - [ ] [IN PROGRESS] Direct Page addressing — loads/stores, ORA/AND/EOR/CMP, CPX/CPY/BIT and binary ADC/SBC Direct/Direct-X forms only
 - [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
 - [ ] [IN PROGRESS] Indexed addressing — load/store subset, complete ORA/AND/EOR/CMP forms, BIT subset and binary ADC/SBC Direct-X/absolute-X/Y
-- [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP plus regular Direct-indirect ADC/SBC and `(stack-relative),Y`; long ADC/SBC pending
+- [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP plus every binary ADC/SBC indirect form and `(stack-relative),Y`; indirect control flow pending
 - [x] Branch instructions
 - [ ] [IN PROGRESS] Load/store instructions — LDA/STA families complete; LDX/LDY/STX/STY implemented, remaining store/move instructions pending
-- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, complete compare families and every non-long binary ADC/SBC form
+- [ ] [IN PROGRESS] Arithmetic instructions — register INC/DEC, complete compare families and every binary ADC/SBC addressing form; decimal arithmetic pending
 - [ ] [IN PROGRESS] Logic instructions — complete ORA/AND/EOR/BIT families; TSB/TRB and shifts remain
 - [ ] Shift/rotate instructions
 - [x] Transfer instructions
@@ -370,7 +380,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
 - [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, logic/compare, binary arithmetic and register INC/DEC timing only
-- [ ] [IN PROGRESS] CPU automated tests — all 179 dispatch opcodes and implemented behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] CPU automated tests — all 187 dispatch opcodes and implemented behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -517,14 +527,18 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] ADC direct-indexed-indirect, binary mode (`61`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC stack-relative, binary mode (`63`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC direct, binary mode (`65`); D=1 is an explicit unsupported-decimal stop
+- [x] ADC direct-indirect-long, binary mode (`67`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC immediate, binary mode (`69`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC absolute, binary mode (`6D`); D=1 is an explicit unsupported-decimal stop
+- [x] ADC absolute long, binary mode (`6F`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC direct-indirect-indexed,Y, binary mode (`71`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC direct-indirect, binary mode (`72`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC stack-relative-indirect-indexed,Y, binary mode (`73`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC direct,X, binary mode (`75`); D=1 is an explicit unsupported-decimal stop
+- [x] ADC direct-indirect-long-indexed,Y, binary mode (`77`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC absolute,Y, binary mode (`79`); D=1 is an explicit unsupported-decimal stop
 - [x] ADC absolute,X, binary mode (`7D`); D=1 is an explicit unsupported-decimal stop
+- [x] ADC absolute long,X, binary mode (`7F`); D=1 is an explicit unsupported-decimal stop
 - [x] BIT immediate (`89`)
 - [x] CPY immediate (`C0`)
 - [x] CMP direct-indexed-indirect (`C1`)
@@ -549,15 +563,19 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] SBC stack-relative, binary mode (`E3`); D=1 is an explicit unsupported-decimal stop
 - [x] CPX direct (`E4`)
 - [x] SBC direct, binary mode (`E5`); D=1 is an explicit unsupported-decimal stop
+- [x] SBC direct-indirect-long, binary mode (`E7`); D=1 is an explicit unsupported-decimal stop
 - [x] SBC immediate, binary mode (`E9`); D=1 is an explicit unsupported-decimal stop
 - [x] CPX absolute (`EC`)
 - [x] SBC absolute, binary mode (`ED`); D=1 is an explicit unsupported-decimal stop
+- [x] SBC absolute long, binary mode (`EF`); D=1 is an explicit unsupported-decimal stop
 - [x] SBC direct-indirect-indexed,Y, binary mode (`F1`); D=1 is an explicit unsupported-decimal stop
 - [x] SBC direct-indirect, binary mode (`F2`); D=1 is an explicit unsupported-decimal stop
 - [x] SBC stack-relative-indirect-indexed,Y, binary mode (`F3`); D=1 is an explicit unsupported-decimal stop
 - [x] SBC direct,X, binary mode (`F5`); D=1 is an explicit unsupported-decimal stop
+- [x] SBC direct-indirect-long-indexed,Y, binary mode (`F7`); D=1 is an explicit unsupported-decimal stop
 - [x] SBC absolute,Y, binary mode (`F9`); D=1 is an explicit unsupported-decimal stop
 - [x] SBC absolute,X, binary mode (`FD`); D=1 is an explicit unsupported-decimal stop
+- [x] SBC absolute long,X, binary mode (`FF`); D=1 is an explicit unsupported-decimal stop
 - [x] Base-cycle accounting for the implemented subset
 - [x] Linear 24-bit word access across bank boundaries
 - [x] Absolute indexed page/write/X cycle rule for implemented opcodes
@@ -592,6 +610,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Binary Direct-X/absolute-X/Y ADC/SBC address, page/index timing, bank-carry, flag, width and cycle behavior
 - [x] Binary stack-relative ADC/SBC bank-zero data/pointer wrap, DBR/Y carry, flags, width and cycle behavior
 - [x] Binary regular Direct-indirect ADC/SBC pointer wrap, DBR, pre/post-index, flag, width and cycle behavior
+- [x] Binary long ADC/SBC pointer-bank, bank-zero wrap, 24-bit carry, flag, width and cycle behavior
 - [x] Decimal ADC/SBC explicit pre-operand diagnostic stop for implemented opcodes
 - [x] Complete BIT selected-width Z, memory N/V and immediate N/V-preservation behavior
 

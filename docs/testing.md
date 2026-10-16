@@ -63,6 +63,12 @@ Binary regular Direct-indirect arithmetic regressions execute ADC/SBC `(direct,X
 selection, pre/post-indexing, Y bank carry, DL/M/X/page cycle additions, selected-
 width flags/B, PC/cycles and the pre-operand decimal diagnostic stop across all
 twenty-two recognized ADC/SBC forms.
+Binary long arithmetic regressions execute ADC/SBC `[direct]`, `[direct],Y`,
+absolute long and absolute long,X at both M widths. They cover long-pointer byte
+reads wrapping within bank zero, pointer-bank selection independent of DBR, absolute-
+long fetch, full 24-bit index carry, selected-width flags/B, exact DL/M cycle
+additions, the absence of page/X penalties and the pre-operand decimal diagnostic
+stop across all thirty ADC/SBC opcodes.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -138,6 +144,8 @@ Binary stack-relative ADC/SBC evidence is recorded in
 [65c816-binary-stack-relative-audit.md](65c816-binary-stack-relative-audit.md).
 Binary regular Direct-indirect ADC/SBC evidence is recorded in
 [65c816-binary-direct-indirect-audit.md](65c816-binary-direct-indirect-audit.md).
+Binary long ADC/SBC evidence is recorded in
+[65c816-binary-long-audit.md](65c816-binary-long-audit.md).
 
 ## End-of-task audit
 
