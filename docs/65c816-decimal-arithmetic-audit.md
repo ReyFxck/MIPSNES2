@@ -4,6 +4,8 @@ Date: 2026-10-16
 
 Branch: `feature/65c816-decimal-adc-sbc`
 
+Pull request: [#23](https://github.com/ReyFxck/MIPSNES2/pull/23)
+
 Stacked base: PR #22 final revision
 `134c37911b2f945c15de72ee1c1dc8d25b10320f`
 
