@@ -55,30 +55,13 @@ DBR plus Y 24-bit carry, native/emulation behavior and fixed 4/7-cycle bases wit
 Direct Page, page-cross or X-width penalties. Stack-relative LDA/STA regressions add
 8/16-bit reads and writes, B/N/Z/status behavior and bank-zero word wrap for their
 four forms.
-Binary immediate arithmetic regressions cover ADC/SBC at both M widths, carry and
-borrow inputs, unsigned carry/no-borrow, signed overflow, N/Z, 8-bit B preservation
-and exact timing. D=1 is verified as a sticky pre-operand unsupported-decimal stop;
-no decimal result is approximated.
-Binary Direct Page/absolute arithmetic regressions add bank-zero Direct word wrap,
-aligned and nonzero-DL cycle bases, absolute DBR selection, linear absolute word
-crossing into the next bank, PC length and width cycles. All recognized ADC/SBC
-forms retain the pre-operand decimal diagnostic stop.
-Binary indexed arithmetic regressions add ADC/SBC Direct-X and absolute-X/Y at both
-M widths, Direct Page wrap/DL timing, absolute page and bank carry, the shared page-
-cross-or-16-bit-index cycle, PC length and exact width cycles. All twelve recognized
-ADC/SBC forms retain the pre-operand decimal diagnostic stop.
-Binary regular Direct-indirect arithmetic regressions add ADC/SBC `(direct,X)`,
-`(direct),Y` and `(direct)` at both M widths. They cover bank-zero pointer wrap, DBR
-selection, X pre-indexing, Y post-indexing and bank carry, aligned/nonzero-DL timing,
-the shared page-cross-or-16-bit-index cycle and exact 5/6-cycle bases. All twenty-two
-recognized ADC/SBC forms retain the pre-operand decimal diagnostic stop.
-Binary stack-relative arithmetic regressions add ADC/SBC `offset,S` and
-`(offset,S),Y` at both M widths, full 16-bit S-based address formation, bank-zero
-word/pointer wrap, DBR plus Y carry, emulation-mode stack addressing, exact 4/7-cycle
-bases and the absence of Direct Page/page/index penalties. All sixteen recognized
-ADC/SBC forms retain the pre-operand decimal diagnostic stop.
-Binary long arithmetic regressions add ADC/SBC `[direct]`, `[direct],Y`, absolute
-long and absolute long,X at both M widths. They cover linear long-pointer byte reads
-with bank-zero wrap, pointer-bank selection independent of DBR, full 24-bit indexed
-carry, exact 5/6-cycle bases plus DL/M additions and the absence of page-cross or
-X-width penalties. All thirty ADC/SBC forms retain the pre-operand decimal stop.
+ADC/SBC regressions cover all thirty addressing forms at both M widths. They verify
+carry/borrow inputs, unsigned carry/no-borrow, signed overflow, N/Z, 8-bit B
+preservation, Direct Page and stack-relative bank-zero rules, DBR and long-pointer
+bank selection, pre/post indexing, 24-bit carry, PC movement and exact width/DL/
+indexed cycle additions.
+Decimal arithmetic regressions exhaust 40,000 valid 8-bit packed-BCD ADC/SBC
+operand/carry combinations, add targeted 16-bit and invalid-digit cases, and execute
+all thirty addressing forms at both M widths with D=1. A separate read-only audit
+compares result and C/V/N/Z behavior against 19,970 decimal immediate vectors from
+a pinned MIT-licensed SingleStepTests revision.

@@ -307,16 +307,17 @@ static void compare_value(mipsnes2_cpu *cpu, uint16_t left,
     }
 }
 
-static void arithmetic_accumulator_binary(mipsnes2_cpu *cpu,
-                                          uint16_t operand,
-                                          bool subtract,
-                                          uint64_t base_cycles)
+static void arithmetic_accumulator(mipsnes2_cpu *cpu,
+                                   uint16_t operand,
+                                   bool subtract,
+                                   uint64_t base_cycles)
 {
     bool wide = !accumulator_is_8_bit(cpu);
     uint32_t mask = wide ? UINT32_C(0xffff) : UINT32_C(0x00ff);
     uint32_t sign = wide ? UINT32_C(0x8000) : UINT32_C(0x0080);
     uint32_t left = cpu->a & mask;
     uint32_t right = operand & mask;
+    uint32_t binary_result;
     uint32_t result;
     bool carry;
     bool overflow;
@@ -325,16 +326,68 @@ static void arithmetic_accumulator_binary(mipsnes2_cpu *cpu,
         uint32_t borrow = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U ? 0U : 1U;
         uint32_t subtrahend = right + borrow;
 
-        result = (left - subtrahend) & mask;
+        binary_result = (left - subtrahend) & mask;
         carry = left >= subtrahend;
-        overflow = ((left ^ right) & (left ^ result) & sign) != 0U;
+        overflow = ((left ^ right) & (left ^ binary_result) & sign) != 0U;
     } else {
         uint32_t carry_in = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U ? 1U : 0U;
         uint32_t sum = left + right + carry_in;
 
-        result = sum & mask;
+        binary_result = sum & mask;
         carry = sum > mask;
-        overflow = ((~(left ^ right) & (left ^ result)) & sign) != 0U;
+        overflow = ((~(left ^ right) & (left ^ binary_result)) & sign) != 0U;
+    }
+
+    result = binary_result;
+    if ((cpu->p & MIPSNES2_CPU_FLAG_D) != 0U) {
+        unsigned digit_count = wide ? 4U : 2U;
+        unsigned digit;
+        uint32_t decimal_result = 0U;
+
+        if (subtract) {
+            int32_t borrow = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U ? 0 : 1;
+
+            for (digit = 0U; digit < digit_count; ++digit) {
+                unsigned shift = digit * 4U;
+                int32_t difference =
+                    (int32_t)((left >> shift) & UINT32_C(0x0f)) -
+                    (int32_t)((right >> shift) & UINT32_C(0x0f)) - borrow;
+
+                if (difference < 0) {
+                    difference -= 6;
+                    borrow = 1;
+                } else {
+                    borrow = 0;
+                }
+                decimal_result |=
+                    ((uint32_t)difference & UINT32_C(0x0f)) << shift;
+            }
+            carry = borrow == 0;
+        } else {
+            uint32_t decimal_carry =
+                (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U ? 1U : 0U;
+            uint32_t highest_binary_nibble = 0U;
+
+            for (digit = 0U; digit < digit_count; ++digit) {
+                unsigned shift = digit * 4U;
+                uint32_t sum = ((left >> shift) & UINT32_C(0x0f)) +
+                               ((right >> shift) & UINT32_C(0x0f)) +
+                               decimal_carry;
+
+                if (digit + 1U == digit_count) {
+                    highest_binary_nibble = sum << shift;
+                }
+                if (sum > UINT32_C(9)) {
+                    sum += UINT32_C(6);
+                }
+                decimal_result |= (sum & UINT32_C(0x0f)) << shift;
+                decimal_carry = sum > UINT32_C(0x0f) ? 1U : 0U;
+            }
+            carry = decimal_carry != 0U;
+            overflow = ((~(left ^ right) &
+                         (left ^ highest_binary_nibble)) & sign) != 0U;
+        }
+        result = decimal_result & mask;
     }
 
     cpu->p &= (uint8_t)~(MIPSNES2_CPU_FLAG_V | MIPSNES2_CPU_FLAG_C);
@@ -354,16 +407,6 @@ static void arithmetic_accumulator_binary(mipsnes2_cpu *cpu,
     }
     cpu->instruction_cycles += base_cycles + (wide ? UINT64_C(1)
                                                     : UINT64_C(0));
-}
-
-static bool stop_for_unimplemented_decimal_arithmetic(mipsnes2_cpu *cpu)
-{
-    if ((cpu->p & MIPSNES2_CPU_FLAG_D) == 0U) {
-        return false;
-    }
-    cpu->stopped = true;
-    cpu->stop_reason = MIPSNES2_CPU_UNIMPLEMENTED_DECIMAL_ARITHMETIC;
-    return true;
 }
 
 static void test_bits(mipsnes2_cpu *cpu, uint16_t operand,
@@ -1148,77 +1191,53 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(5));
         break;
-    case 0x61: /* ADC (direct,X), binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x61: /* ADC (direct,X), binary/decimal modes */
         address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
-    case 0x63: /* ADC stack-relative, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x63: /* ADC stack-relative, binary/decimal modes */
         address = stack_relative_address(cpu);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_stack_operand(cpu, (uint16_t)address),
             false, UINT64_C(4));
         break;
-    case 0x65: /* ADC direct, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x65: /* ADC direct, binary/decimal modes */
         address = direct_address(cpu, 0U);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, true), false,
             direct_base_cycles(cpu, false));
         break;
-    case 0x67: /* ADC [direct], binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x67: /* ADC [direct], binary/decimal modes */
         address = direct_indirect_long_address(cpu, 0U);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
-    case 0x69: /* ADC immediate, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
-        arithmetic_accumulator_binary(cpu, fetch_accumulator_operand(cpu),
+    case 0x69: /* ADC immediate, binary/decimal modes */
+        arithmetic_accumulator(cpu, fetch_accumulator_operand(cpu),
                                       false, UINT64_C(2));
         break;
-    case 0x6d: /* ADC absolute, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x6d: /* ADC absolute, binary/decimal modes */
         address = absolute_address(cpu);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             UINT64_C(4));
         break;
-    case 0x6f: /* ADC absolute long, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x6f: /* ADC absolute long, binary/decimal modes */
         address = fetch24(cpu);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             UINT64_C(5));
         break;
     case 0x70: /* BVS */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_V) != 0U);
         break;
-    case 0x71: /* ADC (direct),Y, binary mode */
+    case 0x71: /* ADC (direct),Y, binary/decimal modes */
     {
         uint16_t pointer;
 
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
         address = direct_indirect_address(cpu, 0U, cpu->y, &pointer);
         base_cycles = direct_penalized_cycles(cpu, UINT64_C(5));
         if (!index_is_8_bit(cpu) ||
@@ -1226,44 +1245,32 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                 UINT32_C(0x00ff)) {
             base_cycles += UINT64_C(1);
         }
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             base_cycles);
         break;
     }
-    case 0x72: /* ADC (direct), binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x72: /* ADC (direct), binary/decimal modes */
         address = direct_indirect_address(cpu, 0U, 0U, NULL);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             direct_penalized_cycles(cpu, UINT64_C(5)));
         break;
-    case 0x73: /* ADC (stack-relative),Y, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x73: /* ADC (stack-relative),Y, binary/decimal modes */
         address = stack_relative_indirect_indexed_address(cpu);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             UINT64_C(7));
         break;
-    case 0x75: /* ADC direct,X, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x75: /* ADC direct,X, binary/decimal modes */
         address = direct_address(cpu, cpu->x);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, true), false,
             direct_base_cycles(cpu, true));
         break;
-    case 0x77: /* ADC [direct],Y, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x77: /* ADC [direct],Y, binary/decimal modes */
         address = direct_indirect_long_address(cpu, cpu->y);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
@@ -1271,35 +1278,26 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         cpu->p |= MIPSNES2_CPU_FLAG_I;
         cpu->instruction_cycles += UINT64_C(2);
         break;
-    case 0x79: /* ADC absolute,Y, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x79: /* ADC absolute,Y, binary/decimal modes */
         address = absolute_indexed_address(cpu, cpu->y, false,
                                            &base_cycles);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             base_cycles);
         break;
     case 0x7b: /* TDC */
         transfer16_to_accumulator(cpu, cpu->d);
         break;
-    case 0x7d: /* ADC absolute,X, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x7d: /* ADC absolute,X, binary/decimal modes */
         address = absolute_indexed_address(cpu, cpu->x, false,
                                            &base_cycles);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             base_cycles);
         break;
-    case 0x7f: /* ADC absolute long,X, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0x7f: /* ADC absolute long,X, binary/decimal modes */
         address = absolute_long_indexed_address(cpu, cpu->x);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             UINT64_C(5));
         break;
@@ -1805,12 +1803,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         compare_value(cpu, cpu->x, fetch_index_operand(cpu),
                       !index_is_8_bit(cpu), UINT64_C(2));
         break;
-    case 0xe1: /* SBC (direct,X), binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xe1: /* SBC (direct,X), binary/decimal modes */
         address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
@@ -1820,12 +1815,9 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         apply_mode_invariants(cpu);
         cpu->instruction_cycles += UINT64_C(3);
         break;
-    case 0xe3: /* SBC stack-relative, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xe3: /* SBC stack-relative, binary/decimal modes */
         address = stack_relative_address(cpu);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_stack_operand(cpu, (uint16_t)address),
             true, UINT64_C(4));
         break;
@@ -1835,32 +1827,23 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                       !index_is_8_bit(cpu),
                       direct_base_cycles(cpu, false));
         break;
-    case 0xe5: /* SBC direct, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xe5: /* SBC direct, binary/decimal modes */
         address = direct_address(cpu, 0U);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, true), true,
             direct_base_cycles(cpu, false));
         break;
-    case 0xe7: /* SBC [direct], binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xe7: /* SBC [direct], binary/decimal modes */
         address = direct_indirect_long_address(cpu, 0U);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
     case 0xe8: /* INX */
         change_index(cpu, &cpu->x, true);
         break;
-    case 0xe9: /* SBC immediate, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
-        arithmetic_accumulator_binary(cpu, fetch_accumulator_operand(cpu),
+    case 0xe9: /* SBC immediate, binary/decimal modes */
+        arithmetic_accumulator(cpu, fetch_accumulator_operand(cpu),
                                       true, UINT64_C(2));
         break;
     case 0xea: /* NOP */
@@ -1875,34 +1858,25 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                       read_index_operand(cpu, address, false),
                       !index_is_8_bit(cpu), UINT64_C(4));
         break;
-    case 0xed: /* SBC absolute, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xed: /* SBC absolute, binary/decimal modes */
         address = absolute_address(cpu);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             UINT64_C(4));
         break;
-    case 0xef: /* SBC absolute long, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xef: /* SBC absolute long, binary/decimal modes */
         address = fetch24(cpu);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             UINT64_C(5));
         break;
     case 0xf0: /* BEQ */
         branch_relative8(cpu, (cpu->p & MIPSNES2_CPU_FLAG_Z) != 0U);
         break;
-    case 0xf1: /* SBC (direct),Y, binary mode */
+    case 0xf1: /* SBC (direct),Y, binary/decimal modes */
     {
         uint16_t pointer;
 
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
         address = direct_indirect_address(cpu, 0U, cpu->y, &pointer);
         base_cycles = direct_penalized_cycles(cpu, UINT64_C(5));
         if (!index_is_8_bit(cpu) ||
@@ -1910,44 +1884,32 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                 UINT32_C(0x00ff)) {
             base_cycles += UINT64_C(1);
         }
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             base_cycles);
         break;
     }
-    case 0xf2: /* SBC (direct), binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xf2: /* SBC (direct), binary/decimal modes */
         address = direct_indirect_address(cpu, 0U, 0U, NULL);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             direct_penalized_cycles(cpu, UINT64_C(5)));
         break;
-    case 0xf3: /* SBC (stack-relative),Y, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xf3: /* SBC (stack-relative),Y, binary/decimal modes */
         address = stack_relative_indirect_indexed_address(cpu);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             UINT64_C(7));
         break;
-    case 0xf5: /* SBC direct,X, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xf5: /* SBC direct,X, binary/decimal modes */
         address = direct_address(cpu, cpu->x);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, true), true,
             direct_base_cycles(cpu, true));
         break;
-    case 0xf7: /* SBC [direct],Y, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xf7: /* SBC [direct],Y, binary/decimal modes */
         address = direct_indirect_long_address(cpu, cpu->y);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
@@ -1955,13 +1917,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         cpu->p |= MIPSNES2_CPU_FLAG_D;
         cpu->instruction_cycles += UINT64_C(2);
         break;
-    case 0xf9: /* SBC absolute,Y, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xf9: /* SBC absolute,Y, binary/decimal modes */
         address = absolute_indexed_address(cpu, cpu->y, false,
                                            &base_cycles);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             base_cycles);
         break;
@@ -1978,22 +1937,16 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         cpu->instruction_cycles += UINT64_C(2);
         break;
     }
-    case 0xfd: /* SBC absolute,X, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xfd: /* SBC absolute,X, binary/decimal modes */
         address = absolute_indexed_address(cpu, cpu->x, false,
                                            &base_cycles);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             base_cycles);
         break;
-    case 0xff: /* SBC absolute long,X, binary mode */
-        if (stop_for_unimplemented_decimal_arithmetic(cpu)) {
-            return cpu->stop_reason;
-        }
+    case 0xff: /* SBC absolute long,X, binary/decimal modes */
         address = absolute_long_indexed_address(cpu, cpu->x);
-        arithmetic_accumulator_binary(
+        arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             UINT64_C(5));
         break;

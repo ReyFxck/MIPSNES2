@@ -20,8 +20,8 @@ ROM.** One hundred eighty-seven opcodes now cover the foundation, the complete r
 transfer and branch families, implied single-flag status controls, accumulator/index
 register increment-decrement operations, complete ORA/AND/EOR/CMP address families,
 a stack-relative foundation, a logic/compare foundation, and complete LDA/STA address
-families alongside the implemented index-register load/store paths and binary ADC/SBC
-complete binary ADC/SBC addressing families. Deterministic host regressions
+families alongside the implemented index-register load/store paths and complete
+ADC/SBC addressing families, including packed-BCD decimal operation. Deterministic host regressions
 cover widths, flags, cycles, signed branch offsets, program-bank-local PC wrapping,
 Direct Page pointer wrapping, DBR selection and 24-bit bank crossing. Console entry
 points remain build probes, not usable emulators. No PPU, APU, cartridge integration,
@@ -36,10 +36,10 @@ Phase 1's foundation exit gate, the complete register-transfer and branch famili
 the implied single-flag status controls, accumulator/index register increment-
 decrement operations and the complete BIT/CPX/CPY/ORA/AND/EOR/CMP families are
 verified. The LDA/STA families are also complete, including both stack-relative modes.
-All binary ADC/SBC addressing forms are verified. The next focused milestone should
-research and implement decimal ADC/SBC arithmetic with exhaustive 8/16-bit BCD
-vectors while preserving the existing address and timing regressions. Until then,
-decimal ADC/SBC remains an explicit diagnostic stop.
+All ADC/SBC addressing forms are verified in binary and decimal modes. Decimal
+coverage includes exhaustive valid 8-bit packed-BCD inputs, targeted 16-bit and
+invalid-digit cases, plus an independent SingleStepTests vector audit. The next
+focused milestone is the memory read-modify-write and shift/rotate families.
 Do not start with a dynarec,
 renderer or enhancement chips.
 

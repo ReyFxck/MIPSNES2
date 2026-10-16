@@ -40,35 +40,16 @@ Stack-relative accumulator load/store regressions execute all four LDA/STA forms
 both M widths. They cover 8-bit B preservation, LDA N/Z isolation, STA status
 preservation, bank-zero 16-bit load/store wrap, DBR plus Y carry, emulation-mode full
 S addressing, PC movement and exact 4/7-cycle bases plus the M=0 width cycle.
-Binary immediate arithmetic regressions execute ADC/SBC at both M widths. They cover
-carry/borrow input, carry/no-borrow output, signed overflow in both directions,
-selected-width N/Z, B and unrelated-status preservation, PC/cycles, and the explicit
-sticky D=1 diagnostic stop before operand fetch.
-Binary Direct Page/absolute arithmetic regressions execute all four new opcodes at
-both M widths. They cover bank-zero Direct word wrap, aligned/nonzero-DL timing,
-absolute DBR and linear bank crossing, selected-width flags/B, PC/cycles and the
-pre-operand decimal diagnostic stop across all recognized ADC/SBC forms.
-Binary indexed arithmetic regressions execute ADC/SBC Direct-X and absolute-X/Y at
-both M widths. They cover bank-zero Direct wrap, nonzero-DL timing, absolute page and
-bank carry, the shared page-cross-or-16-bit-index cycle, selected-width flags/B,
-PC/cycles and the pre-operand decimal diagnostic stop across all twelve recognized
-ADC/SBC forms.
-Binary stack-relative arithmetic regressions execute ADC/SBC `offset,S` and
-`(offset,S),Y` at both M widths. They cover full 16-bit S-based address formation,
-bank-zero word/pointer wrap, DBR plus Y carry, native/emulation behavior,
-selected-width flags/B, fixed 4/7-cycle bases and the pre-operand decimal diagnostic
-stop across all sixteen recognized ADC/SBC forms.
-Binary regular Direct-indirect arithmetic regressions execute ADC/SBC `(direct,X)`,
-`(direct),Y` and `(direct)` at both M widths. They cover bank-zero pointer wrap, DBR
-selection, pre/post-indexing, Y bank carry, DL/M/X/page cycle additions, selected-
-width flags/B, PC/cycles and the pre-operand decimal diagnostic stop across all
-twenty-two recognized ADC/SBC forms.
-Binary long arithmetic regressions execute ADC/SBC `[direct]`, `[direct],Y`,
-absolute long and absolute long,X at both M widths. They cover long-pointer byte
-reads wrapping within bank zero, pointer-bank selection independent of DBR, absolute-
-long fetch, full 24-bit index carry, selected-width flags/B, exact DL/M cycle
-additions, the absence of page/X penalties and the pre-operand decimal diagnostic
-stop across all thirty ADC/SBC opcodes.
+ADC/SBC regressions execute all thirty addressing forms at both M widths. They cover
+carry/borrow input, carry/no-borrow output, signed overflow, selected-width N/Z, B
+and unrelated-status preservation, Direct Page and stack-relative bank-zero rules,
+DBR and long-pointer bank selection, pre/post indexing, 24-bit carry, PC movement and
+exact width/DL/indexed cycle additions.
+Decimal regressions exhaust 40,000 valid 8-bit packed-BCD ADC/SBC operand/carry
+combinations, add targeted 16-bit and invalid-digit cases, and execute all thirty
+addressing forms at both M widths with D=1. A separate read-only audit compares the
+algorithm's result and C/V/N/Z behavior against 19,970 decimal immediate vectors
+from a pinned MIT-licensed SingleStepTests revision.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -146,6 +127,8 @@ Binary regular Direct-indirect ADC/SBC evidence is recorded in
 [65c816-binary-direct-indirect-audit.md](65c816-binary-direct-indirect-audit.md).
 Binary long ADC/SBC evidence is recorded in
 [65c816-binary-long-audit.md](65c816-binary-long-audit.md).
+Decimal ADC/SBC evidence is recorded in
+[65c816-decimal-arithmetic-audit.md](65c816-decimal-arithmetic-audit.md).
 
 ## End-of-task audit
 
