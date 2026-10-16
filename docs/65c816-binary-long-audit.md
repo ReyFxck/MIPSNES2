@@ -79,8 +79,26 @@ Cross-build success is compilation evidence only and never console execution.
 
 ## GitHub Actions evidence
 
-Pending publication and successful workflow inspection. A workflow file existing is
-not accepted as CI evidence.
+Implementation head: `24415b05891942fa29cec60eb7e52bf2e2122ab5`.
+
+| Workflow | Run | Result | Inspected artifact |
+|---|---|---|---|
+| Host CI | [38933904869](https://github.com/ReyFxck/MIPSNES2/actions/runs/38933904869) | Passed GCC 13.3 and Clang 18.1 release, sanitizer and test jobs | GCC host 21,472 bytes; Clang host 20,552 bytes |
+| PS2 CI | [38933904729](https://github.com/ReyFxck/MIPSNES2/actions/runs/38933904729) | Passed pinned cross-build and checksum job | 1,418,660-byte MIPS ELF |
+| PSP CI | [38933904830](https://github.com/ReyFxck/MIPSNES2/actions/runs/38933904830) | Passed pinned cross-build and checksum job | 188,010-byte `EBOOT.PBP` |
+
+The downloaded archive digests match GitHub artifact metadata:
+
+- host GCC: `ae4785539af9abe8c625bd03f92a2aa9f612a186e189de51e6dc0fbf94e15f67`;
+- host Clang: `f79c9c18850de0a22def0b031ddae0b80afcb18b37f8e00d3af02b6f4cebc186`;
+- PS2: `bffb37b9283981fca47c352a9fe6cde80de2aa2e36023da3f24e4c1d7a2654ea`;
+- PSP: `12dd6bc75823c53fe4b982b28eb76dc553c54aa2c751c7acc7169d0a0513ccc6`.
+
+Every embedded `SHA256SUMS` entry validates. Artifact metadata identifies branch
+head `24415b05891942fa29cec60eb7e52bf2e2122ab5`; artifact names and `BUILD.txt`
+identify pull-request synthetic merge commit
+`a7b71a4954fd14d94491f00e9a09ba6012e3e04b`. The documentation-only follow-up is
+verified by a separate workflow run recorded in the pull-request conversation.
 
 ## Validation limits
 

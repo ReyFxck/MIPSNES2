@@ -332,9 +332,10 @@ operation. Deterministic host tests cover both M widths, Direct-indirect-long po
 bytes wrapping in bank zero, pointer-bank selection independent of DBR, absolute-long
 operand fetch, full 24-bit indexed carry, C/V/N/Z, B preservation, PC and exact
 cycles without page-cross or X-width penalties. All thirty ADC/SBC opcodes stop
-before operand/address fetch when D=1. Local evidence is recorded in
-docs/65c816-binary-long-audit.md; GitHub workflow and artifact inspection is pending.
-Decimal ADC/SBC calculation remains incomplete.
+before operand/address fetch when D=1. Local evidence and successful GitHub Host
+GCC/Clang plus pinned PS2/PSP cross-builds are recorded in
+docs/65c816-binary-long-audit.md; downloaded artifacts and all checksums were
+inspected. Decimal ADC/SBC calculation remains incomplete.
 
 ## Current blockers and diagnostic exceptions
 
