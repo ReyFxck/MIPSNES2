@@ -107,8 +107,11 @@ After PR #24 was retargeted to `main`, integration run `38979028919` failed both
 Host jobs in the repository checker because the automatic merge result retained a
 newer `main` identity statement but lost the separately required exact SNES9X-port
 warning. PS2 run `38979029070` and PSP run `38979028956` passed, but the change was
-not merged. The branch was reconciled to preserve both identity statements; a new
-full workflow matrix is required before integration.
+not merged. A first reconciliation still produced two copies of the newer statement
+and no exact warning in the synthetic merge; Host run `38979172343` failed while PS2
+run `38979173655` and PSP run `38979172314` passed. The warning was then moved outside
+the conflicting line while preserving the newer statement exactly. A new full
+workflow matrix is required before integration.
 
 ## Deliberate limits
 
