@@ -75,7 +75,18 @@ remain the console compiler gate.
 
 ## GitHub Actions
 
-Workflow runs will be recorded only after the published branch executes successfully.
+GitHub's pinned workflows passed for implementation commit
+`e1dc763ad81601bdcfbc44885eee08b2f770dd0d`:
+
+- [Host CI run 39050212756](https://github.com/ReyFxck/MIPSNES2/actions/runs/39050212756)
+  — GCC and Clang release/sanitizer jobs succeeded and staged artifacts;
+- [PS2 CI run 39050212797](https://github.com/ReyFxck/MIPSNES2/actions/runs/39050212797)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded;
+- [PSP CI run 39050212757](https://github.com/ReyFxck/MIPSNES2/actions/runs/39050212757)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded.
+
+The final documentation-evidence commit must also pass applicable workflows before
+merge. Cross-compilation is not console execution.
 
 ## Runtime and performance
 

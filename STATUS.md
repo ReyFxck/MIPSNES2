@@ -395,8 +395,9 @@ classes and FastROM-capable windows. Host GCC debug/release and ASan+UBSan tests
 including repeated traces, long chunked-ratio equivalence, timing boundaries and
 scheduled IRQ/NMI delivery to WAI. The CPU still lacks per-bus-cycle timing, refresh
 stalls and arbitration, so the broad timing/event-horizon tasks remain in progress.
-Exact local evidence and limitations are in docs/scheduler-foundation-audit.md;
-GitHub Host/PS2/PSP evidence remains required before merge.
+GitHub Host GCC/Clang plus sanitizers and pinned PS2/PSP cross-build workflows passed
+for implementation commit `e1dc763ad81601bdcfbc44885eee08b2f770dd0d`.
+Exact local/CI evidence and limitations are in docs/scheduler-foundation-audit.md.
 
 ## Current blockers and diagnostic exceptions
 
