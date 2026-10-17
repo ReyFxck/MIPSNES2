@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 223-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a partial 248-opcode 65C816/reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -360,6 +360,21 @@ cross-build workflows passed for implementation head
 `7649664d488687436daeac1a41969cd8af402610`; artifact metadata/digests were inspected,
 but archive download inspection was blocked by repeated HTTP 502 responses.
 
+The stack push/pull and subroutine-control milestone on 2026-10-17 adds 25 verified
+opcodes and brings the reference interpreter to 248 dispatch entries. Deterministic
+host regressions cover every stack/status/register push and pull, PEA/PEI/PER, every
+direct/long/indirect JMP/JSR form, JSL, RTS and RTL in emulation and native modes.
+They verify M/X-selected 8/16-bit widths, byte order, flags, PC/PBR and return-address
+rules, ordinary `01xx` stack wrapping versus WDC's linear multi-byte exceptions,
+Direct Page pointer wrapping and DL timing, aggregate cycles, meaningful JSL/JSR
+`(absolute,X)` callback order/count and missing-write-bus stops before operand fetch.
+Local GCC debug/release and ASan+UBSan tests pass; local PS2SDK/PSPSDK are unavailable,
+so GitHub's pinned cross-build workflows are the platform build gate. GitHub Host
+GCC/Clang plus pinned PS2/PSP workflows passed for implementation head
+`182c31f40a536b99044a389fade89633c2ab4014`. Exact local and CI evidence, initial
+resolved documentation-order failures and limitations are recorded in
+docs/65c816-stack-control-audit.md. No console runtime or hardware result is claimed.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -373,26 +388,27 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 223-opcode subset only
+- [ ] [IN PROGRESS] Opcode dispatch — 248-opcode subset only
 - [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary/decimal ADC/SBC forms only
 - [ ] [IN PROGRESS] Absolute addressing — JMP, scalar loads/stores, logic/compare, binary/decimal ADC/SBC and read-modify-write forms only
-- [ ] [IN PROGRESS] Long addressing — LDA/STA, ORA/AND/EOR/CMP and binary/decimal ADC/SBC long forms implemented; unrelated long/control forms pending
+- [x] Long addressing — data, ALU and JMP/JSL long forms verified
 - [ ] [IN PROGRESS] Direct Page addressing — scalar loads/stores, logic/compare, binary/decimal ADC/SBC and read-modify-write forms only
 - [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
 - [ ] [IN PROGRESS] Indexed addressing — scalar load/store, logic/compare, binary/decimal ADC/SBC and Direct-X/absolute-X read-modify-write forms
-- [ ] [IN PROGRESS] Indirect addressing — LDA/STA/ORA/AND/EOR/CMP plus every binary/decimal ADC/SBC indirect form and `(stack-relative),Y`; indirect control flow pending
+- [x] Indirect addressing — data/ALU, PEI and all indirect JMP/JSR forms verified
 - [x] Branch instructions
+- [x] Jump/subroutine call/return instructions
 - [ ] [IN PROGRESS] Load/store instructions — scalar LDA/LDX/LDY/STA/STX/STY/STZ families complete; block moves pending
 - [x] Arithmetic instructions — complete ADC/SBC, compare and register/memory INC/DEC families
 - [x] Logic instructions — complete ORA/AND/EOR/BIT/TSB/TRB families
 - [x] Shift/rotate instructions — complete ASL/LSR/ROL/ROR accumulator and memory families
 - [x] Transfer instructions
-- [ ] Stack instructions
-- [ ] [IN PROGRESS] Status flag behavior — controls plus implemented load/transfer/logic/compare/arithmetic/read-modify-write flag effects verified
-- [ ] [IN PROGRESS] M flag behavior — implemented accumulator data, transfer, ALU, store and read-modify-write paths verified at both widths
-- [ ] [IN PROGRESS] X flag behavior — implemented index data, transfer, compare, register INC/DEC and accumulator-ALU indexed cycles verified
-- [ ] [IN PROGRESS] Native mode — XCE entry, implemented widths/transfers/logic, branches, status controls and register INC/DEC verified
-- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers/logic, Direct/indirect pointer wrapping, branches, status controls and register INC/DEC verified for implemented subset
+- [x] Stack instructions
+- [ ] [IN PROGRESS] Status flag behavior — controls plus implemented load/transfer/logic/compare/arithmetic/read-modify-write and pull flag effects verified
+- [ ] [IN PROGRESS] M flag behavior — implemented accumulator data, transfer, ALU, store, read-modify-write and stack paths verified at both widths
+- [ ] [IN PROGRESS] X flag behavior — implemented index data, transfer, compare, register INC/DEC, accumulator-ALU indexed cycles and stack paths verified
+- [ ] [IN PROGRESS] Native mode — XCE entry, implemented widths/transfers/logic, branches, stack/control, status controls and register INC/DEC verified
+- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers/logic, Direct/indirect pointer wrapping, branches, stack/control, status controls and register INC/DEC verified for implemented subset
 - [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
 - [ ] IRQ
 - [ ] NMI
@@ -403,8 +419,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] STP
 - [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
-- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, control, ALU and aggregate read-modify-write timing only
-- [ ] [IN PROGRESS] CPU automated tests — all 223 dispatch opcodes and implemented behavior covered; complete CPU pending
+- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, stack/control, ALU and aggregate read-modify-write timing only
+- [ ] [IN PROGRESS] CPU automated tests — all 248 dispatch opcodes and implemented behavior covered; complete CPU pending
 - [ ] CPU regression tests
 - [ ] Complete interpreter integration
 
@@ -413,6 +429,31 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Caller-owned register/mode/bus/diagnostic state
 - [x] Reset vector fetch from logical 00:FFFC-D
 - [x] Pre-reset and unimplemented-opcode diagnostic stops
+- [x] PHP (`08`)
+- [x] PHD (`0B`)
+- [x] JSR absolute (`20`)
+- [x] JSL absolute long (`22`)
+- [x] PLP (`28`)
+- [x] PLD (`2B`)
+- [x] PHA (`48`)
+- [x] PHK (`4B`)
+- [x] PHY (`5A`)
+- [x] JMP absolute long (`5C`)
+- [x] RTS (`60`)
+- [x] PER (`62`)
+- [x] PLA (`68`)
+- [x] RTL (`6B`)
+- [x] JMP absolute indirect (`6C`)
+- [x] PLY (`7A`)
+- [x] JMP absolute-indexed-indirect (`7C`)
+- [x] PHB (`8B`)
+- [x] PLB (`AB`)
+- [x] PEI direct (`D4`)
+- [x] PHX (`DA`)
+- [x] JMP absolute-indirect-long (`DC`)
+- [x] PEA (`F4`)
+- [x] PLX (`FA`)
+- [x] JSR absolute-indexed-indirect (`FC`)
 - [x] TSB direct (`04`)
 - [x] ASL direct (`06`)
 - [x] ASL accumulator (`0A`)
@@ -678,6 +719,10 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Complete memory INC/DEC wrap, N/Z isolation, address, width and cycle behavior
 - [x] Complete TSB/TRB memory update, original-operand Z, address, width and cycle behavior
 - [x] Complete STZ Direct/Direct-X/absolute/absolute-X width, address, flag-preservation and cycle behavior
+- [x] Complete stack push/pull/effective-address instruction widths, byte order, flags and aggregate cycles
+- [x] Ordinary emulation stack-page wrapping and documented linear multi-byte stack exceptions
+- [x] Jump/subroutine target, return-address, PC/PBR and indirect-table bank behavior
+- [x] JSL and JSR absolute-indexed-indirect meaningful bus callback order/count
 
 ## Bus
 

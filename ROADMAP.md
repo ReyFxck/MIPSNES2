@@ -48,18 +48,19 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Opcode dispatch
 - [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary/decimal ADC/SBC subset
 - [ ] [IN PROGRESS] Absolute addressing — includes binary/decimal ADC/SBC, scalar load/store and read-modify-write forms
-- [ ] [IN PROGRESS] Long addressing — includes complete binary/decimal ADC/SBC long forms
+- [x] Long addressing — data, ALU and JMP/JSL long forms verified
 - [ ] [IN PROGRESS] Direct Page addressing — includes binary/decimal ADC/SBC, scalar load/store and read-modify-write forms
 - [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
 - [ ] [IN PROGRESS] Indexed addressing — includes binary/decimal ADC/SBC plus Direct-X/absolute-X read-modify-write forms
-- [ ] [IN PROGRESS] Indirect addressing — includes complete binary/decimal ADC/SBC regular/long forms; indirect control flow pending
+- [x] Indirect addressing — data/ALU, PEI and all indirect JMP/JSR forms verified
 - [x] Branch instructions
+- [x] Jump/subroutine call/return instructions
 - [ ] [IN PROGRESS] Load/store instructions — scalar LDA/LDX/LDY/STA/STX/STY/STZ families complete; block moves pending
 - [x] Arithmetic instructions — complete ADC/SBC, compare and register/memory INC/DEC families
 - [x] Logic instructions — complete ORA/AND/EOR/BIT/TSB/TRB families
 - [x] Shift/rotate instructions — complete ASL/LSR/ROL/ROR accumulator and memory families
 - [x] Transfer instructions
-- [ ] Stack instructions
+- [x] Stack instructions
 - [ ] [IN PROGRESS] Status flag behavior
 - [ ] [IN PROGRESS] M flag behavior
 - [ ] [IN PROGRESS] X flag behavior

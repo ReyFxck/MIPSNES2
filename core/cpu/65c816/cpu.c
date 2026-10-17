@@ -84,6 +84,29 @@ static uint16_t read16_bank_zero(const mipsnes2_cpu *cpu, uint16_t address)
     return (uint16_t)(low | (uint16_t)(high << 8));
 }
 
+static uint16_t read16_program_bank(const mipsnes2_cpu *cpu,
+                                    uint16_t address)
+{
+    uint16_t low = read8(cpu, mipsnes2_address_make(cpu->pbr, address));
+    uint16_t high = read8(
+        cpu, mipsnes2_address_make(cpu->pbr,
+                                   (uint16_t)(address + UINT16_C(1))));
+
+    return (uint16_t)(low | (uint16_t)(high << 8));
+}
+
+static mipsnes2_address read24_bank_zero(const mipsnes2_cpu *cpu,
+                                         uint16_t address)
+{
+    mipsnes2_address low = read8(cpu, address);
+    mipsnes2_address high = read8(
+        cpu, (uint16_t)(address + UINT16_C(1)));
+    mipsnes2_address bank = read8(
+        cpu, (uint16_t)(address + UINT16_C(2)));
+
+    return low | (high << 8) | (bank << 16);
+}
+
 static void write16_bank_zero(const mipsnes2_cpu *cpu, uint16_t address,
                               uint16_t value)
 {
@@ -97,6 +120,76 @@ static void write16_linear(const mipsnes2_cpu *cpu,
 {
     write8(cpu, address, (uint8_t)value);
     write8(cpu, address + UINT32_C(1), (uint8_t)(value >> 8));
+}
+
+static void stack_decrement(mipsnes2_cpu *cpu)
+{
+    cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+    if (cpu->emulation) {
+        cpu->s = (uint16_t)(UINT16_C(0x0100) |
+                            (cpu->s & UINT16_C(0x00ff)));
+    }
+}
+
+static void stack_increment(mipsnes2_cpu *cpu)
+{
+    cpu->s = (uint16_t)(cpu->s + UINT16_C(1));
+    if (cpu->emulation) {
+        cpu->s = (uint16_t)(UINT16_C(0x0100) |
+                            (cpu->s & UINT16_C(0x00ff)));
+    }
+}
+
+static void stack_push8(mipsnes2_cpu *cpu, uint8_t value)
+{
+    write8(cpu, cpu->s, value);
+    stack_decrement(cpu);
+}
+
+static uint8_t stack_pull8(mipsnes2_cpu *cpu)
+{
+    stack_increment(cpu);
+    return read8(cpu, cpu->s);
+}
+
+static void stack_push16(mipsnes2_cpu *cpu, uint16_t value)
+{
+    stack_push8(cpu, (uint8_t)(value >> 8));
+    stack_push8(cpu, (uint8_t)value);
+}
+
+static uint16_t stack_pull16(mipsnes2_cpu *cpu)
+{
+    uint16_t low = stack_pull8(cpu);
+    uint16_t high = stack_pull8(cpu);
+
+    return (uint16_t)(low | (uint16_t)(high << 8));
+}
+
+/*
+ * WDC documents these fixed-width operations as exceptions that may access
+ * outside 01xx while E=1. Keep their linear address sequence separate from
+ * ordinary byte-at-a-time stack wrapping.
+ */
+static void stack_push16_linear(mipsnes2_cpu *cpu, uint16_t value)
+{
+    uint16_t initial = cpu->s;
+
+    write8(cpu, initial, (uint8_t)(value >> 8));
+    write8(cpu, (uint16_t)(initial - UINT16_C(1)), (uint8_t)value);
+    cpu->s = (uint16_t)(initial - UINT16_C(2));
+    apply_mode_invariants(cpu);
+}
+
+static uint16_t stack_pull16_linear(mipsnes2_cpu *cpu)
+{
+    uint16_t initial = cpu->s;
+    uint16_t low = read8(cpu, (uint16_t)(initial + UINT16_C(1)));
+    uint16_t high = read8(cpu, (uint16_t)(initial + UINT16_C(2)));
+
+    cpu->s = (uint16_t)(initial + UINT16_C(2));
+    apply_mode_invariants(cpu);
+    return (uint16_t)(low | (uint16_t)(high << 8));
 }
 
 static mipsnes2_address direct_data_next_address(const mipsnes2_cpu *cpu,
@@ -1001,12 +1094,26 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_OR,
                           direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0x08: /* PHP */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        stack_push8(cpu, cpu->p);
+        cpu->instruction_cycles += UINT64_C(3);
+        break;
     case 0x09: /* ORA immediate */
         logic_accumulator(cpu, fetch_accumulator_operand(cpu),
                           ACCUMULATOR_LOGIC_OR, UINT64_C(2));
         break;
     case 0x0a: /* ASL accumulator */
         shift_accumulator(cpu, SHIFT_LEFT);
+        break;
+    case 0x0b: /* PHD */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        stack_push16_linear(cpu, cpu->d);
+        cpu->instruction_cycles += UINT64_C(4);
         break;
     case 0x0c: /* TSB absolute */
         if (!require_write_bus(cpu)) {
@@ -1141,6 +1248,20 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_OR, UINT64_C(5));
         break;
+    case 0x20: { /* JSR absolute */
+        uint16_t target;
+        uint16_t return_address;
+
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        target = fetch16(cpu);
+        return_address = (uint16_t)(cpu->pc - UINT16_C(1));
+        stack_push16(cpu, return_address);
+        cpu->pc = target;
+        cpu->instruction_cycles += UINT64_C(6);
+        break;
+    }
     case 0x21: /* AND (direct,X) */
         address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
         logic_accumulator(cpu,
@@ -1148,6 +1269,32 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_AND,
                           direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0x22: { /* JSL absolute long */
+        uint16_t target_low;
+        uint16_t return_address;
+        uint16_t initial_stack;
+        uint8_t target_bank;
+
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        target_low = fetch8(cpu);
+        target_low |= (uint16_t)((uint16_t)fetch8(cpu) << 8);
+        return_address = cpu->pc;
+        initial_stack = cpu->s;
+        write8(cpu, initial_stack, cpu->pbr);
+        target_bank = fetch8(cpu);
+        write8(cpu, (uint16_t)(initial_stack - UINT16_C(1)),
+               (uint8_t)(return_address >> 8));
+        write8(cpu, (uint16_t)(initial_stack - UINT16_C(2)),
+               (uint8_t)return_address);
+        cpu->s = (uint16_t)(initial_stack - UINT16_C(3));
+        apply_mode_invariants(cpu);
+        cpu->pc = target_low;
+        cpu->pbr = target_bank;
+        cpu->instruction_cycles += UINT64_C(8);
+        break;
+    }
     case 0x23: /* AND stack-relative */
         address = stack_relative_address(cpu);
         logic_accumulator(
@@ -1181,12 +1328,22 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_AND,
                           direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0x28: /* PLP */
+        cpu->p = stack_pull8(cpu);
+        apply_mode_invariants(cpu);
+        cpu->instruction_cycles += UINT64_C(4);
+        break;
     case 0x29: /* AND immediate */
         logic_accumulator(cpu, fetch_accumulator_operand(cpu),
                           ACCUMULATOR_LOGIC_AND, UINT64_C(2));
         break;
     case 0x2a: /* ROL accumulator */
         shift_accumulator(cpu, ROTATE_LEFT);
+        break;
+    case 0x2b: /* PLD */
+        cpu->d = stack_pull16_linear(cpu);
+        set_nz16(cpu, cpu->d);
+        cpu->instruction_cycles += UINT64_C(5);
         break;
     case 0x2c: /* BIT absolute */
         address = absolute_address(cpu);
@@ -1350,12 +1507,31 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_XOR,
                           direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0x48: /* PHA */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        if (accumulator_is_8_bit(cpu)) {
+            stack_push8(cpu, (uint8_t)cpu->a);
+            cpu->instruction_cycles += UINT64_C(3);
+        } else {
+            stack_push16(cpu, cpu->a);
+            cpu->instruction_cycles += UINT64_C(4);
+        }
+        break;
     case 0x49: /* EOR immediate */
         logic_accumulator(cpu, fetch_accumulator_operand(cpu),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(2));
         break;
     case 0x4a: /* LSR accumulator */
         shift_accumulator(cpu, SHIFT_RIGHT);
+        break;
+    case 0x4b: /* PHK */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        stack_push8(cpu, cpu->pbr);
+        cpu->instruction_cycles += UINT64_C(3);
         break;
     case 0x4c: /* JMP absolute */
         cpu->pc = fetch16(cpu);
@@ -1445,11 +1621,31 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, base_cycles);
         break;
+    case 0x5a: /* PHY */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        if (index_is_8_bit(cpu)) {
+            stack_push8(cpu, (uint8_t)cpu->y);
+            cpu->instruction_cycles += UINT64_C(3);
+        } else {
+            stack_push16(cpu, cpu->y);
+            cpu->instruction_cycles += UINT64_C(4);
+        }
+        break;
     case 0x5b: /* TCD */
         cpu->d = cpu->a;
         set_nz16(cpu, cpu->d);
         cpu->instruction_cycles += UINT64_C(2);
         break;
+    case 0x5c: { /* JMP absolute long */
+        mipsnes2_address target = fetch24(cpu);
+
+        cpu->pc = (uint16_t)target;
+        cpu->pbr = (uint8_t)(target >> 16);
+        cpu->instruction_cycles += UINT64_C(4);
+        break;
+    }
     case 0x5d: /* EOR absolute,X */
         address = absolute_indexed_address(cpu, cpu->x, false,
                                            &base_cycles);
@@ -1471,12 +1667,29 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(5));
         break;
+    case 0x60: /* RTS */
+        cpu->pc = (uint16_t)(stack_pull16(cpu) + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(6);
+        break;
     case 0x61: /* ADC (direct,X), binary/decimal modes */
         address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
         arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0x62: { /* PER relative long */
+        uint16_t relative;
+        uint16_t target;
+
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        relative = fetch16(cpu);
+        target = (uint16_t)((int32_t)cpu->pc + signed_offset16(relative));
+        stack_push16_linear(cpu, target);
+        cpu->instruction_cycles += UINT64_C(6);
+        break;
+    }
     case 0x63: /* ADC stack-relative, binary/decimal modes */
         address = stack_relative_address(cpu);
         arithmetic_accumulator(
@@ -1511,12 +1724,42 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu, read_accumulator_operand(cpu, address, false), false,
             direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0x68: /* PLA */
+        if (accumulator_is_8_bit(cpu)) {
+            uint8_t value = stack_pull8(cpu);
+
+            cpu->a = (uint16_t)((cpu->a & UINT16_C(0xff00)) | value);
+            set_nz8(cpu, value);
+            cpu->instruction_cycles += UINT64_C(4);
+        } else {
+            cpu->a = stack_pull16(cpu);
+            set_nz16(cpu, cpu->a);
+            cpu->instruction_cycles += UINT64_C(5);
+        }
+        break;
     case 0x69: /* ADC immediate, binary/decimal modes */
         arithmetic_accumulator(cpu, fetch_accumulator_operand(cpu),
                                       false, UINT64_C(2));
         break;
     case 0x6a: /* ROR accumulator */
         shift_accumulator(cpu, ROTATE_RIGHT);
+        break;
+    case 0x6b: { /* RTL */
+        uint16_t initial = cpu->s;
+        uint16_t low = read8(cpu, (uint16_t)(initial + UINT16_C(1)));
+        uint16_t high = read8(cpu, (uint16_t)(initial + UINT16_C(2)));
+
+        cpu->pbr = read8(cpu, (uint16_t)(initial + UINT16_C(3)));
+        cpu->s = (uint16_t)(initial + UINT16_C(3));
+        apply_mode_invariants(cpu);
+        cpu->pc = (uint16_t)((low | (uint16_t)(high << 8)) +
+                             UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(6);
+        break;
+    }
+    case 0x6c: /* JMP absolute indirect */
+        cpu->pc = read16_bank_zero(cpu, fetch16(cpu));
+        cpu->instruction_cycles += UINT64_C(5);
         break;
     case 0x6d: /* ADC absolute, binary/decimal modes */
         address = absolute_address(cpu);
@@ -1607,9 +1850,27 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu, read_accumulator_operand(cpu, address, false), false,
             base_cycles);
         break;
+    case 0x7a: /* PLY */
+        if (index_is_8_bit(cpu)) {
+            cpu->y = stack_pull8(cpu);
+            set_nz8(cpu, (uint8_t)cpu->y);
+            cpu->instruction_cycles += UINT64_C(4);
+        } else {
+            cpu->y = stack_pull16(cpu);
+            set_nz16(cpu, cpu->y);
+            cpu->instruction_cycles += UINT64_C(5);
+        }
+        break;
     case 0x7b: /* TDC */
         transfer16_to_accumulator(cpu, cpu->d);
         break;
+    case 0x7c: { /* JMP absolute indexed indirect */
+        uint16_t pointer = (uint16_t)(fetch16(cpu) + cpu->x);
+
+        cpu->pc = read16_program_bank(cpu, pointer);
+        cpu->instruction_cycles += UINT64_C(6);
+        break;
+    }
     case 0x7d: /* ADC absolute,X, binary/decimal modes */
         address = absolute_indexed_address(cpu, cpu->x, false,
                                            &base_cycles);
@@ -1705,6 +1966,13 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         break;
     case 0x8a: /* TXA */
         transfer_to_accumulator(cpu, index_register_value(cpu, cpu->x));
+        break;
+    case 0x8b: /* PHB */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        stack_push8(cpu, cpu->dbr);
+        cpu->instruction_cycles += UINT64_C(3);
         break;
     case 0x8f: /* STA absolute long */
         if (cpu->bus.write8 == NULL) {
@@ -1914,6 +2182,11 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     case 0xaa: /* TAX */
         transfer_to_index(cpu, &cpu->x, cpu->a);
         break;
+    case 0xab: /* PLB */
+        cpu->dbr = stack_pull8(cpu);
+        set_nz8(cpu, cpu->dbr);
+        cpu->instruction_cycles += UINT64_C(4);
+        break;
     case 0xac: /* LDY absolute */
         load_index_memory(cpu, &cpu->y, absolute_address(cpu), UINT64_C(4));
         break;
@@ -2121,6 +2394,19 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                       read_accumulator_operand(cpu, address, false),
                       !accumulator_is_8_bit(cpu), UINT64_C(7));
         break;
+    case 0xd4: { /* PEI direct */
+        uint16_t value;
+
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        address = direct_address(cpu, 0U);
+        value = read16_direct(cpu, address);
+        stack_push16_linear(cpu, value);
+        cpu->instruction_cycles += direct_penalized_cycles(
+            cpu, UINT64_C(6));
+        break;
+    }
     case 0xd5: /* CMP direct,X */
         address = direct_address(cpu, cpu->x);
         compare_value(cpu, cpu->a,
@@ -2154,6 +2440,26 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                       read_accumulator_operand(cpu, address, false),
                       !accumulator_is_8_bit(cpu), base_cycles);
         break;
+    case 0xda: /* PHX */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        if (index_is_8_bit(cpu)) {
+            stack_push8(cpu, (uint8_t)cpu->x);
+            cpu->instruction_cycles += UINT64_C(3);
+        } else {
+            stack_push16(cpu, cpu->x);
+            cpu->instruction_cycles += UINT64_C(4);
+        }
+        break;
+    case 0xdc: { /* JMP absolute indirect long */
+        mipsnes2_address target = read24_bank_zero(cpu, fetch16(cpu));
+
+        cpu->pc = (uint16_t)target;
+        cpu->pbr = (uint8_t)(target >> 16);
+        cpu->instruction_cycles += UINT64_C(6);
+        break;
+    }
     case 0xdd: /* CMP absolute,X */
         address = absolute_indexed_address(cpu, cpu->x, false,
                                            &base_cycles);
@@ -2292,6 +2598,17 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu, read_accumulator_operand(cpu, address, false), true,
             UINT64_C(7));
         break;
+    case 0xf4: { /* PEA absolute */
+        uint16_t value;
+
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        value = fetch16(cpu);
+        stack_push16_linear(cpu, value);
+        cpu->instruction_cycles += UINT64_C(5);
+        break;
+    }
     case 0xf5: /* SBC direct,X, binary/decimal modes */
         address = direct_address(cpu, cpu->x);
         arithmetic_accumulator(
@@ -2323,6 +2640,17 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             cpu, read_accumulator_operand(cpu, address, false), true,
             base_cycles);
         break;
+    case 0xfa: /* PLX */
+        if (index_is_8_bit(cpu)) {
+            cpu->x = stack_pull8(cpu);
+            set_nz8(cpu, (uint8_t)cpu->x);
+            cpu->instruction_cycles += UINT64_C(4);
+        } else {
+            cpu->x = stack_pull16(cpu);
+            set_nz16(cpu, cpu->x);
+            cpu->instruction_cycles += UINT64_C(5);
+        }
+        break;
     case 0xfb: { /* XCE */
         bool old_carry = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U;
         bool old_emulation = cpu->emulation;
@@ -2334,6 +2662,30 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         }
         apply_mode_invariants(cpu);
         cpu->instruction_cycles += UINT64_C(2);
+        break;
+    }
+    case 0xfc: { /* JSR absolute indexed indirect */
+        uint16_t pointer_low;
+        uint16_t pointer;
+        uint16_t return_address;
+        uint16_t initial_stack;
+
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        pointer_low = fetch8(cpu);
+        return_address = cpu->pc;
+        initial_stack = cpu->s;
+        write8(cpu, initial_stack, (uint8_t)(return_address >> 8));
+        write8(cpu, (uint16_t)(initial_stack - UINT16_C(1)),
+               (uint8_t)return_address);
+        cpu->s = (uint16_t)(initial_stack - UINT16_C(2));
+        apply_mode_invariants(cpu);
+        pointer = (uint16_t)(pointer_low |
+                             (uint16_t)((uint16_t)fetch8(cpu) << 8));
+        pointer = (uint16_t)(pointer + cpu->x);
+        cpu->pc = read16_program_bank(cpu, pointer);
+        cpu->instruction_cycles += UINT64_C(8);
         break;
     }
     case 0xfd: /* SBC absolute,X, binary/decimal modes */
