@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 223-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 248-opcode reference subset |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -91,7 +91,16 @@ forms read a bank-zero 16-bit pointer, apply DBR and then add Y across the 24-bi
 space. Sixteen-bit direct stack-relative data accesses wrap within bank zero, while
 indirect-indexed data accesses advance linearly from their 24-bit effective address.
 The LDA/STA/ORA/AND/EOR/CMP/ADC/SBC stack-relative forms share these explicit
-address rules; stack push/pull behavior remains separate.
+address rules; stack push/pull behavior remains separate. Ordinary byte pushes and
+pulls adjust S one byte at a time and wrap inside `01xx` when E=1. The documented
+fixed-width exceptions (`JSL`, `JSR (a,X)`, `PEA`, `PEI`, `PER`, `PHD`, `PLD` and
+`RTL`) instead form their multi-byte bank-zero addresses linearly before restoring
+the emulation-mode `SH=01` invariant. Width-selected PHA/PLA use M and PHX/PLX plus
+PHY/PLY use X; pulls set N/Z only where the instruction specifies it.
+Absolute and indirect jumps keep PC-local targets in PBR unless the long form supplies
+a new bank. Bank-zero pointer tables serve `JMP (a)` and `JML [a]`; PBR-local tables
+serve `JMP (a,X)` and `JSR (a,X)`. JSR/JSL stack the address of the final instruction
+byte and RTS/RTL increment the pulled address, with RTL also restoring PBR.
 All ADC/SBC addressing forms share one M-selected arithmetic path and the established
 address helpers. It preserves B for 8-bit accumulator results and derives C/V/N/Z at
 the selected width. D selects independently tested packed-BCD correction without
@@ -200,6 +209,11 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-16: ASL/LSR/ROL/ROR, memory INC/DEC, TSB/TRB and STZ share M-selected
   helpers and established logical address paths. Bus-cycle dummy writes and MLB
   remain explicit future work rather than being approximated.
+- 2026-10-17: All architectural stack push/pull/effective-address instructions and
+  jump/subroutine call/return forms use explicit bank-zero stack and PBR/direct-bank
+  pointer rules. WDC's emulation-mode multi-byte stack exceptions remain distinct
+  from ordinary byte-at-a-time page wrapping, and callback-order tests cover JSL
+  and JSR `(a,X)` meaningful bus accesses.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

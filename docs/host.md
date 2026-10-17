@@ -27,7 +27,7 @@ nonzero exit status; they deliberately avoid NDEBUG-sensitive assertions.
 
 Current coverage includes 24-bit address construction/masking across all banks and
 offsets; logging callback/context/disabled behavior; host banner/argument rejection;
-repository structure/boundaries/checklists; the reference bus; and the 223-opcode CPU
+repository structure/boundaries/checklists; the reference bus; and the 248-opcode CPU
 subset described in [65c816.md](65c816.md). CPU regressions include implemented
 8/16-bit widths, flags, cycles, Direct Page/indexed/pointer wrapping and penalties,
 regular-indirect DBR selection, long-indirect bank selection, absolute indexing and
@@ -55,6 +55,10 @@ DBR plus Y 24-bit carry, native/emulation behavior and fixed 4/7-cycle bases wit
 Direct Page, page-cross or X-width penalties. Stack-relative LDA/STA regressions add
 8/16-bit reads and writes, B/N/Z/status behavior and bank-zero word wrap for their
 four forms.
+Stack/control regressions cover all push/pull/effective-address stack instructions
+and all jump/subroutine call/return forms, including M/X-selected 8/16-bit widths,
+emulation/native stack boundaries, byte order, flags, PC/PBR, aggregate cycles,
+indirect-table banks and meaningful JSL/JSR callback ordering.
 ADC/SBC regressions cover all thirty addressing forms at both M widths. They verify
 carry/borrow inputs, unsigned carry/no-borrow, signed overflow, N/Z, 8-bit B
 preservation, Direct Page and stack-relative bank-zero rules, DBR and long-pointer

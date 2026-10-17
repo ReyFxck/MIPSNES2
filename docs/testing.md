@@ -56,6 +56,14 @@ results, C/N/Z and unrelated-flag isolation, B preservation, original-operand
 TSB/TRB Z behavior, Direct Page bank/DL rules, DBR and 24-bit indexed carry, 16-bit
 writes, aggregate timing and missing-write-bus diagnostics. Bus-cycle dummy writes
 and MLB signaling remain outside the current contract.
+Stack/control regressions execute every PHP/PHD/PHA/PHK/PHY/PHB/PHX, PLP/PLD/PLA/
+PLY/PLB/PLX, PEA/PEI/PER, JMP/JML, JSR/JSL and RTS/RTL form. They cover emulation
+and native modes, M/X-selected 8/16-bit width, high/low byte order, status and N/Z,
+ordinary `01xx` wrapping, WDC's linear multi-byte stack exceptions, PC/PBR return
+rules, Direct Page pointer wrapping and DL timing, indirect-table bank selection,
+aggregate cycles and missing-write-bus stops. A tracing bus verifies the meaningful
+operand/stack/pointer callback order and count for JSL and JSR `(absolute,X)`; the
+current contract still omits internal dummy reads and signal-level bus cycles.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -139,6 +147,8 @@ Decimal ADC/SBC evidence is recorded in
 [65c816-decimal-arithmetic-audit.md](65c816-decimal-arithmetic-audit.md).
 Memory RMW and shift/rotate evidence is recorded in
 [65c816-memory-rmw-shifts-audit.md](65c816-memory-rmw-shifts-audit.md).
+Stack push/pull and subroutine-control evidence is recorded in
+[65c816-stack-control-audit.md](65c816-stack-control-audit.md).
 
 ## End-of-task audit
 
