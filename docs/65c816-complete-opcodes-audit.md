@@ -69,9 +69,17 @@ The initial sanitizer execution compiled but LeakSanitizer failed because this
 environment prevents its `/proc` thread inspection under ptrace. The clean rerun
 disabled leak detection only; AddressSanitizer and UndefinedBehaviorSanitizer stayed
 enabled and passed. Local Clang was unavailable. Local PS2 failed immediately with
-`PS2SDK is unset`; local PSP failed because `psp-config` was unavailable. Pinned
-GitHub Host/PS2/PSP workflow results will be added after they run for the final
-commit. Cross-compilation is not runtime validation; no PCSX2, real PS2, PPSSPP or
+`PS2SDK is unset`; local PSP failed because `psp-config` was unavailable.
+
+GitHub's pinned workflows passed for implementation commit
+`74890c559b428643c787fda71358d2065bcd030f`:
+
+- [Host CI run 39048840081](https://github.com/ReyFxck/MIPSNES2/actions/runs/39048840081) — success;
+- [PS2 CI run 39048840054](https://github.com/ReyFxck/MIPSNES2/actions/runs/39048840054) — success;
+- [PSP CI run 39048840099](https://github.com/ReyFxck/MIPSNES2/actions/runs/39048840099) — success.
+
+The documentation-only evidence commit must also pass applicable workflows before
+merge. Cross-compilation is not runtime validation; no PCSX2, real PS2, PPSSPP or
 real PSP result is claimed.
 
 ## Honest completion boundary

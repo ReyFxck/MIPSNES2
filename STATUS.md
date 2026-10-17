@@ -382,7 +382,9 @@ Host regressions verify emulation/native vectors and stack layouts, signature-by
 PC behavior, flags, meaningful bus order/count, aggregate cycles, native/8-bit-index
 block moves, WAI wake rules, NMI priority and STP reset-only release. This does not
 complete ABORT, signal-level RESET/bus cycles, Ricoh 5A22 timing or scheduler
-integration. Exact evidence is in docs/65c816-complete-opcodes-audit.md.
+integration. GitHub Host plus pinned PS2/PSP workflows passed for implementation
+commit `74890c559b428643c787fda71358d2065bcd030f`. Exact evidence is in
+docs/65c816-complete-opcodes-audit.md.
 
 ## Current blockers and diagnostic exceptions
 
