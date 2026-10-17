@@ -45,41 +45,42 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch
-- [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary/decimal ADC/SBC subset
-- [ ] [IN PROGRESS] Absolute addressing — includes binary/decimal ADC/SBC, scalar load/store and read-modify-write forms
+- [x] Opcode dispatch — all 256 byte values
+- [x] Immediate addressing
+- [x] Absolute addressing
 - [x] Long addressing — data, ALU and JMP/JSL long forms verified
-- [ ] [IN PROGRESS] Direct Page addressing — includes binary/decimal ADC/SBC, scalar load/store and read-modify-write forms
+- [x] Direct Page addressing
 - [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
-- [ ] [IN PROGRESS] Indexed addressing — includes binary/decimal ADC/SBC plus Direct-X/absolute-X read-modify-write forms
+- [x] Indexed addressing
 - [x] Indirect addressing — data/ALU, PEI and all indirect JMP/JSR forms verified
 - [x] Branch instructions
 - [x] Jump/subroutine call/return instructions
-- [ ] [IN PROGRESS] Load/store instructions — scalar LDA/LDX/LDY/STA/STX/STY/STZ families complete; block moves pending
+- [x] Load/store instructions — scalar families and MVP/MVN
 - [x] Arithmetic instructions — complete ADC/SBC, compare and register/memory INC/DEC families
 - [x] Logic instructions — complete ORA/AND/EOR/BIT/TSB/TRB families
 - [x] Shift/rotate instructions — complete ASL/LSR/ROL/ROR accumulator and memory families
 - [x] Transfer instructions
 - [x] Stack instructions
-- [ ] [IN PROGRESS] Status flag behavior
-- [ ] [IN PROGRESS] M flag behavior
-- [ ] [IN PROGRESS] X flag behavior
-- [ ] [IN PROGRESS] Native mode
-- [ ] [IN PROGRESS] Emulation mode
+- [x] Status flag behavior
+- [x] M flag behavior
+- [x] X flag behavior
+- [x] Native mode instruction behavior
+- [x] Emulation mode instruction behavior
 - [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
-- [ ] IRQ
-- [ ] NMI
+- [x] IRQ CPU input and entry
+- [x] NMI CPU input and entry
+- [ ] ABORT input and entry
 - [ ] [IN PROGRESS] RESET
-- [ ] BRK
-- [ ] COP
-- [ ] WAI
-- [ ] STP
-- [ ] [IN PROGRESS] Bank wrapping
-- [ ] [IN PROGRESS] Direct Page edge cases
+- [x] BRK
+- [x] COP
+- [x] WAI
+- [x] STP
+- [x] Bank wrapping
+- [x] Direct Page edge cases
 - [ ] [IN PROGRESS] Timing model
-- [ ] [IN PROGRESS] CPU automated tests
-- [ ] CPU regression tests
-- [ ] Complete interpreter integration
+- [x] CPU automated tests for all 256 opcode values
+- [ ] [IN PROGRESS] CPU regression tests — broader independent vectors/test ROMs pending
+- [ ] [IN PROGRESS] Complete interpreter integration — scheduler/5A22 timing and ABORT pending
 
 ## Phase 3 — Bus and Cartridge
 

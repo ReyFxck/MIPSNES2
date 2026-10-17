@@ -1,6 +1,6 @@
 # STATUS — canonical project state
 
-Project foundation plus a partial 248-opcode 65C816/reference-bus milestone. No ROM execution,
+Project foundation plus a 256-opcode 65C816/partial reference-bus milestone. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -375,6 +375,15 @@ GCC/Clang plus pinned PS2/PSP workflows passed for implementation head
 resolved documentation-order failures and limitations are recorded in
 docs/65c816-stack-control-audit.md. No console runtime or hardware result is claimed.
 
+The final opcode-dispatch milestone on 2026-10-17 adds BRK, COP, RTI, WDM, MVP,
+MVN, WAI and STP, bringing the reference interpreter to all 256 opcode values. It
+also adds caller-driven IRQ/NMI inputs required to test wait and return behavior.
+Host regressions verify emulation/native vectors and stack layouts, signature-byte
+PC behavior, flags, meaningful bus order/count, aggregate cycles, native/8-bit-index
+block moves, WAI wake rules, NMI priority and STP reset-only release. This does not
+complete ABORT, signal-level RESET/bus cycles, Ricoh 5A22 timing or scheduler
+integration. Exact evidence is in docs/65c816-complete-opcodes-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -388,47 +397,56 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] CPU state representation
 - [ ] [IN PROGRESS] Reset sequence — sourced programmer-visible invariants/vector implemented; signal and cycle sequence incomplete
 - [x] Instruction fetch
-- [ ] [IN PROGRESS] Opcode dispatch — 248-opcode subset only
-- [ ] [IN PROGRESS] Immediate addressing — loads, REP/SEP, logic/compare and binary/decimal ADC/SBC forms only
-- [ ] [IN PROGRESS] Absolute addressing — JMP, scalar loads/stores, logic/compare, binary/decimal ADC/SBC and read-modify-write forms only
+- [x] Opcode dispatch — all 256 byte values have explicit behavior
+- [x] Immediate addressing
+- [x] Absolute addressing
 - [x] Long addressing — data, ALU and JMP/JSL long forms verified
-- [ ] [IN PROGRESS] Direct Page addressing — scalar loads/stores, logic/compare, binary/decimal ADC/SBC and read-modify-write forms only
+- [x] Direct Page addressing
 - [x] Stack-relative addressing — complete LDA/STA/ORA/AND/EOR/CMP/ADC/SBC families
-- [ ] [IN PROGRESS] Indexed addressing — scalar load/store, logic/compare, binary/decimal ADC/SBC and Direct-X/absolute-X read-modify-write forms
+- [x] Indexed addressing
 - [x] Indirect addressing — data/ALU, PEI and all indirect JMP/JSR forms verified
 - [x] Branch instructions
 - [x] Jump/subroutine call/return instructions
-- [ ] [IN PROGRESS] Load/store instructions — scalar LDA/LDX/LDY/STA/STX/STY/STZ families complete; block moves pending
+- [x] Load/store instructions — scalar families and MVP/MVN verified
 - [x] Arithmetic instructions — complete ADC/SBC, compare and register/memory INC/DEC families
 - [x] Logic instructions — complete ORA/AND/EOR/BIT/TSB/TRB families
 - [x] Shift/rotate instructions — complete ASL/LSR/ROL/ROR accumulator and memory families
 - [x] Transfer instructions
 - [x] Stack instructions
-- [ ] [IN PROGRESS] Status flag behavior — controls plus implemented load/transfer/logic/compare/arithmetic/read-modify-write and pull flag effects verified
-- [ ] [IN PROGRESS] M flag behavior — implemented accumulator data, transfer, ALU, store, read-modify-write and stack paths verified at both widths
-- [ ] [IN PROGRESS] X flag behavior — implemented index data, transfer, compare, register INC/DEC, accumulator-ALU indexed cycles and stack paths verified
-- [ ] [IN PROGRESS] Native mode — XCE entry, implemented widths/transfers/logic, branches, stack/control, status controls and register INC/DEC verified
-- [ ] [IN PROGRESS] Emulation mode — reset/REP/XCE invariants, widths, transfers/logic, Direct/indirect pointer wrapping, branches, stack/control, status controls and register INC/DEC verified for implemented subset
+- [x] Status flag behavior
+- [x] M flag behavior
+- [x] X flag behavior
+- [x] Native mode instruction behavior
+- [x] Emulation mode instruction behavior
 - [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
-- [ ] IRQ
-- [ ] NMI
+- [x] IRQ CPU input and entry — SNES IRQ generation/timing remains Phase 4
+- [x] NMI CPU input and entry — SNES NMI generation/timing remains Phase 4
+- [ ] ABORT input and entry
 - [ ] [IN PROGRESS] RESET — vector and documented visible state subset only
-- [ ] BRK
-- [ ] COP
-- [ ] WAI
-- [ ] STP
-- [ ] [IN PROGRESS] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
-- [ ] [IN PROGRESS] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified for implemented subset
+- [x] BRK
+- [x] COP
+- [x] WAI
+- [x] STP
+- [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
+- [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
 - [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, stack/control, ALU and aggregate read-modify-write timing only
-- [ ] [IN PROGRESS] CPU automated tests — all 248 dispatch opcodes and implemented behavior covered; complete CPU pending
-- [ ] CPU regression tests
-- [ ] Complete interpreter integration
+- [x] CPU automated tests — all 256 opcode values and implemented behavior covered
+- [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
+- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch complete; scheduler/5A22 timing and ABORT pending
 
 ### Verified 65C816 foundation subset
 
 - [x] Caller-owned register/mode/bus/diagnostic state
 - [x] Reset vector fetch from logical 00:FFFC-D
-- [x] Pre-reset and unimplemented-opcode diagnostic stops
+- [x] Pre-reset and invalid-bus diagnostic stops
+- [x] BRK (`00`)
+- [x] COP (`02`)
+- [x] RTI (`40`)
+- [x] WDM (`42`)
+- [x] MVP (`44`)
+- [x] MVN (`54`)
+- [x] WAI (`CB`)
+- [x] STP (`DB`)
 - [x] PHP (`08`)
 - [x] PHD (`0B`)
 - [x] JSR absolute (`20`)

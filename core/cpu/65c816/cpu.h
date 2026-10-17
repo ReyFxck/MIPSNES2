@@ -22,7 +22,9 @@ typedef enum {
     MIPSNES2_CPU_OK = 0,
     MIPSNES2_CPU_NOT_READY,
     MIPSNES2_CPU_INVALID_BUS,
-    MIPSNES2_CPU_UNIMPLEMENTED_OPCODE
+    MIPSNES2_CPU_UNIMPLEMENTED_OPCODE,
+    MIPSNES2_CPU_WAITING,
+    MIPSNES2_CPU_CLOCK_STOPPED
 } mipsnes2_cpu_result;
 
 typedef struct {
@@ -40,6 +42,10 @@ typedef struct {
     uint64_t instruction_cycles;
     mipsnes2_bus_interface bus;
 
+    bool waiting;
+    bool clock_stopped;
+    bool irq_level;
+    bool nmi_pending;
     bool stopped;
     mipsnes2_cpu_result stop_reason;
     uint8_t last_opcode;
@@ -49,5 +55,7 @@ typedef struct {
 void mipsnes2_cpu_init(mipsnes2_cpu *cpu, mipsnes2_bus_interface bus);
 mipsnes2_cpu_result mipsnes2_cpu_reset(mipsnes2_cpu *cpu);
 mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu);
+void mipsnes2_cpu_set_irq(mipsnes2_cpu *cpu, bool asserted);
+void mipsnes2_cpu_pulse_nmi(mipsnes2_cpu *cpu);
 
 #endif

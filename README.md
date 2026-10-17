@@ -17,21 +17,22 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 
 ## Current state
 
-**The project has a partial 65C816 interpreter and reference bus. It cannot run a SNES
-ROM.** Two hundred forty-eight opcodes now cover the foundation, the complete register-
+**The project has a 256-opcode reference 65C816 interpreter and a partial reference
+bus. It cannot run a SNES ROM.** All opcode values now cover the foundation, the complete register-
 transfer and branch families, implied single-flag status controls, accumulator/index
 register increment-decrement operations, complete ORA/AND/EOR/CMP address families,
 a stack-relative foundation, a logic/compare foundation, and complete LDA/STA address
 families alongside the implemented index-register load/store paths, complete
 ADC/SBC addressing families including packed-BCD decimal operation, all shifts and
 rotates, memory INC/DEC, TSB/TRB and STZ, the complete stack push/pull family and
-all jump/subroutine call/return forms. Deterministic host regressions
+all jump/subroutine call/return forms, software/hardware interrupt entry, RTI,
+WDM, MVP/MVN and WAI/STP. Deterministic host regressions
 cover widths, flags, cycles, signed branch offsets, program-bank-local PC wrapping,
 Direct Page pointer wrapping, DBR selection and 24-bit bank crossing. Console entry
 points remain build probes, not usable emulators. No PPU, APU, cartridge integration,
 compatibility or performance claim exists.
 
-Current milestone: Phase 2 — incremental 65C816 reference interpreter.
+Current milestone: Phase 2 — 65C816 integration and evidence after complete opcode dispatch.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
@@ -44,8 +45,10 @@ All ADC/SBC addressing forms are verified in binary and decimal modes. Decimal
 coverage includes exhaustive valid 8-bit packed-BCD inputs, targeted 16-bit and
 invalid-digit cases, plus an independent SingleStepTests vector audit. The complete
 shift/rotate families and the current memory read-modify-write group are also
-verified. The next focused milestone is the interrupt/software-trap and processor-
-state control group: BRK, COP, RTI, WDM, WAI and STP.
+verified. Opcode dispatch is complete, while ABORT, signal-level RESET/bus behavior,
+Ricoh 5A22 timing, scheduler integration and broader independent validation remain.
+The next focused milestone is the central scheduler plus 5A22 interrupt/timing
+integration around the reference interpreter.
 Do not start with a dynarec,
 renderer or enhancement chips.
 

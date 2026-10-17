@@ -1,6 +1,6 @@
 # Architecture
 
-Status: project foundation plus a partial 65C816/reference-bus milestone, not a
+Status: project foundation plus a 256-opcode 65C816/partial reference-bus milestone, not a
 working SNES emulator. Read [STATUS.md](STATUS.md).
 
 ## Dependency direction and ownership
@@ -12,7 +12,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, reset/vector path and 248-opcode reference subset |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
@@ -49,9 +49,11 @@ Page/block mapping remains a candidate. Keep rare MMIO separate from common RAM/
 paths. Avoid broad `#ifdef PS2/PSP` in core. No implicit global singleton or target
 physical pointer belongs in CPU state.
 
-The CPU's `instruction_cycles` counts completed instruction base cycles only. It is
+The CPU's `instruction_cycles` counts completed instruction or block-move-byte base
+cycles only. It is
 not master time; reset timing, 5A22 memory speed, wait states and arbitration remain
-future scheduler/bus work. An unimplemented opcode enters a sticky diagnostic stop.
+future scheduler/bus work. All 256 byte values dispatch. A defensive unimplemented-
+opcode result remains for decoder refactoring; no opcode silently acts as NOP.
 Program fetch wraps PC inside PBR. Implemented data addressing is linear across the
 24-bit space for absolute/long forms: word accesses and absolute indexing may carry
 into the next bank. Direct and Direct-indexed forms always emit bank-zero addresses.
