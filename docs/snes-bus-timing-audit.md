@@ -84,8 +84,7 @@ PASS: host banner and unsupported argument rejection
 GCC completed the default, release and ASan+UBSan suites. Leak detection alone was
 disabled for the existing local environment restriction. Clang was unavailable.
 Local console attempts stopped before compilation: PS2SDK was unset and `psp-config`
-was unavailable. GitHub's pinned PS2/PSP workflows remain the console compiler gate;
-their results are recorded only after they execute.
+was unavailable. GitHub's pinned workflows supplied the console compiler gate.
 
 ## Test coverage
 
@@ -107,8 +106,18 @@ complete SNES mapping, cycle-perfect CPU timing, console runtime or compatibilit
 
 ## GitHub Actions
 
-CI run URLs and exact commit evidence are added only after the Host, PS2 and PSP
-workflows finish. Workflow files or local builds alone are not CI evidence.
+All three pull-request workflows passed for implementation commit
+`161aeb647fabce2b2e7ff7667d06b95204829daa`:
+
+- [Host CI run 39071962561](https://github.com/ReyFxck/MIPSNES2/actions/runs/39071962561)
+  — GCC and Clang release/sanitizer jobs succeeded and staged artifacts;
+- [PS2 CI run 39071962567](https://github.com/ReyFxck/MIPSNES2/actions/runs/39071962567)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded;
+- [PSP CI run 39071962578](https://github.com/ReyFxck/MIPSNES2/actions/runs/39071962578)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded.
+
+The documentation-evidence commit must also pass all applicable workflows before
+merge. Cross-compilation is not console execution.
 
 ## Runtime and performance
 

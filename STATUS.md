@@ -400,6 +400,18 @@ GitHub Host GCC/Clang plus sanitizers and pinned PS2/PSP cross-build workflows p
 for implementation commit `e1dc763ad81601bdcfbc44885eee08b2f770dd0d`.
 Exact local/CI evidence and limitations are in docs/scheduler-foundation-audit.md.
 
+The partial SNES bus/timing milestone on 2026-10-17 adds caller-owned 128 KiB WRAM,
+low-bank mirrors, WRAM ports, subsystem callback routes, `$420D` FastROM state and
+address-dependent clocks for meaningful CPU accesses. An atomic timing bridge
+advances the scheduler and exposes mismatch/overflow errors. Host tests cover map
+boundaries, port side effects, FastROM, mixed-speed instructions and NMI delivery.
+Exact dummy/internal cycle placement, WRAM refresh, DMA/HDMA arbitration, cartridge
+mappers and mid-instruction event pausing remain incomplete. GitHub Host GCC/Clang
+plus sanitizers and pinned PS2/PSP cross-build workflows passed for implementation
+commit `161aeb647fabce2b2e7ff7667d06b95204829daa`. Exact local/CI evidence and limits
+are in docs/snes-bus-timing-audit.md. No console runtime or performance result is
+claimed.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
