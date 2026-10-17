@@ -1,7 +1,8 @@
 # Architecture
 
-Status: project foundation plus a 256-opcode 65C816, partial real SNES logical bus
-and deterministic scheduler/timing foundation, not a working SNES emulator. Read
+Status: project foundation plus a 256-opcode 65C816, partial real SNES logical bus,
+base LoROM/HiROM mapping and deterministic scheduler/timing foundation, not a working
+SNES emulator. Read
 [STATUS.md](STATUS.md).
 
 ## Dependency direction and ownership
@@ -15,7 +16,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, mirrors, ports, MMIO routes, FastROM state and per-access clocks |
-| core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
+| core/cartridge | Validated metadata, mappings, SRAM data | Explicit caller-owned base LoROM/HiROM ROM/SRAM views; no header detection |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
@@ -30,8 +31,8 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 Directories without source contain an explicit scope README, not stub functions.
 There is no machine instance, ROM runner, renderer or APU. CPU reset implements only
 the documented programmer-visible foundation; complete RESET timing remains open.
-The partial SNES bus is not a complete machine map: it has no cartridge mapper,
-SRAM windows, implemented peripheral registers, enhancement windows or verified
+The partial SNES bus is not a complete machine map: it has no complete cartridge
+board coverage, implemented peripheral registers, enhancement windows or verified
 hardware open-bus domains. It does connect meaningful CPU callbacks to individual
 5A22 address-speed charges. No per-access function-pointer design has been benchmarked
 or selected for final hot paths.
@@ -60,7 +61,17 @@ defined PPU, APU, CPU-I/O, DMA and cartridge windows to distinct replaceable
 interfaces. Missing routes return one deterministic latch; that is an explicit
 foundation approximation, not a complete open-bus claim. Every read/write normalizes
 to 24 bits and adds the address-dependent master-clock count. Cartridge callbacks
-receive logical addresses and will later implement LoROM/HiROM/SRAM selection.
+receive logical addresses; the base mapper now implements the supported subset below.
+
+The cartridge-slot interface differs intentionally from ordinary MMIO callbacks: a
+read/write returns whether the cartridge decoded that address. A declined read leaves
+the bus's open latch intact. The base cartridge implementation accepts an explicit
+LoROM or HiROM mapper plus caller-owned ROM/SRAM buffers. It models the ordinary
+32 KiB LoROM and 64 KiB HiROM wiring, standard SRAM windows and read-only ROM. For
+now it accepts only power-of-two ROMs from 32 KiB through 4 MiB and power-of-two SRAM
+within each base mapper's addressable window. Header analysis, automatic selection,
+copier headers, irregular/multi-chip ROM layouts, Ex mappings and enhancement chips
+remain separate work; no title or checksum selects behavior.
 
 The CPU's `instruction_cycles` counts completed instruction or block-move-byte base
 cycles only; it is not master time. The timing bridge combines it with observed
@@ -255,6 +266,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   charges meaningful accesses at 5A22 address speeds. The atomic CPU timing bridge
   infers only the remaining aggregate internal cycles; exact cycle placement,
   refresh and bus arbitration remain incomplete rather than silently claimed.
+- 2026-10-17: The cartridge slot can explicitly decline addresses so open-bus
+  ownership stays in the SNES bus. Original caller-owned C99 base LoROM/HiROM maps
+  support power-of-two ROM/SRAM only; detection and irregular board layouts remain
+  incomplete instead of being guessed or keyed to games.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

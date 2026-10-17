@@ -55,6 +55,27 @@ static void routed_write(mipsnes2_bus_interface route,
     }
 }
 
+static uint8_t cartridge_read(mipsnes2_snes_bus *bus,
+                              mipsnes2_address address)
+{
+    uint8_t value;
+
+    if (bus->cartridge.read8 == NULL ||
+        !bus->cartridge.read8(bus->cartridge.context, address, &value)) {
+        return bus->open_value;
+    }
+    return value;
+}
+
+static void cartridge_write(mipsnes2_snes_bus *bus,
+                            mipsnes2_address address,
+                            uint8_t value)
+{
+    if (bus->cartridge.write8 != NULL) {
+        (void)bus->cartridge.write8(bus->cartridge.context, address, value);
+    }
+}
+
 static bool wram_index(mipsnes2_address address, uint32_t *index)
 {
     uint8_t bank = (uint8_t)(address >> 16);
@@ -139,7 +160,7 @@ static uint8_t read_system_area(mipsnes2_snes_bus *bus,
         (offset >= UINT16_C(0x4200) && offset <= UINT16_C(0x43ff))) {
         return bus->open_value;
     }
-    return routed_read(bus->cartridge, address, bus->open_value);
+    return cartridge_read(bus, address);
 }
 
 static void write_system_area(mipsnes2_snes_bus *bus,
@@ -175,7 +196,7 @@ static void write_system_area(mipsnes2_snes_bus *bus,
         (offset >= UINT16_C(0x4200) && offset <= UINT16_C(0x43ff))) {
         return;
     }
-    routed_write(bus->cartridge, address, value);
+    cartridge_write(bus, address, value);
 }
 
 mipsnes2_snes_bus_result mipsnes2_snes_bus_init(
@@ -218,7 +239,7 @@ uint8_t mipsnes2_snes_bus_read(mipsnes2_snes_bus *bus,
         offset = (uint16_t)address;
         value = is_system_bank(bank)
                     ? read_system_area(bus, address, offset)
-                    : routed_read(bus->cartridge, address, bus->open_value);
+                    : cartridge_read(bus, address);
     }
     bus->open_value = value;
     return value;
@@ -243,7 +264,7 @@ void mipsnes2_snes_bus_write(mipsnes2_snes_bus *bus,
         if (is_system_bank(bank)) {
             write_system_area(bus, address, (uint16_t)address, value);
         } else {
-            routed_write(bus->cartridge, address, value);
+            cartridge_write(bus, address, value);
         }
     }
     bus->open_value = value;
