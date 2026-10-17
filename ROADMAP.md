@@ -90,7 +90,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Logical 24-bit access integration
 - [x] Low-bank WRAM mirrors
 - [ ] ROM fast path
-- [ ] SRAM windows
+- [ ] [IN PROGRESS] SRAM windows — supported base LoROM/HiROM mappings verified
 - [x] PPU MMIO routing — callback route only
 - [x] CPU I/O routing — callback route plus bus-owned `$420D`
 - [x] APU port routing — callback route only
@@ -100,20 +100,20 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Read side effects — WRAM data-port increment only
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` only
 - [ ] [IN PROGRESS] Access timing — meaningful accesses integrated; exact cycle placement/refresh/arbitration pending
-- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — implemented partial map verified; cartridge/SRAM/enhancement pending
+- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO and power-of-two base cartridge maps verified; irregular/Ex/enhancement pending
 - [ ] Page/block mapping benchmark
 - [ ] ROM loading
 - [ ] ROM metadata
 - [ ] Header analysis
-- [ ] LoROM
-- [ ] HiROM
+- [ ] [IN PROGRESS] LoROM — explicit power-of-two base mapping verified
+- [ ] [IN PROGRESS] HiROM — explicit power-of-two base mapping verified
 - [ ] ExLoROM
 - [ ] ExHiROM
-- [ ] SRAM
+- [ ] [IN PROGRESS] SRAM — base mapper windows/read/write verified; persistence pending
 - [ ] SRAM persistence
-- [ ] Mapper tests
+- [ ] [IN PROGRESS] Mapper tests — synthetic base LoROM/HiROM suite exists
 - [ ] Checksum handling where useful
-- [ ] Truncated and malformed input rejection
+- [ ] [IN PROGRESS] Truncated and malformed input rejection — config/size validation only
 - [ ] Copier-header policy
 - [ ] Region detection
 

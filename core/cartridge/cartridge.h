@@ -1,0 +1,59 @@
+/* MIPSNES2 base cartridge mapping foundation. See LICENSE for GPL-3.0 terms. */
+#ifndef MIPSNES2_CARTRIDGE_H
+#define MIPSNES2_CARTRIDGE_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+#include "core/cartridge/interface.h"
+
+enum {
+    MIPSNES2_LOROM_BANK_SIZE = 32 * 1024,
+    MIPSNES2_HIROM_BANK_SIZE = 64 * 1024,
+    MIPSNES2_BASE_ROM_MAX_SIZE = 4 * 1024 * 1024,
+    MIPSNES2_LOROM_SRAM_MAX_SIZE = 512 * 1024,
+    MIPSNES2_HIROM_SRAM_MAX_SIZE = 256 * 1024
+};
+
+typedef enum {
+    MIPSNES2_CARTRIDGE_LOROM = 0,
+    MIPSNES2_CARTRIDGE_HIROM
+} mipsnes2_cartridge_mapper;
+
+typedef enum {
+    MIPSNES2_CARTRIDGE_OK = 0,
+    MIPSNES2_CARTRIDGE_INVALID_ARGUMENT,
+    MIPSNES2_CARTRIDGE_UNSUPPORTED_MAPPER,
+    MIPSNES2_CARTRIDGE_UNSUPPORTED_ROM_SIZE,
+    MIPSNES2_CARTRIDGE_UNSUPPORTED_SRAM_SIZE
+} mipsnes2_cartridge_result;
+
+typedef struct {
+    const uint8_t *rom;
+    size_t rom_size;
+    uint8_t *sram;
+    size_t sram_size;
+    mipsnes2_cartridge_mapper mapper;
+} mipsnes2_cartridge_config;
+
+typedef struct {
+    const uint8_t *rom;
+    size_t rom_size;
+    uint8_t *sram;
+    size_t sram_size;
+    mipsnes2_cartridge_mapper mapper;
+} mipsnes2_cartridge;
+
+mipsnes2_cartridge_result mipsnes2_cartridge_init(
+    mipsnes2_cartridge *cartridge,
+    const mipsnes2_cartridge_config *config);
+bool mipsnes2_cartridge_read(mipsnes2_cartridge *cartridge,
+                             mipsnes2_address address,
+                             uint8_t *value);
+bool mipsnes2_cartridge_write(mipsnes2_cartridge *cartridge,
+                              mipsnes2_address address,
+                              uint8_t value);
+mipsnes2_cartridge_interface mipsnes2_cartridge_make_interface(
+    mipsnes2_cartridge *cartridge);
+
+#endif

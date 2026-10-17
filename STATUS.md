@@ -1,11 +1,13 @@
 # STATUS — canonical project state
 
-Project foundation plus a 256-opcode 65C816, partial real SNES logical bus and
-deterministic scheduler/timing foundation. No ROM execution,
-complete emulated subsystem, console runtime validation, compatibility result or
-hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
-CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md)
-and [docs/snes-bus-timing-audit.md](docs/snes-bus-timing-audit.md).
+Project foundation plus a 256-opcode 65C816, partial real SNES logical bus, base
+LoROM/HiROM mapping and deterministic scheduler/timing foundation. No ROM loader or
+runnable SNES machine, complete emulated subsystem, console runtime validation,
+compatibility result or hardware benchmark exists. Read
+[bootstrap audit](docs/bootstrap-audit.md) and the CPU/bus evidence in
+[docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md)
+and [docs/snes-bus-timing-audit.md](docs/snes-bus-timing-audit.md), plus the
+[base-cartridge audit](docs/cartridge-foundation-audit.md).
 
 ## State and evidence rules
 
@@ -776,7 +778,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Logical 24-bit access integration
 - [x] Low-bank WRAM mirrors
 - [ ] ROM fast path
-- [ ] SRAM windows
+- [ ] [IN PROGRESS] SRAM windows — base LoROM/HiROM power-of-two mappings exist; broader boards absent
 - [x] PPU MMIO routing — callback route only; PPU registers remain unimplemented
 - [x] CPU I/O routing — callback route plus bus-owned `$420D`; CPU-I/O registers remain incomplete
 - [x] APU port routing — callback route only; APU ports remain unimplemented
@@ -786,7 +788,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` exist; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Access timing — meaningful accesses use 5A22 6/8/12 clocks and atomic CPU steps advance the scheduler; dummy/internal placement, refresh and arbitration absent
-- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM, mirror, MMIO-route and FastROM boundaries verified; cartridge/SRAM/enhancement maps absent
+- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO plus power-of-two base LoROM/HiROM/SRAM boundaries verified; irregular/Ex/enhancement maps absent
 - [ ] Page/block mapping benchmark
 
 ### Verified logical-bus foundation subset
@@ -798,23 +800,34 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Deterministic unmapped fixture behavior
 - [x] Partial SNES-map WRAM, mirror, port, MMIO-route and FastROM fixtures
 - [x] Atomic CPU/scheduler timing integration fixtures
+- [x] Cartridge no-response preserves deterministic bus latch
 
 ## Cartridge
 
 - [ ] ROM loading
 - [ ] ROM metadata
 - [ ] Header analysis
-- [ ] LoROM
-- [ ] HiROM
+- [ ] [IN PROGRESS] LoROM — explicit power-of-two base ROM/SRAM mapping verified; irregular boards and detection absent
+- [ ] [IN PROGRESS] HiROM — explicit power-of-two base ROM/SRAM mapping verified; irregular boards and detection absent
 - [ ] ExLoROM
 - [ ] ExHiROM
-- [ ] SRAM
+- [ ] [IN PROGRESS] SRAM — caller-owned base mapper windows/read/write verified; persistence and broader boards absent
 - [ ] SRAM persistence
-- [ ] Mapper tests
+- [ ] [IN PROGRESS] Mapper tests — synthetic base LoROM/HiROM boundaries, mirrors, SRAM and bus/CPU integration covered
 - [ ] Checksum handling where useful
-- [ ] Truncated and malformed input rejection
+- [ ] [IN PROGRESS] Truncated and malformed input rejection — explicit config/size rejection exists; file/header parsing absent
 - [ ] Copier-header policy
 - [ ] Region detection
+
+### Verified base-cartridge foundation subset
+
+- [x] Caller-owned read-only ROM and writable SRAM views
+- [x] Cartridge slot mapped/unmapped response contract
+- [x] Explicit base LoROM 32 KiB-bank wiring for supported sizes
+- [x] Explicit base HiROM 64 KiB-bank wiring for supported sizes
+- [x] Standard base LoROM/HiROM SRAM windows for supported sizes
+- [x] ROM write protection and deterministic mirror fixtures
+- [x] Cartridge/SNES-bus/CPU/scheduler integration fixture
 
 ## Scheduler
 

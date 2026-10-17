@@ -57,7 +57,9 @@ static void capture_write(void *opaque,
     capture->last_value = value;
 }
 
-static uint8_t cartridge_read(void *opaque, mipsnes2_address address)
+static bool cartridge_read(void *opaque,
+                           mipsnes2_address address,
+                           uint8_t *value)
 {
     cartridge_fixture *fixture = opaque;
     uint8_t bank = (uint8_t)(address >> 16);
@@ -65,15 +67,16 @@ static uint8_t cartridge_read(void *opaque, mipsnes2_address address)
     fixture->capture.reads++;
     fixture->capture.last_address = address;
     if (bank == 0U) {
-        return fixture->bank00[(uint16_t)address];
+        *value = fixture->bank00[(uint16_t)address];
+    } else if (bank == UINT8_C(0xc0)) {
+        *value = fixture->bankc0[(uint16_t)address];
+    } else {
+        *value = fixture->capture.read_value;
     }
-    if (bank == UINT8_C(0xc0)) {
-        return fixture->bankc0[(uint16_t)address];
-    }
-    return fixture->capture.read_value;
+    return true;
 }
 
-static void cartridge_write(void *opaque,
+static bool cartridge_write(void *opaque,
                             mipsnes2_address address,
                             uint8_t value)
 {
@@ -82,6 +85,23 @@ static void cartridge_write(void *opaque,
     fixture->capture.writes++;
     fixture->capture.last_address = address;
     fixture->capture.last_value = value;
+    return true;
+}
+
+static bool capture_cartridge_read(void *opaque,
+                                   mipsnes2_address address,
+                                   uint8_t *value)
+{
+    *value = capture_read(opaque, address);
+    return true;
+}
+
+static bool capture_cartridge_write(void *opaque,
+                                    mipsnes2_address address,
+                                    uint8_t value)
+{
+    capture_write(opaque, address, value);
+    return true;
 }
 
 static mipsnes2_bus_interface capture_interface(route_capture *capture)
@@ -94,10 +114,21 @@ static mipsnes2_bus_interface capture_interface(route_capture *capture)
     return interface;
 }
 
-static mipsnes2_bus_interface cartridge_interface(
+static mipsnes2_cartridge_interface capture_cartridge_interface(
+    route_capture *capture)
+{
+    mipsnes2_cartridge_interface interface;
+
+    interface.context = capture;
+    interface.read8 = capture_cartridge_read;
+    interface.write8 = capture_cartridge_write;
+    return interface;
+}
+
+static mipsnes2_cartridge_interface cartridge_interface(
     cartridge_fixture *fixture)
 {
-    mipsnes2_bus_interface interface;
+    mipsnes2_cartridge_interface interface;
 
     interface.context = fixture;
     interface.read8 = cartridge_read;
@@ -164,7 +195,7 @@ static int test_wram_port_and_fastrom_timing(void)
     uint64_t before;
 
     (void)memset(wram, 0, sizeof(wram));
-    config.cartridge = capture_interface(&cart);
+    config.cartridge = capture_cartridge_interface(&cart);
     CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_OK);
 
     mipsnes2_snes_bus_write(&bus, UINT32_C(0x002181), UINT8_C(0xfe));
@@ -229,7 +260,7 @@ static int test_mmio_and_cartridge_routing(void)
     config.apu = capture_interface(&apu);
     config.cpu_io = capture_interface(&cpu_io);
     config.dma = capture_interface(&dma);
-    config.cartridge = capture_interface(&cart);
+    config.cartridge = capture_cartridge_interface(&cart);
     CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_OK);
 
     CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x002100)) == 0x10U);

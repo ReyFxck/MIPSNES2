@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include "core/bus/interface.h"
+#include "core/cartridge/interface.h"
 
 enum {
     MIPSNES2_SNES_WRAM_SIZE = 128 * 1024
@@ -26,7 +27,7 @@ typedef struct {
     mipsnes2_bus_interface apu;
     mipsnes2_bus_interface cpu_io;
     mipsnes2_bus_interface dma;
-    mipsnes2_bus_interface cartridge;
+    mipsnes2_cartridge_interface cartridge;
 } mipsnes2_snes_bus_config;
 
 typedef struct {
@@ -35,7 +36,7 @@ typedef struct {
     mipsnes2_bus_interface apu;
     mipsnes2_bus_interface cpu_io;
     mipsnes2_bus_interface dma;
-    mipsnes2_bus_interface cartridge;
+    mipsnes2_cartridge_interface cartridge;
     uint32_t wram_port_address;
     uint64_t access_count;
     uint64_t master_clocks;

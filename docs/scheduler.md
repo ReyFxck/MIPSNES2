@@ -22,7 +22,7 @@ Implemented and host-verified behavior:
 - deterministic replay and CPU IRQ/NMI boundary fixtures.
 
 This is not a complete SNES scheduler. The interpreter does not expose every W65C816
-bus/internal cycle, and the partial SNES bus has no cartridge mapper or active
+bus/internal cycle, and the partial SNES bus has no complete cartridge map or active
 peripherals. Therefore the bridge distinguishes observed address-speed accesses from
 the remaining aggregate CPU cycles but does not claim exact cycle placement.
 
