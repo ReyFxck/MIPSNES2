@@ -4601,19 +4601,6 @@ static int test_control_flow_and_faults(void)
     CHECK(cpu->last_opcode_address == UINT32_C(0x7effff));
     CHECK(cpu->instruction_cycles == UINT64_C(2));
 
-    cpu->pc = UINT16_C(0x8100);
-    cpu->instruction_cycles = 0U;
-    bank7e[0x8100] = UINT8_C(0x02);
-    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_UNIMPLEMENTED_OPCODE);
-    CHECK(cpu->stopped);
-    CHECK(cpu->stop_reason == MIPSNES2_CPU_UNIMPLEMENTED_OPCODE);
-    CHECK(cpu->last_opcode == UINT8_C(0x02));
-    CHECK(cpu->last_opcode_address == UINT32_C(0x7e8100));
-    CHECK(cpu->pc == UINT16_C(0x8101));
-    CHECK(cpu->instruction_cycles == 0U);
-    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_UNIMPLEMENTED_OPCODE);
-    CHECK(cpu->pc == UINT16_C(0x8101));
-    CHECK(cpu->instruction_cycles == 0U);
     return 0;
 }
 
@@ -5367,6 +5354,406 @@ static int test_stack_bus_access_order_and_invalid_bus(void)
     return 0;
 }
 
+static int test_software_interrupts_and_rti(void)
+{
+    trace_bus_context trace;
+    mipsnes2_cpu cpu;
+    uint8_t pushed_status;
+
+    CHECK(initialize_trace_cpu(&cpu, &trace, UINT16_C(0x8000)) == 0);
+    cpu.pbr = UINT8_C(0x7e);
+    cpu.s = UINT16_C(0x0100);
+    cpu.p |= MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_C;
+    pushed_status = cpu.p;
+    bank7e[0x8000] = UINT8_C(0x00);
+    bank7e[0x8001] = UINT8_C(0x5a);
+    bank00[0xfffe] = UINT8_C(0x34);
+    bank00[0xffff] = UINT8_C(0x12);
+    CHECK(mipsnes2_cpu_step(&cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu.pc == UINT16_C(0x1234));
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.s == UINT16_C(0x01fd));
+    CHECK(cpu.p == (uint8_t)((pushed_status |
+                              MIPSNES2_CPU_FLAG_I) &
+                             (uint8_t)~MIPSNES2_CPU_FLAG_D));
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
+    CHECK(trace.count == 7U);
+    CHECK(!trace.accesses[0].write &&
+          trace.accesses[0].address == UINT32_C(0x7e8000));
+    CHECK(!trace.accesses[1].write &&
+          trace.accesses[1].address == UINT32_C(0x7e8001));
+    CHECK(trace.accesses[2].write &&
+          trace.accesses[2].address == UINT32_C(0x000100) &&
+          trace.accesses[2].value == UINT8_C(0x80));
+    CHECK(trace.accesses[3].write &&
+          trace.accesses[3].address == UINT32_C(0x0001ff) &&
+          trace.accesses[3].value == UINT8_C(0x02));
+    CHECK(trace.accesses[4].write &&
+          trace.accesses[4].address == UINT32_C(0x0001fe) &&
+          trace.accesses[4].value == pushed_status);
+    CHECK(!trace.accesses[5].write &&
+          trace.accesses[5].address == UINT32_C(0x00fffe));
+    CHECK(!trace.accesses[6].write &&
+          trace.accesses[6].address == UINT32_C(0x00ffff));
+
+    CHECK(initialize_trace_cpu(&cpu, &trace, UINT16_C(0x8100)) == 0);
+    cpu.emulation = false;
+    cpu.pbr = UINT8_C(0x7e);
+    cpu.s = UINT16_C(0x2000);
+    cpu.p = MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_C;
+    pushed_status = cpu.p;
+    bank7e[0x8100] = UINT8_C(0x02);
+    bank7e[0x8101] = UINT8_C(0xa5);
+    bank00[0xffe4] = UINT8_C(0x78);
+    bank00[0xffe5] = UINT8_C(0x56);
+    CHECK(mipsnes2_cpu_step(&cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu.pc == UINT16_C(0x5678));
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.s == UINT16_C(0x1ffc));
+    CHECK(cpu.p == (MIPSNES2_CPU_FLAG_I | MIPSNES2_CPU_FLAG_C));
+    CHECK(cpu.instruction_cycles == UINT64_C(8));
+    CHECK(trace.count == 8U);
+    CHECK(trace.accesses[2].write &&
+          trace.accesses[2].address == UINT32_C(0x002000) &&
+          trace.accesses[2].value == UINT8_C(0x7e));
+    CHECK(trace.accesses[3].write &&
+          trace.accesses[3].value == UINT8_C(0x81));
+    CHECK(trace.accesses[4].write &&
+          trace.accesses[4].value == UINT8_C(0x02));
+    CHECK(trace.accesses[5].write &&
+          trace.accesses[5].value == pushed_status);
+    CHECK(trace.accesses[6].address == UINT32_C(0x00ffe4));
+    CHECK(trace.accesses[7].address == UINT32_C(0x00ffe5));
+
+    CHECK(initialize_trace_cpu(&cpu, &trace, UINT16_C(0x8150)) == 0);
+    cpu.pbr = UINT8_C(0x7e);
+    cpu.s = UINT16_C(0x01ff);
+    bank7e[0x8150] = UINT8_C(0x02);
+    bank7e[0x8151] = UINT8_C(0x11);
+    bank00[0xfff4] = UINT8_C(0x44);
+    bank00[0xfff5] = UINT8_C(0x33);
+    CHECK(mipsnes2_cpu_step(&cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu.pc == UINT16_C(0x3344));
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.s == UINT16_C(0x01fc));
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
+    CHECK(bank00[0x01fd] ==
+          (uint8_t)((MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X |
+                     MIPSNES2_CPU_FLAG_I) &
+                    (uint8_t)~MIPSNES2_CPU_FLAG_X));
+
+    CHECK(initialize_trace_cpu(&cpu, &trace, UINT16_C(0x8180)) == 0);
+    cpu.emulation = false;
+    cpu.pbr = UINT8_C(0x80);
+    cpu.s = UINT16_C(0x2100);
+    bank80[0x8180] = UINT8_C(0x00);
+    bank80[0x8181] = UINT8_C(0x22);
+    bank00[0xffe6] = UINT8_C(0x88);
+    bank00[0xffe7] = UINT8_C(0x77);
+    CHECK(mipsnes2_cpu_step(&cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu.pc == UINT16_C(0x7788));
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.s == UINT16_C(0x20fc));
+    CHECK(cpu.instruction_cycles == UINT64_C(8));
+
+    CHECK(initialize_trace_cpu(&cpu, &trace, UINT16_C(0x8200)) == 0);
+    cpu.pbr = UINT8_C(0x7e);
+    cpu.s = UINT16_C(0x01fc);
+    cpu.x = UINT16_C(0xabcd);
+    cpu.y = UINT16_C(0xef12);
+    bank7e[0x8200] = UINT8_C(0x40);
+    bank00[0x01fd] = MIPSNES2_CPU_FLAG_D;
+    bank00[0x01fe] = UINT8_C(0x9a);
+    bank00[0x01ff] = UINT8_C(0xbc);
+    CHECK(mipsnes2_cpu_step(&cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu.pc == UINT16_C(0xbc9a));
+    CHECK(cpu.pbr == UINT8_C(0x7e));
+    CHECK(cpu.p == (MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_M |
+                    MIPSNES2_CPU_FLAG_X));
+    CHECK(cpu.s == UINT16_C(0x01ff));
+    CHECK(cpu.x == UINT16_C(0x00cd));
+    CHECK(cpu.y == UINT16_C(0x0012));
+    CHECK(cpu.instruction_cycles == UINT64_C(6));
+    CHECK(trace.count == 4U);
+
+    CHECK(initialize_trace_cpu(&cpu, &trace, UINT16_C(0x8300)) == 0);
+    cpu.emulation = false;
+    cpu.pbr = UINT8_C(0x7e);
+    cpu.s = UINT16_C(0xfffb);
+    bank7e[0x8300] = UINT8_C(0x40);
+    bank00[0xfffc] = MIPSNES2_CPU_FLAG_C;
+    bank00[0xfffd] = UINT8_C(0xef);
+    bank00[0xfffe] = UINT8_C(0xbe);
+    bank00[0xffff] = UINT8_C(0x80);
+    CHECK(mipsnes2_cpu_step(&cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu.pc == UINT16_C(0xbeef));
+    CHECK(cpu.pbr == UINT8_C(0x80));
+    CHECK(cpu.p == MIPSNES2_CPU_FLAG_C);
+    CHECK(cpu.s == UINT16_C(0xffff));
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
+    CHECK(trace.count == 5U);
+    return 0;
+}
+
+static int test_wdm_and_block_moves(void)
+{
+    cpu_fixture fixture;
+    mipsnes2_cpu *cpu = &fixture.cpu;
+    trace_bus_context trace;
+    mipsnes2_cpu trace_cpu;
+    uint8_t status;
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x8400)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->a = UINT16_C(0x1234);
+    cpu->x = UINT16_C(0x0056);
+    cpu->y = UINT16_C(0x0078);
+    status = cpu->p;
+    bank7e[0x8400] = UINT8_C(0x42);
+    bank7e[0x8401] = UINT8_C(0xa5);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->pc == UINT16_C(0x8402));
+    CHECK(cpu->a == UINT16_C(0x1234));
+    CHECK(cpu->x == UINT16_C(0x0056));
+    CHECK(cpu->y == UINT16_C(0x0078));
+    CHECK(cpu->p == status);
+    CHECK(cpu->instruction_cycles == UINT64_C(2));
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x8480)) == 0);
+    cpu->emulation = false;
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->a = UINT16_C(0xabcd);
+    cpu->p = MIPSNES2_CPU_FLAG_C | MIPSNES2_CPU_FLAG_V;
+    bank7e[0x8480] = UINT8_C(0x42);
+    bank7e[0x8481] = UINT8_C(0x3c);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->pc == UINT16_C(0x8482));
+    CHECK(cpu->a == UINT16_C(0xabcd));
+    CHECK(cpu->p == (MIPSNES2_CPU_FLAG_C | MIPSNES2_CPU_FLAG_V));
+    CHECK(cpu->instruction_cycles == UINT64_C(2));
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x8500)) == 0);
+    cpu->emulation = false;
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->p = 0U;
+    cpu->a = UINT16_C(0x0001);
+    cpu->x = UINT16_C(0xffff);
+    cpu->y = UINT16_C(0x0001);
+    bank7e[0x8500] = UINT8_C(0x54);
+    bank7e[0x8501] = UINT8_C(0x7f);
+    bank7e[0x8502] = UINT8_C(0x80);
+    bank80[0xffff] = UINT8_C(0x11);
+    bank80[0x0000] = UINT8_C(0x22);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(bank7f[0x0001] == UINT8_C(0x11));
+    CHECK(cpu->a == 0U);
+    CHECK(cpu->x == 0U);
+    CHECK(cpu->y == UINT16_C(0x0002));
+    CHECK(cpu->pc == UINT16_C(0x8500));
+    CHECK(cpu->dbr == UINT8_C(0x7f));
+    CHECK(cpu->instruction_cycles == UINT64_C(7));
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(bank7f[0x0002] == UINT8_C(0x22));
+    CHECK(cpu->a == UINT16_C(0xffff));
+    CHECK(cpu->x == UINT16_C(0x0001));
+    CHECK(cpu->y == UINT16_C(0x0003));
+    CHECK(cpu->pc == UINT16_C(0x8503));
+    CHECK(cpu->instruction_cycles == UINT64_C(14));
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x8600)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->a = 0U;
+    cpu->x = 0U;
+    cpu->y = 0U;
+    bank7e[0x8600] = UINT8_C(0x44);
+    bank7e[0x8601] = UINT8_C(0x7f);
+    bank7e[0x8602] = UINT8_C(0x80);
+    bank80[0x0000] = UINT8_C(0x9c);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(bank7f[0x0000] == UINT8_C(0x9c));
+    CHECK(cpu->a == UINT16_C(0xffff));
+    CHECK(cpu->x == UINT16_C(0x00ff));
+    CHECK(cpu->y == UINT16_C(0x00ff));
+    CHECK(cpu->pc == UINT16_C(0x8603));
+    CHECK(cpu->instruction_cycles == UINT64_C(7));
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x8680)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->a = 0U;
+    cpu->x = UINT16_C(0x00ff);
+    cpu->y = UINT16_C(0x00fe);
+    bank7e[0x8680] = UINT8_C(0x54);
+    bank7e[0x8681] = UINT8_C(0x7f);
+    bank7e[0x8682] = UINT8_C(0x80);
+    bank80[0x00ff] = UINT8_C(0x6d);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(bank7f[0x00fe] == UINT8_C(0x6d));
+    CHECK(cpu->x == 0U);
+    CHECK(cpu->y == UINT16_C(0x00ff));
+    CHECK(cpu->a == UINT16_C(0xffff));
+
+    CHECK(initialize_trace_cpu(&trace_cpu, &trace, UINT16_C(0x86c0)) == 0);
+    trace_cpu.emulation = false;
+    trace_cpu.pbr = UINT8_C(0x7e);
+    trace_cpu.p = 0U;
+    trace_cpu.a = 0U;
+    trace_cpu.x = UINT16_C(0x1000);
+    trace_cpu.y = UINT16_C(0x2000);
+    bank7e[0x86c0] = UINT8_C(0x44);
+    bank7e[0x86c1] = UINT8_C(0x7f);
+    bank7e[0x86c2] = UINT8_C(0x80);
+    bank80[0x1000] = UINT8_C(0x4a);
+    CHECK(mipsnes2_cpu_step(&trace_cpu) == MIPSNES2_CPU_OK);
+    CHECK(trace.count == 5U);
+    CHECK(!trace.accesses[0].write &&
+          trace.accesses[0].address == UINT32_C(0x7e86c0));
+    CHECK(!trace.accesses[1].write &&
+          trace.accesses[1].address == UINT32_C(0x7e86c1));
+    CHECK(!trace.accesses[2].write &&
+          trace.accesses[2].address == UINT32_C(0x7e86c2));
+    CHECK(!trace.accesses[3].write &&
+          trace.accesses[3].address == UINT32_C(0x801000) &&
+          trace.accesses[3].value == UINT8_C(0x4a));
+    CHECK(trace.accesses[4].write &&
+          trace.accesses[4].address == UINT32_C(0x7f2000) &&
+          trace.accesses[4].value == UINT8_C(0x4a));
+    CHECK(trace_cpu.x == UINT16_C(0x0fff));
+    CHECK(trace_cpu.y == UINT16_C(0x1fff));
+
+    CHECK(initialize_trace_cpu(&trace_cpu, &trace, UINT16_C(0x8700)) == 0);
+    trace_cpu.pbr = UINT8_C(0x7e);
+    trace_cpu.bus.write8 = NULL;
+    bank7e[0x8700] = UINT8_C(0x54);
+    bank7e[0x8701] = UINT8_C(0x7f);
+    CHECK(mipsnes2_cpu_step(&trace_cpu) == MIPSNES2_CPU_INVALID_BUS);
+    CHECK(trace_cpu.stopped);
+    CHECK(trace_cpu.pc == UINT16_C(0x8701));
+    CHECK(trace_cpu.instruction_cycles == 0U);
+    CHECK(trace.count == 1U);
+    return 0;
+}
+
+static int test_wait_stop_and_interrupt_inputs(void)
+{
+    cpu_fixture fixture;
+    mipsnes2_cpu *cpu = &fixture.cpu;
+    trace_bus_context trace;
+    mipsnes2_cpu native;
+    uint64_t cycles;
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x8800)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    bank7e[0x8800] = UINT8_C(0xcb);
+    bank7e[0x8801] = UINT8_C(0xea);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->waiting);
+    CHECK(cpu->pc == UINT16_C(0x8801));
+    CHECK(cpu->instruction_cycles == UINT64_C(3));
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_WAITING);
+    CHECK(cpu->pc == UINT16_C(0x8801));
+    CHECK(cpu->instruction_cycles == UINT64_C(3));
+    mipsnes2_cpu_set_irq(cpu, true);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(!cpu->waiting);
+    CHECK(cpu->pc == UINT16_C(0x8802));
+    CHECK(cpu->instruction_cycles == UINT64_C(5));
+    mipsnes2_cpu_set_irq(cpu, false);
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x8900)) == 0);
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_I;
+    cpu->s = UINT16_C(0x01ff);
+    bank7e[0x8900] = UINT8_C(0xcb);
+    bank00[0xfffe] = UINT8_C(0x00);
+    bank00[0xffff] = UINT8_C(0x90);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    mipsnes2_cpu_set_irq(cpu, true);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(!cpu->waiting);
+    CHECK(cpu->pc == UINT16_C(0x9000));
+    CHECK(cpu->pbr == 0U);
+    CHECK(cpu->s == UINT16_C(0x01fc));
+    CHECK(cpu->instruction_cycles == UINT64_C(10));
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x8980)) == 0);
+    cpu->emulation = false;
+    cpu->pbr = UINT8_C(0x7e);
+    cpu->p = MIPSNES2_CPU_FLAG_I;
+    cpu->s = UINT16_C(0x2000);
+    bank7e[0x8980] = UINT8_C(0xcb);
+    bank00[0xffea] = UINT8_C(0x45);
+    bank00[0xffeb] = UINT8_C(0x23);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    mipsnes2_cpu_pulse_nmi(cpu);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(!cpu->waiting);
+    CHECK(cpu->pc == UINT16_C(0x2345));
+    CHECK(cpu->pbr == 0U);
+    CHECK(cpu->s == UINT16_C(0x1ffc));
+    CHECK(cpu->instruction_cycles == UINT64_C(11));
+
+    CHECK(reset_fixture(&fixture, UINT16_C(0x8a00)) == 0);
+    cpu->emulation = false;
+    cpu->p = MIPSNES2_CPU_FLAG_I;
+    cpu->pbr = UINT8_C(0x7e);
+    bank7e[0x8a00] = UINT8_C(0xdb);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->clock_stopped);
+    CHECK(cpu->pc == UINT16_C(0x8a01));
+    CHECK(cpu->instruction_cycles == UINT64_C(3));
+    mipsnes2_cpu_set_irq(cpu, true);
+    mipsnes2_cpu_pulse_nmi(cpu);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_CLOCK_STOPPED);
+    CHECK(cpu->pc == UINT16_C(0x8a01));
+    CHECK(cpu->instruction_cycles == UINT64_C(3));
+    bank00[0xfffc] = UINT8_C(0x34);
+    bank00[0xfffd] = UINT8_C(0x12);
+    CHECK(mipsnes2_cpu_reset(cpu) == MIPSNES2_CPU_OK);
+    CHECK(!cpu->clock_stopped);
+    CHECK(!cpu->waiting);
+    CHECK(!cpu->nmi_pending);
+    CHECK(cpu->pc == UINT16_C(0x1234));
+
+    CHECK(initialize_trace_cpu(&native, &trace, UINT16_C(0x8b00)) == 0);
+    native.emulation = false;
+    native.pbr = UINT8_C(0x7e);
+    native.s = UINT16_C(0x2000);
+    native.p = MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_I;
+    bank00[0xffea] = UINT8_C(0x78);
+    bank00[0xffeb] = UINT8_C(0x56);
+    mipsnes2_cpu_set_irq(&native, true);
+    mipsnes2_cpu_pulse_nmi(&native);
+    CHECK(mipsnes2_cpu_step(&native) == MIPSNES2_CPU_OK);
+    CHECK(native.pc == UINT16_C(0x5678));
+    CHECK(native.pbr == 0U);
+    CHECK(native.s == UINT16_C(0x1ffc));
+    CHECK(native.p == MIPSNES2_CPU_FLAG_I);
+    CHECK(native.instruction_cycles == UINT64_C(8));
+    CHECK(!native.nmi_pending);
+    CHECK(trace.count == 6U);
+    CHECK(trace.accesses[0].write &&
+          trace.accesses[0].value == UINT8_C(0x7e));
+    CHECK(trace.accesses[1].write &&
+          trace.accesses[1].value == UINT8_C(0x8b));
+    CHECK(trace.accesses[2].write &&
+          trace.accesses[2].value == UINT8_C(0x00));
+    CHECK(trace.accesses[3].write &&
+          trace.accesses[3].value ==
+              (MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_I));
+    CHECK(trace.accesses[4].address == UINT32_C(0x00ffea));
+    CHECK(trace.accesses[5].address == UINT32_C(0x00ffeb));
+
+    cycles = native.instruction_cycles;
+    native.p |= MIPSNES2_CPU_FLAG_I;
+    native.pbr = UINT8_C(0x7e);
+    native.pc = UINT16_C(0x8c00);
+    bank7e[0x8c00] = UINT8_C(0xea);
+    CHECK(mipsnes2_cpu_step(&native) == MIPSNES2_CPU_OK);
+    CHECK(native.pc == UINT16_C(0x8c01));
+    CHECK(native.instruction_cycles == cycles + UINT64_C(2));
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_bus() == 0);
@@ -5416,6 +5803,9 @@ int main(void)
     CHECK(test_effective_address_pushes() == 0);
     CHECK(test_subroutine_control_instructions() == 0);
     CHECK(test_stack_bus_access_order_and_invalid_bus() == 0);
-    (void)puts("PASS: logical bus and 65C816 248-opcode subset");
+    CHECK(test_software_interrupts_and_rti() == 0);
+    CHECK(test_wdm_and_block_moves() == 0);
+    CHECK(test_wait_stop_and_interrupt_inputs() == 0);
+    (void)puts("PASS: logical bus and all 256 65C816 opcode values");
     return 0;
 }

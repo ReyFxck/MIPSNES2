@@ -5,9 +5,8 @@
 Run `make test`. The contract test checks logical-address masks, all bank/offset
 combinations and logging sink semantics. A second executable compiles with logging
 disabled and verifies callbacks are absent. `test-cpu-bus` checks the reference bus,
-reset/vector foundation, every implemented opcode, widths/modes/flags, logical
-addresses, linear data bank crossing, indexed penalties, base cycles and unknown-
-opcode diagnostics. Direct Page regressions additionally cover bank-zero selection,
+reset/vector foundation, all 256 opcode values, widths/modes/flags, logical
+addresses, linear data bank crossing, indexed penalties and base cycles. Direct Page regressions additionally cover bank-zero selection,
 aligned emulation-mode page wrapping, unaligned-D carry, 8/16-bit transfers and the
 DL cycle penalty. Direct-indirect regressions distinguish 16-bit pointer page wrapping
 from the 24-bit long-pointer linear-increment exception, verify DBR versus pointer-bank
@@ -64,6 +63,10 @@ rules, Direct Page pointer wrapping and DL timing, indirect-table bank selection
 aggregate cycles and missing-write-bus stops. A tracing bus verifies the meaningful
 operand/stack/pointer callback order and count for JSL and JSR `(absolute,X)`; the
 current contract still omits internal dummy reads and signal-level bus cycles.
+Final-dispatch regressions cover BRK/COP/RTI/WDM/MVP/MVN/WAI/STP, software and
+hardware interrupt vectors, native/emulation stack layouts, signature bytes,
+block-move repetition and index wrapping, IRQ/NMI wake/priority behavior, STP reset
+release, meaningful bus order and aggregate cycles.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -149,6 +152,8 @@ Memory RMW and shift/rotate evidence is recorded in
 [65c816-memory-rmw-shifts-audit.md](65c816-memory-rmw-shifts-audit.md).
 Stack push/pull and subroutine-control evidence is recorded in
 [65c816-stack-control-audit.md](65c816-stack-control-audit.md).
+Complete opcode-dispatch and interrupt-boundary evidence is recorded in
+[65c816-complete-opcodes-audit.md](65c816-complete-opcodes-audit.md).
 
 ## End-of-task audit
 

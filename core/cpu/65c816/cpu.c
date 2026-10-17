@@ -991,6 +991,100 @@ static uint64_t direct_base_cycles(const mipsnes2_cpu *cpu, bool indexed)
                                     indexed ? UINT64_C(4) : UINT64_C(3));
 }
 
+typedef enum {
+    INTERRUPT_IRQ,
+    INTERRUPT_NMI,
+    INTERRUPT_BRK,
+    INTERRUPT_COP
+} interrupt_kind;
+
+static uint16_t interrupt_vector(const mipsnes2_cpu *cpu,
+                                 interrupt_kind kind)
+{
+    if (cpu->emulation) {
+        switch (kind) {
+        case INTERRUPT_COP:
+            return UINT16_C(0xfff4);
+        case INTERRUPT_NMI:
+            return UINT16_C(0xfffa);
+        case INTERRUPT_IRQ:
+        case INTERRUPT_BRK:
+            return UINT16_C(0xfffe);
+        }
+    }
+
+    switch (kind) {
+    case INTERRUPT_COP:
+        return UINT16_C(0xffe4);
+    case INTERRUPT_BRK:
+        return UINT16_C(0xffe6);
+    case INTERRUPT_NMI:
+        return UINT16_C(0xffea);
+    case INTERRUPT_IRQ:
+        return UINT16_C(0xffee);
+    }
+    return UINT16_C(0xfffe);
+}
+
+static mipsnes2_cpu_result enter_interrupt(mipsnes2_cpu *cpu,
+                                           interrupt_kind kind)
+{
+    uint16_t vector;
+    uint8_t pushed_status = cpu->p;
+
+    if (!require_write_bus(cpu)) {
+        return cpu->stop_reason;
+    }
+
+    if (!cpu->emulation) {
+        stack_push8(cpu, cpu->pbr);
+    } else if (kind == INTERRUPT_BRK) {
+        pushed_status |= MIPSNES2_CPU_FLAG_X;
+    } else {
+        pushed_status &= (uint8_t)~MIPSNES2_CPU_FLAG_X;
+    }
+    stack_push16(cpu, cpu->pc);
+    stack_push8(cpu, pushed_status);
+
+    cpu->p |= MIPSNES2_CPU_FLAG_I;
+    cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_D;
+    cpu->pbr = 0U;
+    vector = interrupt_vector(cpu, kind);
+    cpu->pc = read16_bank_zero(cpu, vector);
+    cpu->instruction_cycles += cpu->emulation ? UINT64_C(7)
+                                               : UINT64_C(8);
+    return MIPSNES2_CPU_OK;
+}
+
+static void block_move(mipsnes2_cpu *cpu, bool decrement)
+{
+    uint8_t destination_bank = fetch8(cpu);
+    uint8_t source_bank = fetch8(cpu);
+    uint8_t value = read8(cpu, mipsnes2_address_make(source_bank, cpu->x));
+
+    write8(cpu, mipsnes2_address_make(destination_bank, cpu->y), value);
+    cpu->dbr = destination_bank;
+    cpu->a = (uint16_t)(cpu->a - UINT16_C(1));
+
+    if (index_is_8_bit(cpu)) {
+        uint8_t delta = decrement ? UINT8_C(0xff) : UINT8_C(1);
+
+        cpu->x = (uint8_t)((uint8_t)cpu->x + delta);
+        cpu->y = (uint8_t)((uint8_t)cpu->y + delta);
+    } else if (decrement) {
+        cpu->x = (uint16_t)(cpu->x - UINT16_C(1));
+        cpu->y = (uint16_t)(cpu->y - UINT16_C(1));
+    } else {
+        cpu->x = (uint16_t)(cpu->x + UINT16_C(1));
+        cpu->y = (uint16_t)(cpu->y + UINT16_C(1));
+    }
+
+    if (cpu->a != UINT16_C(0xffff)) {
+        cpu->pc = (uint16_t)(cpu->pc - UINT16_C(3));
+    }
+    cpu->instruction_cycles += UINT64_C(7);
+}
+
 void mipsnes2_cpu_init(mipsnes2_cpu *cpu, mipsnes2_bus_interface bus)
 {
     if (cpu == NULL) {
@@ -1027,11 +1121,28 @@ mipsnes2_cpu_result mipsnes2_cpu_reset(mipsnes2_cpu *cpu)
     high = read8(cpu, UINT32_C(0x00fffd));
     cpu->pc = (uint16_t)(low | (uint16_t)(high << 8));
     cpu->instruction_cycles = 0U;
+    cpu->waiting = false;
+    cpu->clock_stopped = false;
+    cpu->nmi_pending = false;
     cpu->stopped = false;
     cpu->stop_reason = MIPSNES2_CPU_OK;
     cpu->last_opcode = 0U;
     cpu->last_opcode_address = mipsnes2_address_make(cpu->pbr, cpu->pc);
     return MIPSNES2_CPU_OK;
+}
+
+void mipsnes2_cpu_set_irq(mipsnes2_cpu *cpu, bool asserted)
+{
+    if (cpu != NULL) {
+        cpu->irq_level = asserted;
+    }
+}
+
+void mipsnes2_cpu_pulse_nmi(mipsnes2_cpu *cpu)
+{
+    if (cpu != NULL) {
+        cpu->nmi_pending = true;
+    }
 }
 
 mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
@@ -1046,11 +1157,35 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     if (cpu->stopped) {
         return cpu->stop_reason;
     }
+    if (cpu->clock_stopped) {
+        return MIPSNES2_CPU_CLOCK_STOPPED;
+    }
+    if (cpu->nmi_pending) {
+        cpu->waiting = false;
+        cpu->nmi_pending = false;
+        return enter_interrupt(cpu, INTERRUPT_NMI);
+    }
+    if (cpu->irq_level && (cpu->p & MIPSNES2_CPU_FLAG_I) == 0U) {
+        cpu->waiting = false;
+        return enter_interrupt(cpu, INTERRUPT_IRQ);
+    }
+    if (cpu->waiting) {
+        if (!cpu->irq_level) {
+            return MIPSNES2_CPU_WAITING;
+        }
+        cpu->waiting = false;
+    }
 
     cpu->last_opcode_address = mipsnes2_address_make(cpu->pbr, cpu->pc);
     cpu->last_opcode = fetch8(cpu);
 
     switch (cpu->last_opcode) {
+    case 0x00: /* BRK signature */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        (void)fetch8(cpu);
+        return enter_interrupt(cpu, INTERRUPT_BRK);
     case 0x01: /* ORA (direct,X) */
         address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
         logic_accumulator(cpu,
@@ -1058,6 +1193,12 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_OR,
                           direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0x02: /* COP signature */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        (void)fetch8(cpu);
+        return enter_interrupt(cpu, INTERRUPT_COP);
     case 0x03: /* ORA stack-relative */
         address = stack_relative_address(cpu);
         logic_accumulator(
@@ -1472,6 +1613,16 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_AND, UINT64_C(5));
         break;
+    case 0x40: /* RTI */
+        cpu->p = stack_pull8(cpu);
+        apply_mode_invariants(cpu);
+        cpu->pc = stack_pull16(cpu);
+        if (!cpu->emulation) {
+            cpu->pbr = stack_pull8(cpu);
+        }
+        cpu->instruction_cycles += cpu->emulation ? UINT64_C(6)
+                                                   : UINT64_C(7);
+        break;
     case 0x41: /* EOR (direct,X) */
         address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
         logic_accumulator(cpu,
@@ -1479,11 +1630,21 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
                           ACCUMULATOR_LOGIC_XOR,
                           direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
+    case 0x42: /* WDM signature */
+        (void)fetch8(cpu);
+        cpu->instruction_cycles += UINT64_C(2);
+        break;
     case 0x43: /* EOR stack-relative */
         address = stack_relative_address(cpu);
         logic_accumulator(
             cpu, read_accumulator_stack_operand(cpu, (uint16_t)address),
             ACCUMULATOR_LOGIC_XOR, UINT64_C(4));
+        break;
+    case 0x44: /* MVP destination bank, source bank */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        block_move(cpu, true);
         break;
     case 0x45: /* EOR direct */
         address = direct_address(cpu, 0U);
@@ -1587,6 +1748,12 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR, UINT64_C(7));
+        break;
+    case 0x54: /* MVN destination bank, source bank */
+        if (!require_write_bus(cpu)) {
+            return cpu->stop_reason;
+        }
+        block_move(cpu, false);
         break;
     case 0x55: /* EOR direct,X */
         address = direct_address(cpu, cpu->x);
@@ -2337,6 +2504,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     case 0xca: /* DEX */
         change_index(cpu, &cpu->x, false);
         break;
+    case 0xcb: /* WAI */
+        cpu->waiting = true;
+        cpu->instruction_cycles += UINT64_C(3);
+        break;
     case 0xcc: /* CPY absolute */
         address = absolute_address(cpu);
         compare_value(cpu, cpu->y,
@@ -2451,6 +2622,10 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
             stack_push16(cpu, cpu->x);
             cpu->instruction_cycles += UINT64_C(4);
         }
+        break;
+    case 0xdb: /* STP */
+        cpu->clock_stopped = true;
+        cpu->instruction_cycles += UINT64_C(3);
         break;
     case 0xdc: { /* JMP absolute indirect long */
         mipsnes2_address target = read24_bank_zero(cpu, fetch16(cpu));
