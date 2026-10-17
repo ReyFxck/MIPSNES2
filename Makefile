@@ -14,7 +14,9 @@ HOST = $(BUILD_DIR)/mipsnes2-host
 TEST = $(BUILD_DIR)/test-contracts
 TEST_NOLOG = $(BUILD_DIR)/test-contracts-nolog
 TEST_CPU_BUS = $(BUILD_DIR)/test-cpu-bus
-CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu.o
+TEST_SCHEDULER = $(BUILD_DIR)/test-scheduler
+CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu.o \
+	$(BUILD_DIR)/scheduler.o $(BUILD_DIR)/5a22_timing.o
 
 .PHONY: all test check clean
 all: $(HOST)
@@ -29,6 +31,12 @@ $(BUILD_DIR)/bus.o: core/bus/bus.c core/bus/bus.h core/bus/interface.h core/comm
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/cpu.o: core/cpu/65c816/cpu.c core/cpu/65c816/cpu.h core/bus/interface.h core/common/address.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/scheduler.o: core/scheduler/scheduler.c core/scheduler/scheduler.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/5a22_timing.o: core/scheduler/5a22_timing.c core/scheduler/5a22_timing.h core/common/address.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(LIB): $(CORE_OBJS)
@@ -46,16 +54,21 @@ $(TEST_NOLOG): tests/test_contracts.c core/common/log.c core/common/log.h core/c
 $(TEST_CPU_BUS): tests/test_cpu_bus.c core/bus/bus.h core/cpu/65c816/cpu.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_SCHEDULER): tests/test_scheduler.c core/scheduler/scheduler.h core/scheduler/5a22_timing.h core/cpu/65c816/cpu.h core/bus/bus.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_SCHEDULER) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
+	$(TEST_SCHEDULER)
 	$(PYTHON) tests/test_host.py $(HOST)
 
 clean:
 	$(RM) -r $(BUILD_DIR)
 
--include $(BUILD_DIR)/log.d $(BUILD_DIR)/bus.d $(BUILD_DIR)/cpu.d
+-include $(BUILD_DIR)/log.d $(BUILD_DIR)/bus.d $(BUILD_DIR)/cpu.d \
+	$(BUILD_DIR)/scheduler.d $(BUILD_DIR)/5a22_timing.d

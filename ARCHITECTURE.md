@@ -1,7 +1,8 @@
 # Architecture
 
-Status: project foundation plus a 256-opcode 65C816/partial reference-bus milestone, not a
-working SNES emulator. Read [STATUS.md](STATUS.md).
+Status: project foundation plus a 256-opcode 65C816, partial reference bus and
+deterministic scheduler foundation, not a working SNES emulator. Read
+[STATUS.md](STATUS.md).
 
 ## Dependency direction and ownership
 
@@ -19,7 +20,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
-| core/scheduler | Deterministic emulated time and ordered events | Directory only |
+| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks and 5A22 access classifier |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Build probe only |
@@ -29,8 +30,10 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 Directories without source contain an explicit scope README, not stub functions.
 There is no machine instance, ROM runner, renderer or APU. CPU reset implements only
 the documented programmer-visible foundation; complete RESET timing remains open.
-The concrete reference bus does not implement the SNES map. No per-access function-
-pointer design has been benchmarked or selected for final hot paths.
+The concrete reference bus does not implement the SNES map. The scheduler's 5A22
+classifier identifies logical-address access classes but is not yet connected to
+individual CPU bus cycles. No per-access function-pointer design has been benchmarked
+or selected for final hot paths.
 
 ## Memory and interfaces
 
@@ -114,14 +117,23 @@ absolute RMW forms retain their established bank-zero/DBR address rules. The cur
 bus interface exposes final writes and aggregate instruction cycles, not the W65C816
 dummy/modify write sequence or MLB signaling.
 
-## Scheduler and timing proposal
+## Scheduler and timing foundation
 
-A central integer emulated-time scheduler will coordinate CPU, PPU, DMA/HDMA,
-timers, IRQ/NMI, SPC700/DSP and chips. Define timestamp units, rational clock ratios,
-event priority and tie ordering in docs/scheduler.md before implementation. A host
-wall clock must never advance emulated state. Same ROM, initial state and input
-sequence should yield identical state. Timing granularity may evolve with hardware
-evidence; do not scatter magic timing corrections around unrelated modules.
+The caller-owned scheduler uses unsigned 64-bit SNES master-clock timestamps and no
+heap. Its fixed-capacity event queue orders first by timestamp, then caller-supplied
+priority and finally insertion token. A dispatch budget prevents an event callback
+from creating an unbounded same-timestamp loop. Exact rational conversion carries
+integer remainder across calls, avoiding host floating point and chunk-size drift.
+Wall clocks never advance emulated state.
+
+The 5A22 timing classifier returns the documented 6, 8 or 12 master clocks for one
+logical-address access and accepts the FastROM-enable state explicitly. Internal CPU
+cycles are classified as six master clocks. The interpreter currently exposes only
+aggregate W65C816 instruction cycles and meaningful accesses, so adding those values
+would be false precision. CPU dummy/internal cycles, refresh stalls, complete SNES
+mapping, FastROM register ownership, DMA/HDMA arbitration and subsystem priority
+assignment remain future bus/scheduler integration. The event-horizon query exposes
+the next observable boundary without pretending that the CPU can yet stop mid-cycle.
 
 ## Platform-Specific Optimization Architecture
 
@@ -216,6 +228,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   pointer rules. WDC's emulation-mode multi-byte stack exceptions remain distinct
   from ordinary byte-at-a-time page wrapping, and callback-order tests cover JSL
   and JSR `(a,X)` meaningful bus accesses.
+- 2026-10-17: The scheduler foundation uses 64-bit master-clock timestamps, a bounded
+  caller-owned event table, explicit priority plus insertion tie order and exact
+  rational clock remainders. The 5A22 address classifier records 6/8/12-clock access
+  classes separately from the still-incomplete CPU bus-cycle integration.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

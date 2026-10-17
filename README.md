@@ -17,8 +17,8 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 
 ## Current state
 
-**The project has a 256-opcode reference 65C816 interpreter and a partial reference
-bus. It cannot run a SNES ROM.** All opcode values now cover the foundation, the complete register-
+**The project has a 256-opcode reference 65C816 interpreter, a partial reference
+bus and a deterministic scheduler foundation. It cannot run a SNES ROM.** All opcode values now cover the foundation, the complete register-
 transfer and branch families, implied single-flag status controls, accumulator/index
 register increment-decrement operations, complete ORA/AND/EOR/CMP address families,
 a stack-relative foundation, a logic/compare foundation, and complete LDA/STA address
@@ -29,10 +29,13 @@ all jump/subroutine call/return forms, software/hardware interrupt entry, RTI,
 WDM, MVP/MVN and WAI/STP. Deterministic host regressions
 cover widths, flags, cycles, signed branch offsets, program-bank-local PC wrapping,
 Direct Page pointer wrapping, DBR selection and 24-bit bank crossing. Console entry
-points remain build probes, not usable emulators. No PPU, APU, cartridge integration,
+points remain build probes, not usable emulators. The scheduler uses integer SNES
+master-clock timestamps, deterministic event ordering and an exact rational clock
+converter. A 5A22 classifier identifies 6/8/12-master-clock logical address classes,
+but the CPU still lacks per-access timing integration. No PPU, APU, cartridge integration,
 compatibility or performance claim exists.
 
-Current milestone: Phase 2 — 65C816 integration and evidence after complete opcode dispatch.
+Current milestone: Phase 2/4 boundary — 65C816 timing integration and scheduler foundation.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
@@ -45,10 +48,10 @@ All ADC/SBC addressing forms are verified in binary and decimal modes. Decimal
 coverage includes exhaustive valid 8-bit packed-BCD inputs, targeted 16-bit and
 invalid-digit cases, plus an independent SingleStepTests vector audit. The complete
 shift/rotate families and the current memory read-modify-write group are also
-verified. Opcode dispatch is complete, while ABORT, signal-level RESET/bus behavior,
-Ricoh 5A22 timing, scheduler integration and broader independent validation remain.
-The next focused milestone is the central scheduler plus 5A22 interrupt/timing
-integration around the reference interpreter.
+verified. Opcode dispatch and the generic scheduler/event foundation are complete.
+ABORT, signal-level RESET/bus behavior, per-access Ricoh 5A22 timing, full CPU event-
+horizon integration and broader independent validation remain. The next focused
+milestone is the real SNES bus map plus per-access 5A22 CPU timing integration.
 Do not start with a dynarec,
 renderer or enhancement chips.
 
@@ -63,7 +66,7 @@ make test
 ```
 
 Use `make BUILD_DIR=build/clang CC=clang test` for a separate Clang build.
-These test the implemented CPU/bus foundation plus address/logging contracts and
+These test the implemented CPU/bus/scheduler foundation plus address/logging contracts and
 repository consistency. They do not establish complete SNES behavior.
 
 For pinned Linux x86-64 console toolchains see [GitHub setup](docs/github-setup.md).

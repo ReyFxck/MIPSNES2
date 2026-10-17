@@ -26,6 +26,11 @@ address it receives.
 This is not the SNES memory map. WRAM mirrors, cartridge ROM/SRAM, PPU/CPU/APU/DMA
 registers, enhancement windows, side effects and access timing remain unimplemented.
 
+The scheduler foundation now contains a pure 5A22 logical-address classifier for the
+documented 6/8/12-master-clock access classes and FastROM-capable windows. It does
+not make the reference region table a SNES map, own `$420D`, or attach elapsed time
+to CPU callbacks. Full bus timing therefore remains in progress.
+
 ## CPU interface and future fast path
 
 `mipsnes2_bus_interface` remains the CPU-facing reference/test contract. The concrete
@@ -59,5 +64,5 @@ they do not satisfy full mapping/mirror/MMIO timing gates.
 
 The full bus must map WRAM, cartridge ROM/SRAM, PPU, CPU I/O, APU ports, DMA and
 enhancement hardware; model relevant read/write side effects and open-bus domains;
-return/access timing to the scheduler; and benchmark page/block layouts on real PS2
+connect each real access and FastROM state to scheduler time; and benchmark page/block layouts on real PS2
 and PSP. See [STATUS.md](../STATUS.md).

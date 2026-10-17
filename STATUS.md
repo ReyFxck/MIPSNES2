@@ -1,6 +1,7 @@
 # STATUS — canonical project state
 
-Project foundation plus a 256-opcode 65C816/partial reference-bus milestone. No ROM execution,
+Project foundation plus a 256-opcode 65C816, partial reference bus and deterministic
+scheduler/timing foundation. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
 CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
@@ -386,6 +387,18 @@ integration. GitHub Host plus pinned PS2/PSP workflows passed for implementation
 commit `74890c559b428643c787fda71358d2065bcd030f`. Exact evidence is in
 docs/65c816-complete-opcodes-audit.md.
 
+The scheduler foundation milestone on 2026-10-17 adds caller-owned 64-bit master-
+clock time, a bounded deterministic event table, explicit priority/insertion tie
+ordering, cancellation, event horizons and exact rational conversion. A separately
+sourced Ricoh 5A22 classifier identifies 6/8/12-master-clock logical-address access
+classes and FastROM-capable windows. Host GCC debug/release and ASan+UBSan tests pass,
+including repeated traces, long chunked-ratio equivalence, timing boundaries and
+scheduled IRQ/NMI delivery to WAI. The CPU still lacks per-bus-cycle timing, refresh
+stalls and arbitration, so the broad timing/event-horizon tasks remain in progress.
+GitHub Host GCC/Clang plus sanitizers and pinned PS2/PSP cross-build workflows passed
+for implementation commit `e1dc763ad81601bdcfbc44885eee08b2f770dd0d`.
+Exact local/CI evidence and limitations are in docs/scheduler-foundation-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -759,7 +772,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
 - [ ] [IN PROGRESS] Read side effects — direct/MMIO dispatch exists; SNES register effects absent
 - [ ] [IN PROGRESS] Write side effects — direct/MMIO dispatch exists; SNES register effects absent
-- [ ] Access timing
+- [ ] [IN PROGRESS] Access timing — 5A22 6/8/12-clock address classifier exists; bus/CPU cycle integration absent
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — reference-region boundaries tested; SNES mirrors absent
 - [ ] Page/block mapping benchmark
 
@@ -790,17 +803,17 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 
 ## Scheduler
 
-- [ ] Master timestamp units
-- [ ] Clock ratio representation
-- [ ] Event tie ordering
-- [ ] CPU event horizon
+- [x] Master timestamp units — unsigned 64-bit SNES master clocks
+- [x] Clock ratio representation — exact reduced rational with carried remainder
+- [x] Event tie ordering — timestamp, explicit priority, insertion token
+- [ ] [IN PROGRESS] CPU event horizon — next-event query exists; per-access CPU stepping pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
-- [ ] Determinism tests
-- [ ] Long-run clock drift tests
+- [x] Determinism tests — identical scheduler replay traces verified
+- [ ] [IN PROGRESS] Long-run clock drift tests — chunked ratio conversion verified; integrated regional domains pending
 
 ## Interrupts and timers
 
@@ -975,7 +988,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] PPU logic fixtures
 - [ ] SPC700 fixtures
 - [ ] DSP sample fixtures
-- [ ] Scheduler fixtures
+- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes and IRQ/NMI boundary
 - [ ] DMA/HDMA fixtures
 - [ ] Licensed test-ROM runner
 - [ ] Deterministic replay harness
