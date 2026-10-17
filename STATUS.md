@@ -408,11 +408,23 @@ address-dependent clocks for meaningful CPU accesses. An atomic timing bridge
 advances the scheduler and exposes mismatch/overflow errors. Host tests cover map
 boundaries, port side effects, FastROM, mixed-speed instructions and NMI delivery.
 Exact dummy/internal cycle placement, WRAM refresh, DMA/HDMA arbitration, cartridge
-mappers and mid-instruction event pausing remain incomplete. GitHub Host GCC/Clang
-plus sanitizers and pinned PS2/PSP cross-build workflows passed for implementation
+board coverage and mid-instruction event pausing remain incomplete. GitHub Host
+GCC/Clang plus sanitizers and pinned PS2/PSP cross-build workflows passed for implementation
 commit `161aeb647fabce2b2e7ff7667d06b95204829daa`. Exact local/CI evidence and limits
 are in docs/snes-bus-timing-audit.md. No console runtime or performance result is
 claimed.
+
+The base-cartridge milestone on 2026-10-17 adds explicit caller-owned LoROM/HiROM
+ROM/SRAM views, standard base windows, deterministic power-of-two mirrors and a slot
+response contract that preserves the bus latch for undecoded reads. Synthetic host
+tests cover map boundaries, SRAM aliases, ROM write protection, invalid configuration
+and reset/NOP fetch through cartridge, bus, CPU and scheduler. Header detection,
+file loading, irregular/multi-chip boards, Ex mappings, persistence and enhancement
+hardware remain incomplete. GitHub Host GCC/Clang plus sanitizers and pinned PS2/PSP
+cross-build workflows passed for implementation commit
+`f5be6dec1b4fc9ebdf96564fb1736c6fcdcad032`. Exact evidence and limitations are in
+docs/cartridge-foundation-audit.md. No commercial ROM, console runtime, compatibility
+or performance result is claimed.
 
 ## Current blockers and diagnostic exceptions
 

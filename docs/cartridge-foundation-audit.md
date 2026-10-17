@@ -65,9 +65,18 @@ unavailable. GitHub's pinned workflows remain the cross-compiler gate.
 
 ## GitHub Actions
 
-CI run URLs and commit evidence are added only after the Host, PS2 and PSP workflows
-execute. A workflow file is not execution evidence. Cross-compilation is not console
-execution.
+All three pull-request workflows passed for implementation commit
+`f5be6dec1b4fc9ebdf96564fb1736c6fcdcad032`:
+
+- [Host CI run 39072800480](https://github.com/ReyFxck/MIPSNES2/actions/runs/39072800480)
+  — GCC and Clang release/sanitizer jobs succeeded and staged artifacts;
+- [PS2 CI run 39072800463](https://github.com/ReyFxck/MIPSNES2/actions/runs/39072800463)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded;
+- [PSP CI run 39072800446](https://github.com/ReyFxck/MIPSNES2/actions/runs/39072800446)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded.
+
+The documentation-evidence commit must also pass all applicable workflows before
+merge. Cross-compilation is not console execution.
 
 ## Runtime and performance
 
