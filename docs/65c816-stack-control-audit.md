@@ -96,8 +96,14 @@ remain the cross-build gate.
 
 ## GitHub Actions
 
-Pending publication and execution for the milestone branch. Workflow YAML existing
-does not count as verification.
+The first workflow execution for implementation head
+`182c31f40a536b99044a389fade89633c2ab4014` passed all required gates:
+
+- Host CI run `39012857662` — success, including GCC/Clang and sanitizer jobs;
+- PS2 CI run `39012857631` — success with the pinned PS2SDK cross-build;
+- PSP CI run `39012857641` — success with the pinned PSPSDK cross-build.
+
+These are cross-build results, not emulator or real-console runtime validation.
 
 ## Limits
 

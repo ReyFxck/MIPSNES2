@@ -369,10 +369,11 @@ rules, ordinary `01xx` stack wrapping versus WDC's linear multi-byte exceptions,
 Direct Page pointer wrapping and DL timing, aggregate cycles, meaningful JSL/JSR
 `(absolute,X)` callback order/count and missing-write-bus stops before operand fetch.
 Local GCC debug/release and ASan+UBSan tests pass; local PS2SDK/PSPSDK are unavailable,
-so GitHub's pinned cross-build workflows remain the platform build gate. Exact local
-commands, initial resolved documentation-order failures and limitations are recorded
-in docs/65c816-stack-control-audit.md. No console runtime or hardware result is
-claimed.
+so GitHub's pinned cross-build workflows are the platform build gate. GitHub Host
+GCC/Clang plus pinned PS2/PSP workflows passed for implementation head
+`182c31f40a536b99044a389fade89633c2ab4014`. Exact local and CI evidence, initial
+resolved documentation-order failures and limitations are recorded in
+docs/65c816-stack-control-audit.md. No console runtime or hardware result is claimed.
 
 ## Current blockers and diagnostic exceptions
 
