@@ -67,6 +67,13 @@ Final-dispatch regressions cover BRK/COP/RTI/WDM/MVP/MVN/WAI/STP, software and
 hardware interrupt vectors, native/emulation stack layouts, signature bytes,
 block-move repetition and index wrapping, IRQ/NMI wake/priority behavior, STP reset
 release, meaningful bus order and aggregate cycles.
+The scheduler regression executable covers absolute master-clock events, deterministic
+timestamp/priority/insertion ordering, cancellation, capacity, callback insertion,
+dispatch budgets, reentrant-run rejection, event horizons, exact rational conversion,
+overflow handling, chunked/one-shot drift equivalence and 5A22 6/8/12-clock address
+classification. An integration fixture schedules simultaneous IRQ/NMI inputs for a
+waiting CPU and verifies explicit event priority followed by the CPU's NMI priority.
+It does not claim per-access CPU timing or complete SNES interrupt generation.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -154,6 +161,8 @@ Stack push/pull and subroutine-control evidence is recorded in
 [65c816-stack-control-audit.md](65c816-stack-control-audit.md).
 Complete opcode-dispatch and interrupt-boundary evidence is recorded in
 [65c816-complete-opcodes-audit.md](65c816-complete-opcodes-audit.md).
+Scheduler and 5A22 timing-foundation evidence is recorded in
+[scheduler-foundation-audit.md](scheduler-foundation-audit.md).
 
 ## End-of-task audit
 

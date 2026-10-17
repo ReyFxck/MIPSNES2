@@ -1,5 +1,10 @@
 # core/scheduler
 
-Reserved subsystem directory. No emulation implementation exists.
-See the [canonical status](../../STATUS.md) and subsystem design documentation.
-Do not replace this scope marker with success-returning stubs.
+Contains the caller-owned deterministic scheduler foundation, exact integer clock-
+ratio accumulator and Ricoh 5A22 logical-address timing classifier. Events use SNES
+master-clock timestamps and deterministic timestamp/priority/insertion ordering.
+
+This is not complete SNES scheduling. CPU per-access timing, refresh stalls, DMA/
+HDMA ownership, PPU/APU clocks and hardware subsystem tie priorities remain open.
+See [scheduler documentation](../../docs/scheduler.md) and the
+[canonical status](../../STATUS.md).

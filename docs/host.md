@@ -75,3 +75,8 @@ isolation, B preservation, Direct Page bank/DL rules, DBR addressing, linear wor
 and indexed 24-bit carry, adjacent-byte preservation, aggregate cycles and a missing
 write bus that stops before operand fetch. They do not claim bus-cycle dummy writes
 or MLB signaling.
+
+Scheduler regressions cover caller-owned event storage, deterministic ties, horizons,
+cancellation, capacity/error paths, exact rational clocks, repeated traces, the 5A22
+logical-address speed classifier and scheduled IRQ/NMI delivery to the CPU boundary.
+They do not establish full CPU/bus master-clock integration.
