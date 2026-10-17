@@ -77,30 +77,30 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] STP
 - [x] Bank wrapping
 - [x] Direct Page edge cases
-- [ ] [IN PROGRESS] Timing model
+- [ ] [IN PROGRESS] Timing model — meaningful-access 5A22 clocks integrated; exact cycle sequencing pending
 - [x] CPU automated tests for all 256 opcode values
 - [ ] [IN PROGRESS] CPU regression tests — broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — scheduler/5A22 timing and ABORT pending
+- [ ] [IN PROGRESS] Complete interpreter integration — atomic scheduler/5A22 bridge exists; exact cycle boundaries and ABORT pending
 
 ## Phase 3 — Bus and Cartridge
 
 - [ ] Phase 3 exit gate verified
 
-- [ ] WRAM allocation and mapping
-- [ ] Logical 24-bit access integration
-- [ ] Low-bank WRAM mirrors
+- [x] WRAM storage ownership and mapping — caller-owned 128 KiB
+- [x] Logical 24-bit access integration
+- [x] Low-bank WRAM mirrors
 - [ ] ROM fast path
 - [ ] SRAM windows
-- [ ] PPU MMIO routing
-- [ ] CPU I/O routing
-- [ ] APU port routing
-- [ ] DMA register routing
+- [x] PPU MMIO routing — callback route only
+- [x] CPU I/O routing — callback route plus bus-owned `$420D`
+- [x] APU port routing — callback route only
+- [x] DMA register routing — callback route only
 - [ ] Enhancement windows
-- [ ] Open bus behavior
-- [ ] Read side effects
-- [ ] Write side effects
-- [ ] Access timing
-- [ ] Mapping boundaries and mirror tests
+- [ ] [IN PROGRESS] Open bus behavior — deterministic latch only
+- [ ] [IN PROGRESS] Read side effects — WRAM data-port increment only
+- [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` only
+- [ ] [IN PROGRESS] Access timing — meaningful accesses integrated; exact cycle placement/refresh/arbitration pending
+- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — implemented partial map verified; cartridge/SRAM/enhancement pending
 - [ ] Page/block mapping benchmark
 - [ ] ROM loading
 - [ ] ROM metadata
@@ -124,7 +124,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Master timestamp units
 - [x] Clock ratio representation
 - [x] Event tie ordering
-- [ ] [IN PROGRESS] CPU event horizon — next-event query exists; per-access CPU stepping pending
+- [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle pausing pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization

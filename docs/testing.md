@@ -73,7 +73,13 @@ dispatch budgets, reentrant-run rejection, event horizons, exact rational conver
 overflow handling, chunked/one-shot drift equivalence and 5A22 6/8/12-clock address
 classification. An integration fixture schedules simultaneous IRQ/NMI inputs for a
 waiting CPU and verifies explicit event priority followed by the CPU's NMI priority.
-It does not claim per-access CPU timing or complete SNES interrupt generation.
+The SNES-bus regression executable covers 128 KiB WRAM, low-bank mirrors, WRAM
+ports, MMIO callback ranges, cartridge fallthrough, `$420D`, FastROM timing,
+24-bit normalization and counter overflow. Timed CPU fixtures verify a slow NOP,
+mixed FastROM-fetch/slow-WRAM LDA, an event timestamped inside an atomic instruction,
+emulation-mode NMI entry and visible bridge errors. They validate meaningful-access
+timing, not missing dummy cycles, mid-instruction pause/resume, WRAM refresh, complete
+SNES interrupt generation or cartridge mapping.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -163,6 +169,8 @@ Complete opcode-dispatch and interrupt-boundary evidence is recorded in
 [65c816-complete-opcodes-audit.md](65c816-complete-opcodes-audit.md).
 Scheduler and 5A22 timing-foundation evidence is recorded in
 [scheduler-foundation-audit.md](scheduler-foundation-audit.md).
+Partial SNES bus and timed CPU-step evidence is recorded in
+[snes-bus-timing-audit.md](snes-bus-timing-audit.md).
 
 ## End-of-task audit
 

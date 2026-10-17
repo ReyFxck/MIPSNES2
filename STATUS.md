@@ -1,10 +1,11 @@
 # STATUS — canonical project state
 
-Project foundation plus a 256-opcode 65C816, partial reference bus and deterministic
-scheduler/timing foundation. No ROM execution,
+Project foundation plus a 256-opcode 65C816, partial real SNES logical bus and
+deterministic scheduler/timing foundation. No ROM execution,
 complete emulated subsystem, console runtime validation, compatibility result or
 hardware benchmark exists. Read [bootstrap audit](docs/bootstrap-audit.md) and the
-CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md).
+CPU/bus evidence in [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md)
+and [docs/snes-bus-timing-audit.md](docs/snes-bus-timing-audit.md).
 
 ## State and evidence rules
 
@@ -444,10 +445,10 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STP
 - [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
-- [ ] [IN PROGRESS] Timing model — implemented width, Direct DL, indexed, branch/transfer, stack/control, ALU and aggregate read-modify-write timing only
+- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; exact dummy/internal sequencing, refresh and arbitration pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch complete; scheduler/5A22 timing and ABORT pending
+- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch and atomic scheduler/5A22 bridge exist; exact cycle boundaries and ABORT pending
 
 ### Verified 65C816 foundation subset
 
@@ -759,21 +760,21 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 
 ## Bus
 
-- [ ] WRAM allocation and mapping
+- [x] WRAM storage ownership and mapping — caller supplies verified 128 KiB storage
 - [x] Logical 24-bit access integration
-- [ ] Low-bank WRAM mirrors
+- [x] Low-bank WRAM mirrors
 - [ ] ROM fast path
 - [ ] SRAM windows
-- [ ] PPU MMIO routing
-- [ ] CPU I/O routing
-- [ ] APU port routing
-- [ ] DMA register routing
+- [x] PPU MMIO routing — callback route only; PPU registers remain unimplemented
+- [x] CPU I/O routing — callback route plus bus-owned `$420D`; CPU-I/O registers remain incomplete
+- [x] APU port routing — callback route only; APU ports remain unimplemented
+- [x] DMA register routing — callback route only; DMA registers remain unimplemented
 - [ ] Enhancement windows
 - [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
-- [ ] [IN PROGRESS] Read side effects — direct/MMIO dispatch exists; SNES register effects absent
-- [ ] [IN PROGRESS] Write side effects — direct/MMIO dispatch exists; SNES register effects absent
-- [ ] [IN PROGRESS] Access timing — 5A22 6/8/12-clock address classifier exists; bus/CPU cycle integration absent
-- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — reference-region boundaries tested; SNES mirrors absent
+- [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent
+- [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` exist; remaining SNES register effects absent
+- [ ] [IN PROGRESS] Access timing — meaningful accesses use 5A22 6/8/12 clocks and atomic CPU steps advance the scheduler; dummy/internal placement, refresh and arbitration absent
+- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM, mirror, MMIO-route and FastROM boundaries verified; cartridge/SRAM/enhancement maps absent
 - [ ] Page/block mapping benchmark
 
 ### Verified logical-bus foundation subset
@@ -783,6 +784,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Separate MMIO callback slow path
 - [x] Range, overlap and capacity validation
 - [x] Deterministic unmapped fixture behavior
+- [x] Partial SNES-map WRAM, mirror, port, MMIO-route and FastROM fixtures
+- [x] Atomic CPU/scheduler timing integration fixtures
 
 ## Cartridge
 
@@ -806,7 +809,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Master timestamp units — unsigned 64-bit SNES master clocks
 - [x] Clock ratio representation — exact reduced rational with carried remainder
 - [x] Event tie ordering — timestamp, explicit priority, insertion token
-- [ ] [IN PROGRESS] CPU event horizon — next-event query exists; per-access CPU stepping pending
+- [ ] [IN PROGRESS] CPU event horizon — atomic timed CPU steps exist; mid-instruction bus-cycle pausing pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
@@ -988,7 +991,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] PPU logic fixtures
 - [ ] SPC700 fixtures
 - [ ] DSP sample fixtures
-- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes and IRQ/NMI boundary
+- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes, timed CPU steps and IRQ/NMI boundary
 - [ ] DMA/HDMA fixtures
 - [ ] Licensed test-ROM runner
 - [ ] Deterministic replay harness

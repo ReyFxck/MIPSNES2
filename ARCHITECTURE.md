@@ -1,7 +1,7 @@
 # Architecture
 
-Status: project foundation plus a 256-opcode 65C816, partial reference bus and
-deterministic scheduler foundation, not a working SNES emulator. Read
+Status: project foundation plus a 256-opcode 65C816, partial real SNES logical bus
+and deterministic scheduler/timing foundation, not a working SNES emulator. Read
 [STATUS.md](STATUS.md).
 
 ## Dependency direction and ownership
@@ -14,13 +14,13 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
-| core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Fixed reference regions for direct bytes/MMIO test fixtures; no SNES map |
+| core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, mirrors, ports, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Directory only |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
-| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks and 5A22 access classifier |
+| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes and atomic CPU-step bridge |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Build probe only |
@@ -30,9 +30,10 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 Directories without source contain an explicit scope README, not stub functions.
 There is no machine instance, ROM runner, renderer or APU. CPU reset implements only
 the documented programmer-visible foundation; complete RESET timing remains open.
-The concrete reference bus does not implement the SNES map. The scheduler's 5A22
-classifier identifies logical-address access classes but is not yet connected to
-individual CPU bus cycles. No per-access function-pointer design has been benchmarked
+The partial SNES bus is not a complete machine map: it has no cartridge mapper,
+SRAM windows, implemented peripheral registers, enhancement windows or verified
+hardware open-bus domains. It does connect meaningful CPU callbacks to individual
+5A22 address-speed charges. No per-access function-pointer design has been benchmarked
 or selected for final hot paths.
 
 ## Memory and interfaces
@@ -52,10 +53,19 @@ Page/block mapping remains a candidate. Keep rare MMIO separate from common RAM/
 paths. Avoid broad `#ifdef PS2/PSP` in core. No implicit global singleton or target
 physical pointer belongs in CPU state.
 
+The separate `mipsnes2_snes_bus` is the first real machine-map layer. It receives
+caller-owned 128 KiB WRAM, maps banks `7E-7F` plus `00-3F/80-BF:0000-1FFF`, implements
+the `$2180-$2183` WRAM data/address ports, owns `$420D` bit 0, and routes the currently
+defined PPU, APU, CPU-I/O, DMA and cartridge windows to distinct replaceable
+interfaces. Missing routes return one deterministic latch; that is an explicit
+foundation approximation, not a complete open-bus claim. Every read/write normalizes
+to 24 bits and adds the address-dependent master-clock count. Cartridge callbacks
+receive logical addresses and will later implement LoROM/HiROM/SRAM selection.
+
 The CPU's `instruction_cycles` counts completed instruction or block-move-byte base
-cycles only. It is
-not master time; reset timing, 5A22 memory speed, wait states and arbitration remain
-future scheduler/bus work. All 256 byte values dispatch. A defensive unimplemented-
+cycles only; it is not master time. The timing bridge combines it with observed
+address-speed accesses, while reset timing, exact cycle placement, wait states and
+arbitration remain future scheduler/bus work. All 256 byte values dispatch. A defensive unimplemented-
 opcode result remains for decoder refactoring; no opcode silently acts as NOP.
 Program fetch wraps PC inside PBR. Implemented data addressing is linear across the
 24-bit space for absolute/long forms: word accesses and absolute indexing may carry
@@ -127,13 +137,21 @@ integer remainder across calls, avoiding host floating point and chunk-size drif
 Wall clocks never advance emulated state.
 
 The 5A22 timing classifier returns the documented 6, 8 or 12 master clocks for one
-logical-address access and accepts the FastROM-enable state explicitly. Internal CPU
-cycles are classified as six master clocks. The interpreter currently exposes only
-aggregate W65C816 instruction cycles and meaningful accesses, so adding those values
-would be false precision. CPU dummy/internal cycles, refresh stalls, complete SNES
-mapping, FastROM register ownership, DMA/HDMA arbitration and subsystem priority
-assignment remain future bus/scheduler integration. The event-horizon query exposes
-the next observable boundary without pretending that the CPU can yet stop mid-cycle.
+logical-address access and accepts the FastROM-enable state explicitly. The SNES bus
+owns that state and accounts each meaningful CPU read/write. `mipsnes2_cpu_timed_step`
+drains events due at the current boundary, executes one atomic CPU instruction or
+interrupt entry, charges the remaining aggregate WDC cycles as 6-clock internal
+cycles and advances the scheduler by the resulting elapsed master clocks. The bridge
+rejects bus mismatches, counter regressions, access/cycle inconsistencies, overflows
+and scheduler errors instead of hiding them.
+
+This bridge is intentionally partial. The interpreter does not expose all W65C816
+dummy reads/writes, internal-cycle positions or MLB state, so the remaining-cycle
+charge has correct aggregate class only when those missing cycles are internal.
+Events timestamped inside an instruction retain their scheduled timestamp but are
+dispatched after the atomic CPU step; they can affect the following CPU boundary,
+not pause the active instruction. WRAM refresh stalls, DMA/HDMA arbitration,
+complete mapping and simultaneous-subsystem priority remain future work.
 
 ## Platform-Specific Optimization Architecture
 
@@ -232,6 +250,11 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   caller-owned event table, explicit priority plus insertion tie order and exact
   rational clock remainders. The 5A22 address classifier records 6/8/12-clock access
   classes separately from the still-incomplete CPU bus-cycle integration.
+- 2026-10-17: The partial SNES bus maps caller-owned WRAM and low-bank mirrors,
+  implements WRAM ports and `$420D` FastROM state, routes subsystem windows and
+  charges meaningful accesses at 5A22 address speeds. The atomic CPU timing bridge
+  infers only the remaining aggregate internal cycles; exact cycle placement,
+  refresh and bus arbitration remain incomplete rather than silently claimed.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements
