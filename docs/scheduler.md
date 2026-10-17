@@ -17,11 +17,14 @@ Implemented and host-verified behavior:
 - next-event/event-horizon queries;
 - exact rational clock conversion with a carried integer remainder;
 - logical-address classification for 5A22 6/8/12-master-clock accesses;
+- partial SNES-bus accounting for every meaningful CPU callback;
+- an atomic CPU-step bridge that advances the scheduler by the resulting clocks;
 - deterministic replay and CPU IRQ/NMI boundary fixtures.
 
 This is not a complete SNES scheduler. The interpreter does not expose every W65C816
-bus/internal cycle, and the reference bus is not the SNES map. Therefore the code does
-not multiply aggregate instruction cycles by six or claim finished Ricoh 5A22 timing.
+bus/internal cycle, and the partial SNES bus has no cartridge mapper or active
+peripherals. Therefore the bridge distinguishes observed address-speed accesses from
+the remaining aggregate CPU cycles but does not claim exact cycle placement.
 
 ## Event and rollover contract
 
@@ -40,8 +43,9 @@ long-run policies remain explicit future work.
 
 `mipsnes2_scheduler_event_horizon` returns the earlier of the requested time and next
 event. It establishes the API boundary needed to bound CPU work. The current CPU
-cannot yet stop at every bus-cycle boundary, so complete CPU event-horizon integration
-remains in progress.
+cannot yet stop at every bus-cycle boundary. An event inside one atomic timed step is
+dispatched with its exact timestamp after the instruction completes and affects the
+next CPU boundary. Complete CPU event-horizon integration remains in progress.
 
 ## Rational clocks
 
@@ -57,6 +61,13 @@ Low-bank/mirrored WRAM and ordinary ROM/SRAM regions use 8 master clocks; ordina
 I/O uses 6; `$4000-$41FF` in system banks uses 12; FastROM-capable upper ROM windows
 use 6 only when the caller supplies an enabled FastROM state. Internal cycles use 6.
 
+`mipsnes2_snes_bus` now applies that classifier to every meaningful read/write and
+owns `$420D` bit 0. `mipsnes2_cpu_timed_step` snapshots the CPU/bus counters, executes
+one CPU boundary, and subtracts observed accesses from the WDC aggregate cycle count.
+The remainder is charged as 6-clock internal cycles before advancing the scheduler.
+Visible mismatches, counter regressions, overflow and scheduler-budget errors are
+reported. Reset bus accesses are not yet driven through this bridge.
+
 The mapping expectations come from fullsnes' hardware-research sections **SNES Timing
 Oscillators** and **CPU Clock Cycles / SNES Memory Speed**, cross-checked against the
 WDC W65C816S cycle/bus tables. fullsnes identifies the SNES master clocks and the
@@ -65,7 +76,6 @@ SNES-specific memory-speed decoder. No emulator implementation was used.
 
 Still required before total instruction timing is valid:
 
-- the real SNES bus map and FastROM `$420D` ownership;
 - every opcode's program/data/dummy/internal cycle sequence;
 - WRAM refresh stalls;
 - DMA/HDMA bus ownership;
@@ -78,6 +88,9 @@ Still required before total instruction timing is valid:
 capacity, same-time callback insertion, dispatch budgets, time regression, token and
 clock overflow, exact fractional carry, chunked/one-shot drift equivalence, timing-map
 boundaries, identical replay traces and scheduled IRQ/NMI delivery to a waiting CPU.
+`tests/test_snes_bus.c` additionally covers WRAM/MMIO mapping and access timing,
+FastROM transitions, slow and mixed-speed CPU instructions, an event inside an atomic
+instruction, NMI-entry elapsed clocks and timing-bridge error paths.
 
 Future tests must add simultaneous PPU/IRQ/NMI/DMA cases, CPU pause/resume at actual
 bus cycles, scanline/frame boundaries and long regional-clock runs. Same ROM/state/
@@ -91,7 +104,7 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [x] Master timestamp units
 - [x] Clock ratio representation
 - [x] Event tie ordering
-- [ ] [IN PROGRESS] CPU event horizon — query exists; per-bus-cycle CPU bounding pending
+- [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle bounding pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
@@ -107,8 +120,13 @@ Sources:
 - [fullsnes hardware specification](https://problemkaputt.de/fullsnes.htm), sections
   `SNES Timing Oscillators` and `CPU Clock Cycles / SNES Memory Speed`, inspected
   2026-10-17;
+- [Anomie's SNES memory mapping document](https://github.com/gilligan/snesdev/blob/eeb98f1e85b7db6574ca0804455819ec81117198/docs/memmap.txt),
+  pinned at repository revision `eeb98f1e85b7db6574ca0804455819ec81117198`;
 - [WDC W65C816S Datasheet, March 13, 2024](https://www.westerndesigncenter.com/wdc/documentation/w65c816s.pdf),
   timing control, bus-signal descriptions and operation tables.
 
-Intentional approximations: none. The incomplete per-access integration is left
-unimplemented rather than represented by a uniform CPU multiplier.
+Intentional approximation: meaningful callbacks use their actual logical-address
+speed, while aggregate CPU cycles with no callback are temporarily treated as
+6-clock internal cycles. This omits dummy-access addresses and exact within-instruction
+placement. It must be replaced as the CPU exposes complete bus-cycle sequences; it
+must not be used to claim cycle-perfect timing or real-console performance.

@@ -33,6 +33,7 @@ substitute for real PS2 or PSP evidence.
 ## SNES bus, cartridge and registers
 
 - [SNESdev Wiki: memory map](https://snes.nesdev.org/wiki/Memory_map) — WRAM, MMIO, cartridge windows, mirrors and access-speed overview.
+- [Anomie's SNES memory mapping document](https://github.com/gilligan/snesdev/blob/eeb98f1e85b7db6574ca0804455819ec81117198/docs/memmap.txt) — pinned independent hardware-research map used for WRAM, system-bank route and 6/8/12-clock boundaries. Revision `eeb98f1e85b7db6574ca0804455819ec81117198`; review provenance again before importing any asset (no asset is committed).
 - [SNESdev Wiki: ROM header](https://snes.nesdev.org/wiki/ROM_header) — header locations and mapper-related metadata. Header heuristics are not a license for per-game hardcoding.
 - [SNESdev Wiki: ROM file formats](https://snes.nesdev.org/wiki/ROM_file_formats) — copier-header and file-layout context for the future loader.
 - [fullsnes hardware specification](https://problemkaputt.de/fullsnes.htm) — independently written, broad SNES register/timing/mapping reference. It is a hardware document, not an emulator implementation; verify disputed or revision-sensitive details on hardware.
