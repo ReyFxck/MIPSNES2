@@ -51,9 +51,17 @@ Verified locally from `feature/cartridge-sram-persistence` on 2026-10-18:
   LDFLAGS='-fsanitize=address,undefined' clean test` — passed;
 - `python3 tools/check_repository.py` and `git diff --check` — passed.
 
-Local Clang, PS2SDK and PSPSDK are unavailable. GitHub Host/PS2/PSP CI evidence will
-be recorded only after it actually passes. No real PS2/PSP storage device or
-emulator was tested.
+Local Clang, PS2SDK and PSPSDK are unavailable. For implementation commit
+`defebd3bf0ab741639e70a94e08a6fc65d18df0e`, GitHub Actions passed:
+
+- Host CI run `39166009653`: GCC and Clang release, sanitizer and artifact jobs;
+- PS2 CI run `39166009677`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps;
+- PSP CI run `39166009801`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps.
+
+No real PS2/PSP storage device or emulator was tested. These cross-build results do
+not verify runtime persistence.
 
 ## Remaining work
 

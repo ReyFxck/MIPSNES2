@@ -501,9 +501,11 @@ acknowledging a stale revision cannot clear newer dirty data. Generated host tes
 cover aliases, same-value writes, ROM/unmapped writes, stale and matching
 acknowledgements, no-SRAM cartridges and deterministic revision wrap. Local GCC
 default, release and ASan+UBSan suites pass; local Clang and console SDKs are
-unavailable. GitHub cross-build CI remains pending. Platform file loading, durable
-writes, save scheduling and real-device validation remain incomplete. Exact scope is
-in docs/cartridge-sram-persistence-audit.md.
+unavailable. GitHub Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP
+scaffold cross-build, artifact and checksum jobs passed for implementation commit
+`defebd3bf0ab741639e70a94e08a6fc65d18df0e`. Platform file loading, durable writes,
+save scheduling and real-device validation remain incomplete. Exact scope is in
+docs/cartridge-sram-persistence-audit.md.
 
 ## Current blockers and diagnostic exceptions
 
@@ -940,7 +942,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Generic three-candidate selection with explicit ambiguity/no-match
 - [x] Mapper executable-size/alignment confidence gate
 - [x] Platform-neutral image-to-cartridge plan and caller-owned SRAM construction
-- [ ] [IN PROGRESS] Revisioned SRAM dirty-state and exact-acknowledgement handoff — GCC default/release/sanitizer host suites pass; cross-build CI pending
+- [x] Revisioned SRAM dirty-state and exact-acknowledgement handoff
 
 Checksum/selection scope and local verification are recorded in
 [cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md).

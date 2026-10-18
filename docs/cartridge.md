@@ -222,7 +222,7 @@ unchecked until their complete verification gates are met.
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix
 - [ ] Region detection
 - [x] Platform-neutral image-to-cartridge construction contract
-- [ ] [IN PROGRESS] SRAM dirty/revision persistence handoff — GCC default/release/sanitizer host suites pass; cross-build CI pending
+- [x] SRAM dirty/revision persistence handoff
 
 ## Research and decisions
 
