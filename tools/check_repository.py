@@ -6,7 +6,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_DOCS = "README PROJECT_GOALS ARCHITECTURE STATUS ROADMAP PERFORMANCE COMPATIBILITY CONTRIBUTING AGENTS".split()
-DOCS = "65c816 bus ppu spc700 dsp apu dma-hdma scheduler cartridge enhancement-chips ps2 psp host optimization testing debugging github-setup bootstrap-audit 65c816-foundation-audit 65c816-addressing-audit 65c816-direct-page-audit 65c816-direct-indirect-audit 65c816-register-transfer-audit 65c816-special-transfer-audit 65c816-branch-audit 65c816-status-control-audit 65c816-increment-decrement-audit 65c816-logic-compare-audit scheduler-foundation-audit snes-bus-timing-audit cartridge-foundation-audit cartridge-header-analysis-audit".split()
+DOCS = "65c816 bus ppu spc700 dsp apu dma-hdma scheduler cartridge enhancement-chips ps2 psp host optimization testing debugging github-setup bootstrap-audit 65c816-foundation-audit 65c816-addressing-audit 65c816-direct-page-audit 65c816-direct-indirect-audit 65c816-register-transfer-audit 65c816-special-transfer-audit 65c816-branch-audit 65c816-status-control-audit 65c816-increment-decrement-audit 65c816-logic-compare-audit scheduler-foundation-audit snes-bus-timing-audit cartridge-foundation-audit cartridge-header-analysis-audit cartridge-mapper-selection-audit".split()
 REQUIRED_DIRS = "core/cpu/65c816 core/bus core/ppu core/apu/spc700 core/apu/dsp core/dma core/scheduler core/cartridge core/enhancement core/debug core/common platform/ps2 platform/psp platform/host tests tools".split()
 errors = []
 required = [name + ".md" for name in ROOT_DOCS]

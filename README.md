@@ -18,7 +18,7 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 ## Current state
 
 **The project has a 256-opcode reference 65C816 interpreter, a partial real SNES
-logical bus, base LoROM/HiROM mapping, explicit internal-header analysis and a
+logical bus, base LoROM/HiROM mapping, conservative internal-header selection and a
 deterministic scheduler/timing foundation. It cannot run a SNES ROM as a machine.**
 All opcode values now cover the foundation, the complete register-
 transfer and branch families, implied single-flag status controls, accumulator/index
@@ -41,12 +41,13 @@ class. Aggregate CPU cycles not represented by a callback are currently charged 
 DMA/HDMA arbitration and complete open-bus domains remain. The cartridge foundation
 accepts caller-owned, power-of-two ROM/SRAM buffers and implements base LoROM/HiROM
 windows. A separate image view validates 32 KiB-granular payloads, explicitly handles
-optional 512-byte copier prefixes and parses raw LoROM/HiROM internal-header candidates,
-but has no file loader, automatic mapper selection, irregular-size board mapping or
-enhancement hardware. No PPU, APU, ROM runner, compatibility or performance claim
-exists.
+optional 512-byte copier prefixes, calculates the mirrored whole-image checksum and
+can select one base LoROM/HiROM candidate only when independent header evidence agrees.
+No-match and ambiguous images are rejected instead of guessed. There is no file loader,
+irregular-size executable board mapping or enhancement hardware. No PPU, APU, ROM
+runner, compatibility or performance claim exists.
 
-Current milestone: Phase 3/4 boundary — base cartridge and timed logical-bus foundation.
+Current milestone: Phase 3 — cartridge analysis and timed logical-bus foundation.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
@@ -63,8 +64,8 @@ verified. Opcode dispatch and the generic scheduler/event foundation are complet
 Meaningful CPU bus accesses now receive address-dependent Ricoh 5A22 timing through
 the partial SNES map. ABORT, signal-level RESET/bus behavior, exact dummy/internal
 bus sequencing, full CPU event-horizon integration and broader independent validation
-remain. The next focused milestone is evidence-based mapper selection plus irregular
-ROM board/mirroring support.
+remain. The next focused milestone is evidence-backed irregular ROM board/mirroring
+support.
 Do not start with a dynarec,
 renderer or enhancement chips.
 

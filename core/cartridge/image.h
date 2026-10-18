@@ -29,7 +29,10 @@ typedef enum {
     MIPSNES2_CARTRIDGE_IMAGE_MALFORMED_SIZE,
     MIPSNES2_CARTRIDGE_IMAGE_COPIER_HEADER_FORBIDDEN,
     MIPSNES2_CARTRIDGE_IMAGE_COPIER_HEADER_REQUIRED,
-    MIPSNES2_CARTRIDGE_IMAGE_HEADER_OUT_OF_RANGE
+    MIPSNES2_CARTRIDGE_IMAGE_HEADER_OUT_OF_RANGE,
+    MIPSNES2_CARTRIDGE_IMAGE_SIZE_OVERFLOW,
+    MIPSNES2_CARTRIDGE_IMAGE_NO_CONFIDENT_HEADER,
+    MIPSNES2_CARTRIDGE_IMAGE_AMBIGUOUS_HEADER
 } mipsnes2_cartridge_image_result;
 
 typedef enum {
@@ -67,6 +70,28 @@ typedef struct {
     bool declared_sram_size_representable;
 } mipsnes2_cartridge_header;
 
+typedef struct {
+    mipsnes2_cartridge_header header;
+    uint16_t calculated_checksum;
+    size_t mirrored_size;
+    bool header_available;
+    bool map_mode_matches;
+    bool base_chipset_supported;
+    bool reset_vector_in_rom;
+    bool declared_rom_size_matches;
+    bool declared_sram_size_supported;
+    bool checksum_layout_unambiguous;
+    bool checksum_matches;
+    bool confident;
+} mipsnes2_cartridge_header_candidate;
+
+typedef struct {
+    mipsnes2_cartridge_header_candidate lorom;
+    mipsnes2_cartridge_header_candidate hirom;
+    /* Valid only when selection returns MIPSNES2_CARTRIDGE_IMAGE_OK. */
+    mipsnes2_cartridge_mapper selected_mapper;
+} mipsnes2_cartridge_header_selection;
+
 mipsnes2_cartridge_image_result mipsnes2_cartridge_image_view_init(
     mipsnes2_cartridge_image_view *view,
     const uint8_t *source,
@@ -76,5 +101,13 @@ mipsnes2_cartridge_image_result mipsnes2_cartridge_header_parse(
     const mipsnes2_cartridge_image_view *view,
     mipsnes2_cartridge_mapper candidate_mapper,
     mipsnes2_cartridge_header *header);
+mipsnes2_cartridge_image_result mipsnes2_cartridge_checksum_calculate(
+    const mipsnes2_cartridge_image_view *view,
+    mipsnes2_cartridge_mapper candidate_mapper,
+    uint16_t *checksum,
+    size_t *mirrored_size);
+mipsnes2_cartridge_image_result mipsnes2_cartridge_select_base_mapper(
+    const mipsnes2_cartridge_image_view *view,
+    mipsnes2_cartridge_header_selection *selection);
 
 #endif

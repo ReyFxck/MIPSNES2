@@ -830,16 +830,16 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 ## Cartridge
 
 - [ ] ROM loading
-- [ ] [IN PROGRESS] ROM metadata — standard raw internal-header fields parsed; extended variants and hardware resolution absent
-- [ ] [IN PROGRESS] Header analysis — explicit LoROM/HiROM candidate parsing verified; automatic evidence-based selection absent
-- [ ] [IN PROGRESS] LoROM — explicit power-of-two base ROM/SRAM mapping verified; irregular boards and detection absent
-- [ ] [IN PROGRESS] HiROM — explicit power-of-two base ROM/SRAM mapping verified; irregular boards and detection absent
+- [ ] [IN PROGRESS] ROM metadata — standard raw fields and conservative base-map evidence parsed; extended variants/hardware resolution absent
+- [ ] [IN PROGRESS] Header analysis — conservative base LoROM/HiROM selection verified; extended/variant headers absent
+- [ ] [IN PROGRESS] LoROM — power-of-two base ROM/SRAM mapping and conservative detection verified; executable irregular boards absent
+- [ ] [IN PROGRESS] HiROM — power-of-two base ROM/SRAM mapping and conservative detection verified; executable irregular boards absent
 - [ ] ExLoROM
 - [ ] ExHiROM
 - [ ] [IN PROGRESS] SRAM — caller-owned base mapper windows/read/write verified; persistence and broader boards absent
 - [ ] SRAM persistence
-- [ ] [IN PROGRESS] Mapper tests — synthetic base LoROM/HiROM boundaries, mirrors, SRAM and bus/CPU integration covered
-- [ ] [IN PROGRESS] Checksum handling where useful — complement-pair validation exists; full image checksum absent
+- [ ] [IN PROGRESS] Mapper tests — synthetic maps, checksum, selection, ambiguity and bus/CPU integration covered; irregular/Ex/enhancement execution absent
+- [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board checksum variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config, image granularity and candidate bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection
@@ -859,6 +859,16 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Overflow-safe declared ROM/SRAM size decoding
 - [x] Checksum/complement relationship and base map-mode classification
 - [x] Malformed image-size and out-of-range candidate rejection
+- [x] Whole-payload checksum with candidate fields normalized and copier prefix excluded
+- [x] Unambiguous two-region power-of-two checksum mirroring
+- [x] Conservative base LoROM/HiROM evidence gates
+- [x] Explicit no-confident-header and ambiguous-header results
+- [x] Selection independent of title text and guessed reset opcode
+
+Checksum/selection scope and local verification are recorded in
+[cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md).
+Special checksum conventions, padded irregular layouts, extended headers and
+executable irregular boards remain unchecked.
 
 ## Scheduler
 
