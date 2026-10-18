@@ -459,10 +459,12 @@ bank-aligned images formed from one larger power-of-two region followed by one s
 power-of-two tail. Initialization precomputes the mirror span; padded and board-specific
 layouts are rejected. Generated host fixtures cover 96/160 KiB LoROM, 192 KiB HiROM,
 tail repetition, span wrap, alignment/rejection and selected-header-to-mapper setup.
-Local GCC default/release and ASan+UBSan tests pass. Local Clang and console SDKs are
-unavailable; GitHub Host/PS2/PSP CI is pending for the published commit. Exact evidence
-and limitations are in docs/cartridge-irregular-mapping-audit.md. No console runtime,
-compatibility or performance result is claimed.
+Local GCC default/release and ASan+UBSan tests pass. Local Clang and console SDKs were
+unavailable. GitHub Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP
+scaffold cross-build, artifact and checksum jobs passed for implementation commit
+`2d9f03bb51dbb4248685e91fdfa61f85df28ffd3`. Exact evidence and limitations are in
+docs/cartridge-irregular-mapping-audit.md. No console runtime, compatibility or
+performance result is claimed.
 
 ## Current blockers and diagnostic exceptions
 

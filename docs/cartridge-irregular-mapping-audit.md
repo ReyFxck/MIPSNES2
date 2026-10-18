@@ -64,8 +64,19 @@ Local verification used GCC 13.3.0 on 2026-10-18:
 The cartridge suites reported `PASS: base LoROM/HiROM power-of-two and irregular
 mapping` and `PASS: cartridge image checksum and base-mapper selection`. Local Clang
 was unavailable. Local PS2 and PSP cross-builds were unavailable because `PS2SDK`
-was unset and `psp-config` was absent. GitHub Host/PS2/PSP CI remains the required
-cross-compiler gate and will be recorded after it executes for the published commit.
+was unset and `psp-config` was absent.
+
+GitHub Actions passed for implementation commit
+`2d9f03bb51dbb4248685e91fdfa61f85df28ffd3`:
+
+| Workflow | Run | Verified result |
+|---|---:|---|
+| Host CI | [39140080472](https://github.com/ReyFxck/MIPSNES2/actions/runs/39140080472) | GCC and Clang release tests, ASan+UBSan tests and artifact upload passed |
+| PS2 CI | [39140080489](https://github.com/ReyFxck/MIPSNES2/actions/runs/39140080489) | Pinned toolchain install, scaffold cross-build, artifact and SHA-256 staging/upload passed |
+| PSP CI | [39140080624](https://github.com/ReyFxck/MIPSNES2/actions/runs/39140080624) | Pinned toolchain install, scaffold cross-build, artifact and SHA-256 staging/upload passed |
+
+These are compilation and deterministic host-test results. No PCSX2, PPSSPP, real
+PS2 or real PSP runtime test was performed.
 
 ## Remaining work
 
