@@ -10,13 +10,22 @@ buffers. The first cartridge foundation now provides:
 - explicit base LoROM or HiROM selection by the caller;
 - standard base mapping windows and deterministic power-of-two mirrors;
 - configuration/size rejection and synthetic host tests;
-- integration through the SNES bus into CPU reset/fetch/timing.
+- integration through the SNES bus into CPU reset/fetch/timing;
+- an immutable image view with explicit 512-byte copier-prefix policy;
+- raw internal-header parsing at a caller-selected LoROM or HiROM candidate.
 
-There is no file loader, header parser or automatic mapper detector. Supported base
+There is no file loader or automatic mapper detector. Supported base
 ROM sizes are powers of two from 32 KiB for LoROM or 64 KiB for HiROM through 4 MiB.
 Supported SRAM is zero or a power of two up to 512 KiB for the LoROM address window
 and 256 KiB for HiROM. These limits avoid pretending that one modulo rule describes
 irregular multi-chip boards.
+
+Image analysis accepts a payload made from one or more 32 KiB units, independently
+of whether the current base mapper can execute that layout. A source may be clean or
+may contain exactly one 512-byte prefix. The caller selects `detect`, `reject` or
+`require`; the view retains both source size and payload offset without copying.
+Other remainders are rejected as malformed. This is a deliberately narrow policy,
+not a claim that every historical copier format used identical metadata.
 
 ## Design direction
 
@@ -28,6 +37,20 @@ game-specific mapping. Platform filesystem code must remain outside `core/`.
 The slot returns `false` when the selected cartridge hardware does not decode an
 address. The SNES bus then preserves its open latch. ROM writes report a decoded
 address but do not modify bytes; SRAM writes update the caller's buffer.
+
+### Internal-header candidate analysis
+
+The parser reads the 64-byte block beginning at payload offset `$7FC0` for an explicit
+LoROM candidate or `$FFC0` for an explicit HiROM candidate. It returns the raw 21-byte
+title, map mode, chipset, ROM/SRAM size exponents, destination code, developer ID,
+version, checksum/complement and emulation-mode reset vector. Declared sizes are
+decoded only when representable by `size_t`; exponent zero means no declared SRAM.
+
+Map-mode classification recognizes only base `20h/30h` LoROM and `21h/31h` HiROM.
+Everything else remains `OTHER`, including enhancement and Ex mapping values. The
+parser reports whether checksum and complement XOR to `FFFFh`; it does not yet sum
+the image. Parsing a candidate does not endorse it. Candidate scoring, automatic
+selection, extended-header interpretation and hardware resolution remain future work.
 
 ### Base LoROM subset
 
@@ -52,6 +75,12 @@ mapped/unmapped boundaries; SRAM aliases/read/write; ROM write protection; 24-bi
 normalization; open-latch preservation; and CPU reset/NOP through the integrated
 cartridge bus. It proves explicit mapping, not header detection or file loading.
 
+`tests/test_cartridge_image.c` covers clean, prefixed, required and rejected prefix
+policies; malformed granularities; 96 KiB analysis independent of mapper support;
+LoROM/HiROM offsets; all currently exposed fields; size-exponent overflow; checksum
+pair classification; wrong-candidate neutrality; and truncated candidate rejection.
+It proves deterministic parsing, not automatic mapper selection.
+
 Future detection tests must be independent of ROM titles. SRAM persistence needs
 explicit save/error behavior and platform tests.
 
@@ -61,8 +90,8 @@ Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Partial items r
 unchecked until their complete verification gates are met.
 
 - [ ] ROM loading
-- [ ] ROM metadata
-- [ ] Header analysis
+- [ ] [IN PROGRESS] ROM metadata — standard raw fields only
+- [ ] [IN PROGRESS] Header analysis — explicit candidates only
 - [ ] [IN PROGRESS] LoROM — explicit power-of-two base map verified
 - [ ] [IN PROGRESS] HiROM — explicit power-of-two base map verified
 - [ ] ExLoROM
@@ -70,9 +99,9 @@ unchecked until their complete verification gates are met.
 - [ ] [IN PROGRESS] SRAM — base mapper read/write windows verified
 - [ ] SRAM persistence
 - [ ] [IN PROGRESS] Mapper tests — synthetic base suite exists
-- [ ] Checksum handling where useful
-- [ ] [IN PROGRESS] Truncated and malformed input rejection — config/size validation only
-- [ ] Copier-header policy
+- [ ] [IN PROGRESS] Checksum handling where useful — complement pair only
+- [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds only
+- [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix
 - [ ] Region detection
 
 ## Research and decisions
@@ -86,9 +115,16 @@ Sources:
   2026-10-17, describes the 32 KiB LoROM and 64 KiB HiROM address-line wiring;
 - [The SNES Cartridge, Briefly Explained](https://mousebitelabs.com/2019/05/18/custom-pcb-explanation/),
   inspected 2026-10-17, supplies an independent hardware-board/decoder cross-check.
+- [fullsnes cartridge ROM header specification](https://problemkaputt.de/fullsnes.htm#snescartridgeromheader),
+  inspected 2026-10-17, documents candidate offsets, the 512-byte image-prefix rule,
+  standard fields, size encoding, checksum pair, map modes and vectors;
+- [SNESdev Wiki ROM header](https://snes.nesdev.org/wiki/ROM_header) and
+  [ROM file formats](https://snes.nesdev.org/wiki/ROM_file_formats), inspected
+  2026-10-17, provide an independent research cross-check for the file/header boundary.
 
 No emulator implementation was consulted or copied.
 
-Intentional limitation: non-power-of-two/multi-chip ROM layouts are rejected rather
-than approximated. Header detection, copier-header stripping, Ex mappings and special
-boards must add evidence and fixtures before those tasks can be promoted.
+Intentional limitation: non-power-of-two/multi-chip ROM layouts can be inspected but
+are rejected by the current mapper rather than approximated. Automatic candidate
+selection, extended/variant header interpretation, Ex mappings and special boards
+must add evidence and fixtures before those tasks can be promoted.

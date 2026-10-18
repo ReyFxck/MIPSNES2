@@ -103,8 +103,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO and power-of-two base cartridge maps verified; irregular/Ex/enhancement pending
 - [ ] Page/block mapping benchmark
 - [ ] ROM loading
-- [ ] ROM metadata
-- [ ] Header analysis
+- [ ] [IN PROGRESS] ROM metadata — standard raw internal-header fields parsed; extended variants and hardware resolution pending
+- [ ] [IN PROGRESS] Header analysis — explicit LoROM/HiROM candidates parsed; automatic evidence-based selection pending
 - [ ] [IN PROGRESS] LoROM — explicit power-of-two base mapping verified
 - [ ] [IN PROGRESS] HiROM — explicit power-of-two base mapping verified
 - [ ] ExLoROM
@@ -112,9 +112,9 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] SRAM — base mapper windows/read/write verified; persistence pending
 - [ ] SRAM persistence
 - [ ] [IN PROGRESS] Mapper tests — synthetic base LoROM/HiROM suite exists
-- [ ] Checksum handling where useful
-- [ ] [IN PROGRESS] Truncated and malformed input rejection — config/size validation only
-- [ ] Copier-header policy
+- [ ] [IN PROGRESS] Checksum handling where useful — checksum/complement pair validation only
+- [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds covered; file I/O absent
+- [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection
 
 ## Phase 4 — Scheduler / IRQ / NMI / DMA / HDMA
