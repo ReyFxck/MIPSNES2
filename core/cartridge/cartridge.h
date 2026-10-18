@@ -39,6 +39,8 @@ typedef struct {
 typedef struct {
     const uint8_t *rom;
     size_t rom_size;
+    size_t rom_first_size;
+    size_t rom_mirror_span;
     uint8_t *sram;
     size_t sram_size;
     mipsnes2_cartridge_mapper mapper;

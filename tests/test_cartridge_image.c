@@ -400,6 +400,8 @@ static int test_selection_prefix_irregular_and_ambiguity(void)
 {
     mipsnes2_cartridge_image_view view;
     mipsnes2_cartridge_header_selection selection;
+    mipsnes2_cartridge cartridge;
+    mipsnes2_cartridge_config config;
     uint16_t checksum;
     size_t mirrored_size;
 
@@ -433,6 +435,15 @@ static int test_selection_prefix_irregular_and_ambiguity(void)
     CHECK(selection.selected_mapper == MIPSNES2_CARTRIDGE_LOROM);
     CHECK(selection.lorom.mirrored_size == (size_t)(128 * 1024));
     CHECK(selection.lorom.checksum_layout_unambiguous);
+    config.rom = view.data;
+    config.rom_size = view.size;
+    config.sram = NULL;
+    config.sram_size = 0U;
+    config.mapper = selection.selected_mapper;
+    CHECK(mipsnes2_cartridge_init(&cartridge, &config) ==
+          MIPSNES2_CARTRIDGE_OK);
+    CHECK(cartridge.rom_first_size == (size_t)(64 * 1024));
+    CHECK(cartridge.rom_mirror_span == (size_t)(128 * 1024));
 
     (void)memset(clean_image, 0, sizeof(clean_image));
     populate_header(clean_image, MIPSNES2_LOROM_HEADER_OFFSET,

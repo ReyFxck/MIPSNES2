@@ -39,13 +39,14 @@ FastROM selection, and charges each meaningful CPU access at its 5A22 6/8/12-clo
 class. Aggregate CPU cycles not represented by a callback are currently charged as
 6-clock internal cycles. Exact dummy/internal cycle placement, WRAM refresh,
 DMA/HDMA arbitration and complete open-bus domains remain. The cartridge foundation
-accepts caller-owned, power-of-two ROM/SRAM buffers and implements base LoROM/HiROM
-windows. A separate image view validates 32 KiB-granular payloads, explicitly handles
+accepts caller-owned ROM/SRAM buffers and implements base LoROM/HiROM windows for
+power-of-two images plus unambiguous larger-region/smaller-tail layouts. A separate
+image view validates 32 KiB-granular payloads, explicitly handles
 optional 512-byte copier prefixes, calculates the mirrored whole-image checksum and
 can select one base LoROM/HiROM candidate only when independent header evidence agrees.
 No-match and ambiguous images are rejected instead of guessed. There is no file loader,
-irregular-size executable board mapping or enhancement hardware. No PPU, APU, ROM
-runner, compatibility or performance claim exists.
+padded/board-specific irregular mapping, Ex mapping or enhancement hardware. No PPU,
+APU, ROM runner, compatibility or performance claim exists.
 
 Current milestone: Phase 3 — cartridge analysis and timed logical-bus foundation.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and
@@ -64,8 +65,8 @@ verified. Opcode dispatch and the generic scheduler/event foundation are complet
 Meaningful CPU bus accesses now receive address-dependent Ricoh 5A22 timing through
 the partial SNES map. ABORT, signal-level RESET/bus behavior, exact dummy/internal
 bus sequencing, full CPU event-horizon integration and broader independent validation
-remain. The next focused milestone is evidence-backed irregular ROM board/mirroring
-support.
+remain. The next focused milestone is extended-header analysis plus an evidence-backed
+ExLoROM/ExHiROM design.
 Do not start with a dynarec,
 renderer or enhancement chips.
 

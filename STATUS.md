@@ -9,7 +9,10 @@ compatibility result or hardware benchmark exists. Read
 [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md)
 and [docs/snes-bus-timing-audit.md](docs/snes-bus-timing-audit.md), plus the
 [base-cartridge audit](docs/cartridge-foundation-audit.md) and
-[header-analysis audit](docs/cartridge-header-analysis-audit.md).
+[header-analysis audit](docs/cartridge-header-analysis-audit.md). Checksum/selection
+and executable irregular-map evidence are recorded in
+[docs/cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md)
+and [docs/cartridge-irregular-mapping-audit.md](docs/cartridge-irregular-mapping-audit.md).
 
 ## State and evidence rules
 
@@ -451,6 +454,18 @@ ambiguous layouts, extended headers and special checksum conventions remain inco
 Exact evidence is in docs/cartridge-mapper-selection-audit.md. No console runtime,
 compatibility or performance result is claimed.
 
+The executable irregular-map milestone on 2026-10-18 extends the base mapper only to
+bank-aligned images formed from one larger power-of-two region followed by one smaller
+power-of-two tail. Initialization precomputes the mirror span; padded and board-specific
+layouts are rejected. Generated host fixtures cover 96/160 KiB LoROM, 192 KiB HiROM,
+tail repetition, span wrap, alignment/rejection and selected-header-to-mapper setup.
+Local GCC default/release and ASan+UBSan tests pass. Local Clang and console SDKs were
+unavailable. GitHub Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP
+scaffold cross-build, artifact and checksum jobs passed for implementation commit
+`2d9f03bb51dbb4248685e91fdfa61f85df28ffd3`. Exact evidence and limitations are in
+docs/cartridge-irregular-mapping-audit.md. No console runtime, compatibility or
+performance result is claimed.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -825,7 +840,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` exist; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Access timing — meaningful accesses use 5A22 6/8/12 clocks and atomic CPU steps advance the scheduler; dummy/internal placement, refresh and arbitration absent
-- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO plus power-of-two base LoROM/HiROM/SRAM boundaries verified; irregular/Ex/enhancement maps absent
+- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO plus power-of-two and unambiguous two-region base LoROM/HiROM boundaries verified; padded/Ex/enhancement maps absent
 - [ ] Page/block mapping benchmark
 
 ### Verified logical-bus foundation subset
@@ -844,13 +859,13 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] ROM loading
 - [ ] [IN PROGRESS] ROM metadata — standard raw fields and conservative base-map evidence parsed; extended variants/hardware resolution absent
 - [ ] [IN PROGRESS] Header analysis — conservative base LoROM/HiROM selection verified; extended/variant headers absent
-- [ ] [IN PROGRESS] LoROM — power-of-two base ROM/SRAM mapping and conservative detection verified; executable irregular boards absent
-- [ ] [IN PROGRESS] HiROM — power-of-two base ROM/SRAM mapping and conservative detection verified; executable irregular boards absent
+- [ ] [IN PROGRESS] LoROM — power-of-two and unambiguous two-region base ROM mapping, base SRAM and conservative detection verified; broader boards absent
+- [ ] [IN PROGRESS] HiROM — power-of-two and unambiguous two-region base ROM mapping, base SRAM and conservative detection verified; broader boards absent
 - [ ] ExLoROM
 - [ ] ExHiROM
 - [ ] [IN PROGRESS] SRAM — caller-owned base mapper windows/read/write verified; persistence and broader boards absent
 - [ ] SRAM persistence
-- [ ] [IN PROGRESS] Mapper tests — synthetic maps, checksum, selection, ambiguity and bus/CPU integration covered; irregular/Ex/enhancement execution absent
+- [ ] [IN PROGRESS] Mapper tests — synthetic power-of-two/irregular maps, checksum, selection, ambiguity and bus/CPU integration covered; padded/Ex/enhancement execution absent
 - [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board checksum variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config, image granularity and candidate bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
@@ -876,11 +891,16 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Conservative base LoROM/HiROM evidence gates
 - [x] Explicit no-confident-header and ambiguous-header results
 - [x] Selection independent of title text and guessed reset opcode
+- [x] Larger-first/smaller-tail base ROM mirroring for unambiguous layouts
+- [x] Mapper-bank alignment and padding-dependent layout rejection
+- [x] Header-selection to irregular-mapper initialization fixture
 
 Checksum/selection scope and local verification are recorded in
 [cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md).
-Special checksum conventions, padded irregular layouts, extended headers and
-executable irregular boards remain unchecked.
+Executable irregular-map scope and verification are recorded in
+[cartridge-irregular-mapping-audit.md](docs/cartridge-irregular-mapping-audit.md).
+Special checksum conventions, padded and board-specific irregular layouts, extended
+headers, Ex mappings and enhancement hardware remain unchecked.
 
 ## Scheduler
 
