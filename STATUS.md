@@ -439,6 +439,18 @@ pinned PS2/PSP cross-build workflows passed for implementation commit
 `add0e83ae5c5aee1680794ea420314cac3aa2b57`. Exact evidence and limitations are in
 docs/cartridge-header-analysis-audit.md. No commercial ROM or runtime result is claimed.
 
+The checksum/base-selection milestone on 2026-10-18 adds normalized whole-payload
+checksums, unambiguous smaller-tail mirroring and conservative base LoROM/HiROM
+selection. Map mode, base chipset, RESET vector, declared sizes, complement and actual
+checksum must all agree; no-match and dual-valid ambiguity are explicit. Synthetic
+tests cover each gate without title/opcode scoring or commercial data. Host GCC/Clang
+release and sanitizer jobs plus pinned PS2/PSP scaffold cross-build, artifact and
+checksum jobs passed for implementation commit
+`b394209825d6c78ed2e08f86d7c142158e52ba6c`. Executable irregular boards, padded
+ambiguous layouts, extended headers and special checksum conventions remain incomplete.
+Exact evidence is in docs/cartridge-mapper-selection-audit.md. No console runtime,
+compatibility or performance result is claimed.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped

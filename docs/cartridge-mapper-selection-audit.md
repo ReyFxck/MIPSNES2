@@ -82,9 +82,23 @@ environment restriction. Clang was unavailable.
 
 Local `make -C platform/ps2 clean all` stopped before compilation because `PS2SDK`
 was unset. Local `make -C platform/psp clean all` stopped before compilation because
-`psp-config` was unavailable. GitHub Actions evidence is added only after the remote
-workflows actually complete. No runtime or performance claim is implied by host tests
+`psp-config` was unavailable. No runtime or performance claim is implied by host tests
 or cross-compilation.
+
+## GitHub Actions
+
+All three pull-request workflows passed for implementation commit
+`b394209825d6c78ed2e08f86d7c142158e52ba6c`:
+
+- [Host CI run 39139163385](https://github.com/ReyFxck/MIPSNES2/actions/runs/39139163385)
+  — GCC and Clang release/sanitizer jobs succeeded and staged artifacts;
+- [PS2 CI run 39139163219](https://github.com/ReyFxck/MIPSNES2/actions/runs/39139163219)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded;
+- [PSP CI run 39139163241](https://github.com/ReyFxck/MIPSNES2/actions/runs/39139163241)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded.
+
+The documentation-evidence commit must also pass all applicable workflows before
+merge. Cross-compilation is not console execution.
 
 ## Runtime and performance
 
