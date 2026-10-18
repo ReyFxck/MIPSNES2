@@ -109,14 +109,15 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] HiROM — power-of-two and unambiguous two-region base mapping plus conservative detection verified; broader boards pending
 - [ ] ExLoROM — unofficial mapping remains research-only
 - [ ] [IN PROGRESS] ExHiROM — Mode 25/35 ROM/SRAM mapping and selection verified; board/runtime validation pending
-- [ ] [IN PROGRESS] SRAM — base mapper windows/read/write verified; persistence pending
-- [ ] SRAM persistence
+- [ ] [IN PROGRESS] SRAM — mapper windows/read/write and revisioned dirty tracking verified; broader boards pending
+- [ ] [IN PROGRESS] SRAM persistence — shared revision/acknowledgement handoff verified; platform file backends absent
 - [ ] [IN PROGRESS] Mapper tests — synthetic base/irregular/ExHiROM map, checksum, selection and ambiguity suite exists; broader boards pending
 - [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board variants pending
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection
 - [x] Platform-neutral image-to-cartridge construction contract
+- [x] SRAM dirty/revision persistence handoff
 
 ## Phase 4 — Scheduler / IRQ / NMI / DMA / HDMA
 

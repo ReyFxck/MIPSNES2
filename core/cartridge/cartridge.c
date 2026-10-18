@@ -267,7 +267,17 @@ bool mipsnes2_cartridge_write(mipsnes2_cartridge *cartridge,
     }
     address = mipsnes2_address24(address);
     if (sram_offset(cartridge, address, &offset)) {
-        cartridge->sram[offset & (cartridge->sram_size - 1U)] = value;
+        uint8_t *target = &cartridge->sram[
+            offset & (cartridge->sram_size - 1U)];
+
+        if (*target != value) {
+            *target = value;
+            cartridge->sram_revision++;
+            if (cartridge->sram_revision == 0U) {
+                cartridge->sram_revision = 1U;
+            }
+            cartridge->sram_dirty = true;
+        }
         return true;
     }
     return rom_offset(cartridge, address, &offset);
@@ -298,4 +308,31 @@ mipsnes2_cartridge_interface mipsnes2_cartridge_make_interface(
     interface.read8 = cartridge != NULL ? interface_read : NULL;
     interface.write8 = cartridge != NULL ? interface_write : NULL;
     return interface;
+}
+
+bool mipsnes2_cartridge_sram_view_get(
+    const mipsnes2_cartridge *cartridge,
+    mipsnes2_cartridge_sram_view *view)
+{
+    if (cartridge == NULL || view == NULL || cartridge->rom == NULL ||
+        (cartridge->sram_size != 0U && cartridge->sram == NULL)) {
+        return false;
+    }
+    view->data = cartridge->sram;
+    view->size = cartridge->sram_size;
+    view->revision = cartridge->sram_revision;
+    view->dirty = cartridge->sram_dirty;
+    return true;
+}
+
+bool mipsnes2_cartridge_sram_acknowledge(
+    mipsnes2_cartridge *cartridge,
+    uint64_t revision)
+{
+    if (cartridge == NULL || cartridge->rom == NULL ||
+        revision != cartridge->sram_revision) {
+        return false;
+    }
+    cartridge->sram_dirty = false;
+    return true;
 }
