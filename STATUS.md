@@ -420,13 +420,24 @@ The base-cartridge milestone on 2026-10-17 adds explicit caller-owned LoROM/HiRO
 ROM/SRAM views, standard base windows, deterministic power-of-two mirrors and a slot
 response contract that preserves the bus latch for undecoded reads. Synthetic host
 tests cover map boundaries, SRAM aliases, ROM write protection, invalid configuration
-and reset/NOP fetch through cartridge, bus, CPU and scheduler. Header detection,
-file loading, irregular/multi-chip boards, Ex mappings, persistence and enhancement
-hardware remain incomplete. GitHub Host GCC/Clang plus sanitizers and pinned PS2/PSP
-cross-build workflows passed for implementation commit
+and reset/NOP fetch through cartridge, bus, CPU and scheduler. Automatic mapper
+selection, file loading, irregular/multi-chip boards, Ex mappings, persistence and
+enhancement hardware remain incomplete. GitHub Host GCC/Clang plus sanitizers and
+pinned PS2/PSP cross-build workflows passed for implementation commit
 `f5be6dec1b4fc9ebdf96564fb1736c6fcdcad032`. Exact evidence and limitations are in
 docs/cartridge-foundation-audit.md. No commercial ROM, console runtime, compatibility
 or performance result is claimed.
+
+The cartridge image-analysis milestone on 2026-10-18 adds immutable views over clean
+or 512-byte-prefixed payloads and caller-selected LoROM/HiROM internal-header parsing.
+It extracts raw standard fields, safely decodes declared sizes, classifies only base
+map modes and checks the checksum/complement relationship. Synthetic tests cover all
+prefix policies, malformed sizes, candidate bounds, fields and hostile exponents.
+Automatic candidate selection, extended headers, full checksum calculation and
+hardware resolution remain incomplete. GitHub Host GCC/Clang plus sanitizers and
+pinned PS2/PSP cross-build workflows passed for implementation commit
+`add0e83ae5c5aee1680794ea420314cac3aa2b57`. Exact evidence and limitations are in
+docs/cartridge-header-analysis-audit.md. No commercial ROM or runtime result is claimed.
 
 ## Current blockers and diagnostic exceptions
 
@@ -830,7 +841,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Mapper tests — synthetic base LoROM/HiROM boundaries, mirrors, SRAM and bus/CPU integration covered
 - [ ] [IN PROGRESS] Checksum handling where useful — complement-pair validation exists; full image checksum absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config, image granularity and candidate bounds covered; file I/O absent
-- [ ] [IN PROGRESS] Copier-header policy — explicit detect/reject/require implementation awaiting cross-build evidence
+- [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection
 
 ### Verified base-cartridge foundation subset

@@ -101,7 +101,7 @@ unchecked until their complete verification gates are met.
 - [ ] [IN PROGRESS] Mapper tests — synthetic base suite exists
 - [ ] [IN PROGRESS] Checksum handling where useful — complement pair only
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds only
-- [ ] [IN PROGRESS] Copier-header policy — implementation awaits cross-build evidence
+- [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix
 - [ ] Region detection
 
 ## Research and decisions

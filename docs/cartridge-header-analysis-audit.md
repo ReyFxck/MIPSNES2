@@ -68,10 +68,24 @@ The new suite reported
 `PASS: cartridge image and internal-header analysis foundation` in default, release
 and ASan+UBSan configurations. Leak detection alone was disabled for the existing
 local environment restriction. Clang was unavailable. Local PS2 and PSP commands
-stopped before compilation because PS2SDK and `psp-config` were unavailable; GitHub's
-pinned workflows remain the cross-compiler gate. Repository, modified-source marker,
-platform-API leakage and RFAuds2-leakage checks passed. GitHub run IDs are added only
-after actual workflow execution.
+stopped before compilation because PS2SDK and `psp-config` were unavailable.
+Repository, modified-source marker, platform-API leakage and RFAuds2-leakage checks
+passed.
+
+## GitHub Actions
+
+All three pull-request workflows passed for implementation commit
+`add0e83ae5c5aee1680794ea420314cac3aa2b57`:
+
+- [Host CI run 39137517768](https://github.com/ReyFxck/MIPSNES2/actions/runs/39137517768)
+  — GCC and Clang release/sanitizer jobs succeeded and staged artifacts;
+- [PS2 CI run 39137517776](https://github.com/ReyFxck/MIPSNES2/actions/runs/39137517776)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded;
+- [PSP CI run 39137517750](https://github.com/ReyFxck/MIPSNES2/actions/runs/39137517750)
+  — pinned-toolchain scaffold cross-build, artifact and checksum steps succeeded.
+
+The documentation-evidence commit must also pass all applicable workflows before
+merge. Cross-compilation is not console execution.
 
 ## Runtime and performance
 

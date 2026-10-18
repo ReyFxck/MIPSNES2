@@ -114,7 +114,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Mapper tests — synthetic base LoROM/HiROM suite exists
 - [ ] [IN PROGRESS] Checksum handling where useful — checksum/complement pair validation only
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds covered; file I/O absent
-- [ ] [IN PROGRESS] Copier-header policy — explicit detect/reject/require implementation awaiting cross-build evidence
+- [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection
 
 ## Phase 4 — Scheduler / IRQ / NMI / DMA / HDMA
