@@ -44,6 +44,7 @@ static int test_configuration_validation(void)
 {
     mipsnes2_cartridge cartridge;
     mipsnes2_cartridge_config config = base_config(MIPSNES2_CARTRIDGE_LOROM);
+    mipsnes2_cartridge_sram_view view;
 
     CHECK(mipsnes2_cartridge_init(NULL, &config) ==
           MIPSNES2_CARTRIDGE_INVALID_ARGUMENT);
@@ -107,6 +108,10 @@ static int test_configuration_validation(void)
           cartridge.mapper == MIPSNES2_CARTRIDGE_HIROM);
     CHECK(cartridge.rom_first_size == sizeof(rom));
     CHECK(cartridge.rom_mirror_span == sizeof(rom));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &view));
+    CHECK(view.data == NULL && view.size == 0U);
+    CHECK(view.revision == 0U && !view.dirty);
+    CHECK(mipsnes2_cartridge_sram_acknowledge(&cartridge, 0U));
     CHECK(mipsnes2_cartridge_make_interface(NULL).read8 == NULL);
     return 0;
 }
@@ -383,6 +388,68 @@ static int test_hirom_mapping(void)
     return 0;
 }
 
+static int test_sram_persistence_handoff(void)
+{
+    mipsnes2_cartridge cartridge;
+    mipsnes2_cartridge_config config =
+        base_config(MIPSNES2_CARTRIDGE_LOROM);
+    mipsnes2_cartridge_sram_view first;
+    mipsnes2_cartridge_sram_view current;
+
+    (void)memset(rom, 0, sizeof(rom));
+    (void)memset(sram, 0, sizeof(sram));
+    CHECK(mipsnes2_cartridge_init(&cartridge, &config) ==
+          MIPSNES2_CARTRIDGE_OK);
+    CHECK(!mipsnes2_cartridge_sram_view_get(NULL, &current));
+    CHECK(!mipsnes2_cartridge_sram_view_get(&cartridge, NULL));
+    CHECK(!mipsnes2_cartridge_sram_acknowledge(NULL, 0U));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &current));
+    CHECK(current.data == sram && current.size == TEST_LOROM_SRAM_SIZE);
+    CHECK(current.revision == 0U && !current.dirty);
+    CHECK(!mipsnes2_cartridge_sram_acknowledge(&cartridge, 1U));
+
+    CHECK(mipsnes2_cartridge_write(&cartridge, UINT32_C(0x008000),
+                                    UINT8_C(0xaa)));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &current));
+    CHECK(current.revision == 0U && !current.dirty);
+    CHECK(!mipsnes2_cartridge_write(&cartridge, UINT32_C(0x007fff),
+                                     UINT8_C(0xaa)));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &current));
+    CHECK(current.revision == 0U && !current.dirty);
+
+    CHECK(mipsnes2_cartridge_write(&cartridge, UINT32_C(0x700003),
+                                    UINT8_C(0x51)));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &first));
+    CHECK(first.data == sram && first.data[3] == UINT8_C(0x51));
+    CHECK(first.revision == UINT64_C(1) && first.dirty);
+    CHECK(mipsnes2_cartridge_write(&cartridge, UINT32_C(0xf00003),
+                                    UINT8_C(0x51)));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &current));
+    CHECK(current.revision == first.revision && current.dirty);
+
+    CHECK(mipsnes2_cartridge_write(&cartridge, UINT32_C(0x700003),
+                                    UINT8_C(0x52)));
+    CHECK(!mipsnes2_cartridge_sram_acknowledge(
+              &cartridge, first.revision));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &current));
+    CHECK(current.revision == UINT64_C(2) && current.dirty);
+    CHECK(mipsnes2_cartridge_sram_acknowledge(
+              &cartridge, current.revision));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &current));
+    CHECK(current.revision == UINT64_C(2) && !current.dirty);
+    CHECK(mipsnes2_cartridge_write(&cartridge, UINT32_C(0x700003),
+                                    UINT8_C(0x52)));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &current));
+    CHECK(current.revision == UINT64_C(2) && !current.dirty);
+
+    cartridge.sram_revision = UINT64_MAX;
+    CHECK(mipsnes2_cartridge_write(&cartridge, UINT32_C(0x700003),
+                                    UINT8_C(0x53)));
+    CHECK(mipsnes2_cartridge_sram_view_get(&cartridge, &current));
+    CHECK(current.revision == UINT64_C(1) && current.dirty);
+    return 0;
+}
+
 static int test_snes_bus_cpu_integration(void)
 {
     mipsnes2_cartridge cartridge;
@@ -473,6 +540,7 @@ int main(void)
     CHECK(test_configuration_validation() == 0);
     CHECK(test_lorom_mapping() == 0);
     CHECK(test_hirom_mapping() == 0);
+    CHECK(test_sram_persistence_handoff() == 0);
     CHECK(test_irregular_lorom_mapping() == 0);
     CHECK(test_irregular_hirom_mapping() == 0);
     CHECK(test_irregular_layout_rejection() == 0);

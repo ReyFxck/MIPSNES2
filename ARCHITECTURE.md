@@ -101,6 +101,12 @@ the selected mapper to caller-owned ROM/SRAM storage and reuses the executable
 mapper's validation. Failed analysis/construction leaves destination objects
 unchanged. Paths, file handles, allocation and persistence remain platform concerns.
 
+SRAM contents also remain caller-owned. The mapper marks only value-changing SRAM
+writes dirty and advances a revision token. Platform persistence code reads a live
+const view and may clear dirty state only by acknowledging the exact revision it
+successfully stored; a concurrent newer write makes the token stale. File naming,
+atomic replacement and save scheduling remain outside the shared core.
+
 The CPU's `instruction_cycles` counts completed instruction or block-move-byte base
 cycles only; it is not master time. The timing bridge combines it with observed
 address-speed accesses, while reset timing, exact cycle placement, wait states and

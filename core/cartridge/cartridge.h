@@ -2,6 +2,7 @@
 #ifndef MIPSNES2_CARTRIDGE_H
 #define MIPSNES2_CARTRIDGE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -45,8 +46,17 @@ typedef struct {
     size_t rom_mirror_span;
     uint8_t *sram;
     size_t sram_size;
+    uint64_t sram_revision;
+    bool sram_dirty;
     mipsnes2_cartridge_mapper mapper;
 } mipsnes2_cartridge;
+
+typedef struct {
+    const uint8_t *data;
+    size_t size;
+    uint64_t revision;
+    bool dirty;
+} mipsnes2_cartridge_sram_view;
 
 mipsnes2_cartridge_result mipsnes2_cartridge_init(
     mipsnes2_cartridge *cartridge,
@@ -59,5 +69,11 @@ bool mipsnes2_cartridge_write(mipsnes2_cartridge *cartridge,
                               uint8_t value);
 mipsnes2_cartridge_interface mipsnes2_cartridge_make_interface(
     mipsnes2_cartridge *cartridge);
+bool mipsnes2_cartridge_sram_view_get(
+    const mipsnes2_cartridge *cartridge,
+    mipsnes2_cartridge_sram_view *view);
+bool mipsnes2_cartridge_sram_acknowledge(
+    mipsnes2_cartridge *cartridge,
+    uint64_t revision);
 
 #endif

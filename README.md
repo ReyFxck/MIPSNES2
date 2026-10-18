@@ -46,7 +46,9 @@ image view validates 32 KiB-granular payloads, explicitly handles
 optional 512-byte copier prefixes, calculates the mirrored whole-image checksum and
 can select one LoROM/HiROM/ExHiROM candidate only when independent header evidence
 agrees. A platform-neutral, allocation-free preparation contract then reports required
-SRAM and constructs the executable mapper over caller-owned buffers.
+SRAM and constructs the executable mapper over caller-owned buffers. Value-changing
+SRAM writes carry a revisioned dirty-state handoff so platform save backends cannot
+acknowledge stale asynchronous data.
 No-match and ambiguous images are rejected instead of guessed. There is no file loader,
 unofficial ExLoROM, padded/board-specific irregular mapping or enhancement hardware.
 No PPU, APU, ROM runner, compatibility or performance claim exists.

@@ -494,6 +494,17 @@ artifact and checksum jobs passed for implementation commit
 and ROM execution remain incomplete. Exact scope and evidence are in
 docs/cartridge-construction-audit.md.
 
+The SRAM-persistence-handoff milestone on 2026-10-18 keeps storage and filesystem
+policy outside `core/` while exposing the mapper-visible caller-owned SRAM buffer,
+dirty state and a revision token. Only value-changing writes advance the token;
+acknowledging a stale revision cannot clear newer dirty data. Generated host tests
+cover aliases, same-value writes, ROM/unmapped writes, stale and matching
+acknowledgements, no-SRAM cartridges and deterministic revision wrap. Local GCC
+default, release and ASan+UBSan suites pass; local Clang and console SDKs are
+unavailable. GitHub cross-build CI remains pending. Platform file loading, durable
+writes, save scheduling and real-device validation remain incomplete. Exact scope is
+in docs/cartridge-sram-persistence-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -891,8 +902,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] HiROM — power-of-two and unambiguous two-region base ROM mapping, base SRAM and conservative detection verified; broader boards absent
 - [ ] ExLoROM — unofficial mapping remains research-only; no commercial-library requirement established
 - [ ] [IN PROGRESS] ExHiROM — Mode 25/35 ROM/SRAM mapping and conservative selection verified; board/runtime validation absent
-- [ ] [IN PROGRESS] SRAM — caller-owned base mapper windows/read/write verified; persistence and broader boards absent
-- [ ] SRAM persistence
+- [ ] [IN PROGRESS] SRAM — caller-owned mapper windows/read/write and revisioned dirty tracking verified; broader boards absent
+- [ ] [IN PROGRESS] SRAM persistence — shared handoff exists; platform file backends and target validation absent
 - [ ] [IN PROGRESS] Mapper tests — synthetic base/irregular/ExHiROM maps, checksum, selection, ambiguity and bus/CPU integration covered; padded/ExLoROM/enhancement execution absent
 - [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board checksum variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config, image granularity and candidate bounds covered; file I/O absent
@@ -929,6 +940,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Generic three-candidate selection with explicit ambiguity/no-match
 - [x] Mapper executable-size/alignment confidence gate
 - [x] Platform-neutral image-to-cartridge plan and caller-owned SRAM construction
+- [ ] [IN PROGRESS] Revisioned SRAM dirty-state and exact-acknowledgement handoff — GCC default/release/sanitizer host suites pass; cross-build CI pending
 
 Checksum/selection scope and local verification are recorded in
 [cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md).
@@ -941,7 +953,9 @@ Mode 25/35 ExHiROM scope and verification are recorded in
 special boards and enhancement hardware remain unchecked.
 Preparation/construction scope and verification are recorded in
 [cartridge-construction-audit.md](docs/cartridge-construction-audit.md). Platform file
-I/O, allocation policy and SRAM persistence remain unchecked.
+I/O and allocation policy remain unchecked. Shared SRAM handoff scope is recorded in
+[cartridge-sram-persistence-audit.md](docs/cartridge-sram-persistence-audit.md);
+platform persistence remains incomplete.
 
 ## Scheduler
 

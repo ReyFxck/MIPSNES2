@@ -25,6 +25,11 @@ allocation. It produces a plan over the caller-owned source, reports required SR
 and transactionally constructs a cartridge over caller-owned buffers. Platform code
 retains all file, allocation and persistence ownership.
 
+The mapper exposes a const SRAM view with dirty state and a revision token. Only
+value-changing writes advance the token. A platform may acknowledge the exact
+revision it stored; stale acknowledgement fails and preserves newer dirty data. The
+view does not perform or schedule filesystem I/O.
+
 This is not complete cartridge support. Special board/header variants,
 board-specific irregular ROM layouts, unofficial ExLoROM and enhancement
 chips and SRAM persistence remain open. See [cartridge documentation](../../docs/cartridge.md)
