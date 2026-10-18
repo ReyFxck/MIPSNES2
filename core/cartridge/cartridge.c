@@ -8,6 +8,38 @@ static bool is_power_of_two(size_t value)
     return value != 0U && (value & (value - 1U)) == 0U;
 }
 
+static size_t largest_power_of_two(size_t value)
+{
+    size_t power = 1U;
+
+    while (power <= value / 2U) {
+        power *= 2U;
+    }
+    return power;
+}
+
+static bool analyze_rom_layout(size_t size,
+                               size_t bank_size,
+                               size_t *first_size,
+                               size_t *mirror_span)
+{
+    size_t first;
+    size_t tail;
+
+    if (size < bank_size || size > MIPSNES2_BASE_ROM_MAX_SIZE ||
+        size % bank_size != 0U) {
+        return false;
+    }
+    first = largest_power_of_two(size);
+    tail = size - first;
+    if (tail != 0U && !is_power_of_two(tail)) {
+        return false;
+    }
+    *first_size = first;
+    *mirror_span = tail == 0U ? first : first * 2U;
+    return true;
+}
+
 static bool is_system_bank(uint8_t bank)
 {
     return bank <= UINT8_C(0x3f) ||
@@ -100,11 +132,27 @@ static bool rom_offset(const mipsnes2_cartridge *cartridge,
     return hirom_rom_offset(address, offset);
 }
 
+static size_t mirror_rom_offset(const mipsnes2_cartridge *cartridge,
+                                size_t offset)
+{
+    size_t tail_size;
+
+    offset &= cartridge->rom_mirror_span - 1U;
+    if (offset < cartridge->rom_first_size) {
+        return offset;
+    }
+    tail_size = cartridge->rom_size - cartridge->rom_first_size;
+    return cartridge->rom_first_size +
+           ((offset - cartridge->rom_first_size) & (tail_size - 1U));
+}
+
 mipsnes2_cartridge_result mipsnes2_cartridge_init(
     mipsnes2_cartridge *cartridge,
     const mipsnes2_cartridge_config *config)
 {
     size_t rom_min;
+    size_t rom_first_size;
+    size_t rom_mirror_span;
     size_t sram_max;
 
     if (cartridge == NULL || config == NULL || config->rom == NULL ||
@@ -118,9 +166,8 @@ mipsnes2_cartridge_result mipsnes2_cartridge_init(
     rom_min = config->mapper == MIPSNES2_CARTRIDGE_LOROM
                   ? MIPSNES2_LOROM_BANK_SIZE
                   : MIPSNES2_HIROM_BANK_SIZE;
-    if (config->rom_size < rom_min ||
-        config->rom_size > MIPSNES2_BASE_ROM_MAX_SIZE ||
-        !is_power_of_two(config->rom_size)) {
+    if (!analyze_rom_layout(config->rom_size, rom_min,
+                            &rom_first_size, &rom_mirror_span)) {
         return MIPSNES2_CARTRIDGE_UNSUPPORTED_ROM_SIZE;
     }
     sram_max = config->mapper == MIPSNES2_CARTRIDGE_LOROM
@@ -134,6 +181,8 @@ mipsnes2_cartridge_result mipsnes2_cartridge_init(
     (void)memset(cartridge, 0, sizeof(*cartridge));
     cartridge->rom = config->rom;
     cartridge->rom_size = config->rom_size;
+    cartridge->rom_first_size = rom_first_size;
+    cartridge->rom_mirror_span = rom_mirror_span;
     cartridge->sram = config->sram;
     cartridge->sram_size = config->sram_size;
     cartridge->mapper = config->mapper;
@@ -157,7 +206,7 @@ bool mipsnes2_cartridge_read(mipsnes2_cartridge *cartridge,
     if (!rom_offset(cartridge, address, &offset)) {
         return false;
     }
-    *value = cartridge->rom[offset & (cartridge->rom_size - 1U)];
+    *value = cartridge->rom[mirror_rom_offset(cartridge, offset)];
     return true;
 }
 

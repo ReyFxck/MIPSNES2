@@ -16,7 +16,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, mirrors, ports, MMIO routes, FastROM state and per-access clocks |
-| core/cartridge | Validated metadata, mappings, SRAM data | Caller-owned base LoROM/HiROM views plus copier-prefix handling, mirrored checksum and conservative base-map selection |
+| core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM including unambiguous irregular tails, copier-prefix handling, mirrored checksum and conservative selection |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
@@ -67,12 +67,15 @@ The cartridge-slot interface differs intentionally from ordinary MMIO callbacks:
 read/write returns whether the cartridge decoded that address. A declined read leaves
 the bus's open latch intact. The base cartridge implementation accepts an explicit
 LoROM or HiROM mapper plus caller-owned ROM/SRAM buffers. It models the ordinary
-32 KiB LoROM and 64 KiB HiROM wiring, standard SRAM windows and read-only ROM. For
-now it accepts only power-of-two ROMs from 32 KiB through 4 MiB and power-of-two SRAM
-within each base mapper's addressable window. Header selection is a separate analysis
-step and does not initialize the executable mapper. Extended/variant headers,
-irregular/multi-chip executable layouts, Ex mappings and enhancement chips remain
-separate work; no title or game identity selects behavior.
+32 KiB LoROM and 64 KiB HiROM wiring, standard SRAM windows and read-only ROM. It
+accepts mapper-bank-aligned ROMs through 4 MiB when the image is either a power of two
+or one larger power-of-two region followed by one smaller power-of-two tail. The tail
+is repeated across the next power-of-two address span; the span and first-region size
+are precomputed at initialization. Layouts needing arbitrary padding remain rejected.
+SRAM remains power-of-two within each base mapper's addressable window. Header
+selection is a separate analysis step. Extended/variant headers, board-specific
+layouts, Ex mappings and enhancement chips remain separate work; no title or game
+identity selects behavior.
 
 Cartridge image analysis is also caller-owned and heap-free. It separates a possible
 512-byte copier prefix from the ROM payload using an explicit detect/reject/require
@@ -285,6 +288,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   ownership stays in the SNES bus. Original caller-owned C99 base LoROM/HiROM maps
   support power-of-two ROM/SRAM only; detection and irregular board layouts remain
   incomplete instead of being guessed or keyed to games.
+- 2026-10-18: Base mapper initialization accepts only power-of-two ROMs or an
+  unambiguous larger power-of-two region plus smaller power-of-two tail, aligned to
+  the mapper's bank size. It precomputes the address span and rejects layouts that
+  would require arbitrary padding.
 - 2026-10-18: Base LoROM/HiROM selection is an explicit conservative analysis step,
   separate from executable mapper initialization. It requires agreement among full
   checksum, complement, map mode, chipset, RESET vector and declared sizes, returns

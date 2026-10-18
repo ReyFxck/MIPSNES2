@@ -10,7 +10,12 @@ checksum and conservatively selects one supported base map only when every docum
 evidence gate agrees. No-match and ambiguity are explicit results. Selection does not
 initialize the executable mapper or trust a title/game identity as hardware truth.
 
+The executable base mapper accepts power-of-two images and the documented larger
+power-of-two region followed by a smaller power-of-two tail, repeating that tail to
+the next power-of-two address span. Bank-misaligned or padding-dependent layouts are
+rejected rather than guessed.
+
 This is not complete cartridge support. Extended/variant header analysis,
-executable non-power-of-two ROM boards, ExLoROM/ExHiROM, enhancement
+board-specific irregular ROM layouts, ExLoROM/ExHiROM, enhancement
 chips and SRAM persistence remain open. See [cartridge documentation](../../docs/cartridge.md)
 and [canonical status](../../STATUS.md).
