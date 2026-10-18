@@ -439,6 +439,18 @@ pinned PS2/PSP cross-build workflows passed for implementation commit
 `add0e83ae5c5aee1680794ea420314cac3aa2b57`. Exact evidence and limitations are in
 docs/cartridge-header-analysis-audit.md. No commercial ROM or runtime result is claimed.
 
+The checksum/base-selection milestone on 2026-10-18 adds normalized whole-payload
+checksums, unambiguous smaller-tail mirroring and conservative base LoROM/HiROM
+selection. Map mode, base chipset, RESET vector, declared sizes, complement and actual
+checksum must all agree; no-match and dual-valid ambiguity are explicit. Synthetic
+tests cover each gate without title/opcode scoring or commercial data. Host GCC/Clang
+release and sanitizer jobs plus pinned PS2/PSP scaffold cross-build, artifact and
+checksum jobs passed for implementation commit
+`b394209825d6c78ed2e08f86d7c142158e52ba6c`. Executable irregular boards, padded
+ambiguous layouts, extended headers and special checksum conventions remain incomplete.
+Exact evidence is in docs/cartridge-mapper-selection-audit.md. No console runtime,
+compatibility or performance result is claimed.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -830,16 +842,16 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 ## Cartridge
 
 - [ ] ROM loading
-- [ ] [IN PROGRESS] ROM metadata — standard raw internal-header fields parsed; extended variants and hardware resolution absent
-- [ ] [IN PROGRESS] Header analysis — explicit LoROM/HiROM candidate parsing verified; automatic evidence-based selection absent
-- [ ] [IN PROGRESS] LoROM — explicit power-of-two base ROM/SRAM mapping verified; irregular boards and detection absent
-- [ ] [IN PROGRESS] HiROM — explicit power-of-two base ROM/SRAM mapping verified; irregular boards and detection absent
+- [ ] [IN PROGRESS] ROM metadata — standard raw fields and conservative base-map evidence parsed; extended variants/hardware resolution absent
+- [ ] [IN PROGRESS] Header analysis — conservative base LoROM/HiROM selection verified; extended/variant headers absent
+- [ ] [IN PROGRESS] LoROM — power-of-two base ROM/SRAM mapping and conservative detection verified; executable irregular boards absent
+- [ ] [IN PROGRESS] HiROM — power-of-two base ROM/SRAM mapping and conservative detection verified; executable irregular boards absent
 - [ ] ExLoROM
 - [ ] ExHiROM
 - [ ] [IN PROGRESS] SRAM — caller-owned base mapper windows/read/write verified; persistence and broader boards absent
 - [ ] SRAM persistence
-- [ ] [IN PROGRESS] Mapper tests — synthetic base LoROM/HiROM boundaries, mirrors, SRAM and bus/CPU integration covered
-- [ ] [IN PROGRESS] Checksum handling where useful — complement-pair validation exists; full image checksum absent
+- [ ] [IN PROGRESS] Mapper tests — synthetic maps, checksum, selection, ambiguity and bus/CPU integration covered; irregular/Ex/enhancement execution absent
+- [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board checksum variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config, image granularity and candidate bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection
@@ -859,6 +871,16 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Overflow-safe declared ROM/SRAM size decoding
 - [x] Checksum/complement relationship and base map-mode classification
 - [x] Malformed image-size and out-of-range candidate rejection
+- [x] Whole-payload checksum with candidate fields normalized and copier prefix excluded
+- [x] Unambiguous two-region power-of-two checksum mirroring
+- [x] Conservative base LoROM/HiROM evidence gates
+- [x] Explicit no-confident-header and ambiguous-header results
+- [x] Selection independent of title text and guessed reset opcode
+
+Checksum/selection scope and local verification are recorded in
+[cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md).
+Special checksum conventions, padded irregular layouts, extended headers and
+executable irregular boards remain unchecked.
 
 ## Scheduler
 

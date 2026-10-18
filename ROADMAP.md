@@ -103,16 +103,16 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO and power-of-two base cartridge maps verified; irregular/Ex/enhancement pending
 - [ ] Page/block mapping benchmark
 - [ ] ROM loading
-- [ ] [IN PROGRESS] ROM metadata — standard raw internal-header fields parsed; extended variants and hardware resolution pending
-- [ ] [IN PROGRESS] Header analysis — explicit LoROM/HiROM candidates parsed; automatic evidence-based selection pending
-- [ ] [IN PROGRESS] LoROM — explicit power-of-two base mapping verified
-- [ ] [IN PROGRESS] HiROM — explicit power-of-two base mapping verified
+- [ ] [IN PROGRESS] ROM metadata — standard raw fields and conservative base-map evidence parsed; extended variants pending
+- [ ] [IN PROGRESS] Header analysis — conservative base LoROM/HiROM selection verified; extended/variant headers pending
+- [ ] [IN PROGRESS] LoROM — power-of-two base mapping and conservative detection verified; executable irregular boards pending
+- [ ] [IN PROGRESS] HiROM — power-of-two base mapping and conservative detection verified; executable irregular boards pending
 - [ ] ExLoROM
 - [ ] ExHiROM
 - [ ] [IN PROGRESS] SRAM — base mapper windows/read/write verified; persistence pending
 - [ ] SRAM persistence
-- [ ] [IN PROGRESS] Mapper tests — synthetic base LoROM/HiROM suite exists
-- [ ] [IN PROGRESS] Checksum handling where useful — checksum/complement pair validation only
+- [ ] [IN PROGRESS] Mapper tests — synthetic map/checksum/selection/ambiguity suite exists; broader boards pending
+- [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board variants pending
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection

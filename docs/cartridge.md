@@ -12,9 +12,11 @@ buffers. The first cartridge foundation now provides:
 - configuration/size rejection and synthetic host tests;
 - integration through the SNES bus into CPU reset/fetch/timing;
 - an immutable image view with explicit 512-byte copier-prefix policy;
-- raw internal-header parsing at a caller-selected LoROM or HiROM candidate.
+- raw internal-header parsing at LoROM and HiROM candidates;
+- mirrored whole-image checksum calculation and conservative base-map selection.
 
-There is no file loader or automatic mapper detector. Supported base
+There is no file loader, extended-header resolver or automatic executable-cartridge
+configuration. Supported base
 ROM sizes are powers of two from 32 KiB for LoROM or 64 KiB for HiROM through 4 MiB.
 Supported SRAM is zero or a power of two up to 512 KiB for the LoROM address window
 and 256 KiB for HiROM. These limits avoid pretending that one modulo rule describes
@@ -29,8 +31,8 @@ not a claim that every historical copier format used identical metadata.
 
 ## Design direction
 
-Validate size, candidate headers and documented mapper fields; define copier-header
-and ambiguous-header policy. Detect hardware, not games. Handle LoROM, HiROM,
+Validate size, candidate headers and documented mapper fields. Detect hardware, not
+games. Handle LoROM, HiROM,
 ExLoROM and ExHiROM separately. Checksums may aid diagnostics but must not invent
 game-specific mapping. Platform filesystem code must remain outside `core/`.
 
@@ -48,9 +50,39 @@ decoded only when representable by `size_t`; exponent zero means no declared SRA
 
 Map-mode classification recognizes only base `20h/30h` LoROM and `21h/31h` HiROM.
 Everything else remains `OTHER`, including enhancement and Ex mapping values. The
-parser reports whether checksum and complement XOR to `FFFFh`; it does not yet sum
-the image. Parsing a candidate does not endorse it. Candidate scoring, automatic
-selection, extended-header interpretation and hardware resolution remain future work.
+parser reports whether checksum and complement XOR to `FFFFh`; parsing alone does not
+endorse a candidate.
+
+### Checksum and base-map selection
+
+The checksum calculator sums the immutable ROM payload, never the optional copier
+prefix. The selected candidate's four checksum bytes are normalized to `FF FF 00 00`,
+which has the same byte sum as any valid checksum/complement pair. Power-of-two images
+are summed once. If an image is the documented larger power-of-two region followed by
+a smaller power-of-two region, the smaller tail is repeated until the combined span
+reaches the next power of two. The reported mirrored span must equal the header's
+declared ROM size.
+
+For diagnostic completeness the calculator can zero-pad a tail whose size is not a
+power of two before mirroring it. Hardware/file tools disagree on such malformed or
+unusual shapes, so that result is never sufficient for confident automatic selection.
+It remains useful for reporting and does not make the current mapper execute the image.
+
+The selector evaluates both header locations and accepts exactly one candidate only
+when all of these independent gates pass:
+
+- header location is present and its map mode matches that location;
+- chipset is base ROM/RAM/battery class `00h` through `02h`;
+- RESET vector is in the ROM-visible `$8000-$FFFF` half of bank zero;
+- declared ROM size equals the calculated mirrored span;
+- declared SRAM size is representable by the supported base map;
+- checksum/complement form a valid pair and the full checksum matches;
+- the payload is a power of two or an unambiguous sum of two power-of-two regions.
+
+Zero passing candidates return `NO_CONFIDENT_HEADER`; two return `AMBIGUOUS_HEADER`.
+There are no weighted scores, title/ASCII tests, first-opcode guesses, game names or
+CRC exceptions. A successful result identifies base LoROM versus HiROM evidence only;
+the caller still decides whether the current executable mapper supports the image.
 
 ### Base LoROM subset
 
@@ -76,10 +108,12 @@ normalization; open-latch preservation; and CPU reset/NOP through the integrated
 cartridge bus. It proves explicit mapping, not header detection or file loading.
 
 `tests/test_cartridge_image.c` covers clean, prefixed, required and rejected prefix
-policies; malformed granularities; 96 KiB analysis independent of mapper support;
-LoROM/HiROM offsets; all currently exposed fields; size-exponent overflow; checksum
-pair classification; wrong-candidate neutrality; and truncated candidate rejection.
-It proves deterministic parsing, not automatic mapper selection.
+policies; malformed granularities; LoROM/HiROM offsets and fields; exponent overflow;
+normalized power-of-two checksums; copier-prefix exclusion; unambiguous 96 KiB tail
+mirroring; diagnostic padded-tail calculation; valid LoROM/HiROM selection; 32 KiB
+LoROM-only bounds; arbitrary non-ASCII titles; checksum, pair, map, chipset, RESET and
+size rejection; ambiguous dual headers; explicit no-match; and invalid arguments.
+All fixtures are generated byte arrays with no commercial content.
 
 Future detection tests must be independent of ROM titles. SRAM persistence needs
 explicit save/error behavior and platform tests.
@@ -90,16 +124,16 @@ Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Partial items r
 unchecked until their complete verification gates are met.
 
 - [ ] ROM loading
-- [ ] [IN PROGRESS] ROM metadata — standard raw fields only
-- [ ] [IN PROGRESS] Header analysis — explicit candidates only
-- [ ] [IN PROGRESS] LoROM — explicit power-of-two base map verified
-- [ ] [IN PROGRESS] HiROM — explicit power-of-two base map verified
+- [ ] [IN PROGRESS] ROM metadata — standard raw fields and base-map evidence only
+- [ ] [IN PROGRESS] Header analysis — conservative base selection; extended variants absent
+- [ ] [IN PROGRESS] LoROM — power-of-two base map and conservative selection verified
+- [ ] [IN PROGRESS] HiROM — power-of-two base map and conservative selection verified
 - [ ] ExLoROM
 - [ ] ExHiROM
 - [ ] [IN PROGRESS] SRAM — base mapper read/write windows verified
 - [ ] SRAM persistence
-- [ ] [IN PROGRESS] Mapper tests — synthetic base suite exists
-- [ ] [IN PROGRESS] Checksum handling where useful — complement pair only
+- [ ] [IN PROGRESS] Mapper tests — synthetic map/checksum/selection suite exists
+- [ ] [IN PROGRESS] Checksum handling where useful — base mirrored checksum exists; special variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds only
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix
 - [ ] Region detection
@@ -116,15 +150,18 @@ Sources:
 - [The SNES Cartridge, Briefly Explained](https://mousebitelabs.com/2019/05/18/custom-pcb-explanation/),
   inspected 2026-10-17, supplies an independent hardware-board/decoder cross-check.
 - [fullsnes cartridge ROM header specification](https://problemkaputt.de/fullsnes.htm#snescartridgeromheader),
-  inspected 2026-10-17, documents candidate offsets, the 512-byte image-prefix rule,
+  inspected 2026-10-18, documents candidate offsets, the 512-byte image-prefix rule,
   standard fields, size encoding, checksum pair, map modes and vectors;
 - [SNESdev Wiki ROM header](https://snes.nesdev.org/wiki/ROM_header) and
   [ROM file formats](https://snes.nesdev.org/wiki/ROM_file_formats), inspected
-  2026-10-17, provide an independent research cross-check for the file/header boundary.
+  2026-10-18, provide the checksum mirroring process, header verification evidence and
+  an independent file/header boundary cross-check. The checksum page cites Nintendo's
+  development manual Book 1 pages 1-2-10 and 1-2-21; no manual copy is committed.
 
 No emulator implementation was consulted or copied.
 
-Intentional limitation: non-power-of-two/multi-chip ROM layouts can be inspected but
-are rejected by the current mapper rather than approximated. Automatic candidate
-selection, extended/variant header interpretation, Ex mappings and special boards
+Intentional limitation: an unambiguous two-region non-power-of-two layout can now be
+checksummed and its base map identified, but the current mapper still rejects it rather
+than approximating physical board wiring. Padded irregular shapes are diagnostic-only.
+Extended/variant headers, Ex mappings, special checksum conventions and special boards
 must add evidence and fixtures before those tasks can be promoted.
