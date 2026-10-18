@@ -481,6 +481,16 @@ validation, special boards, file loading, persistence, console runtime, compatib
 and performance remain incomplete. Exact scope and evidence are in
 docs/cartridge-exhirom-audit.md.
 
+The cartridge-construction milestone on 2026-10-18 adds an allocation-free plan over
+caller-owned file bytes, exposes exact header-declared SRAM requirements and binds a
+validated mapper to caller-owned ROM/SRAM storage. Outputs remain unchanged on
+failure and no file/path/platform API enters `core/`. Generated tests cover clean and
+prefixed LoROM, missing/undersized/oversized SRAM capacity, failure transactionality,
+tampered plans and selected 6 MiB ExHiROM construction. Local GCC default, release
+and ASan+UBSan tests pass; local Clang and console SDKs are unavailable. GitHub CI
+evidence remains pending. Platform file adapters, persistence and ROM execution
+remain incomplete. Exact scope is in docs/cartridge-construction-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -871,7 +881,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 
 ## Cartridge
 
-- [ ] ROM loading
+- [ ] [IN PROGRESS] ROM loading — platform-neutral analysis/construction contract verified; platform file adapters absent
 - [ ] [IN PROGRESS] ROM metadata — standard fields, registration prefix and conservative mapper evidence parsed; special variants/hardware resolution absent
 - [ ] [IN PROGRESS] Header analysis — conservative LoROM/HiROM/ExHiROM selection verified; special variants absent
 - [ ] [IN PROGRESS] LoROM — power-of-two and unambiguous two-region base ROM mapping, base SRAM and conservative detection verified; broader boards absent
@@ -886,7 +896,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection
 
-### Verified base-cartridge foundation subset
+### Verified cartridge foundation subset
 
 - [x] Caller-owned read-only ROM and writable SRAM views
 - [x] Cartridge slot mapped/unmapped response contract
@@ -915,6 +925,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] ExHiROM 6 MiB tail repetition and standard HiROM-style SRAM windows
 - [x] Generic three-candidate selection with explicit ambiguity/no-match
 - [x] Mapper executable-size/alignment confidence gate
+- [ ] [IN PROGRESS] Platform-neutral image-to-cartridge plan and caller-owned SRAM construction — host verified; PS2/PSP cross-build CI pending
 
 Checksum/selection scope and local verification are recorded in
 [cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md).
@@ -925,6 +936,9 @@ ExLoROM and enhancement hardware remain unchecked.
 Mode 25/35 ExHiROM scope and verification are recorded in
 [cartridge-exhirom-audit.md](docs/cartridge-exhirom-audit.md). Unofficial ExLoROM,
 special boards and enhancement hardware remain unchecked.
+Preparation/construction scope and verification are recorded in
+[cartridge-construction-audit.md](docs/cartridge-construction-audit.md). Platform file
+I/O, allocation policy and SRAM persistence remain unchecked.
 
 ## Scheduler
 

@@ -5,6 +5,10 @@ fuzzing, debugging and tooling only. No GUI, SDL, desktop emulator UX or desktop
 architecture is introduced. The binary identifies the CPU/bus foundation and rejects
 arguments; it does not load ROMs.
 
+Host tests exercise the platform-neutral cartridge preparation contract using
+generated in-memory data. That does not add file loading or ROM execution to the host
+binary.
+
 Future host audio work is for deterministic offline sample tests and diagnostics
 behind the common PCM contract. It remains independent of RFAuds2 and must be able to
 validate S-DSP output without any physical PS2/SPU2 device.
