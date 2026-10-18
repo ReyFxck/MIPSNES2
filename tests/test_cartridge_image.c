@@ -13,13 +13,15 @@ enum {
     CLEAN_SIZE = 64 * 1024,
     HEADERED_SIZE = CLEAN_SIZE + MIPSNES2_COPIER_HEADER_SIZE,
     IRREGULAR_SIZE = 96 * 1024,
-    PADDED_IRREGULAR_SIZE = 224 * 1024
+    PADDED_IRREGULAR_SIZE = 224 * 1024,
+    EXHIROM_SIZE = 6 * 1024 * 1024
 };
 
 static uint8_t clean_image[CLEAN_SIZE];
 static uint8_t headered_image[HEADERED_SIZE];
 static uint8_t irregular_image[IRREGULAR_SIZE];
 static uint8_t padded_irregular_image[PADDED_IRREGULAR_SIZE];
+static uint8_t exhirom_image[EXHIROM_SIZE];
 
 static void write16(uint8_t *data, uint16_t value)
 {
@@ -35,8 +37,18 @@ static void populate_header(uint8_t *data,
 {
     static const uint8_t title[MIPSNES2_INTERNAL_TITLE_SIZE] =
         "MIPSNES2 HEADER TEST ";
+    static const uint8_t maker[MIPSNES2_MAKER_CODE_SIZE] = "M2";
+    static const uint8_t game[MIPSNES2_GAME_CODE_SIZE] = "TEST";
     uint8_t *header = data + offset;
+    uint8_t *registration = header - MIPSNES2_REGISTRATION_PREFIX_SIZE;
 
+    (void)memset(registration, 0, MIPSNES2_REGISTRATION_PREFIX_SIZE);
+    (void)memcpy(registration, maker, sizeof(maker));
+    (void)memcpy(registration + MIPSNES2_MAKER_CODE_SIZE,
+                 game, sizeof(game));
+    registration[0x0d] = UINT8_C(0x05);
+    registration[0x0e] = UINT8_C(0x06);
+    registration[0x0f] = UINT8_C(0x07);
     (void)memset(header, 0, MIPSNES2_INTERNAL_HEADER_BLOCK_SIZE);
     (void)memcpy(header, title, sizeof(title));
     header[0x15] = map_mode;
@@ -53,9 +65,13 @@ static void populate_header(uint8_t *data,
 
 static size_t candidate_offset(mipsnes2_cartridge_mapper mapper)
 {
-    return mapper == MIPSNES2_CARTRIDGE_LOROM
-               ? (size_t)MIPSNES2_LOROM_HEADER_OFFSET
-               : (size_t)MIPSNES2_HIROM_HEADER_OFFSET;
+    if (mapper == MIPSNES2_CARTRIDGE_LOROM) {
+        return (size_t)MIPSNES2_LOROM_HEADER_OFFSET;
+    }
+    if (mapper == MIPSNES2_CARTRIDGE_HIROM) {
+        return (size_t)MIPSNES2_HIROM_HEADER_OFFSET;
+    }
+    return (size_t)MIPSNES2_EXHIROM_HEADER_OFFSET;
 }
 
 static int finalize_candidate(mipsnes2_cartridge_image_view *view,
@@ -141,6 +157,8 @@ static int test_lorom_header_parse(void)
 {
     static const uint8_t expected_title[MIPSNES2_INTERNAL_TITLE_SIZE] =
         "MIPSNES2 HEADER TEST ";
+    static const uint8_t expected_fixed[MIPSNES2_REGISTRATION_FIXED_SIZE] =
+        {0};
     mipsnes2_cartridge_image_view view;
     mipsnes2_cartridge_header header;
     uint8_t *raw;
@@ -156,6 +174,13 @@ static int test_lorom_header_parse(void)
               &view, MIPSNES2_CARTRIDGE_LOROM, &header) ==
           MIPSNES2_CARTRIDGE_IMAGE_OK);
     CHECK(memcmp(header.title, expected_title, sizeof(expected_title)) == 0);
+    CHECK(memcmp(header.maker_code, "M2", MIPSNES2_MAKER_CODE_SIZE) == 0);
+    CHECK(memcmp(header.game_code, "TEST", MIPSNES2_GAME_CODE_SIZE) == 0);
+    CHECK(memcmp(header.registration_fixed, expected_fixed,
+                 sizeof(expected_fixed)) == 0);
+    CHECK(header.expansion_ram_size == UINT8_C(0x05));
+    CHECK(header.special_version == UINT8_C(0x06));
+    CHECK(header.cartridge_sub_number == UINT8_C(0x07));
     CHECK(header.map_mode == UINT8_C(0x30));
     CHECK(header.chipset == UINT8_C(0x02));
     CHECK(header.rom_size_exponent == UINT8_C(8));
@@ -211,6 +236,9 @@ static int test_hirom_and_candidate_boundaries(void)
     view.size = MIPSNES2_LOROM_BANK_SIZE;
     CHECK(mipsnes2_cartridge_header_parse(
               &view, MIPSNES2_CARTRIDGE_HIROM, &header) ==
+          MIPSNES2_CARTRIDGE_IMAGE_HEADER_OUT_OF_RANGE);
+    CHECK(mipsnes2_cartridge_header_parse(
+              &view, MIPSNES2_CARTRIDGE_EXHIROM, &header) ==
           MIPSNES2_CARTRIDGE_IMAGE_HEADER_OUT_OF_RANGE);
     CHECK(mipsnes2_cartridge_header_parse(
               &view, (mipsnes2_cartridge_mapper)99, &header) ==
@@ -377,6 +405,7 @@ static int test_base_mapper_selection(void)
     CHECK(selection.lorom.declared_rom_size_matches);
     CHECK(selection.lorom.declared_sram_size_supported);
     CHECK(selection.lorom.checksum_layout_unambiguous);
+    CHECK(selection.lorom.mapper_layout_supported);
     CHECK(selection.lorom.header.checksum_pair_valid);
     CHECK(selection.lorom.checksum_matches && selection.lorom.confident);
     CHECK(selection.lorom.mirrored_size == CLEAN_SIZE);
@@ -393,6 +422,85 @@ static int test_base_mapper_selection(void)
           MIPSNES2_CARTRIDGE_IMAGE_OK);
     CHECK(selection.selected_mapper == MIPSNES2_CARTRIDGE_HIROM);
     CHECK(selection.hirom.confident && !selection.lorom.confident);
+    CHECK(mipsnes2_cartridge_select_mapper(&view, &selection) ==
+          MIPSNES2_CARTRIDGE_IMAGE_OK);
+    CHECK(selection.selected_mapper == MIPSNES2_CARTRIDGE_HIROM);
+    CHECK(!selection.exhirom.header_available);
+    return 0;
+}
+
+static int test_exhirom_header_selection(void)
+{
+    mipsnes2_cartridge_image_view view;
+    mipsnes2_cartridge_header_selection selection;
+    mipsnes2_cartridge cartridge;
+    mipsnes2_cartridge_config config;
+
+    (void)memset(exhirom_image, 0, sizeof(exhirom_image));
+    exhirom_image[0] = UINT8_C(0x5a);
+    exhirom_image[4U * 1024U * 1024U] = UINT8_C(0xa5);
+    populate_header(exhirom_image, MIPSNES2_EXHIROM_HEADER_OFFSET,
+                    UINT8_C(0x25), UINT8_C(13), UINT8_C(3));
+    CHECK(mipsnes2_cartridge_image_view_init(
+              &view, exhirom_image, sizeof(exhirom_image),
+              MIPSNES2_COPIER_HEADER_REJECT) ==
+          MIPSNES2_CARTRIDGE_IMAGE_OK);
+    CHECK(finalize_candidate(&view, MIPSNES2_CARTRIDGE_EXHIROM) == 0);
+    CHECK(mipsnes2_cartridge_select_mapper(&view, &selection) ==
+          MIPSNES2_CARTRIDGE_IMAGE_OK);
+    CHECK(selection.selected_mapper == MIPSNES2_CARTRIDGE_EXHIROM);
+    CHECK(selection.exhirom.header_available);
+    CHECK(selection.exhirom.header.map == MIPSNES2_HEADER_MAP_EXHIROM);
+    CHECK(!selection.exhirom.header.fastrom);
+    CHECK(selection.exhirom.header.declared_rom_size ==
+          (size_t)(8U * 1024U * 1024U));
+    CHECK(selection.exhirom.header.declared_sram_size ==
+          (size_t)(8U * 1024U));
+    CHECK(selection.exhirom.map_mode_matches);
+    CHECK(selection.exhirom.base_chipset_supported);
+    CHECK(selection.exhirom.reset_vector_in_rom);
+    CHECK(selection.exhirom.declared_rom_size_matches);
+    CHECK(selection.exhirom.declared_sram_size_supported);
+    CHECK(selection.exhirom.checksum_layout_unambiguous);
+    CHECK(selection.exhirom.mapper_layout_supported);
+    CHECK(selection.exhirom.checksum_matches);
+    CHECK(selection.exhirom.header.checksum_pair_valid);
+    CHECK(selection.exhirom.confident);
+    CHECK(!selection.lorom.confident && !selection.hirom.confident);
+
+    config.rom = view.data;
+    config.rom_size = view.size;
+    config.sram = NULL;
+    config.sram_size = 0U;
+    config.mapper = selection.selected_mapper;
+    CHECK(mipsnes2_cartridge_init(&cartridge, &config) ==
+          MIPSNES2_CARTRIDGE_OK);
+    CHECK(cartridge.rom_first_size == (size_t)(4U * 1024U * 1024U));
+    CHECK(cartridge.rom_mirror_span == (size_t)(8U * 1024U * 1024U));
+
+    exhirom_image[MIPSNES2_EXHIROM_HEADER_OFFSET + 0x15U] = UINT8_C(0x35);
+    CHECK(finalize_candidate(&view, MIPSNES2_CARTRIDGE_EXHIROM) == 0);
+    CHECK(mipsnes2_cartridge_select_mapper(&view, &selection) ==
+          MIPSNES2_CARTRIDGE_IMAGE_OK);
+    CHECK(selection.selected_mapper == MIPSNES2_CARTRIDGE_EXHIROM);
+    CHECK(selection.exhirom.header.map == MIPSNES2_HEADER_MAP_EXHIROM);
+    CHECK(selection.exhirom.header.fastrom);
+
+    CHECK(mipsnes2_cartridge_select_mapper(NULL, &selection) ==
+          MIPSNES2_CARTRIDGE_IMAGE_INVALID_ARGUMENT);
+    CHECK(mipsnes2_cartridge_select_mapper(&view, NULL) ==
+          MIPSNES2_CARTRIDGE_IMAGE_INVALID_ARGUMENT);
+
+    (void)memset(exhirom_image, 0, sizeof(exhirom_image));
+    populate_header(exhirom_image, MIPSNES2_LOROM_HEADER_OFFSET,
+                    UINT8_C(0x20), UINT8_C(13), UINT8_C(0));
+    CHECK(finalize_candidate(&view, MIPSNES2_CARTRIDGE_LOROM) == 0);
+    CHECK(mipsnes2_cartridge_select_mapper(&view, &selection) ==
+          MIPSNES2_CARTRIDGE_IMAGE_NO_CONFIDENT_HEADER);
+    CHECK(selection.lorom.map_mode_matches);
+    CHECK(selection.lorom.checksum_matches);
+    CHECK(!selection.lorom.mapper_layout_supported);
+    CHECK(!selection.lorom.confident);
     return 0;
 }
 
@@ -466,6 +574,10 @@ static int test_selection_prefix_irregular_and_ambiguity(void)
     CHECK(mipsnes2_cartridge_select_base_mapper(&view, &selection) ==
           MIPSNES2_CARTRIDGE_IMAGE_AMBIGUOUS_HEADER);
     CHECK(selection.lorom.confident && selection.hirom.confident);
+    CHECK(mipsnes2_cartridge_select_mapper(&view, &selection) ==
+          MIPSNES2_CARTRIDGE_IMAGE_AMBIGUOUS_HEADER);
+    CHECK(selection.lorom.confident && selection.hirom.confident);
+    CHECK(!selection.exhirom.header_available);
     return 0;
 }
 
@@ -595,9 +707,10 @@ int main(void)
     CHECK(test_copier_offset_and_size_overflow() == 0);
     CHECK(test_checksum_calculation() == 0);
     CHECK(test_base_mapper_selection() == 0);
+    CHECK(test_exhirom_header_selection() == 0);
     CHECK(test_selection_prefix_irregular_and_ambiguity() == 0);
     CHECK(test_selection_rejection_evidence() == 0);
     CHECK(test_single_lorom_candidate() == 0);
-    (void)puts("PASS: cartridge image checksum and base-mapper selection");
+    (void)puts("PASS: cartridge image checksum and mapper selection");
     return 0;
 }

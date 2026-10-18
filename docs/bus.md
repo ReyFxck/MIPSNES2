@@ -37,7 +37,7 @@ address it receives.
 | `00-3F/80-BF:2180-2183` | WRAM data/address ports |
 | `00-3F/80-BF:4000-421F` | CPU-I/O route, except bus-owned `$420D` |
 | `00-3F/80-BF:4300-437F` | DMA callback route |
-| Cartridge-visible ranges | Cartridge slot route; base LoROM/HiROM implementation available |
+| Cartridge-visible ranges | Cartridge slot route; base LoROM/HiROM and Mode 25/35 ExHiROM subsets available |
 
 The `$2180` data port auto-increments and wraps its 17-bit address; `$2181-$2183`
 select that address. `$420D` write bit 0 controls the bus's FastROM state. Reserved
@@ -92,7 +92,8 @@ cartridge mapping or cycle-level event placement.
 
 ## Remaining design work
 
-The full bus must add complete cartridge boards/irregular mirrors, implemented peripheral registers,
+The full bus must add broader cartridge boards, unofficial ExLoROM only if justified,
+implemented peripheral registers,
 enhancement windows, accurate read/write side effects and open-bus domains; expose
 every relevant CPU dummy/internal cycle; add WRAM refresh and DMA/HDMA arbitration;
 and benchmark page/block layouts on real PS2 and PSP. See [STATUS.md](../STATUS.md).

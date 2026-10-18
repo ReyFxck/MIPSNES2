@@ -90,7 +90,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Logical 24-bit access integration
 - [x] Low-bank WRAM mirrors
 - [ ] ROM fast path
-- [ ] [IN PROGRESS] SRAM windows — supported base LoROM/HiROM mappings verified
+- [ ] [IN PROGRESS] SRAM windows — supported LoROM/HiROM/ExHiROM mappings verified
 - [x] PPU MMIO routing — callback route only
 - [x] CPU I/O routing — callback route plus bus-owned `$420D`
 - [x] APU port routing — callback route only
@@ -100,18 +100,18 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Read side effects — WRAM data-port increment only
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` only
 - [ ] [IN PROGRESS] Access timing — meaningful accesses integrated; exact cycle placement/refresh/arbitration pending
-- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO plus power-of-two and unambiguous two-region base maps verified; padded/Ex/enhancement pending
+- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO plus base and Mode 25/35 ExHiROM maps verified; padded/ExLoROM/enhancement pending
 - [ ] Page/block mapping benchmark
 - [ ] ROM loading
-- [ ] [IN PROGRESS] ROM metadata — standard raw fields and conservative base-map evidence parsed; extended variants pending
-- [ ] [IN PROGRESS] Header analysis — conservative base LoROM/HiROM selection verified; extended/variant headers pending
+- [ ] [IN PROGRESS] ROM metadata — standard and 16-byte registration fields parsed; special variants pending
+- [ ] [IN PROGRESS] Header analysis — conservative LoROM/HiROM/ExHiROM selection verified; special variants pending
 - [ ] [IN PROGRESS] LoROM — power-of-two and unambiguous two-region base mapping plus conservative detection verified; broader boards pending
 - [ ] [IN PROGRESS] HiROM — power-of-two and unambiguous two-region base mapping plus conservative detection verified; broader boards pending
-- [ ] ExLoROM
-- [ ] ExHiROM
+- [ ] ExLoROM — unofficial mapping remains research-only
+- [ ] [IN PROGRESS] ExHiROM — Mode 25/35 ROM/SRAM mapping and selection verified; board/runtime validation pending
 - [ ] [IN PROGRESS] SRAM — base mapper windows/read/write verified; persistence pending
 - [ ] SRAM persistence
-- [ ] [IN PROGRESS] Mapper tests — synthetic power-of-two/irregular map, checksum, selection and ambiguity suite exists; broader boards pending
+- [ ] [IN PROGRESS] Mapper tests — synthetic base/irregular/ExHiROM map, checksum, selection and ambiguity suite exists; broader boards pending
 - [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board variants pending
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected

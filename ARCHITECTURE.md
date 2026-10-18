@@ -16,7 +16,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, mirrors, ports, MMIO routes, FastROM state and per-access clocks |
-| core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM including unambiguous irregular tails, copier-prefix handling, mirrored checksum and conservative selection |
+| core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
@@ -65,31 +65,34 @@ receive logical addresses; the base mapper now implements the supported subset b
 
 The cartridge-slot interface differs intentionally from ordinary MMIO callbacks: a
 read/write returns whether the cartridge decoded that address. A declined read leaves
-the bus's open latch intact. The base cartridge implementation accepts an explicit
-LoROM or HiROM mapper plus caller-owned ROM/SRAM buffers. It models the ordinary
+the bus's open latch intact. The cartridge implementation accepts an explicit LoROM,
+HiROM or ExHiROM mapper plus caller-owned ROM/SRAM buffers. It models the ordinary
 32 KiB LoROM and 64 KiB HiROM wiring, standard SRAM windows and read-only ROM. It
 accepts mapper-bank-aligned ROMs through 4 MiB when the image is either a power of two
 or one larger power-of-two region followed by one smaller power-of-two tail. The tail
 is repeated across the next power-of-two address span; the span and first-region size
 are precomputed at initialization. Layouts needing arbitrary padding remain rejected.
 SRAM remains power-of-two within each base mapper's addressable window. Header
-selection is a separate analysis step. Extended/variant headers, board-specific
-layouts, Ex mappings and enhancement chips remain separate work; no title or game
-identity selects behavior.
+selection is a separate analysis step. Mode 25/35 ExHiROM uses its documented
+`$40FFC0` internal-header location and separate 8 MiB-capable address transform.
+Unofficial ExLoROM, board-specific layouts and enhancement chips remain separate work;
+no title or game identity selects behavior.
 
 Cartridge image analysis is also caller-owned and heap-free. It separates a possible
 512-byte copier prefix from the ROM payload using an explicit detect/reject/require
-policy, then parses LoROM and HiROM internal-header candidates. Whole-image checksum
+policy, then parses LoROM, HiROM and ExHiROM internal-header candidates. Whole-image checksum
 calculation excludes that prefix, normalizes the candidate checksum fields and mirrors
 an unambiguous smaller power-of-two tail to the declared power-of-two span. Candidate
-selection requires the full checksum and complement pair, matching base map mode,
-base chipset class, ROM-visible RESET vector, matching declared ROM span and supported
-base SRAM declaration. Exactly one candidate must satisfy every gate; zero candidates
-return no-confident-header and two return ambiguous-header. Title text and reset opcode
-guessing are not selection inputs. Non-power-of-two shapes that need arbitrary padding
+selection requires the full checksum and complement pair, matching mapper mode,
+supported base chipset class, ROM-visible RESET vector, matching declared ROM span and
+supported SRAM declaration. Exactly one candidate must satisfy every gate; zero candidates
+return no-confident-header and multiple matches return ambiguous-header. Title text
+and reset-opcode guessing are not selection inputs. Non-power-of-two shapes that need arbitrary padding
 can be checksummed diagnostically under the documented zero-padding rule but cannot be
-selected confidently. The analysis does not configure a cartridge, interpret extended
-headers or perform file I/O.
+selected confidently. The analysis does not configure a cartridge, resolve special
+board/header variants or perform file I/O. The 16 bytes preceding the title are parsed
+as raw Nintendo registration metadata without turning ASCII contents into a
+confidence gate.
 
 The CPU's `instruction_cycles` counts completed instruction or block-move-byte base
 cycles only; it is not master time. The timing bridge combines it with observed
@@ -292,6 +295,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   unambiguous larger power-of-two region plus smaller power-of-two tail, aligned to
   the mapper's bank size. It precomputes the address span and rejects layouts that
   would require arbitrary padding.
+- 2026-10-18: Documented Map Mode 25/35 ExHiROM is distinct from base HiROM: its
+  registration/header candidate lives at payload offset `$40FFB0/$40FFC0`, the first
+  4 MiB maps through banks `C0-FF`, and the extended region maps through `40-7D` with
+  the corresponding upper-half mirrors. Unofficial ExLoROM is not inferred from it.
 - 2026-10-18: Base LoROM/HiROM selection is an explicit conservative analysis step,
   separate from executable mapper initialization. It requires agreement among full
   checksum, complement, map mode, chipset, RESET vector and declared sizes, returns
