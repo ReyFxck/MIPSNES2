@@ -1,4 +1,4 @@
-/* MIPSNES2 LoROM/HiROM cartridge mapping tests. See LICENSE for GPL-3.0 terms. */
+/* MIPSNES2 LoROM/HiROM/ExHiROM mapping tests. See LICENSE for GPL-3.0 terms. */
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,11 +15,13 @@
 
 enum {
     TEST_ROM_SIZE = 256 * 1024,
+    TEST_EXHIROM_SIZE = 6 * 1024 * 1024,
     TEST_LOROM_SRAM_SIZE = 32 * 1024,
     TEST_HIROM_SRAM_SIZE = 8 * 1024
 };
 
 static uint8_t rom[TEST_ROM_SIZE];
+static uint8_t exhirom_rom[TEST_EXHIROM_SIZE];
 static uint8_t sram[TEST_LOROM_SRAM_SIZE];
 static uint8_t wram[MIPSNES2_SNES_WRAM_SIZE];
 
@@ -65,6 +67,14 @@ static int test_configuration_validation(void)
           MIPSNES2_CARTRIDGE_UNSUPPORTED_ROM_SIZE);
     config = base_config(MIPSNES2_CARTRIDGE_HIROM);
     config.rom_size = MIPSNES2_HIROM_BANK_SIZE / 2U;
+    CHECK(mipsnes2_cartridge_init(&cartridge, &config) ==
+          MIPSNES2_CARTRIDGE_UNSUPPORTED_ROM_SIZE);
+    config.rom = exhirom_rom;
+    config.rom_size = MIPSNES2_BASE_ROM_MAX_SIZE;
+    config.mapper = MIPSNES2_CARTRIDGE_EXHIROM;
+    CHECK(mipsnes2_cartridge_init(&cartridge, &config) ==
+          MIPSNES2_CARTRIDGE_UNSUPPORTED_ROM_SIZE);
+    config.rom_size = MIPSNES2_EXHIROM_MAX_SIZE + 1U;
     CHECK(mipsnes2_cartridge_init(&cartridge, &config) ==
           MIPSNES2_CARTRIDGE_UNSUPPORTED_ROM_SIZE);
     config = base_config(MIPSNES2_CARTRIDGE_LOROM);
@@ -206,6 +216,65 @@ static int test_irregular_layout_rejection(void)
     CHECK(value == UINT8_C(0xc1));
     CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0x088000), &value));
     CHECK(value == UINT8_C(0xc2));
+    return 0;
+}
+
+static int test_exhirom_mapping(void)
+{
+    mipsnes2_cartridge cartridge;
+    mipsnes2_cartridge_config config;
+    uint8_t value = 0U;
+
+    (void)memset(exhirom_rom, 0, sizeof(exhirom_rom));
+    config.rom = exhirom_rom;
+    config.rom_size = sizeof(exhirom_rom);
+    config.sram = sram;
+    config.sram_size = TEST_HIROM_SRAM_SIZE;
+    config.mapper = MIPSNES2_CARTRIDGE_EXHIROM;
+    exhirom_rom[0x000000] = UINT8_C(0xd0);
+    exhirom_rom[0x008000] = UINT8_C(0xd1);
+    exhirom_rom[0x3fffff] = UINT8_C(0xd2);
+    exhirom_rom[0x400000] = UINT8_C(0xd3);
+    exhirom_rom[0x408000] = UINT8_C(0xd4);
+    exhirom_rom[0x5fffff] = UINT8_C(0xd5);
+    CHECK(mipsnes2_cartridge_init(&cartridge, &config) ==
+          MIPSNES2_CARTRIDGE_OK);
+    CHECK(cartridge.rom_first_size == (size_t)(4U * 1024U * 1024U));
+    CHECK(cartridge.rom_mirror_span == (size_t)(8U * 1024U * 1024U));
+
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0xc00000), &value));
+    CHECK(value == UINT8_C(0xd0));
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0x808000), &value));
+    CHECK(value == UINT8_C(0xd1));
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0xffffff), &value));
+    CHECK(value == UINT8_C(0xd2));
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0x400000), &value));
+    CHECK(value == UINT8_C(0xd3));
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0x008000), &value));
+    CHECK(value == UINT8_C(0xd4));
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0x5fffff), &value));
+    CHECK(value == UINT8_C(0xd5));
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0x600000), &value));
+    CHECK(value == UINT8_C(0xd3));
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0x208000), &value));
+    CHECK(value == UINT8_C(0xd4));
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0x3fffff), &value));
+    CHECK(value == UINT8_C(0xd5));
+
+    value = UINT8_C(0xcc);
+    CHECK(!mipsnes2_cartridge_read(&cartridge, UINT32_C(0x007fff), &value));
+    CHECK(value == UINT8_C(0xcc));
+    CHECK(!mipsnes2_cartridge_read(&cartridge, UINT32_C(0x7e8000), &value));
+    CHECK(mipsnes2_cartridge_write(&cartridge, UINT32_C(0xc00000),
+                                    UINT8_C(0xff)));
+    CHECK(exhirom_rom[0] == UINT8_C(0xd0));
+
+    (void)memset(sram, 0, sizeof(sram));
+    CHECK(mipsnes2_cartridge_write(&cartridge, UINT32_C(0x206000),
+                                    UINT8_C(0xd6)));
+    CHECK(sram[0] == UINT8_C(0xd6));
+    CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0xa06000), &value));
+    CHECK(value == UINT8_C(0xd6));
     return 0;
 }
 
@@ -357,6 +426,48 @@ static int test_snes_bus_cpu_integration(void)
     return 0;
 }
 
+static int test_exhirom_snes_bus_cpu_integration(void)
+{
+    mipsnes2_cartridge cartridge;
+    mipsnes2_cartridge_config cartridge_config;
+    mipsnes2_snes_bus bus;
+    mipsnes2_snes_bus_config bus_config;
+    mipsnes2_cpu cpu;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_cpu_timing_report report;
+
+    (void)memset(exhirom_rom, 0, sizeof(exhirom_rom));
+    (void)memset(wram, 0, sizeof(wram));
+    exhirom_rom[0x408000] = UINT8_C(0xea);
+    exhirom_rom[0x40fffc] = UINT8_C(0x00);
+    exhirom_rom[0x40fffd] = UINT8_C(0x80);
+    cartridge_config.rom = exhirom_rom;
+    cartridge_config.rom_size = sizeof(exhirom_rom);
+    cartridge_config.sram = NULL;
+    cartridge_config.sram_size = 0U;
+    cartridge_config.mapper = MIPSNES2_CARTRIDGE_EXHIROM;
+    CHECK(mipsnes2_cartridge_init(&cartridge, &cartridge_config) ==
+          MIPSNES2_CARTRIDGE_OK);
+
+    (void)memset(&bus_config, 0, sizeof(bus_config));
+    bus_config.wram = wram;
+    bus_config.wram_size = sizeof(wram);
+    bus_config.initial_open_value = UINT8_C(0xa5);
+    bus_config.cartridge = mipsnes2_cartridge_make_interface(&cartridge);
+    CHECK(mipsnes2_snes_bus_init(&bus, &bus_config) == MIPSNES2_SNES_BUS_OK);
+
+    mipsnes2_cpu_init(&cpu, mipsnes2_snes_bus_make_interface(&bus));
+    CHECK(mipsnes2_cpu_reset(&cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu.pc == UINT16_C(0x8000));
+    mipsnes2_scheduler_init(&scheduler);
+    CHECK(mipsnes2_cpu_timed_step(&cpu, &bus, &scheduler, 4U, &report) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.cpu_result == MIPSNES2_CPU_OK);
+    CHECK(cpu.pc == UINT16_C(0x8001));
+    CHECK(report.master_clocks == UINT64_C(14));
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_configuration_validation() == 0);
@@ -365,7 +476,9 @@ int main(void)
     CHECK(test_irregular_lorom_mapping() == 0);
     CHECK(test_irregular_hirom_mapping() == 0);
     CHECK(test_irregular_layout_rejection() == 0);
+    CHECK(test_exhirom_mapping() == 0);
     CHECK(test_snes_bus_cpu_integration() == 0);
-    (void)puts("PASS: base LoROM/HiROM power-of-two and irregular mapping");
+    CHECK(test_exhirom_snes_bus_cpu_integration() == 0);
+    (void)puts("PASS: base LoROM/HiROM and ExHiROM mapping");
     return 0;
 }

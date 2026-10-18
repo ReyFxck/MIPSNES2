@@ -1,7 +1,7 @@
 # STATUS — canonical project state
 
 Project foundation plus a 256-opcode 65C816, partial real SNES logical bus, base
-LoROM/HiROM mapping, explicit internal-header analysis and deterministic scheduler/
+LoROM/HiROM and Mode 25/35 ExHiROM mapping, explicit internal-header analysis and deterministic scheduler/
 timing foundation. No ROM loader or runnable SNES machine, complete emulated subsystem,
 console runtime validation,
 compatibility result or hardware benchmark exists. Read
@@ -13,6 +13,8 @@ and [docs/snes-bus-timing-audit.md](docs/snes-bus-timing-audit.md), plus the
 and executable irregular-map evidence are recorded in
 [docs/cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md)
 and [docs/cartridge-irregular-mapping-audit.md](docs/cartridge-irregular-mapping-audit.md).
+Mode 25/35 evidence is in
+[docs/cartridge-exhirom-audit.md](docs/cartridge-exhirom-audit.md).
 
 ## State and evidence rules
 
@@ -466,6 +468,19 @@ scaffold cross-build, artifact and checksum jobs passed for implementation commi
 docs/cartridge-irregular-mapping-audit.md. No console runtime, compatibility or
 performance result is claimed.
 
+The documented ExHiROM milestone on 2026-10-18 adds raw 16-byte registration fields,
+Mode 25/35 classification at `$40FFC0`, conservative three-candidate selection and a
+separate 4-8 MiB address transform with HiROM-style SRAM. Generated 6 MiB fixtures
+cover first/extended regions, upper-half mirrors, bounded tail repetition, selection,
+mapper initialization and CPU reset/NOP through the SNES bus. Local GCC default,
+release and ASan+UBSan tests pass; local Clang and console SDKs are unavailable.
+GitHub Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP scaffold
+cross-build, artifact and checksum jobs passed for implementation commit
+`9f333a97609857db808ec83a4f83f1a16429acdd`. Unofficial ExLoROM, physical cartridge
+validation, special boards, file loading, persistence, console runtime, compatibility
+and performance remain incomplete. Exact scope and evidence are in
+docs/cartridge-exhirom-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -840,7 +855,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` exist; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Access timing — meaningful accesses use 5A22 6/8/12 clocks and atomic CPU steps advance the scheduler; dummy/internal placement, refresh and arbitration absent
-- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO plus power-of-two and unambiguous two-region base LoROM/HiROM boundaries verified; padded/Ex/enhancement maps absent
+- [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO, base LoROM/HiROM and Mode 25/35 ExHiROM boundaries verified; padded/ExLoROM/enhancement maps absent
 - [ ] Page/block mapping benchmark
 
 ### Verified logical-bus foundation subset
@@ -857,15 +872,15 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 ## Cartridge
 
 - [ ] ROM loading
-- [ ] [IN PROGRESS] ROM metadata — standard raw fields and conservative base-map evidence parsed; extended variants/hardware resolution absent
-- [ ] [IN PROGRESS] Header analysis — conservative base LoROM/HiROM selection verified; extended/variant headers absent
+- [ ] [IN PROGRESS] ROM metadata — standard fields, registration prefix and conservative mapper evidence parsed; special variants/hardware resolution absent
+- [ ] [IN PROGRESS] Header analysis — conservative LoROM/HiROM/ExHiROM selection verified; special variants absent
 - [ ] [IN PROGRESS] LoROM — power-of-two and unambiguous two-region base ROM mapping, base SRAM and conservative detection verified; broader boards absent
 - [ ] [IN PROGRESS] HiROM — power-of-two and unambiguous two-region base ROM mapping, base SRAM and conservative detection verified; broader boards absent
-- [ ] ExLoROM
-- [ ] ExHiROM
+- [ ] ExLoROM — unofficial mapping remains research-only; no commercial-library requirement established
+- [ ] [IN PROGRESS] ExHiROM — Mode 25/35 ROM/SRAM mapping and conservative selection verified; board/runtime validation absent
 - [ ] [IN PROGRESS] SRAM — caller-owned base mapper windows/read/write verified; persistence and broader boards absent
 - [ ] SRAM persistence
-- [ ] [IN PROGRESS] Mapper tests — synthetic power-of-two/irregular maps, checksum, selection, ambiguity and bus/CPU integration covered; padded/Ex/enhancement execution absent
+- [ ] [IN PROGRESS] Mapper tests — synthetic base/irregular/ExHiROM maps, checksum, selection, ambiguity and bus/CPU integration covered; padded/ExLoROM/enhancement execution absent
 - [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board checksum variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config, image granularity and candidate bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
@@ -894,13 +909,22 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Larger-first/smaller-tail base ROM mirroring for unambiguous layouts
 - [x] Mapper-bank alignment and padding-dependent layout rejection
 - [x] Header-selection to irregular-mapper initialization fixture
+- [x] Raw 16-byte registration-prefix parsing without ASCII/title scoring
+- [x] Mode 25/35 ExHiROM header classification at `$40FFC0`
+- [x] ExHiROM first/extended region and upper-half mirror mapping
+- [x] ExHiROM 6 MiB tail repetition and standard HiROM-style SRAM windows
+- [x] Generic three-candidate selection with explicit ambiguity/no-match
+- [x] Mapper executable-size/alignment confidence gate
 
 Checksum/selection scope and local verification are recorded in
 [cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md).
 Executable irregular-map scope and verification are recorded in
 [cartridge-irregular-mapping-audit.md](docs/cartridge-irregular-mapping-audit.md).
-Special checksum conventions, padded and board-specific irregular layouts, extended
-headers, Ex mappings and enhancement hardware remain unchecked.
+Special checksum conventions, padded and board-specific irregular layouts, unofficial
+ExLoROM and enhancement hardware remain unchecked.
+Mode 25/35 ExHiROM scope and verification are recorded in
+[cartridge-exhirom-audit.md](docs/cartridge-exhirom-audit.md). Unofficial ExLoROM,
+special boards and enhancement hardware remain unchecked.
 
 ## Scheduler
 

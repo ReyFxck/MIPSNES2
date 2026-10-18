@@ -33,6 +33,9 @@ static mipsnes2_cartridge_header_map classify_map(uint8_t map_mode)
     if (map_mode == UINT8_C(0x21) || map_mode == UINT8_C(0x31)) {
         return MIPSNES2_HEADER_MAP_BASE_HIROM;
     }
+    if (map_mode == UINT8_C(0x25) || map_mode == UINT8_C(0x35)) {
+        return MIPSNES2_HEADER_MAP_EXHIROM;
+    }
     return MIPSNES2_HEADER_MAP_OTHER;
 }
 
@@ -45,6 +48,10 @@ static bool header_offset_for_mapper(mipsnes2_cartridge_mapper mapper,
     }
     if (mapper == MIPSNES2_CARTRIDGE_HIROM) {
         *offset = MIPSNES2_HIROM_HEADER_OFFSET;
+        return true;
+    }
+    if (mapper == MIPSNES2_CARTRIDGE_EXHIROM) {
+        *offset = MIPSNES2_EXHIROM_HEADER_OFFSET;
         return true;
     }
     return false;
@@ -63,6 +70,33 @@ static size_t largest_power_of_two(size_t value)
 static bool is_power_of_two(size_t value)
 {
     return value != 0U && (value & (value - 1U)) == 0U;
+}
+
+static bool mapper_layout_supported(size_t size,
+                                    mipsnes2_cartridge_mapper mapper)
+{
+    size_t bank_size;
+    size_t first_size;
+    size_t tail_size;
+
+    bank_size = mapper == MIPSNES2_CARTRIDGE_LOROM
+                    ? (size_t)MIPSNES2_LOROM_BANK_SIZE
+                    : (size_t)MIPSNES2_HIROM_BANK_SIZE;
+    if (size % bank_size != 0U) {
+        return false;
+    }
+    if (mapper == MIPSNES2_CARTRIDGE_EXHIROM) {
+        if (size <= (size_t)MIPSNES2_BASE_ROM_MAX_SIZE ||
+            size > (size_t)MIPSNES2_EXHIROM_MAX_SIZE) {
+            return false;
+        }
+    } else if (size < bank_size ||
+               size > (size_t)MIPSNES2_BASE_ROM_MAX_SIZE) {
+        return false;
+    }
+    first_size = largest_power_of_two(size);
+    tail_size = size - first_size;
+    return tail_size == 0U || is_power_of_two(tail_size);
 }
 
 static uint16_t checksum_range(const uint8_t *data,
@@ -140,6 +174,7 @@ mipsnes2_cartridge_image_result mipsnes2_cartridge_header_parse(
     mipsnes2_cartridge_header *header)
 {
     const uint8_t *data;
+    const uint8_t *registration;
     size_t offset;
 
     if (view == NULL || header == NULL || view->data == NULL) {
@@ -154,7 +189,20 @@ mipsnes2_cartridge_image_result mipsnes2_cartridge_header_parse(
     }
 
     data = view->data + offset;
+    registration = data - MIPSNES2_REGISTRATION_PREFIX_SIZE;
     (void)memset(header, 0, sizeof(*header));
+    (void)memcpy(header->maker_code, registration,
+                 sizeof(header->maker_code));
+    (void)memcpy(header->game_code,
+                 registration + MIPSNES2_MAKER_CODE_SIZE,
+                 sizeof(header->game_code));
+    (void)memcpy(header->registration_fixed,
+                 registration + MIPSNES2_MAKER_CODE_SIZE +
+                     MIPSNES2_GAME_CODE_SIZE,
+                 sizeof(header->registration_fixed));
+    header->expansion_ram_size = registration[0x0d];
+    header->special_version = registration[0x0e];
+    header->cartridge_sub_number = registration[0x0f];
     (void)memcpy(header->title, data, sizeof(header->title));
     header->map_mode = data[0x15];
     header->chipset = data[0x16];
@@ -264,9 +312,13 @@ static mipsnes2_cartridge_image_result evaluate_candidate(
         return result;
     }
 
-    expected_map = mapper == MIPSNES2_CARTRIDGE_LOROM
-                       ? MIPSNES2_HEADER_MAP_BASE_LOROM
-                       : MIPSNES2_HEADER_MAP_BASE_HIROM;
+    if (mapper == MIPSNES2_CARTRIDGE_LOROM) {
+        expected_map = MIPSNES2_HEADER_MAP_BASE_LOROM;
+    } else if (mapper == MIPSNES2_CARTRIDGE_HIROM) {
+        expected_map = MIPSNES2_HEADER_MAP_BASE_HIROM;
+    } else {
+        expected_map = MIPSNES2_HEADER_MAP_EXHIROM;
+    }
     candidate->header_available = true;
     candidate->map_mode_matches = candidate->header.map == expected_map;
     candidate->base_chipset_supported = candidate->header.chipset <= 2U;
@@ -284,6 +336,8 @@ static mipsnes2_cartridge_image_result evaluate_candidate(
     remainder_size = view->size - largest_power_of_two(view->size);
     candidate->checksum_layout_unambiguous =
         remainder_size == 0U || is_power_of_two(remainder_size);
+    candidate->mapper_layout_supported =
+        mapper_layout_supported(view->size, mapper);
     candidate->checksum_matches =
         candidate->header.checksum == candidate->calculated_checksum;
     candidate->confident =
@@ -292,6 +346,7 @@ static mipsnes2_cartridge_image_result evaluate_candidate(
         candidate->declared_rom_size_matches &&
         candidate->declared_sram_size_supported &&
         candidate->checksum_layout_unambiguous &&
+        candidate->mapper_layout_supported &&
         candidate->header.checksum_pair_valid && candidate->checksum_matches;
     return MIPSNES2_CARTRIDGE_IMAGE_OK;
 }
@@ -325,5 +380,51 @@ mipsnes2_cartridge_image_result mipsnes2_cartridge_select_base_mapper(
     selection->selected_mapper = selection->lorom.confident
                                      ? MIPSNES2_CARTRIDGE_LOROM
                                      : MIPSNES2_CARTRIDGE_HIROM;
+    return MIPSNES2_CARTRIDGE_IMAGE_OK;
+}
+
+mipsnes2_cartridge_image_result mipsnes2_cartridge_select_mapper(
+    const mipsnes2_cartridge_image_view *view,
+    mipsnes2_cartridge_header_selection *selection)
+{
+    mipsnes2_cartridge_image_result result;
+    unsigned int confident_count;
+
+    if (view == NULL || view->data == NULL || selection == NULL) {
+        return MIPSNES2_CARTRIDGE_IMAGE_INVALID_ARGUMENT;
+    }
+    (void)memset(selection, 0, sizeof(*selection));
+    result = evaluate_candidate(view, MIPSNES2_CARTRIDGE_LOROM,
+                                &selection->lorom);
+    if (result != MIPSNES2_CARTRIDGE_IMAGE_OK) {
+        return result;
+    }
+    result = evaluate_candidate(view, MIPSNES2_CARTRIDGE_HIROM,
+                                &selection->hirom);
+    if (result != MIPSNES2_CARTRIDGE_IMAGE_OK) {
+        return result;
+    }
+    result = evaluate_candidate(view, MIPSNES2_CARTRIDGE_EXHIROM,
+                                &selection->exhirom);
+    if (result != MIPSNES2_CARTRIDGE_IMAGE_OK) {
+        return result;
+    }
+
+    confident_count = (selection->lorom.confident ? 1U : 0U) +
+                      (selection->hirom.confident ? 1U : 0U) +
+                      (selection->exhirom.confident ? 1U : 0U);
+    if (confident_count > 1U) {
+        return MIPSNES2_CARTRIDGE_IMAGE_AMBIGUOUS_HEADER;
+    }
+    if (confident_count == 0U) {
+        return MIPSNES2_CARTRIDGE_IMAGE_NO_CONFIDENT_HEADER;
+    }
+    if (selection->lorom.confident) {
+        selection->selected_mapper = MIPSNES2_CARTRIDGE_LOROM;
+    } else if (selection->hirom.confident) {
+        selection->selected_mapper = MIPSNES2_CARTRIDGE_HIROM;
+    } else {
+        selection->selected_mapper = MIPSNES2_CARTRIDGE_EXHIROM;
+    }
     return MIPSNES2_CARTRIDGE_IMAGE_OK;
 }

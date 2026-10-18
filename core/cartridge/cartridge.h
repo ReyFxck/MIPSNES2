@@ -1,4 +1,4 @@
-/* MIPSNES2 base cartridge mapping foundation. See LICENSE for GPL-3.0 terms. */
+/* MIPSNES2 cartridge mapping foundation. See LICENSE for GPL-3.0 terms. */
 #ifndef MIPSNES2_CARTRIDGE_H
 #define MIPSNES2_CARTRIDGE_H
 
@@ -11,13 +11,15 @@ enum {
     MIPSNES2_LOROM_BANK_SIZE = 32 * 1024,
     MIPSNES2_HIROM_BANK_SIZE = 64 * 1024,
     MIPSNES2_BASE_ROM_MAX_SIZE = 4 * 1024 * 1024,
+    MIPSNES2_EXHIROM_MAX_SIZE = 8 * 1024 * 1024,
     MIPSNES2_LOROM_SRAM_MAX_SIZE = 512 * 1024,
     MIPSNES2_HIROM_SRAM_MAX_SIZE = 256 * 1024
 };
 
 typedef enum {
     MIPSNES2_CARTRIDGE_LOROM = 0,
-    MIPSNES2_CARTRIDGE_HIROM
+    MIPSNES2_CARTRIDGE_HIROM,
+    MIPSNES2_CARTRIDGE_EXHIROM
 } mipsnes2_cartridge_mapper;
 
 typedef enum {

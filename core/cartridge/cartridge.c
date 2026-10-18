@@ -1,4 +1,4 @@
-/* MIPSNES2 base cartridge mapping foundation. See LICENSE for GPL-3.0 terms. */
+/* MIPSNES2 cartridge mapping foundation. See LICENSE for GPL-3.0 terms. */
 #include "core/cartridge/cartridge.h"
 
 #include <string.h>
@@ -20,13 +20,15 @@ static size_t largest_power_of_two(size_t value)
 
 static bool analyze_rom_layout(size_t size,
                                size_t bank_size,
+                               size_t minimum_size,
+                               size_t maximum_size,
                                size_t *first_size,
                                size_t *mirror_span)
 {
     size_t first;
     size_t tail;
 
-    if (size < bank_size || size > MIPSNES2_BASE_ROM_MAX_SIZE ||
+    if (size < minimum_size || size > maximum_size ||
         size % bank_size != 0U) {
         return false;
     }
@@ -129,7 +131,43 @@ static bool rom_offset(const mipsnes2_cartridge *cartridge,
     if (cartridge->mapper == MIPSNES2_CARTRIDGE_LOROM) {
         return lorom_rom_offset(address, offset);
     }
-    return hirom_rom_offset(address, offset);
+    if (cartridge->mapper == MIPSNES2_CARTRIDGE_HIROM) {
+        return hirom_rom_offset(address, offset);
+    }
+
+    {
+        uint8_t bank = (uint8_t)(address >> 16);
+        uint16_t local = (uint16_t)address;
+
+        if (bank == UINT8_C(0x7e) || bank == UINT8_C(0x7f)) {
+            return false;
+        }
+        if (bank >= UINT8_C(0xc0)) {
+            *offset = ((size_t)(bank & UINT8_C(0x3f)) << 16) |
+                      (size_t)local;
+            return true;
+        }
+        if (bank >= UINT8_C(0x40) && bank <= UINT8_C(0x7d)) {
+            *offset = (size_t)MIPSNES2_BASE_ROM_MAX_SIZE |
+                      ((size_t)(bank & UINT8_C(0x3f)) << 16) |
+                      (size_t)local;
+            return true;
+        }
+        if (local < UINT16_C(0x8000)) {
+            return false;
+        }
+        if (bank <= UINT8_C(0x3f)) {
+            *offset = (size_t)MIPSNES2_BASE_ROM_MAX_SIZE |
+                      ((size_t)bank << 16) | (size_t)local;
+            return true;
+        }
+        if (bank >= UINT8_C(0x80) && bank <= UINT8_C(0xbf)) {
+            *offset = ((size_t)(bank & UINT8_C(0x3f)) << 16) |
+                      (size_t)local;
+            return true;
+        }
+    }
+    return false;
 }
 
 static size_t mirror_rom_offset(const mipsnes2_cartridge *cartridge,
@@ -160,13 +198,21 @@ mipsnes2_cartridge_result mipsnes2_cartridge_init(
         return MIPSNES2_CARTRIDGE_INVALID_ARGUMENT;
     }
     if (config->mapper != MIPSNES2_CARTRIDGE_LOROM &&
-        config->mapper != MIPSNES2_CARTRIDGE_HIROM) {
+        config->mapper != MIPSNES2_CARTRIDGE_HIROM &&
+        config->mapper != MIPSNES2_CARTRIDGE_EXHIROM) {
         return MIPSNES2_CARTRIDGE_UNSUPPORTED_MAPPER;
     }
     rom_min = config->mapper == MIPSNES2_CARTRIDGE_LOROM
                   ? MIPSNES2_LOROM_BANK_SIZE
                   : MIPSNES2_HIROM_BANK_SIZE;
-    if (!analyze_rom_layout(config->rom_size, rom_min,
+    if (!analyze_rom_layout(
+            config->rom_size, rom_min,
+            config->mapper == MIPSNES2_CARTRIDGE_EXHIROM
+                ? (size_t)MIPSNES2_BASE_ROM_MAX_SIZE + rom_min
+                : rom_min,
+            config->mapper == MIPSNES2_CARTRIDGE_EXHIROM
+                ? (size_t)MIPSNES2_EXHIROM_MAX_SIZE
+                : (size_t)MIPSNES2_BASE_ROM_MAX_SIZE,
                             &rom_first_size, &rom_mirror_span)) {
         return MIPSNES2_CARTRIDGE_UNSUPPORTED_ROM_SIZE;
     }

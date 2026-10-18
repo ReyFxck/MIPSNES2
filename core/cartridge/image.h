@@ -10,10 +10,15 @@
 
 enum {
     MIPSNES2_COPIER_HEADER_SIZE = 512,
+    MIPSNES2_REGISTRATION_PREFIX_SIZE = 16,
+    MIPSNES2_MAKER_CODE_SIZE = 2,
+    MIPSNES2_GAME_CODE_SIZE = 4,
+    MIPSNES2_REGISTRATION_FIXED_SIZE = 7,
     MIPSNES2_INTERNAL_TITLE_SIZE = 21,
     MIPSNES2_INTERNAL_HEADER_BLOCK_SIZE = 64,
     MIPSNES2_LOROM_HEADER_OFFSET = 0x7fc0,
-    MIPSNES2_HIROM_HEADER_OFFSET = 0xffc0
+    MIPSNES2_HIROM_HEADER_OFFSET = 0xffc0,
+    MIPSNES2_EXHIROM_HEADER_OFFSET = 0x40ffc0
 };
 
 typedef enum {
@@ -38,7 +43,8 @@ typedef enum {
 typedef enum {
     MIPSNES2_HEADER_MAP_OTHER = 0,
     MIPSNES2_HEADER_MAP_BASE_LOROM,
-    MIPSNES2_HEADER_MAP_BASE_HIROM
+    MIPSNES2_HEADER_MAP_BASE_HIROM,
+    MIPSNES2_HEADER_MAP_EXHIROM
 } mipsnes2_cartridge_header_map;
 
 typedef struct {
@@ -50,6 +56,12 @@ typedef struct {
 } mipsnes2_cartridge_image_view;
 
 typedef struct {
+    uint8_t maker_code[MIPSNES2_MAKER_CODE_SIZE];
+    uint8_t game_code[MIPSNES2_GAME_CODE_SIZE];
+    uint8_t registration_fixed[MIPSNES2_REGISTRATION_FIXED_SIZE];
+    uint8_t expansion_ram_size;
+    uint8_t special_version;
+    uint8_t cartridge_sub_number;
     uint8_t title[MIPSNES2_INTERNAL_TITLE_SIZE];
     uint8_t map_mode;
     uint8_t chipset;
@@ -81,6 +93,7 @@ typedef struct {
     bool declared_rom_size_matches;
     bool declared_sram_size_supported;
     bool checksum_layout_unambiguous;
+    bool mapper_layout_supported;
     bool checksum_matches;
     bool confident;
 } mipsnes2_cartridge_header_candidate;
@@ -88,6 +101,7 @@ typedef struct {
 typedef struct {
     mipsnes2_cartridge_header_candidate lorom;
     mipsnes2_cartridge_header_candidate hirom;
+    mipsnes2_cartridge_header_candidate exhirom;
     /* Valid only when selection returns MIPSNES2_CARTRIDGE_IMAGE_OK. */
     mipsnes2_cartridge_mapper selected_mapper;
 } mipsnes2_cartridge_header_selection;
@@ -107,6 +121,9 @@ mipsnes2_cartridge_image_result mipsnes2_cartridge_checksum_calculate(
     uint16_t *checksum,
     size_t *mirrored_size);
 mipsnes2_cartridge_image_result mipsnes2_cartridge_select_base_mapper(
+    const mipsnes2_cartridge_image_view *view,
+    mipsnes2_cartridge_header_selection *selection);
+mipsnes2_cartridge_image_result mipsnes2_cartridge_select_mapper(
     const mipsnes2_cartridge_image_view *view,
     mipsnes2_cartridge_header_selection *selection);
 

@@ -34,13 +34,14 @@ substitute for real PS2 or PSP evidence.
 
 - [SNESdev Wiki: memory map](https://snes.nesdev.org/wiki/Memory_map) — WRAM, MMIO, cartridge windows, mirrors and access-speed overview.
 - [Anomie's SNES memory mapping document](https://github.com/gilligan/snesdev/blob/eeb98f1e85b7db6574ca0804455819ec81117198/docs/memmap.txt) — pinned independent hardware-research map used for WRAM, system-bank route and 6/8/12-clock boundaries. Revision `eeb98f1e85b7db6574ca0804455819ec81117198`; review provenance again before importing any asset (no asset is committed).
-- [The SNES Cartridge, Briefly Explained](https://mousebitelabs.com/2019/05/18/custom-pcb-explanation/) — hardware-board and address-decoder explanation used to cross-check base LoROM/HiROM wiring. It is not an emulator implementation; special boards still require board-specific evidence.
+- [The SNES Cartridge, Briefly Explained](https://mousebitelabs.com/2019/05/18/custom-pcb-explanation/) — hardware-board and address-decoder explanation used to cross-check LoROM/HiROM/ExHiROM wiring. It is not an emulator implementation; special boards still require board-specific evidence.
 - [SNESdev Wiki: ROM header](https://snes.nesdev.org/wiki/ROM_header) — header locations and mapper-related metadata. Header heuristics are not a license for per-game hardcoding.
 - [SNESdev Wiki: ROM file formats](https://snes.nesdev.org/wiki/ROM_file_formats) — copier-header and file-layout context for the future loader.
 - [Super Famicom Development Wiki: non-power-of-two ROM size](https://wiki.superfamicom.org/non-power-of-two-rom-size) — community description of larger-chip-first, smaller-chip mirroring (`ABCC`, `ABCDEEEE`) used only for the explicitly bounded irregular base-map policy; board-specific exceptions still require stronger evidence.
 - [fullsnes hardware specification](https://problemkaputt.de/fullsnes.htm) — independently written, broad SNES register/timing/mapping reference. It is a hardware document, not an emulator implementation; verify disputed or revision-sensitive details on hardware.
 - [Super Famicom Development Wiki: registers](https://wiki.superfamicom.org/registers) — searchable community register reference derived from hardware research documents. Check attribution and primary evidence for edge cases.
-- [SNES Development Manual index](https://snes.nesdev.org/wiki/SNES_Development_Manual) — description/index for Nintendo's two-book licensed-developer manual. Do not add a manual copy to this repository without verified redistribution rights.
+- [SNES Development Manual index](https://snes.nesdev.org/wiki/SNES_Development_Manual) — description/index for Nintendo's two-book licensed-developer manual. Book I pages 1-2-14 through 1-2-17 define the 16-byte registration prefix, Mode 25's `$40FFB0-$40FFDF` registration/header location and `25h/35h` map values. Do not add a manual copy to this repository without verified redistribution rights.
+- [SnesLab: ExLoROM](https://sneslab.net/wiki/ExLoROM) — community evidence that ExLoROM is a rare unofficial mapping rather than a Nintendo-defined peer of ExHiROM. MIPSNES2 keeps it research-only pending a demonstrated compatibility need and stronger hardware evidence.
 
 ## PPU, DMA and timing
 
