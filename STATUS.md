@@ -474,7 +474,9 @@ separate 4-8 MiB address transform with HiROM-style SRAM. Generated 6 MiB fixtur
 cover first/extended regions, upper-half mirrors, bounded tail repetition, selection,
 mapper initialization and CPU reset/NOP through the SNES bus. Local GCC default,
 release and ASan+UBSan tests pass; local Clang and console SDKs are unavailable.
-GitHub workflow evidence remains pending. Unofficial ExLoROM, physical cartridge
+GitHub Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP scaffold
+cross-build, artifact and checksum jobs passed for implementation commit
+`9f333a97609857db808ec83a4f83f1a16429acdd`. Unofficial ExLoROM, physical cartridge
 validation, special boards, file loading, persistence, console runtime, compatibility
 and performance remain incomplete. Exact scope and evidence are in
 docs/cartridge-exhirom-audit.md.

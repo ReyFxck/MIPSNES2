@@ -91,9 +91,20 @@ The following local checks passed from the repository root with GCC on 2026-10-1
 
 Leak detection was disabled only for the local sanitizer runtime environment; ASan
 and UBSan remained enabled. Local Clang, PS2SDK and PSPSDK executables were not
-available. GitHub Host/PS2/PSP workflow identifiers are added only after those exact
-jobs succeed. Real PS2, real PSP, PCSX2, PPSSPP and physical SNES cartridge
-validation were not performed.
+available.
+
+GitHub Actions passed for implementation commit
+`9f333a97609857db808ec83a4f83f1a16429acdd`:
+
+- Host CI run `39164945670`: GCC and Clang release tests, ASan+UBSan tests,
+  development artifacts and checksum validation succeeded;
+- PS2 CI run `39164945664`: pinned toolchain installation, scaffold cross-build,
+  artifact upload and SHA-256 validation succeeded;
+- PSP CI run `39164945663`: pinned toolchain installation, scaffold cross-build,
+  artifact upload and SHA-256 validation succeeded.
+
+These cross-builds are not runtime tests. Real PS2, real PSP, PCSX2, PPSSPP and
+physical SNES cartridge validation were not performed.
 
 ## Deliberate exclusions
 
