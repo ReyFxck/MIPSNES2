@@ -4,7 +4,7 @@ $(error PS2SDK is unset; see docs/ps2.md)
 endif
 EE_BIN = mipsnes2-ps2.elf
 EE_OBJS = main.o log.o bus.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
-	cpu_timing.o cartridge.o
+	cpu_timing.o cartridge.o cartridge_image.o
 EE_LIBS = -lc
 EE_INCS = -I../..
 EE_CFLAGS = -std=c99 -Wextra -Werror
@@ -34,6 +34,9 @@ cpu_timing.o: ../../core/scheduler/cpu_timing.c ../../core/scheduler/cpu_timing.
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 cartridge.o: ../../core/cartridge/cartridge.c ../../core/cartridge/cartridge.h ../../core/cartridge/interface.h ../../core/common/address.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+cartridge_image.o: ../../core/cartridge/image.c ../../core/cartridge/image.h ../../core/cartridge/cartridge.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 main.o: main.c ../../core/common/log.h ../../core/common/project.h

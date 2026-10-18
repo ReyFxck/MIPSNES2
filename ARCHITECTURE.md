@@ -1,8 +1,8 @@
 # Architecture
 
 Status: project foundation plus a 256-opcode 65C816, partial real SNES logical bus,
-base LoROM/HiROM mapping and deterministic scheduler/timing foundation, not a working
-SNES emulator. Read
+base LoROM/HiROM mapping, explicit cartridge-header analysis and deterministic
+scheduler/timing foundation, not a working SNES emulator. Read
 [STATUS.md](STATUS.md).
 
 ## Dependency direction and ownership
@@ -16,7 +16,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, mirrors, ports, MMIO routes, FastROM state and per-access clocks |
-| core/cartridge | Validated metadata, mappings, SRAM data | Explicit caller-owned base LoROM/HiROM ROM/SRAM views; no header detection |
+| core/cartridge | Validated metadata, mappings, SRAM data | Caller-owned base LoROM/HiROM views plus explicit copier-prefix and header-candidate analysis; no automatic mapper selection |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
@@ -69,9 +69,16 @@ the bus's open latch intact. The base cartridge implementation accepts an explic
 LoROM or HiROM mapper plus caller-owned ROM/SRAM buffers. It models the ordinary
 32 KiB LoROM and 64 KiB HiROM wiring, standard SRAM windows and read-only ROM. For
 now it accepts only power-of-two ROMs from 32 KiB through 4 MiB and power-of-two SRAM
-within each base mapper's addressable window. Header analysis, automatic selection,
-copier headers, irregular/multi-chip ROM layouts, Ex mappings and enhancement chips
-remain separate work; no title or checksum selects behavior.
+within each base mapper's addressable window. Automatic selection, extended/variant
+header analysis, irregular/multi-chip ROM layouts, Ex mappings and
+enhancement chips remain separate work; no title or checksum selects behavior.
+
+Cartridge image analysis is also caller-owned and heap-free. It separates a possible
+512-byte copier prefix from the ROM payload using an explicit detect/reject/require
+policy, then parses a caller-selected LoROM or HiROM internal-header candidate. It
+reports raw fields, representable declared sizes, the checksum/complement relationship
+and base map-mode classification. It deliberately does not score candidates, select
+a mapper, trust the declared size, identify enhancement hardware or perform file I/O.
 
 The CPU's `instruction_cycles` counts completed instruction or block-move-byte base
 cycles only; it is not master time. The timing bridge combines it with observed
@@ -270,6 +277,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   ownership stays in the SNES bus. Original caller-owned C99 base LoROM/HiROM maps
   support power-of-two ROM/SRAM only; detection and irregular board layouts remain
   incomplete instead of being guessed or keyed to games.
+- 2026-10-17: Cartridge image layout and internal-header parsing are distinct from
+  mapper selection. Copier-prefix handling is an explicit caller policy; raw header
+  fields are diagnostic evidence, never a title-based or single-field selection rule.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
 - Changes to these decisions require rationale, tests, status updates and measurements

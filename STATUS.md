@@ -1,13 +1,15 @@
 # STATUS — canonical project state
 
 Project foundation plus a 256-opcode 65C816, partial real SNES logical bus, base
-LoROM/HiROM mapping and deterministic scheduler/timing foundation. No ROM loader or
-runnable SNES machine, complete emulated subsystem, console runtime validation,
+LoROM/HiROM mapping, explicit internal-header analysis and deterministic scheduler/
+timing foundation. No ROM loader or runnable SNES machine, complete emulated subsystem,
+console runtime validation,
 compatibility result or hardware benchmark exists. Read
 [bootstrap audit](docs/bootstrap-audit.md) and the CPU/bus evidence in
 [docs/65c816-foundation-audit.md](docs/65c816-foundation-audit.md)
 and [docs/snes-bus-timing-audit.md](docs/snes-bus-timing-audit.md), plus the
-[base-cartridge audit](docs/cartridge-foundation-audit.md).
+[base-cartridge audit](docs/cartridge-foundation-audit.md) and
+[header-analysis audit](docs/cartridge-header-analysis-audit.md).
 
 ## State and evidence rules
 
@@ -817,8 +819,8 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 ## Cartridge
 
 - [ ] ROM loading
-- [ ] ROM metadata
-- [ ] Header analysis
+- [ ] [IN PROGRESS] ROM metadata — standard raw internal-header fields parsed; extended variants and hardware resolution absent
+- [ ] [IN PROGRESS] Header analysis — explicit LoROM/HiROM candidate parsing verified; automatic evidence-based selection absent
 - [ ] [IN PROGRESS] LoROM — explicit power-of-two base ROM/SRAM mapping verified; irregular boards and detection absent
 - [ ] [IN PROGRESS] HiROM — explicit power-of-two base ROM/SRAM mapping verified; irregular boards and detection absent
 - [ ] ExLoROM
@@ -826,9 +828,9 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] SRAM — caller-owned base mapper windows/read/write verified; persistence and broader boards absent
 - [ ] SRAM persistence
 - [ ] [IN PROGRESS] Mapper tests — synthetic base LoROM/HiROM boundaries, mirrors, SRAM and bus/CPU integration covered
-- [ ] Checksum handling where useful
-- [ ] [IN PROGRESS] Truncated and malformed input rejection — explicit config/size rejection exists; file/header parsing absent
-- [ ] Copier-header policy
+- [ ] [IN PROGRESS] Checksum handling where useful — complement-pair validation exists; full image checksum absent
+- [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config, image granularity and candidate bounds covered; file I/O absent
+- [ ] [IN PROGRESS] Copier-header policy — explicit detect/reject/require implementation awaiting cross-build evidence
 - [ ] Region detection
 
 ### Verified base-cartridge foundation subset
@@ -840,6 +842,12 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Standard base LoROM/HiROM SRAM windows for supported sizes
 - [x] ROM write protection and deterministic mirror fixtures
 - [x] Cartridge/SNES-bus/CPU/scheduler integration fixture
+- [x] Heap-free clean/copier-prefixed image view with source-offset retention
+- [x] Explicit LoROM/HiROM internal-header candidate parsing
+- [x] Raw title/map/chip/size/destination/developer/version/checksum/vector extraction
+- [x] Overflow-safe declared ROM/SRAM size decoding
+- [x] Checksum/complement relationship and base map-mode classification
+- [x] Malformed image-size and out-of-range candidate rejection
 
 ## Scheduler
 
