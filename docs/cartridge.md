@@ -202,7 +202,7 @@ unchecked until their complete verification gates are met.
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds only
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix
 - [ ] Region detection
-- [ ] [IN PROGRESS] Platform-neutral image-to-cartridge construction contract — host verified; console cross-build CI pending
+- [x] Platform-neutral image-to-cartridge construction contract
 
 ## Research and decisions
 

@@ -62,8 +62,18 @@ The following local checks passed with GCC 13.3.0 on 2026-10-18:
 
 Leak detection was disabled only for the local sanitizer runtime environment; ASan
 and UBSan remained enabled. Local Clang, PS2SDK and PSPSDK were unavailable. GitHub
-CI evidence is added only after the exact jobs succeed. Real PS2, real PSP, PCSX2 and
-PPSSPP runtime validation are not part of this interface-only milestone.
+Actions passed for implementation commit
+`cd55c07af49841751e67c750d1dceb9c70a8393f`:
+
+- Host CI run `39165483492`: GCC and Clang release tests, ASan+UBSan tests,
+  development artifacts and checksum validation succeeded;
+- PS2 CI run `39165483445`: pinned toolchain installation, shared-core/scaffold
+  cross-build, artifact upload and SHA-256 validation succeeded;
+- PSP CI run `39165483460`: pinned toolchain installation, shared-core/scaffold
+  cross-build, artifact upload and SHA-256 validation succeeded.
+
+These cross-builds are not runtime tests. Real PS2, real PSP, PCSX2 and PPSSPP
+runtime validation are not part of this interface-only milestone.
 
 ## Remaining work
 

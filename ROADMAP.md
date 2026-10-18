@@ -116,7 +116,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection
-- [ ] [IN PROGRESS] Platform-neutral image-to-cartridge construction contract — host verified; PS2/PSP cross-build CI pending
+- [x] Platform-neutral image-to-cartridge construction contract
 
 ## Phase 4 — Scheduler / IRQ / NMI / DMA / HDMA
 

@@ -487,9 +487,12 @@ validated mapper to caller-owned ROM/SRAM storage. Outputs remain unchanged on
 failure and no file/path/platform API enters `core/`. Generated tests cover clean and
 prefixed LoROM, missing/undersized/oversized SRAM capacity, failure transactionality,
 tampered plans and selected 6 MiB ExHiROM construction. Local GCC default, release
-and ASan+UBSan tests pass; local Clang and console SDKs are unavailable. GitHub CI
-evidence remains pending. Platform file adapters, persistence and ROM execution
-remain incomplete. Exact scope is in docs/cartridge-construction-audit.md.
+and ASan+UBSan tests pass; local Clang and console SDKs are unavailable. GitHub Host
+GCC/Clang release and sanitizer jobs plus pinned PS2/PSP scaffold cross-build,
+artifact and checksum jobs passed for implementation commit
+`cd55c07af49841751e67c750d1dceb9c70a8393f`. Platform file adapters, persistence
+and ROM execution remain incomplete. Exact scope and evidence are in
+docs/cartridge-construction-audit.md.
 
 ## Current blockers and diagnostic exceptions
 
@@ -925,7 +928,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] ExHiROM 6 MiB tail repetition and standard HiROM-style SRAM windows
 - [x] Generic three-candidate selection with explicit ambiguity/no-match
 - [x] Mapper executable-size/alignment confidence gate
-- [ ] [IN PROGRESS] Platform-neutral image-to-cartridge plan and caller-owned SRAM construction — host verified; PS2/PSP cross-build CI pending
+- [x] Platform-neutral image-to-cartridge plan and caller-owned SRAM construction
 
 Checksum/selection scope and local verification are recorded in
 [cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md).
