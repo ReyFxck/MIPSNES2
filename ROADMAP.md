@@ -102,7 +102,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Access timing — meaningful accesses integrated; exact cycle placement/refresh/arbitration pending
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO plus base and Mode 25/35 ExHiROM maps verified; padded/ExLoROM/enhancement pending
 - [ ] Page/block mapping benchmark
-- [ ] ROM loading
+- [ ] [IN PROGRESS] ROM loading — platform-neutral analysis/construction contract verified; platform file adapters absent
 - [ ] [IN PROGRESS] ROM metadata — standard and 16-byte registration fields parsed; special variants pending
 - [ ] [IN PROGRESS] Header analysis — conservative LoROM/HiROM/ExHiROM selection verified; special variants pending
 - [ ] [IN PROGRESS] LoROM — power-of-two and unambiguous two-region base mapping plus conservative detection verified; broader boards pending
@@ -116,6 +116,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
 - [ ] Region detection
+- [x] Platform-neutral image-to-cartridge construction contract
 
 ## Phase 4 — Scheduler / IRQ / NMI / DMA / HDMA
 

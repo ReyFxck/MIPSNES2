@@ -94,6 +94,13 @@ board/header variants or perform file I/O. The 16 bytes preceding the title are 
 as raw Nintendo registration metadata without turning ASCII contents into a
 confidence gate.
 
+Cartridge preparation joins these layers without taking platform ownership. A
+caller-supplied complete file buffer becomes an immutable image view and conservative
+selection plan. The plan reports header-declared SRAM bytes; construction then binds
+the selected mapper to caller-owned ROM/SRAM storage and reuses the executable
+mapper's validation. Failed analysis/construction leaves destination objects
+unchanged. Paths, file handles, allocation and persistence remain platform concerns.
+
 The CPU's `instruction_cycles` counts completed instruction or block-move-byte base
 cycles only; it is not master time. The timing bridge combines it with observed
 address-speed accesses, while reset timing, exact cycle placement, wait states and

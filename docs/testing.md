@@ -95,6 +95,10 @@ zero-padding, conservative base-map selection, every selection gate, explicit
 no-match/ambiguity, candidate bounds, one selected irregular LoROM-to-mapper fixture
 and one selected 6 MiB ExHiROM-to-mapper fixture. It does not resolve special board
 headers or prove physical cartridge wiring.
+The cartridge-preparation regression executable verifies the allocation-free path
+from caller-owned clean/prefixed bytes through conservative selection, declared SRAM
+capacity and executable LoROM/ExHiROM construction. It checks unchanged outputs on
+failure and rejects malformed/tampered inputs. It performs no platform file I/O.
 The host smoke script checks the honest banner and rejects ROM/unknown arguments. The
 repository checker verifies
 required files, local Markdown links, allowed checkbox syntax, license hash, action
@@ -196,6 +200,8 @@ Executable irregular-map evidence is recorded in
 [cartridge-irregular-mapping-audit.md](cartridge-irregular-mapping-audit.md).
 Mode 25/35 ExHiROM evidence is recorded in
 [cartridge-exhirom-audit.md](cartridge-exhirom-audit.md).
+Cartridge preparation/construction evidence is recorded in
+[cartridge-construction-audit.md](cartridge-construction-audit.md).
 
 ## End-of-task audit
 

@@ -20,6 +20,11 @@ larger than 4 MiB through 8 MiB, uses the `$40FFC0` header candidate and retains
 same bounded smaller-tail policy. Raw maker/game registration fields at the preceding
 16 bytes are parsed for diagnostics but are not title/ASCII confidence heuristics.
 
+`prepare.c` connects analysis to executable mapping without performing I/O or
+allocation. It produces a plan over the caller-owned source, reports required SRAM,
+and transactionally constructs a cartridge over caller-owned buffers. Platform code
+retains all file, allocation and persistence ownership.
+
 This is not complete cartridge support. Special board/header variants,
 board-specific irregular ROM layouts, unofficial ExLoROM and enhancement
 chips and SRAM persistence remain open. See [cartridge documentation](../../docs/cartridge.md)

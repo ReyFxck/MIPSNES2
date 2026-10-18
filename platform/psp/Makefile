@@ -1,7 +1,7 @@
 # SDK conventions verified against pspdev/pspsdk; see docs/psp.md.
 TARGET = mipsnes2-psp
 OBJS = main.o log.o bus.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
-	cpu_timing.o cartridge.o cartridge_image.o
+	cpu_timing.o cartridge.o cartridge_image.o cartridge_prepare.o
 BUILD_PRX = 1
 INCDIR = ../..
 CFLAGS = -O2 -std=c99 -Wall -Wextra -Werror
@@ -42,6 +42,9 @@ cartridge.o: ../../core/cartridge/cartridge.c ../../core/cartridge/cartridge.h .
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 cartridge_image.o: ../../core/cartridge/image.c ../../core/cartridge/image.h ../../core/cartridge/cartridge.h
+	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
+
+cartridge_prepare.o: ../../core/cartridge/prepare.c ../../core/cartridge/prepare.h ../../core/cartridge/image.h ../../core/cartridge/cartridge.h
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 main.o: main.c ../../core/common/log.h ../../core/common/project.h

@@ -18,10 +18,12 @@ TEST_SCHEDULER = $(BUILD_DIR)/test-scheduler
 TEST_SNES_BUS = $(BUILD_DIR)/test-snes-bus
 TEST_CARTRIDGE = $(BUILD_DIR)/test-cartridge
 TEST_CARTRIDGE_IMAGE = $(BUILD_DIR)/test-cartridge-image
+TEST_CARTRIDGE_PREPARE = $(BUILD_DIR)/test-cartridge-prepare
 CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu.o \
 	$(BUILD_DIR)/snes_bus.o $(BUILD_DIR)/scheduler.o \
 	$(BUILD_DIR)/5a22_timing.o $(BUILD_DIR)/cpu_timing.o \
-	$(BUILD_DIR)/cartridge.o $(BUILD_DIR)/cartridge_image.o
+	$(BUILD_DIR)/cartridge.o $(BUILD_DIR)/cartridge_image.o \
+	$(BUILD_DIR)/cartridge_prepare.o
 
 .PHONY: all test check clean
 all: $(HOST)
@@ -56,6 +58,9 @@ $(BUILD_DIR)/cartridge.o: core/cartridge/cartridge.c core/cartridge/cartridge.h 
 $(BUILD_DIR)/cartridge_image.o: core/cartridge/image.c core/cartridge/image.h core/cartridge/cartridge.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
+$(BUILD_DIR)/cartridge_prepare.o: core/cartridge/prepare.c core/cartridge/prepare.h core/cartridge/image.h core/cartridge/cartridge.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
 $(LIB): $(CORE_OBJS)
 	$(AR) rcs $@ $^
 
@@ -83,10 +88,13 @@ $(TEST_CARTRIDGE): tests/test_cartridge.c core/cartridge/cartridge.h core/bus/sn
 $(TEST_CARTRIDGE_IMAGE): tests/test_cartridge_image.c core/cartridge/image.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_CARTRIDGE_PREPARE): tests/test_cartridge_prepare.c core/cartridge/prepare.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
@@ -94,6 +102,7 @@ test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_SCHEDULER) $(TEST_SNES_BU
 	$(TEST_SNES_BUS)
 	$(TEST_CARTRIDGE)
 	$(TEST_CARTRIDGE_IMAGE)
+	$(TEST_CARTRIDGE_PREPARE)
 	$(PYTHON) tests/test_host.py $(HOST)
 
 clean:
@@ -102,4 +111,5 @@ clean:
 -include $(BUILD_DIR)/log.d $(BUILD_DIR)/bus.d $(BUILD_DIR)/snes_bus.d \
 	$(BUILD_DIR)/cpu.d $(BUILD_DIR)/scheduler.d \
 	$(BUILD_DIR)/5a22_timing.d $(BUILD_DIR)/cpu_timing.d \
-	$(BUILD_DIR)/cartridge.d $(BUILD_DIR)/cartridge_image.d
+	$(BUILD_DIR)/cartridge.d $(BUILD_DIR)/cartridge_image.d \
+	$(BUILD_DIR)/cartridge_prepare.d

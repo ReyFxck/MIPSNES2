@@ -45,7 +45,8 @@ smaller-tail layouts are supported within each mapper's verified size limit. A s
 image view validates 32 KiB-granular payloads, explicitly handles
 optional 512-byte copier prefixes, calculates the mirrored whole-image checksum and
 can select one LoROM/HiROM/ExHiROM candidate only when independent header evidence
-agrees.
+agrees. A platform-neutral, allocation-free preparation contract then reports required
+SRAM and constructs the executable mapper over caller-owned buffers.
 No-match and ambiguous images are rejected instead of guessed. There is no file loader,
 unofficial ExLoROM, padded/board-specific irregular mapping or enhancement hardware.
 No PPU, APU, ROM runner, compatibility or performance claim exists.
@@ -67,8 +68,8 @@ verified. Opcode dispatch and the generic scheduler/event foundation are complet
 Meaningful CPU bus accesses now receive address-dependent Ricoh 5A22 timing through
 the partial SNES map. ABORT, signal-level RESET/bus behavior, exact dummy/internal
 bus sequencing, full CPU event-horizon integration and broader independent validation
-remain. The next focused milestone is a platform-neutral ROM-loading/construction
-contract; unofficial ExLoROM remains research-only until stronger evidence exists.
+remain. The next focused milestone is the Ricoh 5A22 CPU-I/O interrupt/timer
+foundation; unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.
 
