@@ -37,6 +37,7 @@ void mipsnes2_cpu_io_set_vblank(mipsnes2_cpu_io *io, bool active);
 void mipsnes2_cpu_io_set_hblank(mipsnes2_cpu_io *io, bool active);
 void mipsnes2_cpu_io_set_auto_joypad_busy(mipsnes2_cpu_io *io,
                                           bool active);
+void mipsnes2_cpu_io_signal_nmi_flag(mipsnes2_cpu_io *io);
 void mipsnes2_cpu_io_signal_timer_irq(mipsnes2_cpu_io *io);
 bool mipsnes2_cpu_io_take_nmi_edge(mipsnes2_cpu_io *io);
 bool mipsnes2_cpu_io_irq_asserted(const mipsnes2_cpu_io *io);

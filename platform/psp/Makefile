@@ -1,7 +1,7 @@
 # SDK conventions verified against pspdev/pspsdk; see docs/psp.md.
 TARGET = mipsnes2-psp
 OBJS = main.o log.o bus.o cpu_io.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
-	cpu_timing.o cartridge.o cartridge_image.o cartridge_prepare.o
+	hv_timing.o cpu_timing.o cartridge.o cartridge_image.o cartridge_prepare.o
 BUILD_PRX = 1
 INCDIR = ../..
 CFLAGS = -O2 -std=c99 -Wall -Wextra -Werror
@@ -36,6 +36,9 @@ scheduler.o: ../../core/scheduler/scheduler.c ../../core/scheduler/scheduler.h
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 5a22_timing.o: ../../core/scheduler/5a22_timing.c ../../core/scheduler/5a22_timing.h ../../core/common/address.h
+	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
+
+hv_timing.o: ../../core/scheduler/hv_timing.c ../../core/scheduler/hv_timing.h ../../core/bus/cpu_io.h
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 cpu_timing.o: ../../core/scheduler/cpu_timing.c ../../core/scheduler/cpu_timing.h ../../core/scheduler/scheduler.h ../../core/bus/snes_bus.h ../../core/cpu/65c816/cpu.h

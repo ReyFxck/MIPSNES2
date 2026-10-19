@@ -19,7 +19,8 @@ not a port or wrapper around another emulator. Fix hardware behavior, not games.
 
 **The project has a 256-opcode reference 65C816 interpreter, a partial real SNES
 logical bus, base LoROM/HiROM mapping, conservative internal-header selection and a
-deterministic scheduler/timing foundation. It cannot run a SNES ROM as a machine.**
+deterministic scheduler/timing foundation with a partial non-interlaced H/V model.
+It cannot run a SNES ROM as a machine.**
 All opcode values now cover the foundation, the complete register-
 transfer and branch families, implied single-flag status controls, accumulator/index
 register increment-decrement operations, complete ORA/AND/EOR/CMP address families,
@@ -71,9 +72,12 @@ Meaningful CPU bus accesses now receive address-dependent Ricoh 5A22 timing thro
 the partial SNES map. ABORT, signal-level RESET/bus behavior, exact dummy/internal
 bus sequencing, full CPU event-horizon integration and broader independent validation
 remain. The first caller-owned CPU-I/O register/latch component now covers the
-documented `$4200`, `$4207-$420A` and `$4210-$4212` foundation. H/V counter match
-generation and scheduler integration are the next focused milestone; unofficial
-ExLoROM remains research-only until stronger evidence exists.
+documented `$4200`, `$4207-$420A` and `$4210-$4212` foundation. A separate H/V
+component now advances deterministic non-interlaced NTSC/PAL master-clock state,
+blank transitions, the NTSC short line and delayed NMI flag. H/V IRQ compare
+generation and connection to the central scheduler/CPU boundary are the next focused
+milestone; interlace remains incomplete. Unofficial ExLoROM remains research-only
+until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.
 

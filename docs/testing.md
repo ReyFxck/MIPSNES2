@@ -78,7 +78,10 @@ ports, MMIO callback ranges, cartridge fallthrough, `$420D`, FastROM timing,
 CPU-I/O state/fallback routing, 24-bit normalization and counter overflow. The
 CPU-I/O regression executable independently covers NMITIMEN masks and transitions,
 9-bit H/V compare storage, RDNMI/TIMEUP acknowledgement, HVBJOY inputs, open-bus bit
-composition and invalid/unimplemented accesses. Timed CPU fixtures verify a slow NOP,
+composition, distinct VBlank/NMI-flag inputs and invalid/unimplemented accesses. The
+H/V regression executable covers non-interlaced NTSC/PAL scanline/frame totals,
+HBlank/VBlank boundaries, overscan, field toggling, the NTSC short line, delayed NMI
+assertion, overflow rejection and one-shot/chunked determinism. Timed CPU fixtures verify a slow NOP,
 mixed FastROM-fetch/slow-WRAM LDA, an event timestamped inside an atomic instruction,
 emulation-mode NMI entry and visible bridge errors. They validate meaningful-access
 timing, not missing dummy cycles, mid-instruction pause/resume, WRAM refresh, complete
@@ -197,6 +200,8 @@ Partial SNES bus and timed CPU-step evidence is recorded in
 [snes-bus-timing-audit.md](snes-bus-timing-audit.md).
 Ricoh 5A22 CPU-I/O register/latch evidence is recorded in
 [cpu-io-foundation-audit.md](cpu-io-foundation-audit.md).
+Non-interlaced H/V timing and blank/NMI transition evidence is recorded in
+[hv-timing-foundation-audit.md](hv-timing-foundation-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in

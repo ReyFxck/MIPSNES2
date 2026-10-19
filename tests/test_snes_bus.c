@@ -324,6 +324,7 @@ static int test_cpu_io_state_routing(void)
 
     mipsnes2_snes_bus_write(&bus, UINT32_C(0x004200), UINT8_C(0x80));
     mipsnes2_cpu_io_set_vblank(&cpu_io_state, true);
+    mipsnes2_cpu_io_signal_nmi_flag(&cpu_io_state);
     bus.open_value = UINT8_C(0x70);
     CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x804210)) ==
           UINT8_C(0xf2));

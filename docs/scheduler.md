@@ -19,6 +19,8 @@ Implemented and host-verified behavior:
 - logical-address classification for 5A22 6/8/12-master-clock accesses;
 - partial SNES-bus accounting for every meaningful CPU callback;
 - an atomic CPU-step bridge that advances the scheduler by the resulting clocks;
+- a caller-owned non-interlaced NTSC/PAL H/V master-clock component;
+- deterministic HBlank/VBlank, field, NTSC short-line and delayed NMI transitions;
 - deterministic replay and CPU IRQ/NMI boundary fixtures.
 
 This is not a complete SNES scheduler. The interpreter does not expose every W65C816
@@ -26,10 +28,27 @@ bus/internal cycle, and the partial SNES bus has no complete cartridge map or ac
 peripherals. Therefore the bridge distinguishes observed address-speed accesses from
 the remaining aggregate CPU cycles but does not claim exact cycle placement.
 
-The caller-owned 5A22 CPU-I/O foundation can latch externally supplied VBlank and
-timer-match signals and report an NMI edge or IRQ level. It does not yet schedule
-those signals: a future H/V counter model must place blank transitions and compare
-matches on this master-clock timeline before CPU interrupt generation is integrated.
+The caller-owned H/V foundation now supplies VBlank, HBlank and the distinct delayed
+NMI-flag signal to the 5A22 CPU-I/O state. It models non-interlaced NTSC/PAL frame
+geometry and the NTSC short scanline without PPU rendering. It does not yet generate
+H/V timer matches or share advancement with `mipsnes2_scheduler.now`; a future machine
+owner must drive both from the same elapsed-clock delta before complete CPU interrupt
+generation can be claimed.
+
+## Non-interlaced H/V phase
+
+`mipsnes2_hv_timing` stores caller-owned elapsed master clocks, frame count, H master-
+clock phase, V line and field. Normal lines use 1364 clocks. Non-interlaced NTSC uses
+262 lines and removes four clocks from line 240 while field is one; PAL uses 312
+normal lines. Field toggles at H=1/V=0. HBlank clears at H=1 and begins at H=274.
+VBlank begins at line 225, or 240 with overscan selected, and ends at H=0/V=0.
+RDNMI/NMI asserts at H=0.5, two master clocks after VBlank begins.
+
+The API advances only from explicit master-clock deltas and gives identical state for
+one-shot and chunked input. Interlace, PAL's interlaced long line, normal-line long-
+dot positions, PPU counter latching, dynamic SETINI, H/V compare generation, joypad
+poll timing and central-scheduler wiring remain absent. See
+[H/V timing audit](hv-timing-foundation-audit.md).
 
 ## Event and rollover contract
 
@@ -96,10 +115,14 @@ boundaries, identical replay traces and scheduled IRQ/NMI delivery to a waiting 
 `tests/test_snes_bus.c` additionally covers WRAM/MMIO mapping and access timing,
 FastROM transitions, slow and mixed-speed CPU instructions, an event inside an atomic
 instruction, NMI-entry elapsed clocks and timing-bridge error paths.
+`tests/test_hv_timing.c` covers non-interlaced NTSC/PAL line and frame geometry,
+HBlank/VBlank boundaries, delayed NMI assertion, overscan, field/short-line behavior,
+overflow handling and one-shot/chunked determinism.
 
 Future tests must add simultaneous PPU/IRQ/NMI/DMA cases, CPU pause/resume at actual
-bus cycles, scanline/frame boundaries and long regional-clock runs. Same ROM/state/
-input must yield the same trace regardless of host speed.
+bus cycles, interlaced frame boundaries, H/V compare events and long integrated
+regional-clock runs. Same ROM/state/input must yield the same trace regardless of
+host speed.
 
 ## Work breakdown
 
@@ -116,15 +139,15 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
-- [ ] [IN PROGRESS] Long-run clock drift tests — ratio chunking verified; integrated regional clocks pending
+- [ ] [IN PROGRESS] Long-run clock drift tests — ratio and H/V chunking verified; integrated domains pending
 
 ## Research and decisions
 
 Sources:
 
 - [fullsnes hardware specification](https://problemkaputt.de/fullsnes.htm), sections
-  `SNES Timing Oscillators` and `CPU Clock Cycles / SNES Memory Speed`, inspected
-  2026-10-17;
+  `SNES Timing Oscillators`, `CPU Clock Cycles / SNES Memory Speed`, `SNES Timing H/V
+  Counters` and `SNES Timing H/V Events`, inspected 2026-10-19;
 - [Anomie's SNES memory mapping document](https://github.com/gilligan/snesdev/blob/eeb98f1e85b7db6574ca0804455819ec81117198/docs/memmap.txt),
   pinned at repository revision `eeb98f1e85b7db6574ca0804455819ec81117198`;
 - [WDC W65C816S Datasheet, March 13, 2024](https://www.westerndesigncenter.com/wdc/documentation/w65c816s.pdf),

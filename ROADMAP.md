@@ -133,18 +133,19 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
-- [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio chunking verified; integrated domains pending
+- [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio and H/V chunking verified; integrated domains pending
 - [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` foundation implemented
-- [ ] H/V counter model
+- [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL phase and blank/NMI boundaries verified; interlace/dot latches pending
 - [ ] [IN PROGRESS] IRQ compare behavior — enable/latch/acknowledgement exists; H/V match generation absent
-- [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch exists; PPU/scheduler timing absent
+- [ ] [IN PROGRESS] NMI edge and enable behavior — non-interlaced VBlank/NMI timing exists; central scheduler/CPU delivery pending
 - [ ] [IN PROGRESS] Interrupt acknowledgement — RDNMI/TIMEUP base side effects exist; match-window/external IRQ cases absent
 - [ ] Pending interrupt ordering
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — deterministic register/latch and bus-routing host tests exist
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus-routing and non-interlaced H/V host tests exist
 - [x] 5A22 CPU-I/O register/latch foundation
+- [ ] [IN PROGRESS] Non-interlaced NTSC/PAL H/V timing foundation — host verified; CI pending
 - [ ] DMA registers
 - [ ] DMA transfer modes
 - [ ] DMA timing

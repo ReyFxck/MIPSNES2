@@ -2,7 +2,8 @@
 
 Project foundation plus a 256-opcode 65C816, partial real SNES logical bus, base
 LoROM/HiROM and Mode 25/35 ExHiROM mapping, explicit internal-header analysis and deterministic scheduler/
-timing foundation. No ROM loader or runnable SNES machine, complete emulated subsystem,
+timing foundation with a partial non-interlaced H/V model. No ROM loader or runnable
+SNES machine, complete emulated subsystem,
 console runtime validation,
 compatibility result or hardware benchmark exists. Read
 [bootstrap audit](docs/bootstrap-audit.md) and the CPU/bus evidence in
@@ -14,7 +15,10 @@ and executable irregular-map evidence are recorded in
 [docs/cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md)
 and [docs/cartridge-irregular-mapping-audit.md](docs/cartridge-irregular-mapping-audit.md).
 Mode 25/35 evidence is in
-[docs/cartridge-exhirom-audit.md](docs/cartridge-exhirom-audit.md).
+[docs/cartridge-exhirom-audit.md](docs/cartridge-exhirom-audit.md). CPU-I/O and H/V
+timing evidence is in
+[docs/cpu-io-foundation-audit.md](docs/cpu-io-foundation-audit.md) and
+[docs/hv-timing-foundation-audit.md](docs/hv-timing-foundation-audit.md).
 
 ## State and evidence rules
 
@@ -521,6 +525,18 @@ passed for implementation commit
 external cartridge IRQ combination or exact TIMEUP match-window behavior is claimed.
 Exact scope is in docs/cpu-io-foundation-audit.md.
 
+The non-interlaced H/V timing foundation on 2026-10-19 adds caller-owned NTSC/PAL
+master-clock phase, 262/312-line frames, HBlank/VBlank transitions, 224/239-line
+VBlank selection, field alternation, the NTSC field-1 short scanline and the RDNMI/
+NMI flag two master clocks after VBlank begins. The CPU-I/O input contract now keeps
+VBlank status and NMI-flag assertion distinct. Deterministic tests cover exact frame
+totals, boundaries, overscan, one-shot/chunked equivalence and overflow rejection.
+GCC default, release and local ASan+UBSan suites pass; local Clang and console SDKs
+are unavailable. Interlace, PPU dot-counter latching, dynamic SETINI, H/V IRQ match
+generation and central-scheduler/CPU-boundary wiring remain incomplete. GitHub CI
+has not yet executed this change. Exact scope is in
+docs/hv-timing-foundation-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -985,20 +1001,20 @@ platform persistence remains incomplete.
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — identical scheduler replay traces verified
-- [ ] [IN PROGRESS] Long-run clock drift tests — chunked ratio conversion verified; integrated regional domains pending
+- [ ] [IN PROGRESS] Long-run clock drift tests — chunked ratio and H/V advancement verified; integrated regional domains pending
 
 ## Interrupts and timers
 
 - [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` subset implemented
-- [ ] H/V counter model
+- [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL master-clock phase, blanking and NTSC short line verified; interlace/dot latches absent
 - [ ] [IN PROGRESS] IRQ compare behavior — enable/latch/acknowledgement exists; H/V match generation absent
-- [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch exists; PPU/scheduler timing absent
+- [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch and non-interlaced VBlank/NMI timing exist; central scheduler/CPU delivery incomplete
 - [ ] [IN PROGRESS] Interrupt acknowledgement — base RDNMI/TIMEUP reads exist; match-window/external IRQ cases absent
 - [ ] Pending interrupt ordering
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch and SNES-bus routing fixtures exist
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, SNES-bus routing and non-interlaced H/V fixtures exist
 
 ### Verified CPU-I/O foundation subset
 
@@ -1007,6 +1023,15 @@ platform persistence remains incomplete.
 - [x] RDNMI/TIMEUP/HVBJOY read composition and side effects
 - [x] NMI gated-edge and timer-IRQ latch handoff
 - [x] Partial SNES-bus CPU-I/O state routing
+
+### Verified H/V foundation subset
+
+- [ ] [IN PROGRESS] Caller-owned non-interlaced NTSC/PAL master-clock state — host verified; console cross-build CI pending
+- [ ] [IN PROGRESS] HBlank and 224/239-line VBlank transition timing — host verified; CI pending
+- [ ] [IN PROGRESS] Separate VBlank and delayed RDNMI/NMI-flag signals — host verified; CI pending
+- [ ] [IN PROGRESS] NTSC field alternation and 1360-clock short scanline — host verified; CI pending
+- [ ] [IN PROGRESS] PAL 312-line non-interlaced frame geometry — host verified; CI pending
+- [ ] [IN PROGRESS] One-shot/chunked H/V advancement determinism — host verified; CI pending
 
 ## DMA / HDMA
 

@@ -15,6 +15,7 @@ TEST = $(BUILD_DIR)/test-contracts
 TEST_NOLOG = $(BUILD_DIR)/test-contracts-nolog
 TEST_CPU_BUS = $(BUILD_DIR)/test-cpu-bus
 TEST_CPU_IO = $(BUILD_DIR)/test-cpu-io
+TEST_HV_TIMING = $(BUILD_DIR)/test-hv-timing
 TEST_SCHEDULER = $(BUILD_DIR)/test-scheduler
 TEST_SNES_BUS = $(BUILD_DIR)/test-snes-bus
 TEST_CARTRIDGE = $(BUILD_DIR)/test-cartridge
@@ -23,7 +24,8 @@ TEST_CARTRIDGE_PREPARE = $(BUILD_DIR)/test-cartridge-prepare
 CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o \
 	$(BUILD_DIR)/cpu.o \
 	$(BUILD_DIR)/snes_bus.o $(BUILD_DIR)/scheduler.o \
-	$(BUILD_DIR)/5a22_timing.o $(BUILD_DIR)/cpu_timing.o \
+	$(BUILD_DIR)/5a22_timing.o $(BUILD_DIR)/hv_timing.o \
+	$(BUILD_DIR)/cpu_timing.o \
 	$(BUILD_DIR)/cartridge.o $(BUILD_DIR)/cartridge_image.o \
 	$(BUILD_DIR)/cartridge_prepare.o
 
@@ -52,6 +54,9 @@ $(BUILD_DIR)/scheduler.o: core/scheduler/scheduler.c core/scheduler/scheduler.h 
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/5a22_timing.o: core/scheduler/5a22_timing.c core/scheduler/5a22_timing.h core/common/address.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/hv_timing.o: core/scheduler/hv_timing.c core/scheduler/hv_timing.h core/bus/cpu_io.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/cpu_timing.o: core/scheduler/cpu_timing.c core/scheduler/cpu_timing.h core/scheduler/scheduler.h core/bus/snes_bus.h core/cpu/65c816/cpu.h | $(BUILD_DIR)
@@ -84,6 +89,9 @@ $(TEST_CPU_BUS): tests/test_cpu_bus.c core/bus/bus.h core/cpu/65c816/cpu.h $(LIB
 $(TEST_CPU_IO): tests/test_cpu_io.c core/bus/cpu_io.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_HV_TIMING): tests/test_hv_timing.c core/scheduler/hv_timing.h core/bus/cpu_io.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(TEST_SCHEDULER): tests/test_scheduler.c core/scheduler/scheduler.h core/scheduler/5a22_timing.h core/cpu/65c816/cpu.h core/bus/bus.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -102,11 +110,12 @@ $(TEST_CARTRIDGE_PREPARE): tests/test_cartridge_prepare.c core/cartridge/prepare
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_IO) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_IO) $(TEST_HV_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
 	$(TEST_CPU_IO)
+	$(TEST_HV_TIMING)
 	$(TEST_SCHEDULER)
 	$(TEST_SNES_BUS)
 	$(TEST_CARTRIDGE)
@@ -120,6 +129,7 @@ clean:
 -include $(BUILD_DIR)/log.d $(BUILD_DIR)/bus.d $(BUILD_DIR)/cpu_io.d \
 	$(BUILD_DIR)/snes_bus.d \
 	$(BUILD_DIR)/cpu.d $(BUILD_DIR)/scheduler.d \
-	$(BUILD_DIR)/5a22_timing.d $(BUILD_DIR)/cpu_timing.d \
+	$(BUILD_DIR)/5a22_timing.d $(BUILD_DIR)/hv_timing.d \
+	$(BUILD_DIR)/cpu_timing.d \
 	$(BUILD_DIR)/cartridge.d $(BUILD_DIR)/cartridge_image.d \
 	$(BUILD_DIR)/cartridge_prepare.d
