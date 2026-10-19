@@ -54,6 +54,7 @@ static mipsnes2_cpu_timing_result timed_step(
     mipsnes2_snes_bus *bus,
     mipsnes2_scheduler *scheduler,
     mipsnes2_hv_timing *hv_timing,
+    mipsnes2_interrupt_lines *interrupt_lines,
     size_t event_budget,
     mipsnes2_cpu_timing_report *report)
 {
@@ -80,6 +81,9 @@ static mipsnes2_cpu_timing_result timed_step(
     if (hv_timing != NULL && bus->cpu_io_state == NULL) {
         return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
     }
+    if (interrupt_lines != NULL && hv_timing == NULL) {
+        return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+    }
     if (bus->timing_overflow) {
         return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
     }
@@ -90,6 +94,16 @@ static mipsnes2_cpu_timing_result timed_step(
     report->events_dispatched = dispatched_before;
     if (timing_result != MIPSNES2_CPU_TIMING_OK) {
         return timing_result;
+    }
+    if (interrupt_lines != NULL) {
+        bool delivered;
+
+        (void)mipsnes2_interrupt_lines_sample_cpu_io(
+            interrupt_lines, bus->cpu_io_state);
+        (void)mipsnes2_interrupt_lines_drive_cpu(
+            interrupt_lines, cpu, &delivered);
+        report->nmi_delivered = delivered;
+        report->irq_level_delivered = cpu->irq_level;
     }
 
     cycles_before = cpu->instruction_cycles;
@@ -139,6 +153,16 @@ static mipsnes2_cpu_timing_result timed_step(
     if (timing_result != MIPSNES2_CPU_TIMING_OK) {
         return timing_result;
     }
+    if (interrupt_lines != NULL) {
+        bool delivered;
+
+        (void)mipsnes2_interrupt_lines_sample_cpu_io(
+            interrupt_lines, bus->cpu_io_state);
+        (void)mipsnes2_interrupt_lines_drive_cpu(
+            interrupt_lines, cpu, &delivered);
+        report->nmi_delivered = report->nmi_delivered || delivered;
+        report->irq_level_delivered = cpu->irq_level;
+    }
     return MIPSNES2_CPU_TIMING_OK;
 }
 
@@ -149,7 +173,7 @@ mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step(
     size_t event_budget,
     mipsnes2_cpu_timing_report *report)
 {
-    return timed_step(cpu, bus, scheduler, NULL, event_budget, report);
+    return timed_step(cpu, bus, scheduler, NULL, NULL, event_budget, report);
 }
 
 mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step_hv(
@@ -169,5 +193,28 @@ mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step_hv(
         }
         return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
     }
-    return timed_step(cpu, bus, scheduler, hv_timing, event_budget, report);
+    return timed_step(cpu, bus, scheduler, hv_timing, NULL,
+                      event_budget, report);
+}
+
+mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step_hv_interrupts(
+    mipsnes2_cpu *cpu,
+    mipsnes2_snes_bus *bus,
+    mipsnes2_scheduler *scheduler,
+    mipsnes2_hv_timing *hv_timing,
+    mipsnes2_interrupt_lines *interrupt_lines,
+    size_t event_budget,
+    mipsnes2_cpu_timing_report *report)
+{
+    if (hv_timing == NULL || interrupt_lines == NULL) {
+        if (report != NULL) {
+            (void)memset(report, 0, sizeof(*report));
+            report->cpu_result = MIPSNES2_CPU_NOT_READY;
+            report->scheduler_result = MIPSNES2_SCHEDULER_OK;
+            report->hv_result = MIPSNES2_HV_OK;
+        }
+        return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+    }
+    return timed_step(cpu, bus, scheduler, hv_timing, interrupt_lines,
+                      event_budget, report);
 }

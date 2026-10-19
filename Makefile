@@ -16,6 +16,7 @@ TEST_NOLOG = $(BUILD_DIR)/test-contracts-nolog
 TEST_CPU_BUS = $(BUILD_DIR)/test-cpu-bus
 TEST_CPU_IO = $(BUILD_DIR)/test-cpu-io
 TEST_HV_TIMING = $(BUILD_DIR)/test-hv-timing
+TEST_INTERRUPT_LINES = $(BUILD_DIR)/test-interrupt-lines
 TEST_MASTER_TIMING = $(BUILD_DIR)/test-master-timing
 TEST_SCHEDULER = $(BUILD_DIR)/test-scheduler
 TEST_SNES_BUS = $(BUILD_DIR)/test-snes-bus
@@ -26,6 +27,7 @@ CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o \
 	$(BUILD_DIR)/cpu.o \
 	$(BUILD_DIR)/snes_bus.o $(BUILD_DIR)/scheduler.o \
 	$(BUILD_DIR)/5a22_timing.o $(BUILD_DIR)/hv_timing.o \
+	$(BUILD_DIR)/interrupt_lines.o \
 	$(BUILD_DIR)/master_timing.o \
 	$(BUILD_DIR)/cpu_timing.o \
 	$(BUILD_DIR)/cartridge.o $(BUILD_DIR)/cartridge_image.o \
@@ -61,10 +63,13 @@ $(BUILD_DIR)/5a22_timing.o: core/scheduler/5a22_timing.c core/scheduler/5a22_tim
 $(BUILD_DIR)/hv_timing.o: core/scheduler/hv_timing.c core/scheduler/hv_timing.h core/bus/cpu_io.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
+$(BUILD_DIR)/interrupt_lines.o: core/scheduler/interrupt_lines.c core/scheduler/interrupt_lines.h core/bus/cpu_io.h core/cpu/65c816/cpu.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
 $(BUILD_DIR)/master_timing.o: core/scheduler/master_timing.c core/scheduler/master_timing.h core/scheduler/hv_timing.h core/scheduler/scheduler.h core/bus/cpu_io.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
-$(BUILD_DIR)/cpu_timing.o: core/scheduler/cpu_timing.c core/scheduler/cpu_timing.h core/scheduler/master_timing.h core/scheduler/scheduler.h core/scheduler/hv_timing.h core/bus/snes_bus.h core/cpu/65c816/cpu.h | $(BUILD_DIR)
+$(BUILD_DIR)/cpu_timing.o: core/scheduler/cpu_timing.c core/scheduler/cpu_timing.h core/scheduler/master_timing.h core/scheduler/interrupt_lines.h core/scheduler/scheduler.h core/scheduler/hv_timing.h core/bus/snes_bus.h core/cpu/65c816/cpu.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/cartridge.o: core/cartridge/cartridge.c core/cartridge/cartridge.h core/cartridge/interface.h core/common/address.h | $(BUILD_DIR)
@@ -97,6 +102,9 @@ $(TEST_CPU_IO): tests/test_cpu_io.c core/bus/cpu_io.h $(LIB)
 $(TEST_HV_TIMING): tests/test_hv_timing.c core/scheduler/hv_timing.h core/bus/cpu_io.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_INTERRUPT_LINES): tests/test_interrupt_lines.c core/scheduler/interrupt_lines.h core/bus/cpu_io.h core/cpu/65c816/cpu.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(TEST_MASTER_TIMING): tests/test_master_timing.c core/scheduler/master_timing.h core/scheduler/hv_timing.h core/scheduler/scheduler.h core/bus/cpu_io.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -118,12 +126,13 @@ $(TEST_CARTRIDGE_PREPARE): tests/test_cartridge_prepare.c core/cartridge/prepare
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_IO) $(TEST_HV_TIMING) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_IO) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
 	$(TEST_CPU_IO)
 	$(TEST_HV_TIMING)
+	$(TEST_INTERRUPT_LINES)
 	$(TEST_MASTER_TIMING)
 	$(TEST_SCHEDULER)
 	$(TEST_SNES_BUS)
@@ -139,6 +148,7 @@ clean:
 	$(BUILD_DIR)/snes_bus.d \
 	$(BUILD_DIR)/cpu.d $(BUILD_DIR)/scheduler.d \
 	$(BUILD_DIR)/5a22_timing.d $(BUILD_DIR)/hv_timing.d \
+	$(BUILD_DIR)/interrupt_lines.d \
 	$(BUILD_DIR)/master_timing.d \
 	$(BUILD_DIR)/cpu_timing.d \
 	$(BUILD_DIR)/cartridge.d $(BUILD_DIR)/cartridge_image.d \

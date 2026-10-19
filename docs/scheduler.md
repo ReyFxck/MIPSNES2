@@ -24,6 +24,8 @@ Implemented and host-verified behavior:
 - stable-register H/V/HV timer-match generation into the CPU-I/O TIMEUP latch;
 - coordinated H/V and scheduler advancement in one checked master-clock domain;
 - deterministic H/V-before-callback ordering at equal timestamps;
+- independent timer/cartridge/expansion IRQ-source aggregation;
+- CPU-I/O NMI-edge and IRQ-level delivery at atomic CPU boundaries;
 - deterministic replay and CPU IRQ/NMI boundary fixtures.
 
 This is not a complete SNES scheduler. The interpreter does not expose every W65C816
@@ -35,8 +37,9 @@ The caller-owned H/V foundation supplies VBlank, HBlank, the distinct delayed NM
 flag signal and stable-register H/V timer matches to the 5A22 CPU-I/O state. It models
 non-interlaced NTSC/PAL frame geometry and the NTSC short scanline without PPU
 rendering. The shared coordinator now drives H/V and `mipsnes2_scheduler.now` from
-the same elapsed-clock delta. Complete CPU interrupt generation is not claimed:
-CPU-I/O latches are not yet connected automatically to CPU IRQ/NMI inputs.
+the same elapsed-clock delta. The optional interrupt-aware CPU bridge connects the
+CPU-I/O latches through an independent-source aggregator. Complete interrupt timing
+is not claimed because the CPU still exposes only atomic instruction boundaries.
 
 ## Non-interlaced H/V phase
 
@@ -84,6 +87,20 @@ delta to this common domain and requires the SNES bus to own CPU-I/O state. It d
 not interrupt an instruction at an internal event timestamp. H/V transitions that
 occur during that instruction can affect the following CPU boundary only, and the
 caller must still transfer CPU-I/O IRQ/NMI state into the interpreter inputs.
+
+`mipsnes2_interrupt_lines` supplies that optional transfer without conflating IRQ
+sources. Its source bitmask reserves separate internal-timer, cartridge and expansion
+levels. Sampling CPU-I/O updates only the internal-timer bit and consumes one latched
+NMI edge; other IRQ sources remain intact. Driving the CPU applies the OR of all IRQ
+sources and transfers a pending NMI edge once.
+
+`mipsnes2_cpu_timed_step_hv_interrupts` samples and drives these inputs after current-
+timestamp events but before the CPU step, then repeats after advancing H/V/scheduler
+to the resulting boundary. Thus an already-pending NMI/IRQ participates in the
+current step, while one generated during that atomic instruction is visible in CPU
+state on return and executes at the next boundary. NMI-versus-IRQ priority remains
+owned and tested by the CPU core. Exact PPU/DMA/timer ties inside an instruction are
+still unresolved.
 
 ## Event and rollover contract
 
@@ -160,6 +177,11 @@ same-time insertion, reentrant-run rejection and failure-state alignment. The SN
 bus fixture also drives repeated NOPs through the H/V-aware CPU bridge and verifies
 clock lockstep and timer-latch assertion without pretending that the CPU IRQ line is
 connected automatically.
+`tests/test_interrupt_lines.c` covers source set/clear independence, CPU-I/O timer
+sampling, NMI edge transfer, TIMEUP acknowledgement with cartridge IRQ retained and
+CPU input driving. The SNES-bus integration fixture covers timer assertion after an
+atomic step, external-source preservation/clear, NMI delivery and simultaneous
+NMI-plus-IRQ priority into the existing NMI vector path.
 
 Future tests must add simultaneous PPU/IRQ/NMI/DMA cases, CPU pause/resume at actual
 bus cycles, interlaced frame boundaries, exact mid-instruction timer-register writes,
@@ -182,6 +204,7 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
 - [x] Shared CPU/scheduler/H/V domain — atomic fanout and failure alignment verified
+- [ ] [IN PROGRESS] CPU-I/O interrupt-line handoff — local default/release/sanitizer fixtures pass; CI evidence pending
 - [ ] [IN PROGRESS] Long-run clock drift tests — ratio, H/V chunking and short shared-domain runs verified; regional soak tests pending
 
 ## Research and decisions
