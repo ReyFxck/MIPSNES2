@@ -81,7 +81,9 @@ CPU-I/O regression executable independently covers NMITIMEN masks and transition
 composition, distinct VBlank/NMI-flag inputs and invalid/unimplemented accesses. The
 H/V regression executable covers non-interlaced NTSC/PAL scanline/frame totals,
 HBlank/VBlank boundaries, overscan, field toggling, the NTSC short line, delayed NMI
-assertion, overflow rejection and one-shot/chunked determinism. Timed CPU fixtures verify a slow NOP,
+assertion, every valid HTIME value, V/HV match positions, short/final-line exceptions,
+out-of-range compare values, exact-boundary enabling, TIMEUP acknowledgement, overflow
+rejection and one-shot/chunked determinism with IRQ enabled. Timed CPU fixtures verify a slow NOP,
 mixed FastROM-fetch/slow-WRAM LDA, an event timestamped inside an atomic instruction,
 emulation-mode NMI entry and visible bridge errors. They validate meaningful-access
 timing, not missing dummy cycles, mid-instruction pause/resume, WRAM refresh, complete
@@ -202,6 +204,8 @@ Ricoh 5A22 CPU-I/O register/latch evidence is recorded in
 [cpu-io-foundation-audit.md](cpu-io-foundation-audit.md).
 Non-interlaced H/V timing and blank/NMI transition evidence is recorded in
 [hv-timing-foundation-audit.md](hv-timing-foundation-audit.md).
+Stable-register H/V timer-match evidence is recorded in
+[hv-irq-foundation-audit.md](hv-irq-foundation-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in

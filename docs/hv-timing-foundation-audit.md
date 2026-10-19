@@ -38,8 +38,11 @@ This is not a PPU, renderer or complete Phase 4 timing implementation.
   line length and events before those dots are used.
 - Overscan is fixed when the timing state is initialized. No SETINI register or
   mid-frame mode change exists.
-- H/V timer compare generation, TIMEUP's narrow read-at-match case, automatic
-  joypad timing, WRAM refresh, HDMA and PPU rendering events remain absent.
+- H/V timer compare generation was absent from this milestone and was added by the
+  later stable-register foundation documented in
+  [H/V timer IRQ audit](hv-irq-foundation-audit.md). Exact within-instruction writes,
+  TIMEUP's narrow read-at-match case, automatic joypad timing, WRAM refresh, HDMA and
+  PPU rendering events remain absent.
 - The component is not yet driven from `mipsnes2_scheduler.now` or the CPU timing
   bridge. A future machine owner must advance it from the same master-clock delta
   and define simultaneous-event ordering.

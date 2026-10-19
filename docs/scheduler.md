@@ -21,6 +21,7 @@ Implemented and host-verified behavior:
 - an atomic CPU-step bridge that advances the scheduler by the resulting clocks;
 - a caller-owned non-interlaced NTSC/PAL H/V master-clock component;
 - deterministic HBlank/VBlank, field, NTSC short-line and delayed NMI transitions;
+- stable-register H/V/HV timer-match generation into the CPU-I/O TIMEUP latch;
 - deterministic replay and CPU IRQ/NMI boundary fixtures.
 
 This is not a complete SNES scheduler. The interpreter does not expose every W65C816
@@ -28,12 +29,12 @@ bus/internal cycle, and the partial SNES bus has no complete cartridge map or ac
 peripherals. Therefore the bridge distinguishes observed address-speed accesses from
 the remaining aggregate CPU cycles but does not claim exact cycle placement.
 
-The caller-owned H/V foundation now supplies VBlank, HBlank and the distinct delayed
-NMI-flag signal to the 5A22 CPU-I/O state. It models non-interlaced NTSC/PAL frame
-geometry and the NTSC short scanline without PPU rendering. It does not yet generate
-H/V timer matches or share advancement with `mipsnes2_scheduler.now`; a future machine
-owner must drive both from the same elapsed-clock delta before complete CPU interrupt
-generation can be claimed.
+The caller-owned H/V foundation supplies VBlank, HBlank, the distinct delayed NMI-
+flag signal and stable-register H/V timer matches to the 5A22 CPU-I/O state. It models
+non-interlaced NTSC/PAL frame geometry and the NTSC short scanline without PPU
+rendering. It does not yet share advancement with `mipsnes2_scheduler.now`; a future
+machine owner must drive both from the same elapsed-clock delta before complete CPU
+interrupt generation can be claimed.
 
 ## Non-interlaced H/V phase
 
@@ -44,11 +45,20 @@ normal lines. Field toggles at H=1/V=0. HBlank clears at H=1 and begins at H=274
 VBlank begins at line 225, or 240 with overscan selected, and ends at H=0/V=0.
 RDNMI/NMI asserts at H=0.5, two master clocks after VBlank begins.
 
+H-only matches use `14 + HTIME * 4` master clocks after the selected scanline's dot
+zero, so HTIME 338/339 spill to clocks 2/6 of the following line. V-only and
+HV-with-HTIME-zero use 1374 clocks from the previous scanline's dot zero. HV with a
+nonzero H value uses the H formula only on VTIME. HTIME values above 339 and VTIME
+values outside the regional frame do not match; H=153 is suppressed on the NTSC
+short line and on the last line. These rules cover stable register state only.
+
 The API advances only from explicit master-clock deltas and gives identical state for
 one-shot and chunked input. Interlace, PAL's interlaced long line, normal-line long-
-dot positions, PPU counter latching, dynamic SETINI, H/V compare generation, joypad
-poll timing and central-scheduler wiring remain absent. See
-[H/V timing audit](hv-timing-foundation-audit.md).
+dot positions, PPU counter latching, dynamic SETINI, exact within-instruction timer
+register writes, repeated reprogrammed matches in one scanline, TIMEUP's narrow
+read-at-match exception, joypad poll timing and central-scheduler wiring remain
+absent. See [H/V timing audit](hv-timing-foundation-audit.md) and
+[H/V timer IRQ audit](hv-irq-foundation-audit.md).
 
 ## Event and rollover contract
 
@@ -117,12 +127,13 @@ FastROM transitions, slow and mixed-speed CPU instructions, an event inside an a
 instruction, NMI-entry elapsed clocks and timing-bridge error paths.
 `tests/test_hv_timing.c` covers non-interlaced NTSC/PAL line and frame geometry,
 HBlank/VBlank boundaries, delayed NMI assertion, overscan, field/short-line behavior,
-overflow handling and one-shot/chunked determinism.
+overflow handling, every valid HTIME value, V/HV match positions, short/final-line
+exceptions, out-of-range compares and one-shot/chunked determinism with IRQ enabled.
 
 Future tests must add simultaneous PPU/IRQ/NMI/DMA cases, CPU pause/resume at actual
-bus cycles, interlaced frame boundaries, H/V compare events and long integrated
-regional-clock runs. Same ROM/state/input must yield the same trace regardless of
-host speed.
+bus cycles, interlaced frame boundaries, exact mid-instruction timer-register writes,
+the TIMEUP read-at-match exception and long integrated regional-clock runs. Same
+ROM/state/input must yield the same trace regardless of host speed.
 
 ## Work breakdown
 
@@ -148,6 +159,8 @@ Sources:
 - [fullsnes hardware specification](https://problemkaputt.de/fullsnes.htm), sections
   `SNES Timing Oscillators`, `CPU Clock Cycles / SNES Memory Speed`, `SNES Timing H/V
   Counters` and `SNES Timing H/V Events`, inspected 2026-10-19;
+- [Super Famicom Development Wiki: Timing](https://wiki.superfamicom.org/timing),
+  `Interrupts`, inspected 2026-10-19, for H/V timer formulas and exceptions;
 - [Anomie's SNES memory mapping document](https://github.com/gilligan/snesdev/blob/eeb98f1e85b7db6574ca0804455819ec81117198/docs/memmap.txt),
   pinned at repository revision `eeb98f1e85b7db6574ca0804455819ec81117198`;
 - [WDC W65C816S Datasheet, March 13, 2024](https://www.westerndesigncenter.com/wdc/documentation/w65c816s.pdf),

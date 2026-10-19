@@ -18,7 +18,9 @@ Mode 25/35 evidence is in
 [docs/cartridge-exhirom-audit.md](docs/cartridge-exhirom-audit.md). CPU-I/O and H/V
 timing evidence is in
 [docs/cpu-io-foundation-audit.md](docs/cpu-io-foundation-audit.md) and
-[docs/hv-timing-foundation-audit.md](docs/hv-timing-foundation-audit.md).
+[docs/hv-timing-foundation-audit.md](docs/hv-timing-foundation-audit.md). Stable-
+register H/V timer-match evidence is in
+[docs/hv-irq-foundation-audit.md](docs/hv-irq-foundation-audit.md).
 
 ## State and evidence rules
 
@@ -535,8 +537,21 @@ GCC default, release and local ASan+UBSan suites pass; local Clang and console S
 are unavailable. GitHub Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP
 scaffold cross-build, artifact and checksum jobs passed for implementation commit
 `6ab26ca22c4d4ec838f513702b490a681196d610`. Interlace, PPU dot-counter latching,
-dynamic SETINI, H/V IRQ match generation and central-scheduler/CPU-boundary wiring
-remain incomplete. Exact scope is in docs/hv-timing-foundation-audit.md.
+dynamic SETINI and central-scheduler/CPU-boundary wiring remain incomplete. A later
+milestone adds the stable-register H/V IRQ subset described below. Exact original
+scope is in docs/hv-timing-foundation-audit.md.
+
+The stable-register H/V timer-IRQ foundation on 2026-10-19 adds non-interlaced H,
+V and HV match generation into the existing CPU-I/O TIMEUP latch. It covers every
+valid HTIME value, 338/339 spill into the following line, V/HV positions including
+the post-short-line offset, regional out-of-range values and the documented H=153
+short/final-line suppressions. Exact mid-instruction register-write ordering,
+multiple reprogrammed matches in one scanline, TIMEUP's narrow read-at-match exception,
+interlace and central-scheduler/CPU-boundary wiring remain incomplete. Local GCC
+default/release and ASan+UBSan verification suites pass. GitHub Host GCC/Clang plus
+pinned PS2/PSP cross-build, artifact and checksum jobs passed for implementation
+commit `9936fd24a2a8cfdd736d4fe7df707c11f0103e55`. Exact scope and run IDs are in
+docs/hv-irq-foundation-audit.md. No console runtime or hardware result is claimed.
 
 ## Current blockers and diagnostic exceptions
 
@@ -1008,14 +1023,14 @@ platform persistence remains incomplete.
 
 - [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` subset implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL master-clock phase, blanking and NTSC short line verified; interlace/dot latches absent
-- [ ] [IN PROGRESS] IRQ compare behavior — enable/latch/acknowledgement exists; H/V match generation absent
+- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches exist; exact write/match windows, interlace and scheduler/CPU delivery incomplete
 - [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch and non-interlaced VBlank/NMI timing exist; central scheduler/CPU delivery incomplete
 - [ ] [IN PROGRESS] Interrupt acknowledgement — base RDNMI/TIMEUP reads exist; match-window/external IRQ cases absent
 - [ ] Pending interrupt ordering
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, SNES-bus routing and non-interlaced H/V fixtures exist
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, SNES-bus routing, non-interlaced H/V and stable-register compare fixtures exist
 
 ### Verified CPU-I/O foundation subset
 
@@ -1033,6 +1048,14 @@ platform persistence remains incomplete.
 - [x] NTSC field alternation and 1360-clock short scanline
 - [x] PAL 312-line non-interlaced frame geometry
 - [x] One-shot/chunked H/V advancement determinism
+
+### H/V timer-IRQ foundation subset
+
+- [x] H-IRQ match formula for every HTIME 0-339
+- [x] HTIME 338/339 following-line spill
+- [x] V-IRQ and HV-IRQ stable-register positions
+- [x] Regional compare-range and H=153 exception behavior
+- [x] TIMEUP latch/acknowledgement handoff from H/V timing
 
 ## DMA / HDMA
 

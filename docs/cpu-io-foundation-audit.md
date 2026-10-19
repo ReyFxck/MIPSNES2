@@ -26,12 +26,14 @@ The 2026-10-19 H/V milestone split `set_vblank` from the new explicit
 `signal_nmi_flag` input. This preserves the documented two-master-clock gap between
 H=0 VBlank status and H=0.5 RDNMI/NMI assertion; see
 [H/V timing audit](hv-timing-foundation-audit.md).
+The later stable-register H/V timer foundation drives the existing timer-match input;
+see [H/V timer IRQ audit](hv-irq-foundation-audit.md).
 
 ## Deliberate limits
 
 - At the original milestone no H/V counter or regional frame geometry existed. The
-  later non-interlaced H/V component now supplies blank/NMI inputs, but interlace,
-  compare generation and central-scheduler wiring remain absent.
+  later non-interlaced H/V component now supplies blank/NMI inputs and stable-register
+  compare generation, but interlace and central-scheduler wiring remain absent.
 - The CPU-I/O component accepts timer-match and blank/NMI inputs; it does not own
   their scheduling.
 - The documented narrow TIMEUP read-at-the-match exception is not modeled because

@@ -28,6 +28,38 @@ static int advance_to_line_start(mipsnes2_hv_timing *timing,
     return 0;
 }
 
+static int set_htime(mipsnes2_cpu_io *cpu_io, uint16_t htime)
+{
+    if (!mipsnes2_cpu_io_write(cpu_io, UINT16_C(0x4207),
+                               (uint8_t)htime) ||
+        !mipsnes2_cpu_io_write(cpu_io, UINT16_C(0x4208),
+                               (uint8_t)(htime >> 8))) {
+        return 1;
+    }
+    return 0;
+}
+
+static int set_vtime(mipsnes2_cpu_io *cpu_io, uint16_t vtime)
+{
+    if (!mipsnes2_cpu_io_write(cpu_io, UINT16_C(0x4209),
+                               (uint8_t)vtime) ||
+        !mipsnes2_cpu_io_write(cpu_io, UINT16_C(0x420a),
+                               (uint8_t)(vtime >> 8))) {
+        return 1;
+    }
+    return 0;
+}
+
+static int acknowledge_timer_irq(mipsnes2_cpu_io *cpu_io)
+{
+    uint8_t value;
+
+    if (!mipsnes2_cpu_io_read(cpu_io, UINT16_C(0x4211), 0U, &value)) {
+        return 1;
+    }
+    return 0;
+}
+
 static int test_initialization_and_validation(void)
 {
     mipsnes2_hv_timing timing;
@@ -51,7 +83,7 @@ static int test_initialization_and_validation(void)
     CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
                                   false, &cpu_io) == MIPSNES2_HV_OK);
     CHECK(timing.initialized && timing.standard == MIPSNES2_HV_STANDARD_NTSC);
-    CHECK(!timing.overscan && !timing.field);
+    CHECK(!timing.overscan && !timing.field && !timing.timer_event_consumed);
     CHECK(timing.elapsed_master_clocks == 0U && timing.frame_count == 0U);
     CHECK(timing.h_master_clock == 0U && timing.v_counter == 0U);
     CHECK(!cpu_io.vblank && cpu_io.hblank && !cpu_io.nmi_flag);
@@ -191,6 +223,280 @@ static int test_ntsc_frame_lengths_and_field_toggle(void)
     return 0;
 }
 
+static int test_h_irq_normal_and_late_spill(void)
+{
+    mipsnes2_hv_timing timing;
+    mipsnes2_cpu_io cpu_io;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_htime(&cpu_io, UINT16_C(10)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x10)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(53)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(timing.h_master_clock == UINT16_C(54));
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(acknowledge_timer_irq(&cpu_io) == 0);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_htime(&cpu_io, UINT16_C(338)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x10)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS + 1U) == MIPSNES2_HV_OK);
+    CHECK(timing.v_counter == UINT16_C(1) &&
+          timing.h_master_clock == UINT16_C(1));
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(timing.h_master_clock == UINT16_C(2));
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_htime(&cpu_io, UINT16_C(339)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x10)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS + 5U) == MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(timing.h_master_clock == UINT16_C(6));
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    return 0;
+}
+
+static int test_all_h_irq_values(void)
+{
+    uint16_t htime;
+
+    for (htime = 0U; htime <= UINT16_C(339); ++htime) {
+        mipsnes2_hv_timing timing;
+        mipsnes2_cpu_io cpu_io;
+        uint64_t event_clock = UINT64_C(14) + (uint64_t)htime * UINT64_C(4);
+
+        mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+        CHECK(set_htime(&cpu_io, htime) == 0);
+        CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                    UINT8_C(0x10)));
+        CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                      false, &cpu_io) == MIPSNES2_HV_OK);
+        CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io,
+                                         event_clock - 1U) ==
+              MIPSNES2_HV_OK);
+        CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+        CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+              MIPSNES2_HV_OK);
+        CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    }
+    return 0;
+}
+
+static int test_v_and_hv_irq_positions(void)
+{
+    mipsnes2_hv_timing timing;
+    mipsnes2_cpu_io cpu_io;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_vtime(&cpu_io, UINT16_C(1)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x20)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS + 9U) == MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(timing.v_counter == UINT16_C(1) &&
+          timing.h_master_clock == UINT16_C(10));
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_htime(&cpu_io, 0U) == 0);
+    CHECK(set_vtime(&cpu_io, UINT16_C(1)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x30)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS + 10U) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_htime(&cpu_io, UINT16_C(5)) == 0);
+    CHECK(set_vtime(&cpu_io, UINT16_C(1)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x30)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS + 33U) == MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(timing.h_master_clock == UINT16_C(34));
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    return 0;
+}
+
+static int test_v_irq_after_short_line_and_suppressed_h153(void)
+{
+    mipsnes2_hv_timing timing;
+    mipsnes2_cpu_io cpu_io;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_vtime(&cpu_io, UINT16_C(241)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x20)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(advance_to_line_start(&timing, &cpu_io, UINT16_C(241)) == 0);
+    CHECK(timing.field && !mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(13)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(timing.h_master_clock == UINT16_C(14));
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_htime(&cpu_io, UINT16_C(153)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x10)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(advance_to_line_start(&timing, &cpu_io, UINT16_C(240)) == 0);
+    CHECK(acknowledge_timer_irq(&cpu_io) == 0);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(626)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_NTSC_SHORT_SCANLINE_CLOCKS - 626U) ==
+          MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(626)) ==
+          MIPSNES2_HV_OK);
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    CHECK(advance_to_line_start(&timing, &cpu_io, UINT16_C(261)) == 0);
+    CHECK(acknowledge_timer_irq(&cpu_io) == 0);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(626)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_htime(&cpu_io, UINT16_C(153)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x10)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_PAL,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(advance_to_line_start(&timing, &cpu_io, UINT16_C(311)) == 0);
+    CHECK(acknowledge_timer_irq(&cpu_io) == 0);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(626)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    return 0;
+}
+
+static int test_irq_range_and_enable_boundary(void)
+{
+    mipsnes2_hv_timing timing;
+    mipsnes2_cpu_io cpu_io;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_htime(&cpu_io, UINT16_C(340)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x10)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS * 2U) == MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_htime(&cpu_io, UINT16_C(10)) == 0);
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(54)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x10)));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_vtime(&cpu_io, 0U) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x20)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io,
+                                     UINT64_C(357364) + 9U) ==
+          MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(timing.v_counter == 0U && timing.h_master_clock == UINT16_C(10));
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_vtime(&cpu_io, MIPSNES2_HV_NTSC_SCANLINES) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x20)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io,
+                                     UINT64_C(714732)) == MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_vtime(&cpu_io, UINT16_C(311)) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x20)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_PAL,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(advance_to_line_start(&timing, &cpu_io, UINT16_C(311)) == 0);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(9)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(mipsnes2_cpu_io_irq_asserted(&cpu_io));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(set_vtime(&cpu_io, MIPSNES2_HV_PAL_SCANLINES) == 0);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200),
+                                UINT8_C(0x20)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_PAL,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io,
+                                     UINT64_C(851136)) == MIPSNES2_HV_OK);
+    CHECK(!mipsnes2_cpu_io_irq_asserted(&cpu_io));
+    return 0;
+}
+
 static int test_pal_frame_and_chunk_determinism(void)
 {
     mipsnes2_hv_timing whole;
@@ -202,10 +508,12 @@ static int test_pal_frame_and_chunk_determinism(void)
 
     mipsnes2_cpu_io_init(&whole_io, UINT8_C(2));
     mipsnes2_cpu_io_init(&chunked_io, UINT8_C(2));
+    CHECK(set_htime(&whole_io, UINT16_C(10)) == 0);
+    CHECK(set_htime(&chunked_io, UINT16_C(10)) == 0);
     CHECK(mipsnes2_cpu_io_write(&whole_io, UINT16_C(0x4200),
-                                UINT8_C(0x80)));
+                                UINT8_C(0x90)));
     CHECK(mipsnes2_cpu_io_write(&chunked_io, UINT16_C(0x4200),
-                                UINT8_C(0x80)));
+                                UINT8_C(0x90)));
     CHECK(mipsnes2_hv_timing_init(&whole, MIPSNES2_HV_STANDARD_PAL,
                                   false, &whole_io) == MIPSNES2_HV_OK);
     CHECK(mipsnes2_hv_timing_init(&chunked, MIPSNES2_HV_STANDARD_PAL,
@@ -276,8 +584,13 @@ int main(void)
     CHECK(test_vblank_and_delayed_nmi_flag() == 0);
     CHECK(test_overscan_vblank_and_ntsc_short_line() == 0);
     CHECK(test_ntsc_frame_lengths_and_field_toggle() == 0);
+    CHECK(test_h_irq_normal_and_late_spill() == 0);
+    CHECK(test_all_h_irq_values() == 0);
+    CHECK(test_v_and_hv_irq_positions() == 0);
+    CHECK(test_v_irq_after_short_line_and_suppressed_h153() == 0);
+    CHECK(test_irq_range_and_enable_boundary() == 0);
     CHECK(test_pal_frame_and_chunk_determinism() == 0);
     CHECK(test_advance_errors() == 0);
-    (void)puts("PASS: deterministic SNES H/V timing, blanking and NMI foundation");
+    (void)puts("PASS: deterministic SNES H/V timing, blanking, NMI and IRQ foundation");
     return 0;
 }
