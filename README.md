@@ -53,7 +53,7 @@ No-match and ambiguous images are rejected instead of guessed. There is no file 
 unofficial ExLoROM, padded/board-specific irregular mapping or enhancement hardware.
 No PPU, APU, ROM runner, compatibility or performance claim exists.
 
-Current milestone: Phase 3 — cartridge analysis and timed logical-bus foundation.
+Current milestone: Phase 4 — Ricoh 5A22 interrupt/timer foundation.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and
 workflows were actually verified. [Bootstrap audit](docs/bootstrap-audit.md) contains
 commands, evidence and limitations. [ROADMAP.md](ROADMAP.md) sequences future work.
@@ -70,8 +70,10 @@ verified. Opcode dispatch and the generic scheduler/event foundation are complet
 Meaningful CPU bus accesses now receive address-dependent Ricoh 5A22 timing through
 the partial SNES map. ABORT, signal-level RESET/bus behavior, exact dummy/internal
 bus sequencing, full CPU event-horizon integration and broader independent validation
-remain. The next focused milestone is the Ricoh 5A22 CPU-I/O interrupt/timer
-foundation; unofficial ExLoROM remains research-only until stronger evidence exists.
+remain. The first caller-owned CPU-I/O register/latch component now covers the
+documented `$4200`, `$4207-$420A` and `$4210-$4212` foundation. H/V counter match
+generation and scheduler integration are the next focused milestone; unofficial
+ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.
 

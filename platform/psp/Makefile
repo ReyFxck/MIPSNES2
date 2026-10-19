@@ -1,6 +1,6 @@
 # SDK conventions verified against pspdev/pspsdk; see docs/psp.md.
 TARGET = mipsnes2-psp
-OBJS = main.o log.o bus.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
+OBJS = main.o log.o bus.o cpu_io.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	cpu_timing.o cartridge.o cartridge_image.o cartridge_prepare.o
 BUILD_PRX = 1
 INCDIR = ../..
@@ -23,7 +23,10 @@ log.o: ../../core/common/log.c ../../core/common/log.h
 bus.o: ../../core/bus/bus.c ../../core/bus/bus.h ../../core/bus/interface.h ../../core/common/address.h
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
-snes_bus.o: ../../core/bus/snes_bus.c ../../core/bus/snes_bus.h ../../core/bus/interface.h ../../core/cartridge/interface.h ../../core/common/address.h ../../core/scheduler/5a22_timing.h
+cpu_io.o: ../../core/bus/cpu_io.c ../../core/bus/cpu_io.h
+	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
+
+snes_bus.o: ../../core/bus/snes_bus.c ../../core/bus/snes_bus.h ../../core/bus/cpu_io.h ../../core/bus/interface.h ../../core/cartridge/interface.h ../../core/common/address.h ../../core/scheduler/5a22_timing.h
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 cpu.o: ../../core/cpu/65c816/cpu.c ../../core/cpu/65c816/cpu.h ../../core/bus/interface.h ../../core/common/address.h

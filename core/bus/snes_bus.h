@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "core/bus/cpu_io.h"
 #include "core/bus/interface.h"
 #include "core/cartridge/interface.h"
 
@@ -26,6 +27,7 @@ typedef struct {
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
     mipsnes2_bus_interface cpu_io;
+    mipsnes2_cpu_io *cpu_io_state;
     mipsnes2_bus_interface dma;
     mipsnes2_cartridge_interface cartridge;
 } mipsnes2_snes_bus_config;
@@ -35,6 +37,7 @@ typedef struct {
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
     mipsnes2_bus_interface cpu_io;
+    mipsnes2_cpu_io *cpu_io_state;
     mipsnes2_bus_interface dma;
     mipsnes2_cartridge_interface cartridge;
     uint32_t wram_port_address;

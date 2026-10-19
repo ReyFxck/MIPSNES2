@@ -1,8 +1,8 @@
 # Architecture
 
 Status: project foundation plus a 256-opcode 65C816, partial real SNES logical bus,
-base LoROM/HiROM mapping, conservative cartridge-header selection and deterministic
-scheduler/timing foundation, not a working SNES emulator. Read
+base LoROM/HiROM mapping, conservative cartridge-header selection, deterministic
+scheduler/timing and partial 5A22 CPU-I/O foundation, not a working SNES emulator. Read
 [STATUS.md](STATUS.md).
 
 ## Dependency direction and ownership
@@ -15,7 +15,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
-| core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, mirrors, ports, MMIO routes, FastROM state and per-access clocks |
+| core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
@@ -62,6 +62,13 @@ interfaces. Missing routes return one deterministic latch; that is an explicit
 foundation approximation, not a complete open-bus claim. Every read/write normalizes
 to 24 bits and adds the address-dependent master-clock count. Cartridge callbacks
 receive logical addresses; the base mapper now implements the supported subset below.
+
+The optional caller-owned `mipsnes2_cpu_io` state sits behind that CPU-I/O route. It
+implements NMITIMEN, the 9-bit H/V compare values, RDNMI, TIMEUP and HVBJOY. PPU or
+scheduler code supplies blank transitions and future timer matches; the component
+exports a latched NMI edge and timer-IRQ level without depending on host or platform
+APIs. It deliberately does not derive H/V positions, schedule compare events, model
+the narrow read-at-match TIMEUP exception, poll joypads or combine cartridge IRQs.
 
 The cartridge-slot interface differs intentionally from ordinary MMIO callbacks: a
 read/write returns whether the cartridge decoded that address. A declined read leaves

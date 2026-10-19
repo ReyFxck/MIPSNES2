@@ -134,16 +134,17 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
 - [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio chunking verified; integrated domains pending
-- [ ] CPU I/O registers
+- [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` foundation implemented
 - [ ] H/V counter model
-- [ ] IRQ compare behavior
-- [ ] NMI edge and enable behavior
-- [ ] Interrupt acknowledgement
+- [ ] [IN PROGRESS] IRQ compare behavior — enable/latch/acknowledgement exists; H/V match generation absent
+- [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch exists; PPU/scheduler timing absent
+- [ ] [IN PROGRESS] Interrupt acknowledgement — RDNMI/TIMEUP base side effects exist; match-window/external IRQ cases absent
 - [ ] Pending interrupt ordering
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] Interrupt and timer integration tests
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — deterministic register/latch and bus-routing host tests exist
+- [ ] [IN PROGRESS] 5A22 CPU-I/O register/latch foundation — GCC default/release/sanitizer host suites passed; cross-build CI pending
 - [ ] DMA registers
 - [ ] DMA transfer modes
 - [ ] DMA timing

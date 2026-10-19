@@ -507,6 +507,18 @@ scaffold cross-build, artifact and checksum jobs passed for implementation commi
 save scheduling and real-device validation remain incomplete. Exact scope is in
 docs/cartridge-sram-persistence-audit.md.
 
+The Ricoh 5A22 CPU-I/O foundation on 2026-10-18 adds caller-owned state for
+NMITIMEN, the 9-bit H/V compare registers, RDNMI, TIMEUP and HVBJOY. It accepts
+external blank transitions and timer-match signals, latches NMI edges, exposes the
+timer IRQ level and is routed through the partial SNES bus without replacing the
+fallback CPU-I/O interface. Deterministic tests cover reserved masks, open-bus bit
+composition, mirror routing, enable transitions, read acknowledgements and blank/
+joypad-busy status. GCC default, release and isolated ASan+UBSan host suites pass;
+local Clang and console SDKs are unavailable, and GitHub cross-build CI remains
+pending. No H/V counter, PPU timing, automatic joypad poll,
+external cartridge IRQ combination or exact TIMEUP match-window behavior is claimed.
+Exact scope is in docs/cpu-io-foundation-audit.md.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -975,16 +987,24 @@ platform persistence remains incomplete.
 
 ## Interrupts and timers
 
-- [ ] CPU I/O registers
+- [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` subset implemented
 - [ ] H/V counter model
-- [ ] IRQ compare behavior
-- [ ] NMI edge and enable behavior
-- [ ] Interrupt acknowledgement
+- [ ] [IN PROGRESS] IRQ compare behavior — enable/latch/acknowledgement exists; H/V match generation absent
+- [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch exists; PPU/scheduler timing absent
+- [ ] [IN PROGRESS] Interrupt acknowledgement — base RDNMI/TIMEUP reads exist; match-window/external IRQ cases absent
 - [ ] Pending interrupt ordering
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] Interrupt and timer integration tests
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch and SNES-bus routing fixtures exist
+
+### Verified CPU-I/O foundation subset
+
+- [ ] [IN PROGRESS] NMITIMEN enable/mode mask and disabled-IRQ acknowledgement — local host suites pass; cross-build CI pending
+- [ ] [IN PROGRESS] 9-bit HTIME/VTIME register storage — local host suites pass; cross-build CI pending
+- [ ] [IN PROGRESS] RDNMI/TIMEUP/HVBJOY read composition and side effects — local host suites pass; cross-build CI pending
+- [ ] [IN PROGRESS] NMI gated-edge and timer-IRQ latch handoff — local host suites pass; cross-build CI pending
+- [ ] [IN PROGRESS] Partial SNES-bus CPU-I/O state routing — local host suites pass; cross-build CI pending
 
 ## DMA / HDMA
 
