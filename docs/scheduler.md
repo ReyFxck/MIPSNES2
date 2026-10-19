@@ -204,7 +204,7 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
 - [x] Shared CPU/scheduler/H/V domain — atomic fanout and failure alignment verified
-- [ ] [IN PROGRESS] CPU-I/O interrupt-line handoff — local default/release/sanitizer fixtures pass; CI evidence pending
+- [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
 - [ ] [IN PROGRESS] Long-run clock drift tests — ratio, H/V chunking and short shared-domain runs verified; regional soak tests pending
 
 ## Research and decisions

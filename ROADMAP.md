@@ -128,7 +128,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Event tie ordering
 - [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle pausing pending
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
-- [ ] [IN PROGRESS] CPU-I/O interrupt-line handoff — local default/release/sanitizer host fixtures pass; CI evidence pending
+- [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization

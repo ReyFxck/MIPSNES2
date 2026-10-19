@@ -578,7 +578,9 @@ existing 65C816 input contract. Host fixtures cover TIMEUP acknowledgement with
 cartridge IRQ retained, deassertion, post-step timer delivery, NMI vector entry and
 simultaneous NMI-over-IRQ priority. Exact within-instruction sampling and complete
 subsystem priority remain incomplete. Local default GCC verification passes;
-release and ASan+UBSan verification also pass; CI evidence is pending. Exact scope is in
+release and ASan+UBSan verification also pass. GitHub Host GCC/Clang plus pinned
+PS2/PSP cross-build, artifact and checksum jobs passed for implementation commit
+`9ed34802ca8d436f70f0f9d8b96563184f65d3ab`. Exact scope and run IDs are in
 docs/interrupt-handoff-audit.md. No console runtime or hardware result is claimed.
 
 ## Current blockers and diagnostic exceptions
@@ -1092,7 +1094,7 @@ platform persistence remains incomplete.
 - [x] Deterministic H/V-before-general-callback ordering at equal timestamps
 - [x] Event-budget exhaustion preserves aligned domain state
 - [x] Atomic CPU-step delta advances scheduler and H/V together
-- [ ] [IN PROGRESS] Automatic CPU-I/O IRQ/NMI delivery into 65C816 inputs — local default/release/sanitizer suites pass; CI evidence pending
+- [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
 
 ### Interrupt-line aggregation subset
 

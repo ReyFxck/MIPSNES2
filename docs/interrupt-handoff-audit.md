@@ -84,9 +84,20 @@ passed. No source or build-rule change was required. This is recorded as a trans
 local filesystem artifact, not hidden or counted as a first-pass success.
 
 LeakSanitizer is disabled locally because this environment cannot inspect the
-required `/proc` state. Local Clang, PS2SDK and PSPSDK are unavailable. GitHub Actions
-evidence is pending, so the narrow handoff checkbox remains in progress. No emulator
-or real PS2/PSP executed the code.
+required `/proc` state. Local Clang, PS2SDK and PSPSDK are unavailable.
+
+For implementation commit `9ed34802ca8d436f70f0f9d8b96563184f65d3ab`, GitHub
+Actions passed:
+
+- Host CI run `39342665872`: GCC and Clang release, sanitizer and artifact jobs;
+- PS2 CI run `39342665944`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps;
+- PSP CI run `39342665931`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps.
+
+No emulator or real PS2/PSP executed the code. Cross-compilation proves that the
+shared source remains accepted by the pinned scaffold toolchains, not interrupt
+timing or runtime correctness on target hardware.
 
 ## Evidence basis
 
