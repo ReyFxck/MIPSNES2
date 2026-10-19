@@ -66,8 +66,19 @@ The first sanitizer invocation was launched concurrently with the release build 
 produced a zero-byte `test-contracts` file, causing `Permission denied`; it was not
 counted as a test pass. The isolated clean sanitizer rebuild produced executable
 artifacts and the complete suite passed. Local Clang, PS2SDK and PSPSDK are
-unavailable. GitHub Host/PS2/PSP CI and real-hardware execution remain unverified at
-this point.
+unavailable. Real-hardware execution remains unverified.
+
+For implementation commit `f0517d99ade3f1768fa803a8c3aa90bafab58370`, GitHub
+Actions subsequently passed:
+
+- Host CI run `39290102034`: GCC and Clang release, sanitizer and artifact jobs;
+- PS2 CI run `39290101982`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps;
+- PSP CI run `39290101965`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps.
+
+No emulator or real PS2/PSP executed the code. Cross-build success proves SDK
+compatibility for the current scaffold, not interrupt timing on target hardware.
 
 ## Sources
 

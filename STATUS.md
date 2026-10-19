@@ -514,8 +514,10 @@ timer IRQ level and is routed through the partial SNES bus without replacing the
 fallback CPU-I/O interface. Deterministic tests cover reserved masks, open-bus bit
 composition, mirror routing, enable transitions, read acknowledgements and blank/
 joypad-busy status. GCC default, release and isolated ASan+UBSan host suites pass;
-local Clang and console SDKs are unavailable, and GitHub cross-build CI remains
-pending. No H/V counter, PPU timing, automatic joypad poll,
+local Clang and console SDKs are unavailable. GitHub Host GCC/Clang release and
+sanitizer jobs plus pinned PS2/PSP scaffold cross-build, artifact and checksum jobs
+passed for implementation commit
+`f0517d99ade3f1768fa803a8c3aa90bafab58370`. No H/V counter, PPU timing, automatic joypad poll,
 external cartridge IRQ combination or exact TIMEUP match-window behavior is claimed.
 Exact scope is in docs/cpu-io-foundation-audit.md.
 
@@ -1000,11 +1002,11 @@ platform persistence remains incomplete.
 
 ### Verified CPU-I/O foundation subset
 
-- [ ] [IN PROGRESS] NMITIMEN enable/mode mask and disabled-IRQ acknowledgement — local host suites pass; cross-build CI pending
-- [ ] [IN PROGRESS] 9-bit HTIME/VTIME register storage — local host suites pass; cross-build CI pending
-- [ ] [IN PROGRESS] RDNMI/TIMEUP/HVBJOY read composition and side effects — local host suites pass; cross-build CI pending
-- [ ] [IN PROGRESS] NMI gated-edge and timer-IRQ latch handoff — local host suites pass; cross-build CI pending
-- [ ] [IN PROGRESS] Partial SNES-bus CPU-I/O state routing — local host suites pass; cross-build CI pending
+- [x] NMITIMEN enable/mode mask and disabled-IRQ acknowledgement
+- [x] 9-bit HTIME/VTIME register storage
+- [x] RDNMI/TIMEUP/HVBJOY read composition and side effects
+- [x] NMI gated-edge and timer-IRQ latch handoff
+- [x] Partial SNES-bus CPU-I/O state routing
 
 ## DMA / HDMA
 

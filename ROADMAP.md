@@ -144,7 +144,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — deterministic register/latch and bus-routing host tests exist
-- [ ] [IN PROGRESS] 5A22 CPU-I/O register/latch foundation — GCC default/release/sanitizer host suites passed; cross-build CI pending
+- [x] 5A22 CPU-I/O register/latch foundation
 - [ ] DMA registers
 - [ ] DMA transfer modes
 - [ ] DMA timing
