@@ -26,6 +26,11 @@ bus/internal cycle, and the partial SNES bus has no complete cartridge map or ac
 peripherals. Therefore the bridge distinguishes observed address-speed accesses from
 the remaining aggregate CPU cycles but does not claim exact cycle placement.
 
+The caller-owned 5A22 CPU-I/O foundation can latch externally supplied VBlank and
+timer-match signals and report an NMI edge or IRQ level. It does not yet schedule
+those signals: a future H/V counter model must place blank transitions and compare
+matches on this master-clock timeline before CPU interrupt generation is integrated.
+
 ## Event and rollover contract
 
 Events scheduled before `now` are rejected. Equal-time events use the lower numeric

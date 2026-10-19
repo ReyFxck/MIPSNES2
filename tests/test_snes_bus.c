@@ -302,6 +302,48 @@ static int test_mmio_and_cartridge_routing(void)
     return 0;
 }
 
+static int test_cpu_io_state_routing(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_snes_bus_config config = base_config();
+    mipsnes2_cpu_io cpu_io_state;
+    route_capture fallback = {0U, 0U, 0U, 0U, UINT8_C(0x3c)};
+
+    mipsnes2_cpu_io_init(&cpu_io_state, UINT8_C(2));
+    config.cpu_io = capture_interface(&fallback);
+    config.cpu_io_state = &cpu_io_state;
+    CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_OK);
+
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x804207), UINT8_C(0x34));
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004208), UINT8_C(0x01));
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x804209), UINT8_C(0x56));
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x00420a), UINT8_C(0x00));
+    CHECK(cpu_io_state.htime == UINT16_C(0x0134));
+    CHECK(cpu_io_state.vtime == UINT16_C(0x0056));
+    CHECK(fallback.writes == 0U);
+
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004200), UINT8_C(0x80));
+    mipsnes2_cpu_io_set_vblank(&cpu_io_state, true);
+    bus.open_value = UINT8_C(0x70);
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x804210)) ==
+          UINT8_C(0xf2));
+    CHECK(!cpu_io_state.nmi_flag);
+    CHECK(mipsnes2_cpu_io_take_nmi_edge(&cpu_io_state));
+
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004201), UINT8_C(0x91));
+    CHECK(fallback.writes == 1U &&
+          fallback.last_address == UINT32_C(0x004201));
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x804213)) ==
+          UINT8_C(0x3c));
+    CHECK(fallback.reads == 1U &&
+          fallback.last_address == UINT32_C(0x804213));
+
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x80420d), UINT8_C(1));
+    CHECK(bus.fastrom_enabled);
+    CHECK(fallback.writes == 1U);
+    return 0;
+}
+
 static void pulse_nmi(void *opaque,
                       mipsnes2_master_clock timestamp,
                       mipsnes2_scheduler_token token)
@@ -413,6 +455,7 @@ int main(void)
     CHECK(test_init_and_wram_mapping() == 0);
     CHECK(test_wram_port_and_fastrom_timing() == 0);
     CHECK(test_mmio_and_cartridge_routing() == 0);
+    CHECK(test_cpu_io_state_routing() == 0);
     CHECK(test_timed_cpu_steps() == 0);
     (void)puts("PASS: SNES WRAM/MMIO routing and timed CPU step foundation");
     return 0;
