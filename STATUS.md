@@ -532,10 +532,11 @@ NMI flag two master clocks after VBlank begins. The CPU-I/O input contract now k
 VBlank status and NMI-flag assertion distinct. Deterministic tests cover exact frame
 totals, boundaries, overscan, one-shot/chunked equivalence and overflow rejection.
 GCC default, release and local ASan+UBSan suites pass; local Clang and console SDKs
-are unavailable. Interlace, PPU dot-counter latching, dynamic SETINI, H/V IRQ match
-generation and central-scheduler/CPU-boundary wiring remain incomplete. GitHub CI
-has not yet executed this change. Exact scope is in
-docs/hv-timing-foundation-audit.md.
+are unavailable. GitHub Host GCC/Clang release and sanitizer jobs plus pinned PS2/PSP
+scaffold cross-build, artifact and checksum jobs passed for implementation commit
+`6ab26ca22c4d4ec838f513702b490a681196d610`. Interlace, PPU dot-counter latching,
+dynamic SETINI, H/V IRQ match generation and central-scheduler/CPU-boundary wiring
+remain incomplete. Exact scope is in docs/hv-timing-foundation-audit.md.
 
 ## Current blockers and diagnostic exceptions
 
@@ -1026,12 +1027,12 @@ platform persistence remains incomplete.
 
 ### Verified H/V foundation subset
 
-- [ ] [IN PROGRESS] Caller-owned non-interlaced NTSC/PAL master-clock state — host verified; console cross-build CI pending
-- [ ] [IN PROGRESS] HBlank and 224/239-line VBlank transition timing — host verified; CI pending
-- [ ] [IN PROGRESS] Separate VBlank and delayed RDNMI/NMI-flag signals — host verified; CI pending
-- [ ] [IN PROGRESS] NTSC field alternation and 1360-clock short scanline — host verified; CI pending
-- [ ] [IN PROGRESS] PAL 312-line non-interlaced frame geometry — host verified; CI pending
-- [ ] [IN PROGRESS] One-shot/chunked H/V advancement determinism — host verified; CI pending
+- [x] Caller-owned non-interlaced NTSC/PAL master-clock state
+- [x] HBlank and 224/239-line VBlank transition timing
+- [x] Separate VBlank and delayed RDNMI/NMI-flag signals
+- [x] NTSC field alternation and 1360-clock short scanline
+- [x] PAL 312-line non-interlaced frame geometry
+- [x] One-shot/chunked H/V advancement determinism
 
 ## DMA / HDMA
 

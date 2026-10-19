@@ -145,7 +145,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] SPC700 timer coordination
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus-routing and non-interlaced H/V host tests exist
 - [x] 5A22 CPU-I/O register/latch foundation
-- [ ] [IN PROGRESS] Non-interlaced NTSC/PAL H/V timing foundation — host verified; CI pending
+- [x] Non-interlaced NTSC/PAL H/V timing foundation
 - [ ] DMA registers
 - [ ] DMA transfer modes
 - [ ] DMA timing

@@ -74,9 +74,20 @@ Verified locally on 2026-10-19:
 - `python3 tools/check_repository.py` — passed as part of all three suites.
 
 LeakSanitizer is disabled locally because this environment cannot inspect the
-required `/proc` state. Local Clang, PS2SDK and PSPSDK are unavailable. GitHub CI and
-both console cross-builds must pass before this milestone is merged. No console or
-emulator runtime has executed the code.
+required `/proc` state. Local Clang, PS2SDK and PSPSDK are unavailable.
+
+For implementation commit `6ab26ca22c4d4ec838f513702b490a681196d610`, GitHub
+Actions subsequently passed:
+
+- Host CI run `39303643924`: GCC and Clang release, sanitizer and artifact jobs;
+- PS2 CI run `39303643805`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps;
+- PSP CI run `39303643856`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps.
+
+No console or emulator runtime has executed the code. Cross-compilation proves the
+new shared source remains accepted by the scaffold toolchains, not timing correctness
+on real PS2/PSP hardware.
 
 ## Sources
 
