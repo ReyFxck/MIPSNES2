@@ -4,7 +4,8 @@ $(error PS2SDK is unset; see docs/ps2.md)
 endif
 EE_BIN = mipsnes2-ps2.elf
 EE_OBJS = main.o log.o bus.o cpu_io.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
-	hv_timing.o cpu_timing.o cartridge.o cartridge_image.o cartridge_prepare.o
+	hv_timing.o master_timing.o cpu_timing.o cartridge.o cartridge_image.o \
+	cartridge_prepare.o
 EE_LIBS = -lc
 EE_INCS = -I../..
 EE_CFLAGS = -std=c99 -Wextra -Werror
@@ -36,7 +37,10 @@ scheduler.o: ../../core/scheduler/scheduler.c ../../core/scheduler/scheduler.h
 hv_timing.o: ../../core/scheduler/hv_timing.c ../../core/scheduler/hv_timing.h ../../core/bus/cpu_io.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
-cpu_timing.o: ../../core/scheduler/cpu_timing.c ../../core/scheduler/cpu_timing.h ../../core/scheduler/scheduler.h ../../core/bus/snes_bus.h ../../core/cpu/65c816/cpu.h
+master_timing.o: ../../core/scheduler/master_timing.c ../../core/scheduler/master_timing.h ../../core/scheduler/hv_timing.h ../../core/scheduler/scheduler.h ../../core/bus/cpu_io.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+cpu_timing.o: ../../core/scheduler/cpu_timing.c ../../core/scheduler/cpu_timing.h ../../core/scheduler/master_timing.h ../../core/scheduler/scheduler.h ../../core/scheduler/hv_timing.h ../../core/bus/snes_bus.h ../../core/cpu/65c816/cpu.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 cartridge.o: ../../core/cartridge/cartridge.c ../../core/cartridge/cartridge.h ../../core/cartridge/interface.h ../../core/common/address.h

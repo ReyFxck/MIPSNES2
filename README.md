@@ -75,8 +75,11 @@ remain. The first caller-owned CPU-I/O register/latch component now covers the
 documented `$4200`, `$4207-$420A` and `$4210-$4212` foundation. A separate H/V
 component advances deterministic non-interlaced NTSC/PAL master-clock state, blank
 transitions, the NTSC short line, delayed NMI flag and stable-register H/V timer
-matches. Exact register-write/match windows, TIMEUP's narrow read exception,
-interlace and connection to the central scheduler/CPU boundary remain incomplete.
+matches. A shared master-clock coordinator now advances H/V state and scheduler
+events from each atomic CPU-step delta with explicit same-timestamp ordering. Exact
+register-write/match windows, TIMEUP's narrow read exception, interlace,
+mid-instruction event pausing and automatic CPU interrupt-line delivery remain
+incomplete.
 Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.

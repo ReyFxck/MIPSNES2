@@ -85,7 +85,12 @@ assertion, every valid HTIME value, V/HV match positions, short/final-line excep
 out-of-range compare values, exact-boundary enabling, TIMEUP acknowledgement, overflow
 rejection and one-shot/chunked determinism with IRQ enabled. Timed CPU fixtures verify a slow NOP,
 mixed FastROM-fetch/slow-WRAM LDA, an event timestamped inside an atomic instruction,
-emulation-mode NMI entry and visible bridge errors. They validate meaningful-access
+emulation-mode NMI entry and visible bridge errors. The master-domain executable
+checks scheduler/H/V timestamp agreement, H/V-before-callback tie ordering, dispatch-
+budget exhaustion, same-time insertion, invalid/reentrant paths and chunk equivalence.
+The SNES-bus fixture additionally advances repeated NOPs through the H/V-aware bridge,
+verifying clock lockstep and timer-latch assertion without claiming automatic CPU IRQ
+delivery. These fixtures validate meaningful-access
 timing, not missing dummy cycles, mid-instruction pause/resume, WRAM refresh, complete
 SNES interrupt generation or complete cartridge mapping.
 The cartridge regression executable covers explicit base LoROM/HiROM and documented
@@ -206,6 +211,8 @@ Non-interlaced H/V timing and blank/NMI transition evidence is recorded in
 [hv-timing-foundation-audit.md](hv-timing-foundation-audit.md).
 Stable-register H/V timer-match evidence is recorded in
 [hv-irq-foundation-audit.md](hv-irq-foundation-audit.md).
+Shared scheduler/H/V master-clock fanout evidence is recorded in
+[master-timing-fanout-audit.md](master-timing-fanout-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in

@@ -20,7 +20,9 @@ timing evidence is in
 [docs/cpu-io-foundation-audit.md](docs/cpu-io-foundation-audit.md) and
 [docs/hv-timing-foundation-audit.md](docs/hv-timing-foundation-audit.md). Stable-
 register H/V timer-match evidence is in
-[docs/hv-irq-foundation-audit.md](docs/hv-irq-foundation-audit.md).
+[docs/hv-irq-foundation-audit.md](docs/hv-irq-foundation-audit.md), and shared
+scheduler/H/V advancement evidence is in
+[docs/master-timing-fanout-audit.md](docs/master-timing-fanout-audit.md).
 
 ## State and evidence rules
 
@@ -547,11 +549,24 @@ valid HTIME value, 338/339 spill into the following line, V/HV positions includi
 the post-short-line offset, regional out-of-range values and the documented H=153
 short/final-line suppressions. Exact mid-instruction register-write ordering,
 multiple reprogrammed matches in one scanline, TIMEUP's narrow read-at-match exception,
-interlace and central-scheduler/CPU-boundary wiring remain incomplete. Local GCC
+interlace and automatic CPU interrupt-line delivery remain incomplete. Local GCC
 default/release and ASan+UBSan verification suites pass. GitHub Host GCC/Clang plus
 pinned PS2/PSP cross-build, artifact and checksum jobs passed for implementation
 commit `9936fd24a2a8cfdd736d4fe7df707c11f0103e55`. Exact scope and run IDs are in
 docs/hv-irq-foundation-audit.md. No console runtime or hardware result is claimed.
+
+The shared master-clock fanout milestone on 2026-10-19 adds a caller-owned coordinator
+that keeps the scheduler and non-interlaced H/V component on one checked timestamp.
+It advances H/V transitions before general callbacks at the same time, preserves
+domain alignment on event-budget exhaustion and lets the atomic CPU timing bridge
+feed both from one instruction delta. Deterministic host fixtures cover mismatch and
+error paths, same-time insertion, provisional tie ordering, chunking and repeated
+NOP-to-H-IRQ advancement. The CPU remains atomic and CPU-I/O IRQ/NMI latches are not
+yet wired automatically into CPU inputs. Local GCC default verification passes;
+release and ASan+UBSan verification also pass. GitHub Host GCC/Clang plus pinned
+PS2/PSP cross-build, artifact and checksum jobs passed for implementation commit
+`f0c863d16c31140f8fd23352c9e68bffaf534c24`. Exact scope and run IDs are in
+docs/master-timing-fanout-audit.md. No console runtime or hardware result is claimed.
 
 ## Current blockers and diagnostic exceptions
 
@@ -1011,13 +1026,14 @@ platform persistence remains incomplete.
 - [x] Clock ratio representation — exact reduced rational with carried remainder
 - [x] Event tie ordering — timestamp, explicit priority, insertion token
 - [ ] [IN PROGRESS] CPU event horizon — atomic timed CPU steps exist; mid-instruction bus-cycle pausing pending
+- [x] Shared scheduler/H/V master-clock fanout — checked alignment, transactional H/V slices and provisional same-time ordering verified
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — identical scheduler replay traces verified
-- [ ] [IN PROGRESS] Long-run clock drift tests — chunked ratio and H/V advancement verified; integrated regional domains pending
+- [ ] [IN PROGRESS] Long-run clock drift tests — chunked ratio, H/V and short common-domain advancement verified; regional soak tests pending
 
 ## Interrupts and timers
 
@@ -1030,7 +1046,7 @@ platform persistence remains incomplete.
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, SNES-bus routing, non-interlaced H/V and stable-register compare fixtures exist
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, SNES-bus routing, H/V compare and atomic common-domain fixtures exist; CPU input delivery pending
 
 ### Verified CPU-I/O foundation subset
 
@@ -1056,6 +1072,14 @@ platform persistence remains incomplete.
 - [x] V-IRQ and HV-IRQ stable-register positions
 - [x] Regional compare-range and H=153 exception behavior
 - [x] TIMEUP latch/acknowledgement handoff from H/V timing
+
+### Shared master-clock domain subset
+
+- [x] Checked scheduler/H/V timestamp alignment and coordinated advancement
+- [x] Deterministic H/V-before-general-callback ordering at equal timestamps
+- [x] Event-budget exhaustion preserves aligned domain state
+- [x] Atomic CPU-step delta advances scheduler and H/V together
+- [ ] Automatic CPU-I/O IRQ/NMI delivery into 65C816 inputs
 
 ## DMA / HDMA
 
@@ -1217,7 +1241,7 @@ platform persistence remains incomplete.
 - [ ] PPU logic fixtures
 - [ ] SPC700 fixtures
 - [ ] DSP sample fixtures
-- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes, timed CPU steps and IRQ/NMI boundary
+- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes, shared H/V fanout, timed CPU steps and IRQ/NMI boundary
 - [ ] DMA/HDMA fixtures
 - [ ] Licensed test-ROM runner
 - [ ] Deterministic replay harness

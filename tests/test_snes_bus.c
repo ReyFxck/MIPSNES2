@@ -357,8 +357,9 @@ static void pulse_nmi(void *opaque,
     mipsnes2_cpu_pulse_nmi(context->cpu);
 }
 
-static int initialize_cpu_bus(mipsnes2_snes_bus *bus,
-                              mipsnes2_cpu *cpu)
+static int initialize_cpu_bus_with_io(mipsnes2_snes_bus *bus,
+                                      mipsnes2_cpu *cpu,
+                                      mipsnes2_cpu_io *cpu_io)
 {
     mipsnes2_snes_bus_config config = base_config();
 
@@ -370,10 +371,17 @@ static int initialize_cpu_bus(mipsnes2_snes_bus *bus,
     cartridge.bank00[0xfffa] = 0x00U;
     cartridge.bank00[0xfffb] = 0x90U;
     config.cartridge = cartridge_interface(&cartridge);
+    config.cpu_io_state = cpu_io;
     CHECK(mipsnes2_snes_bus_init(bus, &config) == MIPSNES2_SNES_BUS_OK);
     mipsnes2_cpu_init(cpu, mipsnes2_snes_bus_make_interface(bus));
     CHECK(mipsnes2_cpu_reset(cpu) == MIPSNES2_CPU_OK);
     return 0;
+}
+
+static int initialize_cpu_bus(mipsnes2_snes_bus *bus,
+                              mipsnes2_cpu *cpu)
+{
+    return initialize_cpu_bus_with_io(bus, cpu, NULL);
 }
 
 static int test_timed_cpu_steps(void)
@@ -451,6 +459,65 @@ static int test_timed_cpu_steps(void)
     return 0;
 }
 
+static int test_timed_cpu_hv_steps(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_io cpu_io;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_hv_timing hv_timing;
+    mipsnes2_cpu_timing_report report;
+    unsigned step;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(initialize_cpu_bus_with_io(&bus, &cpu, &cpu_io) == 0);
+    mipsnes2_scheduler_init(&scheduler);
+    CHECK(mipsnes2_hv_timing_init(&hv_timing,
+                                  MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4207), UINT8_C(10)));
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4208), 0U));
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200), UINT8_C(0x10)));
+    for (step = 0U; step < 4U; ++step) {
+        cartridge.bank00[0x8000U + step] = UINT8_C(0xea);
+        CHECK(mipsnes2_cpu_timed_step_hv(
+                  &cpu, &bus, &scheduler, &hv_timing, 8U, &report) ==
+              MIPSNES2_CPU_TIMING_OK);
+        CHECK(report.cpu_result == MIPSNES2_CPU_OK);
+        CHECK(report.master_clocks == UINT64_C(14));
+        CHECK(scheduler.now == (uint64_t)(step + 1U) * UINT64_C(14));
+        CHECK(hv_timing.elapsed_master_clocks == scheduler.now);
+        CHECK(report.target_time == scheduler.now);
+        CHECK(report.hv_result == MIPSNES2_HV_OK);
+        if (step < 3U) {
+            CHECK(!cpu_io.irq_flag);
+        }
+    }
+    CHECK(cpu.pc == UINT16_C(0x8004));
+    CHECK(cpu_io.irq_flag);
+    CHECK(!cpu.irq_level);
+    CHECK(hv_timing.h_master_clock == UINT16_C(56));
+
+    CHECK(mipsnes2_cpu_timed_step_hv(
+              &cpu, &bus, &scheduler, NULL, 8U, &report) ==
+          MIPSNES2_CPU_TIMING_INVALID_ARGUMENT);
+
+    bus.cpu_io_state = NULL;
+    CHECK(mipsnes2_cpu_timed_step_hv(
+              &cpu, &bus, &scheduler, &hv_timing, 8U, &report) ==
+          MIPSNES2_CPU_TIMING_INVALID_ARGUMENT);
+    bus.cpu_io_state = &cpu_io;
+
+    hv_timing.elapsed_master_clocks++;
+    CHECK(mipsnes2_cpu_timed_step_hv(
+              &cpu, &bus, &scheduler, &hv_timing, 8U, &report) ==
+          MIPSNES2_CPU_TIMING_DOMAIN_MISMATCH);
+    CHECK(cpu.pc == UINT16_C(0x8004));
+    CHECK(scheduler.now == UINT64_C(56));
+    CHECK(hv_timing.h_master_clock == UINT16_C(56));
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_init_and_wram_mapping() == 0);
@@ -458,6 +525,7 @@ int main(void)
     CHECK(test_mmio_and_cartridge_routing() == 0);
     CHECK(test_cpu_io_state_routing() == 0);
     CHECK(test_timed_cpu_steps() == 0);
-    (void)puts("PASS: SNES WRAM/MMIO routing and timed CPU step foundation");
+    CHECK(test_timed_cpu_hv_steps() == 0);
+    (void)puts("PASS: SNES WRAM/MMIO routing and timed CPU/H-V step foundation");
     return 0;
 }
