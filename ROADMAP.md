@@ -136,16 +136,17 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio and H/V chunking verified; integrated domains pending
 - [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` foundation implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL phase and blank/NMI boundaries verified; interlace/dot latches pending
-- [ ] [IN PROGRESS] IRQ compare behavior — enable/latch/acknowledgement exists; H/V match generation absent
+- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches exist; exact write/match windows, interlace and scheduler/CPU delivery pending
 - [ ] [IN PROGRESS] NMI edge and enable behavior — non-interlaced VBlank/NMI timing exists; central scheduler/CPU delivery pending
 - [ ] [IN PROGRESS] Interrupt acknowledgement — RDNMI/TIMEUP base side effects exist; match-window/external IRQ cases absent
 - [ ] Pending interrupt ordering
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus-routing and non-interlaced H/V host tests exist
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus-routing, non-interlaced H/V and stable-register compare host tests exist
 - [x] 5A22 CPU-I/O register/latch foundation
 - [x] Non-interlaced NTSC/PAL H/V timing foundation
+- [ ] [IN PROGRESS] Stable-register non-interlaced H/V timer-IRQ foundation — local verified; GitHub CI pending
 - [ ] DMA registers
 - [ ] DMA transfer modes
 - [ ] DMA timing

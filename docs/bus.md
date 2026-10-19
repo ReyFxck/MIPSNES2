@@ -50,11 +50,12 @@ only. The optional caller-owned CPU-I/O state implements `$4200`, `$4207-$420A` 
 NMITIMEN stores only the documented NMI, H/V IRQ-mode and automatic-joypad-enable
 bits. The compare registers retain nine bits. The non-interlaced H/V timing component
 supplies separate VBlank, HBlank and delayed NMI-flag transitions; other external
-code supplies auto-joypad-busy and future timer-match signals. RDNMI/TIMEUP expose
-and acknowledge their latches, while HVBJOY reports current inputs. Reads combine
-implemented bits with the bus latch for currently unused/open bits. The component
-exposes a gated NMI edge and timer IRQ level, but does not yet generate H/V matches
-or schedule CPU delivery.
+code supplies auto-joypad-busy. The H/V component now supplies stable-register H/V
+timer-match signals. RDNMI/TIMEUP expose and acknowledge their latches, while HVBJOY
+reports current inputs. Reads combine implemented bits with the bus latch for
+currently unused/open bits. The components expose a gated NMI edge and timer IRQ
+level, but do not yet model exact mid-instruction compare-register writes, the narrow
+TIMEUP read-at-match exception or scheduled CPU delivery.
 
 Every SNES-bus read/write updates access counters and charges the 5A22 6/8/12-master-
 clock class selected by its normalized address and current FastROM state. This is

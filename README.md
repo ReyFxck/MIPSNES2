@@ -73,11 +73,11 @@ the partial SNES map. ABORT, signal-level RESET/bus behavior, exact dummy/intern
 bus sequencing, full CPU event-horizon integration and broader independent validation
 remain. The first caller-owned CPU-I/O register/latch component now covers the
 documented `$4200`, `$4207-$420A` and `$4210-$4212` foundation. A separate H/V
-component now advances deterministic non-interlaced NTSC/PAL master-clock state,
-blank transitions, the NTSC short line and delayed NMI flag. H/V IRQ compare
-generation and connection to the central scheduler/CPU boundary are the next focused
-milestone; interlace remains incomplete. Unofficial ExLoROM remains research-only
-until stronger evidence exists.
+component advances deterministic non-interlaced NTSC/PAL master-clock state, blank
+transitions, the NTSC short line, delayed NMI flag and stable-register H/V timer
+matches. Exact register-write/match windows, TIMEUP's narrow read exception,
+interlace and connection to the central scheduler/CPU boundary remain incomplete.
+Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.
 

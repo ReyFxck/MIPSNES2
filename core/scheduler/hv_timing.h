@@ -36,6 +36,7 @@ typedef struct {
     mipsnes2_hv_standard standard;
     bool overscan;
     bool field;
+    bool timer_event_consumed;
     bool initialized;
 } mipsnes2_hv_timing;
 
