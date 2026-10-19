@@ -72,9 +72,20 @@ Verified locally on 2026-10-19 with GCC 13.3.0:
   `3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986`.
 
 LeakSanitizer is disabled locally because this environment cannot inspect the
-required `/proc` state. Local Clang, PS2SDK and PSPSDK are unavailable. GitHub Host,
-PS2 and PSP workflow execution is still pending and no console runtime result is
-claimed.
+required `/proc` state. Local Clang, PS2SDK and PSPSDK are unavailable.
+
+For implementation commit `9936fd24a2a8cfdd736d4fe7df707c11f0103e55`, GitHub
+Actions subsequently passed:
+
+- Host CI run `39340295232`: GCC and Clang release, sanitizer and artifact jobs;
+- PS2 CI run `39340295322`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps;
+- PSP CI run `39340295286`: pinned-toolchain scaffold cross-build, artifact and
+  SHA-256 steps.
+
+No emulator or real PS2/PSP executed the code. Cross-compilation proves the shared
+source remains accepted by the pinned scaffold toolchains, not interrupt timing or
+runtime correctness on target hardware.
 
 ## Sources
 

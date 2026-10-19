@@ -146,7 +146,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus-routing, non-interlaced H/V and stable-register compare host tests exist
 - [x] 5A22 CPU-I/O register/latch foundation
 - [x] Non-interlaced NTSC/PAL H/V timing foundation
-- [ ] [IN PROGRESS] Stable-register non-interlaced H/V timer-IRQ foundation — local verified; GitHub CI pending
+- [x] Stable-register non-interlaced H/V timer-IRQ foundation
 - [ ] DMA registers
 - [ ] DMA transfer modes
 - [ ] DMA timing

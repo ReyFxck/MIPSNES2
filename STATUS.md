@@ -548,9 +548,10 @@ the post-short-line offset, regional out-of-range values and the documented H=15
 short/final-line suppressions. Exact mid-instruction register-write ordering,
 multiple reprogrammed matches in one scanline, TIMEUP's narrow read-at-match exception,
 interlace and central-scheduler/CPU-boundary wiring remain incomplete. Local GCC
-default/release and ASan+UBSan verification suites pass; GitHub workflow verification
-is pending, so no completion box is promoted yet. Exact scope is in
-docs/hv-irq-foundation-audit.md.
+default/release and ASan+UBSan verification suites pass. GitHub Host GCC/Clang plus
+pinned PS2/PSP cross-build, artifact and checksum jobs passed for implementation
+commit `9936fd24a2a8cfdd736d4fe7df707c11f0103e55`. Exact scope and run IDs are in
+docs/hv-irq-foundation-audit.md. No console runtime or hardware result is claimed.
 
 ## Current blockers and diagnostic exceptions
 
@@ -1050,11 +1051,11 @@ platform persistence remains incomplete.
 
 ### H/V timer-IRQ foundation subset
 
-- [ ] [IN PROGRESS] H-IRQ match formula for every HTIME 0-339 — local verified; GitHub CI pending
-- [ ] [IN PROGRESS] HTIME 338/339 following-line spill — local verified; GitHub CI pending
-- [ ] [IN PROGRESS] V-IRQ and HV-IRQ stable-register positions — local verified; GitHub CI pending
-- [ ] [IN PROGRESS] Regional compare-range and H=153 exception behavior — local verified; GitHub CI pending
-- [ ] [IN PROGRESS] TIMEUP latch/acknowledgement handoff from H/V timing — local verified; GitHub CI pending
+- [x] H-IRQ match formula for every HTIME 0-339
+- [x] HTIME 338/339 following-line spill
+- [x] V-IRQ and HV-IRQ stable-register positions
+- [x] Regional compare-range and H=153 exception behavior
+- [x] TIMEUP latch/acknowledgement handoff from H/V timing
 
 ## DMA / HDMA
 
