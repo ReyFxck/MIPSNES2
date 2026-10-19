@@ -127,7 +127,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Clock ratio representation
 - [x] Event tie ordering
 - [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle pausing pending
-- [ ] [IN PROGRESS] Shared scheduler/H/V master-clock fanout — implementation and local host fixtures exist; CI evidence pending
+- [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization

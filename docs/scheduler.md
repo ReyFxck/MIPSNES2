@@ -181,7 +181,7 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
-- [ ] [IN PROGRESS] Shared CPU/scheduler/H/V domain — atomic fanout verified locally; CI evidence pending
+- [x] Shared CPU/scheduler/H/V domain — atomic fanout and failure alignment verified
 - [ ] [IN PROGRESS] Long-run clock drift tests — ratio, H/V chunking and short shared-domain runs verified; regional soak tests pending
 
 ## Research and decisions

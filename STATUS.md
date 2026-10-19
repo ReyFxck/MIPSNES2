@@ -563,7 +563,9 @@ feed both from one instruction delta. Deterministic host fixtures cover mismatch
 error paths, same-time insertion, provisional tie ordering, chunking and repeated
 NOP-to-H-IRQ advancement. The CPU remains atomic and CPU-I/O IRQ/NMI latches are not
 yet wired automatically into CPU inputs. Local GCC default verification passes;
-release and ASan+UBSan verification also pass; GitHub cross-build evidence is pending. Exact scope is in
+release and ASan+UBSan verification also pass. GitHub Host GCC/Clang plus pinned
+PS2/PSP cross-build, artifact and checksum jobs passed for implementation commit
+`f0c863d16c31140f8fd23352c9e68bffaf534c24`. Exact scope and run IDs are in
 docs/master-timing-fanout-audit.md. No console runtime or hardware result is claimed.
 
 ## Current blockers and diagnostic exceptions
@@ -1024,7 +1026,7 @@ platform persistence remains incomplete.
 - [x] Clock ratio representation — exact reduced rational with carried remainder
 - [x] Event tie ordering — timestamp, explicit priority, insertion token
 - [ ] [IN PROGRESS] CPU event horizon — atomic timed CPU steps exist; mid-instruction bus-cycle pausing pending
-- [ ] [IN PROGRESS] Shared scheduler/H/V master-clock fanout — default/release/sanitizer host fixtures pass; CI evidence pending
+- [x] Shared scheduler/H/V master-clock fanout — checked alignment, transactional H/V slices and provisional same-time ordering verified
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
@@ -1073,7 +1075,7 @@ platform persistence remains incomplete.
 
 ### Shared master-clock domain subset
 
-- [ ] [IN PROGRESS] Checked scheduler/H/V timestamp alignment and coordinated advancement — local default/release/sanitizer host suites passed; CI evidence pending
+- [x] Checked scheduler/H/V timestamp alignment and coordinated advancement
 - [x] Deterministic H/V-before-general-callback ordering at equal timestamps
 - [x] Event-budget exhaustion preserves aligned domain state
 - [x] Atomic CPU-step delta advances scheduler and H/V together
