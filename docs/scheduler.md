@@ -22,6 +22,8 @@ Implemented and host-verified behavior:
 - a caller-owned non-interlaced NTSC/PAL H/V master-clock component;
 - deterministic HBlank/VBlank, field, NTSC short-line and delayed NMI transitions;
 - stable-register H/V/HV timer-match generation into the CPU-I/O TIMEUP latch;
+- coordinated H/V and scheduler advancement in one checked master-clock domain;
+- deterministic H/V-before-callback ordering at equal timestamps;
 - deterministic replay and CPU IRQ/NMI boundary fixtures.
 
 This is not a complete SNES scheduler. The interpreter does not expose every W65C816
@@ -32,9 +34,9 @@ the remaining aggregate CPU cycles but does not claim exact cycle placement.
 The caller-owned H/V foundation supplies VBlank, HBlank, the distinct delayed NMI-
 flag signal and stable-register H/V timer matches to the 5A22 CPU-I/O state. It models
 non-interlaced NTSC/PAL frame geometry and the NTSC short scanline without PPU
-rendering. It does not yet share advancement with `mipsnes2_scheduler.now`; a future
-machine owner must drive both from the same elapsed-clock delta before complete CPU
-interrupt generation can be claimed.
+rendering. The shared coordinator now drives H/V and `mipsnes2_scheduler.now` from
+the same elapsed-clock delta. Complete CPU interrupt generation is not claimed:
+CPU-I/O latches are not yet connected automatically to CPU IRQ/NMI inputs.
 
 ## Non-interlaced H/V phase
 
@@ -56,9 +58,32 @@ The API advances only from explicit master-clock deltas and gives identical stat
 one-shot and chunked input. Interlace, PAL's interlaced long line, normal-line long-
 dot positions, PPU counter latching, dynamic SETINI, exact within-instruction timer
 register writes, repeated reprogrammed matches in one scanline, TIMEUP's narrow
-read-at-match exception, joypad poll timing and central-scheduler wiring remain
-absent. See [H/V timing audit](hv-timing-foundation-audit.md) and
-[H/V timer IRQ audit](hv-irq-foundation-audit.md).
+read-at-match exception and joypad poll timing remain absent. See
+[H/V timing audit](hv-timing-foundation-audit.md),
+[H/V timer IRQ audit](hv-irq-foundation-audit.md) and
+[master-timing fanout audit](master-timing-fanout-audit.md).
+
+## Shared master-clock domain
+
+`mipsnes2_master_timing_run_until` requires the scheduler and H/V component to begin
+at the same master timestamp. It advances H/V state to each pending event horizon
+before asking the scheduler to dispatch callbacks there. A callback tied with HBlank,
+VBlank, NMI-flag or timer-IRQ transition therefore observes the updated H/V/CPU-I/O
+state. This is a deterministic provisional ordering rule, not a claim that all future
+SNES subsystem ties share that hardware priority.
+
+The caller-provided event budget covers the entire requested advance. If it is
+exhausted by same-time insertion, both clocks remain aligned at that event timestamp
+and the unconsumed event remains queued. Clock-domain mismatch, time regression,
+invalid H/V state and scheduler failures are distinct visible results. Each H/V
+advance is committed transactionally, so an H/V overflow/error cannot leave the H/V
+clock partially advanced ahead of the scheduler.
+
+`mipsnes2_cpu_timed_step_hv` applies one atomic CPU instruction or interrupt-entry
+delta to this common domain and requires the SNES bus to own CPU-I/O state. It does
+not interrupt an instruction at an internal event timestamp. H/V transitions that
+occur during that instruction can affect the following CPU boundary only, and the
+caller must still transfer CPU-I/O IRQ/NMI state into the interpreter inputs.
 
 ## Event and rollover contract
 
@@ -129,6 +154,12 @@ instruction, NMI-entry elapsed clocks and timing-bridge error paths.
 HBlank/VBlank boundaries, delayed NMI assertion, overscan, field/short-line behavior,
 overflow handling, every valid HTIME value, V/HV match positions, short/final-line
 exceptions, out-of-range compares and one-shot/chunked determinism with IRQ enabled.
+`tests/test_master_timing.c` covers domain validation, plain and chunked advancement,
+H/V-before-callback observation at an equal timestamp, event-budget exhaustion,
+same-time insertion, reentrant-run rejection and failure-state alignment. The SNES-
+bus fixture also drives repeated NOPs through the H/V-aware CPU bridge and verifies
+clock lockstep and timer-latch assertion without pretending that the CPU IRQ line is
+connected automatically.
 
 Future tests must add simultaneous PPU/IRQ/NMI/DMA cases, CPU pause/resume at actual
 bus cycles, interlaced frame boundaries, exact mid-instruction timer-register writes,
@@ -150,7 +181,8 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
-- [ ] [IN PROGRESS] Long-run clock drift tests — ratio and H/V chunking verified; integrated domains pending
+- [ ] [IN PROGRESS] Shared CPU/scheduler/H/V domain — atomic fanout verified locally; CI evidence pending
+- [ ] [IN PROGRESS] Long-run clock drift tests — ratio, H/V chunking and short shared-domain runs verified; regional soak tests pending
 
 ## Research and decisions
 

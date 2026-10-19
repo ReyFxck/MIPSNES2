@@ -127,13 +127,14 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Clock ratio representation
 - [x] Event tie ordering
 - [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle pausing pending
+- [ ] [IN PROGRESS] Shared scheduler/H/V master-clock fanout — implementation and local host fixtures exist; CI evidence pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
-- [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio and H/V chunking verified; integrated domains pending
+- [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio, H/V chunking and short common-domain runs verified; regional soak tests pending
 - [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` foundation implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL phase and blank/NMI boundaries verified; interlace/dot latches pending
 - [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches exist; exact write/match windows, interlace and scheduler/CPU delivery pending
@@ -143,7 +144,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus-routing, non-interlaced H/V and stable-register compare host tests exist
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus-routing, H/V compare and atomic common-domain host tests exist; CPU input delivery pending
 - [x] 5A22 CPU-I/O register/latch foundation
 - [x] Non-interlaced NTSC/PAL H/V timing foundation
 - [x] Stable-register non-interlaced H/V timer-IRQ foundation

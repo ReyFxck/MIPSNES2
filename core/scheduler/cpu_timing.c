@@ -1,21 +1,59 @@
 /* MIPSNES2 CPU/scheduler timing bridge. See LICENSE for GPL-3.0 terms. */
 #include "core/scheduler/cpu_timing.h"
 
+#include "core/scheduler/master_timing.h"
+
 #include <limits.h>
 #include <string.h>
 
-static mipsnes2_cpu_timing_result scheduler_failure(
-    mipsnes2_cpu_timing_report *report,
-    mipsnes2_scheduler_result result)
+static mipsnes2_cpu_timing_result run_until(
+    mipsnes2_scheduler *scheduler,
+    mipsnes2_hv_timing *hv_timing,
+    mipsnes2_cpu_io *cpu_io,
+    mipsnes2_master_clock target,
+    size_t event_budget,
+    size_t *events_dispatched,
+    mipsnes2_cpu_timing_report *report)
 {
-    report->scheduler_result = result;
-    return MIPSNES2_CPU_TIMING_SCHEDULER_ERROR;
+    if (hv_timing != NULL) {
+        mipsnes2_master_timing_report master_report;
+        mipsnes2_master_timing_result result =
+            mipsnes2_master_timing_run_until(
+                scheduler, hv_timing, cpu_io, target, event_budget,
+                &master_report);
+
+        *events_dispatched = master_report.events_dispatched;
+        report->scheduler_result = master_report.scheduler_result;
+        report->hv_result = master_report.hv_result;
+        if (result == MIPSNES2_MASTER_TIMING_INVALID_ARGUMENT) {
+            return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+        }
+        if (result == MIPSNES2_MASTER_TIMING_DOMAIN_MISMATCH ||
+            result == MIPSNES2_MASTER_TIMING_TIME_REGRESSION) {
+            return MIPSNES2_CPU_TIMING_DOMAIN_MISMATCH;
+        }
+        if (result == MIPSNES2_MASTER_TIMING_HV_ERROR) {
+            return MIPSNES2_CPU_TIMING_HV_ERROR;
+        }
+        if (result != MIPSNES2_MASTER_TIMING_OK) {
+            return MIPSNES2_CPU_TIMING_SCHEDULER_ERROR;
+        }
+        return MIPSNES2_CPU_TIMING_OK;
+    }
+
+    report->scheduler_result = mipsnes2_scheduler_run_until(
+        scheduler, target, event_budget, events_dispatched);
+    if (report->scheduler_result != MIPSNES2_SCHEDULER_OK) {
+        return MIPSNES2_CPU_TIMING_SCHEDULER_ERROR;
+    }
+    return MIPSNES2_CPU_TIMING_OK;
 }
 
-mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step(
+static mipsnes2_cpu_timing_result timed_step(
     mipsnes2_cpu *cpu,
     mipsnes2_snes_bus *bus,
     mipsnes2_scheduler *scheduler,
+    mipsnes2_hv_timing *hv_timing,
     size_t event_budget,
     mipsnes2_cpu_timing_report *report)
 {
@@ -25,12 +63,13 @@ mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step(
     uint64_t clocks_after_accesses;
     size_t dispatched_before = 0U;
     size_t dispatched_after = 0U;
-    mipsnes2_scheduler_result scheduler_result;
+    mipsnes2_cpu_timing_result timing_result;
 
     if (report != NULL) {
         (void)memset(report, 0, sizeof(*report));
         report->cpu_result = MIPSNES2_CPU_NOT_READY;
         report->scheduler_result = MIPSNES2_SCHEDULER_OK;
+        report->hv_result = MIPSNES2_HV_OK;
     }
     if (cpu == NULL || bus == NULL || scheduler == NULL || report == NULL) {
         return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
@@ -38,15 +77,19 @@ mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step(
     if (!mipsnes2_snes_bus_interface_matches(bus, cpu->bus)) {
         return MIPSNES2_CPU_TIMING_BUS_MISMATCH;
     }
+    if (hv_timing != NULL && bus->cpu_io_state == NULL) {
+        return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+    }
     if (bus->timing_overflow) {
         return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
     }
 
-    scheduler_result = mipsnes2_scheduler_run_until(
-        scheduler, scheduler->now, event_budget, &dispatched_before);
+    timing_result = run_until(scheduler, hv_timing, bus->cpu_io_state,
+                              scheduler->now, event_budget,
+                              &dispatched_before, report);
     report->events_dispatched = dispatched_before;
-    if (scheduler_result != MIPSNES2_SCHEDULER_OK) {
-        return scheduler_failure(report, scheduler_result);
+    if (timing_result != MIPSNES2_CPU_TIMING_OK) {
+        return timing_result;
     }
 
     cycles_before = cpu->instruction_cycles;
@@ -89,12 +132,42 @@ mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step(
     }
     report->target_time = scheduler->now + report->master_clocks;
 
-    scheduler_result = mipsnes2_scheduler_run_until(
-        scheduler, report->target_time,
-        event_budget - dispatched_before, &dispatched_after);
+    timing_result = run_until(
+        scheduler, hv_timing, bus->cpu_io_state, report->target_time,
+        event_budget - dispatched_before, &dispatched_after, report);
     report->events_dispatched += dispatched_after;
-    if (scheduler_result != MIPSNES2_SCHEDULER_OK) {
-        return scheduler_failure(report, scheduler_result);
+    if (timing_result != MIPSNES2_CPU_TIMING_OK) {
+        return timing_result;
     }
     return MIPSNES2_CPU_TIMING_OK;
+}
+
+mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step(
+    mipsnes2_cpu *cpu,
+    mipsnes2_snes_bus *bus,
+    mipsnes2_scheduler *scheduler,
+    size_t event_budget,
+    mipsnes2_cpu_timing_report *report)
+{
+    return timed_step(cpu, bus, scheduler, NULL, event_budget, report);
+}
+
+mipsnes2_cpu_timing_result mipsnes2_cpu_timed_step_hv(
+    mipsnes2_cpu *cpu,
+    mipsnes2_snes_bus *bus,
+    mipsnes2_scheduler *scheduler,
+    mipsnes2_hv_timing *hv_timing,
+    size_t event_budget,
+    mipsnes2_cpu_timing_report *report)
+{
+    if (hv_timing == NULL) {
+        if (report != NULL) {
+            (void)memset(report, 0, sizeof(*report));
+            report->cpu_result = MIPSNES2_CPU_NOT_READY;
+            report->scheduler_result = MIPSNES2_SCHEDULER_OK;
+            report->hv_result = MIPSNES2_HV_OK;
+        }
+        return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+    }
+    return timed_step(cpu, bus, scheduler, hv_timing, event_budget, report);
 }
