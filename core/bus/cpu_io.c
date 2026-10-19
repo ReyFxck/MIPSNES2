@@ -120,19 +120,13 @@ bool mipsnes2_cpu_io_write(mipsnes2_cpu_io *io,
 
 void mipsnes2_cpu_io_set_vblank(mipsnes2_cpu_io *io, bool active)
 {
-    bool nmi_was_active;
-
     if (io == NULL || io->vblank == active) {
         return;
     }
-    nmi_was_active = nmi_gate_active(io);
     io->vblank = active;
-    if (active) {
-        io->nmi_flag = true;
-    } else {
+    if (!active) {
         io->nmi_flag = false;
     }
-    latch_nmi_rising_edge(io, nmi_was_active);
 }
 
 void mipsnes2_cpu_io_set_hblank(mipsnes2_cpu_io *io, bool active)
@@ -148,6 +142,18 @@ void mipsnes2_cpu_io_set_auto_joypad_busy(mipsnes2_cpu_io *io,
     if (io != NULL) {
         io->auto_joypad_busy = active;
     }
+}
+
+void mipsnes2_cpu_io_signal_nmi_flag(mipsnes2_cpu_io *io)
+{
+    bool nmi_was_active;
+
+    if (io == NULL) {
+        return;
+    }
+    nmi_was_active = nmi_gate_active(io);
+    io->nmi_flag = true;
+    latch_nmi_rising_edge(io, nmi_was_active);
 }
 
 void mipsnes2_cpu_io_signal_timer_irq(mipsnes2_cpu_io *io)

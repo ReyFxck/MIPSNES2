@@ -1,6 +1,6 @@
 # Ricoh 5A22 CPU-I/O foundation audit
 
-Date: 2026-10-18
+Date: 2026-10-18; input contract refined 2026-10-19
 
 ## Scope
 
@@ -12,20 +12,28 @@ the existing SNES-bus route. Its implemented register subset is:
 | `$4200` NMITIMEN | NMI enable, H/V IRQ mode and automatic-joypad-enable storage; disabling both IRQ mode bits clears the timer IRQ latch |
 | `$4207-$4208` HTIME | 9-bit compare-value storage |
 | `$4209-$420A` VTIME | 9-bit compare-value storage |
-| `$4210` RDNMI | VBlank flag, caller-supplied CPU version, open-bus composition and read acknowledgement |
+| `$4210` RDNMI | NMI flag associated with VBlank, caller-supplied CPU version, open-bus composition and read acknowledgement |
 | `$4211` TIMEUP | timer IRQ flag, open-bus composition and read acknowledgement |
 | `$4212` HVBJOY | caller-supplied VBlank, HBlank and auto-joypad-busy inputs |
 
 The component detects a rising edge of `NMITIMEN.NMI-enable AND RDNMI.flag`, including
-enabling NMI while an unacknowledged VBlank flag is already set. It exposes a
+enabling NMI while an unacknowledged RDNMI flag is already set. It exposes a
 single pending edge for later CPU/scheduler delivery. An explicit timer-match input
 sets TIMEUP only when an H/V IRQ mode is enabled and exposes that latch as an IRQ
 level.
 
+The 2026-10-19 H/V milestone split `set_vblank` from the new explicit
+`signal_nmi_flag` input. This preserves the documented two-master-clock gap between
+H=0 VBlank status and H=0.5 RDNMI/NMI assertion; see
+[H/V timing audit](hv-timing-foundation-audit.md).
+
 ## Deliberate limits
 
-- No H/V counter or regional frame geometry exists yet.
-- The component accepts timer-match and blank inputs; it does not schedule them.
+- At the original milestone no H/V counter or regional frame geometry existed. The
+  later non-interlaced H/V component now supplies blank/NMI inputs, but interlace,
+  compare generation and central-scheduler wiring remain absent.
+- The CPU-I/O component accepts timer-match and blank/NMI inputs; it does not own
+  their scheduling.
 - The documented narrow TIMEUP read-at-the-match exception is not modeled because
   exact match-cycle placement does not yet exist.
 - Cartridge/expansion IRQ inputs are not combined with the timer IRQ.

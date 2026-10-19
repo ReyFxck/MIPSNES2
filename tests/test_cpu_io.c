@@ -62,7 +62,9 @@ static int test_nmi_gate_and_acknowledgement(void)
 
     mipsnes2_cpu_io_init(&io, UINT8_C(2));
     mipsnes2_cpu_io_set_vblank(&io, true);
-    CHECK(io.vblank && io.nmi_flag);
+    CHECK(io.vblank && !io.nmi_flag);
+    mipsnes2_cpu_io_signal_nmi_flag(&io);
+    CHECK(io.nmi_flag);
     CHECK(!mipsnes2_cpu_io_take_nmi_edge(&io));
 
     CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4200), UINT8_C(0xff)));
@@ -89,6 +91,8 @@ static int test_nmi_gate_and_acknowledgement(void)
     mipsnes2_cpu_io_set_vblank(&io, false);
     CHECK(!io.vblank && !io.nmi_flag);
     mipsnes2_cpu_io_set_vblank(&io, true);
+    CHECK(!io.nmi_flag && !mipsnes2_cpu_io_take_nmi_edge(&io));
+    mipsnes2_cpu_io_signal_nmi_flag(&io);
     CHECK(io.nmi_flag && mipsnes2_cpu_io_take_nmi_edge(&io));
 
     CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4200), 0U));
@@ -142,6 +146,7 @@ static int test_hvbjoy_and_read_only_writes(void)
     mipsnes2_cpu_io_set_vblank(NULL, true);
     mipsnes2_cpu_io_set_hblank(NULL, true);
     mipsnes2_cpu_io_set_auto_joypad_busy(NULL, true);
+    mipsnes2_cpu_io_signal_nmi_flag(NULL);
     mipsnes2_cpu_io_set_vblank(&io, true);
     mipsnes2_cpu_io_set_hblank(&io, true);
     mipsnes2_cpu_io_set_auto_joypad_busy(&io, true);

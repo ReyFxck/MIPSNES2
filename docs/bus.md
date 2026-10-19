@@ -48,11 +48,13 @@ only. The optional caller-owned CPU-I/O state implements `$4200`, `$4207-$420A` 
 `$4210-$4212`; unimplemented CPU-I/O addresses continue through the fallback route.
 
 NMITIMEN stores only the documented NMI, H/V IRQ-mode and automatic-joypad-enable
-bits. The compare registers retain nine bits. External code supplies VBlank, HBlank,
-auto-joypad-busy and timer-match signals; RDNMI/TIMEUP expose and acknowledge their
-latches, while HVBJOY reports current inputs. Reads combine implemented bits with the
-bus latch for currently unused/open bits. The component exposes a gated NMI edge and
-timer IRQ level, but does not yet generate H/V matches or schedule CPU delivery.
+bits. The compare registers retain nine bits. The non-interlaced H/V timing component
+supplies separate VBlank, HBlank and delayed NMI-flag transitions; other external
+code supplies auto-joypad-busy and future timer-match signals. RDNMI/TIMEUP expose
+and acknowledge their latches, while HVBJOY reports current inputs. Reads combine
+implemented bits with the bus latch for currently unused/open bits. The component
+exposes a gated NMI edge and timer IRQ level, but does not yet generate H/V matches
+or schedule CPU delivery.
 
 Every SNES-bus read/write updates access counters and charges the 5A22 6/8/12-master-
 clock class selected by its normalized address and current FastROM state. This is
@@ -92,7 +94,8 @@ they do not satisfy the SNES map gates.
 
 `tests/test_cpu_io.c` verifies register masks/storage, blank and timer inputs,
 NMI gate transitions, IRQ latch/acknowledgement, open-bus composition and invalid
-operations. `tests/test_snes_bus.c` verifies 128 KiB WRAM, both low-bank mirror groups, 24-bit
+operations, including distinct VBlank and RDNMI/NMI-flag signals.
+`tests/test_snes_bus.c` verifies 128 KiB WRAM, both low-bank mirror groups, 24-bit
 normalization, WRAM port address construction/increment/wrap, `$420D`, FastROM timing
 boundaries, CPU-I/O state/fallback routing, all current MMIO routes, cartridge fallthrough, deterministic holes,
 overflow handling and timed CPU/scheduler steps. The integration cases cover a slow

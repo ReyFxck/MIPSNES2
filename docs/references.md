@@ -47,6 +47,7 @@ substitute for real PS2 or PSP evidence.
 
 - [SNESdev Wiki: SNES PPU for NES developers](https://snes.nesdev.org/wiki/SNES_PPU_for_NES_developers) — useful conceptual PPU orientation, not a complete behavior contract.
 - [SNESdev Wiki: timing](https://snes.nesdev.org/wiki/Timing) — scanline/frame clocks and CPU access timing.
+- [fullsnes hardware specification: SNES Timings](https://problemkaputt.de/fullsnes.htm#snestimings) — independent hardware-research sections for H/V counters, regional frame geometry, long/short scanlines and event positions. The non-interlaced H/V foundation was audited against these sections on 2026-10-19; disputed and revision-specific behavior still requires targeted hardware tests.
 - [SNESdev Wiki: version differences](https://snes.nesdev.org/wiki/Version_differences) — PPU and DMA/HDMA revision differences.
 - [Anomie's document index](https://sneslab.net/wiki/List_of_Anomie%27s_Docs) — independent hardware research covering registers, timing, memory mapping, open bus/wrapping, SPC700 and S-DSP. Preserve document title/revision when citing a specific file.
 

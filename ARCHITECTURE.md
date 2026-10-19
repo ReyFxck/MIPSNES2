@@ -2,7 +2,8 @@
 
 Status: project foundation plus a 256-opcode 65C816, partial real SNES logical bus,
 base LoROM/HiROM mapping, conservative cartridge-header selection, deterministic
-scheduler/timing and partial 5A22 CPU-I/O foundation, not a working SNES emulator. Read
+scheduler/timing, partial 5A22 CPU-I/O and non-interlaced H/V foundations, not a
+working SNES emulator. Read
 [STATUS.md](STATUS.md).
 
 ## Dependency direction and ownership
@@ -21,7 +22,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
-| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes and atomic CPU-step bridge |
+| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, atomic CPU-step bridge and non-interlaced H/V phase |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Build probe only |
@@ -64,11 +65,13 @@ to 24 bits and adds the address-dependent master-clock count. Cartridge callback
 receive logical addresses; the base mapper now implements the supported subset below.
 
 The optional caller-owned `mipsnes2_cpu_io` state sits behind that CPU-I/O route. It
-implements NMITIMEN, the 9-bit H/V compare values, RDNMI, TIMEUP and HVBJOY. PPU or
-scheduler code supplies blank transitions and future timer matches; the component
-exports a latched NMI edge and timer-IRQ level without depending on host or platform
-APIs. It deliberately does not derive H/V positions, schedule compare events, model
-the narrow read-at-match TIMEUP exception, poll joypads or combine cartridge IRQs.
+implements NMITIMEN, the 9-bit H/V compare values, RDNMI, TIMEUP and HVBJOY. The
+separate caller-owned H/V component supplies non-interlaced NTSC/PAL blank and NMI-
+flag transitions. VBlank status and the RDNMI flag are distinct inputs because the
+flag begins two master clocks after VBlank. CPU-I/O exports a latched NMI edge and
+timer-IRQ level without depending on host or platform APIs. It deliberately does not
+generate H/V compare matches, model the narrow read-at-match TIMEUP exception, poll
+joypads or combine cartridge IRQs.
 
 The cartridge-slot interface differs intentionally from ordinary MMIO callbacks: a
 read/write returns whether the cartridge decoded that address. A declined read leaves
@@ -205,6 +208,13 @@ dispatched after the atomic CPU step; they can affect the following CPU boundary
 not pause the active instruction. WRAM refresh stalls, DMA/HDMA arbitration,
 complete mapping and simultaneous-subsystem priority remain future work.
 
+`mipsnes2_hv_timing` owns a deterministic non-interlaced beam phase in SNES master
+clocks. It covers 262-line NTSC and 312-line PAL frames, 224/239-line VBlank starts,
+HBlank boundaries, the alternating NTSC short line and the delayed NMI flag. It does
+not render, own PPU memory, model interlace/latched PPU dot counters or generate H/V
+timer matches. It is not yet driven by `mipsnes2_scheduler.now`; a future machine
+owner must advance both from the same elapsed-clock delta and define event priority.
+
 ## Platform-Specific Optimization Architecture
 
 **PS2 and PSP do not need identical low-level implementations when different implementations better fit each machine.**
@@ -328,5 +338,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   raw header fields are diagnostic evidence, never a title-based selection rule.
 - 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
   platform audio adapter and subject to pinning plus real-PS2 validation.
+- 2026-10-19: The first H/V component uses caller-owned non-interlaced NTSC/PAL
+  master-clock state and drives blank/NMI inputs independently. VBlank begins at H=0
+  while RDNMI/NMI asserts at H=0.5; interlace, H/V timer matches and central scheduler
+  wiring remain explicit future work.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
