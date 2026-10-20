@@ -103,9 +103,11 @@ routing. Reads of `$2137` return CPU open bus without altering the PPU2 latch;
 counter high reads and `$213F` use their distinct PPU2 latch. No complete PPU bus-domain
 model is claimed until CGRAM and other PPU2 reads participate.
 
-The adapter samples the current explicit H/V timestamp. Atomic timed CPU steps do
-not yet advance H/V at each access, so accesses within one instruction see its start
-snapshot. WRIO writes consume edges immediately; external callers must synchronize
+The adapter samples the current explicit H/V timestamp. Timed CPU steps now advance
+H/V and scheduler events before each emitted meaningful access takes effect. Reads
+and writes sample at its end under the provisional ordering policy described in
+[the access-clock audit](cpu-access-timing-audit.md). Missing earlier internal/dummy
+cycles still affect timestamp accuracy. WRIO writes consume edges immediately; external callers must synchronize
 after changing pin levels and before advancing time. Device wiring, exact access
 latency and reset retention remain incomplete. See [ppu.md](ppu.md).
 
@@ -114,6 +116,17 @@ clock class selected by its normalized address and current FastROM state. This i
 real per-meaningful-access accounting, but not complete CPU bus sequencing: the
 interpreter does not yet emit all dummy accesses, internal-cycle positions or MLB.
 WRAM refresh and DMA/HDMA bus ownership also remain unimplemented.
+
+Untimed accesses still only account clocks; they do not advance H/V or the scheduler.
+The timed bridge borrows a stack-owned clock sink and always detaches it on return.
+Event callbacks may update peripheral inputs, not reenter the active CPU bus.
+Reentry, accounting overflow or a failed clock advance latches a bus fault. The failed
+access does not start its effect if clock advancement failed; subsequent accesses
+perform no new memory/MMIO/math/open-latch effects. Earlier effects/events, including
+those in a violating MMIO callback before reentry detection, remain committed.
+The CPU may already be partially evaluated and is
+not resumable: restore/reinitialize the complete machine before further execution.
+Initialization clears the bus fault but is not, by itself, machine recovery.
 
 ## CPU interface and future fast path
 

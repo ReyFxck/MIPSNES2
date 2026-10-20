@@ -830,7 +830,7 @@ static int test_ppu_counter_wiring(void)
     (void)mipsnes2_snes_bus_read(&bus, UINT32_C(0x00213f));
     CHECK(!counters.latched);
 
-    /* CPU access sees the explicit pre-instruction H/V snapshot, not cycle-perfect time. */
+    /* Three 8-clock fetches, then the 6-clock SLHV read; no internal cycles. */
     CHECK(initialize_cpu_bus_with_io(&bus, &cpu, &io) == 0);
     CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
                                   false, &io) == MIPSNES2_HV_OK);
@@ -842,7 +842,7 @@ static int test_ppu_counter_wiring(void)
     cartridge.bank00[0x8002] = UINT8_C(0x21);
     CHECK(mipsnes2_cpu_timed_step_hv(&cpu, &bus, &scheduler, &timing,
                                      8U, &report) == MIPSNES2_CPU_TIMING_OK);
-    CHECK(counters.horizontal == 0U && counters.vertical == 0U);
+    CHECK(counters.horizontal == 7U && counters.vertical == 0U);
     CHECK(timing.h_master_clock == 30U && scheduler.now == 30U);
     wrong_timing = timing;
     CHECK(mipsnes2_cpu_timed_step_hv(&cpu, &bus, &scheduler, &wrong_timing,

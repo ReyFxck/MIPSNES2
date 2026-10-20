@@ -18,8 +18,17 @@ enum {
 typedef enum {
     MIPSNES2_SNES_BUS_OK = 0,
     MIPSNES2_SNES_BUS_INVALID_ARGUMENT,
-    MIPSNES2_SNES_BUS_TIMING_OVERFLOW
+    MIPSNES2_SNES_BUS_TIMING_OVERFLOW,
+    MIPSNES2_SNES_BUS_CLOCK_ERROR,
+    MIPSNES2_SNES_BUS_REENTRANT_ACCESS
 } mipsnes2_snes_bus_result;
+
+/* Provisional reference clock sink, borrowed only during a synchronous timed step.
+ * Return false on failure. No bus effects may be performed by this callback. */
+typedef struct {
+    void *context;
+    bool (*advance)(void *context, uint64_t master_clocks);
+} mipsnes2_snes_bus_clock;
 
 typedef struct {
     uint8_t *wram;
@@ -51,6 +60,11 @@ typedef struct {
     uint8_t open_value;
     bool fastrom_enabled;
     bool timing_overflow;
+    /* Timing bridge implementation state, not CPU-visible addresses/state.
+     * A fault is sticky: restore/reinitialize the complete machine before reuse. */
+    const mipsnes2_snes_bus_clock *clock;
+    bool transaction_active;
+    mipsnes2_snes_bus_result timing_fault;
 } mipsnes2_snes_bus;
 
 mipsnes2_snes_bus_result mipsnes2_snes_bus_init(

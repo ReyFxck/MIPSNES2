@@ -21,7 +21,9 @@ typedef enum {
     MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW,
     MIPSNES2_CPU_TIMING_DOMAIN_MISMATCH,
     MIPSNES2_CPU_TIMING_HV_ERROR,
-    MIPSNES2_CPU_TIMING_SCHEDULER_ERROR
+    MIPSNES2_CPU_TIMING_SCHEDULER_ERROR,
+    MIPSNES2_CPU_TIMING_REENTRANT_ACCESS,
+    MIPSNES2_CPU_TIMING_RECOVERY_REQUIRED
 } mipsnes2_cpu_timing_result;
 
 typedef struct {
@@ -30,11 +32,14 @@ typedef struct {
     mipsnes2_hv_result hv_result;
     bool nmi_delivered;
     bool irq_level_delivered;
+    /* In-flight failure is fail-stop, not a resumable instruction or rollback. */
+    bool recovery_required;
     uint64_t processor_cycles;
     uint64_t bus_accesses;
-    uint64_t internal_cycles;
-    uint64_t master_clocks;
-    mipsnes2_master_clock target_time;
+    uint64_t internal_cycles; /* Requested remainder; may fail before commit. */
+    uint64_t master_clocks; /* Successfully charged bus/internal clocks. */
+    uint64_t elapsed_master_clocks; /* Actual scheduler advance, also on failure. */
+    mipsnes2_master_clock target_time; /* Last requested access/remainder endpoint. */
     size_t events_dispatched;
 } mipsnes2_cpu_timing_report;
 
