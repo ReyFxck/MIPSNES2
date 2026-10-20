@@ -54,6 +54,19 @@ Local verification so far:
 GitHub cross-build evidence will be recorded only after those workflows finish.
 Local Clang, PS2SDK and PSPSDK remain unavailable.
 
+GitHub Actions passed for implementation commit
+`16bbe50d291d1b70daf4051ebfa496ed30a57a4a`:
+
+- Host CI run `39510984908` — GCC and Clang release builds, sanitizer suites and
+  host artifact uploads passed;
+- PS2 CI run `39510984803` — pinned toolchain installation, scaffold cross-build,
+  development artifact and SHA-256 staging/upload passed;
+- PSP CI run `39510984825` — pinned toolchain installation, scaffold cross-build,
+  development artifact and SHA-256 staging/upload passed.
+
+All returned jobs and steps were inspected. These are cross-build results, not
+emulator execution or real-console validation.
+
 ## Explicitly incomplete
 
 - wiring the pending edge into future PPU H/V counter capture;
