@@ -112,9 +112,10 @@ Other PPU accesses still use the existing callback, not fake register behavior.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending
-edge has no timestamp and coalesces multiple unsynchronized edges. During an atomic
-CPU instruction, captures see its starting H/V snapshot rather than exact bus-cycle
-time. The measured WRIO-versus-SLHV latency, held-low flag behavior and repeated
+edge has no timestamp and coalesces multiple unsynchronized edges. During a timed
+CPU instruction, captures now see the end of each emitted meaningful access rather
+than its starting H/V snapshot. Missing earlier internal/dummy cycles still shift
+that timestamp. The measured WRIO-versus-SLHV latency, held-low flag behavior and repeated
 capture details remain documented hardware-validation gaps. See the
 [counter audit](docs/hv-counter-latch-audit.md).
 
@@ -246,9 +247,11 @@ Wall clocks never advance emulated state.
 The 5A22 timing classifier returns the documented 6, 8 or 12 master clocks for one
 logical-address access and accepts the FastROM-enable state explicitly. The SNES bus
 owns that state and accounts each meaningful CPU read/write. `mipsnes2_cpu_timed_step`
-drains events due at the current boundary, executes one atomic CPU instruction or
-interrupt entry, charges the remaining aggregate WDC cycles as 6-clock internal
-cycles and advances the scheduler by the resulting elapsed master clocks. The bridge
+drains events due at the current boundary and installs a synchronous stack-owned
+clock sink in the SNES bus for one CPU instruction or interrupt entry. Before each
+meaningful read/write takes effect, the sink advances the scheduler (and optional
+H/V domain) by that address's clock class. The remaining aggregate WDC cycles are
+still charged as 6-clock internal cycles at the end. The bridge
 rejects bus mismatches, counter regressions, access/cycle inconsistencies, overflows
 and scheduler errors instead of hiding them.
 
@@ -258,8 +261,8 @@ state to each pending scheduler-event timestamp, then dispatches callbacks. Ther
 a callback at an H/V transition observes the updated blank/IRQ/NMI-latch state. The
 dispatch budget and same-timestamp insertion rules remain visible, and budget
 exhaustion leaves both domains aligned at the stopped event timestamp. The optional
-`mipsnes2_cpu_timed_step_hv` entry point feeds one atomic CPU step's elapsed delta
-through this coordinator. The older scheduler-only entry point remains available for
+`mipsnes2_cpu_timed_step_hv` entry point feeds each meaningful CPU access and the
+final internal remainder through this coordinator. The scheduler-only entry point remains available for
 focused tests and callers that have not constructed H/V and CPU-I/O state.
 `mipsnes2_cpu_timed_step_hv_interrupts` additionally samples CPU-I/O plus the caller's
 other IRQ sources before and after the atomic step. Inputs visible before the step can
@@ -269,13 +272,27 @@ boundary. The report distinguishes NMI-edge delivery from the resulting IRQ leve
 This bridge is intentionally partial. The interpreter does not expose all W65C816
 dummy reads/writes, internal-cycle positions or MLB state, so the remaining-cycle
 charge has correct aggregate class only when those missing cycles are internal.
-Events timestamped inside an instruction retain their scheduled timestamp but are
-dispatched after the atomic CPU step; they can affect the following CPU boundary,
-not pause the active instruction. WRAM refresh stalls, DMA/HDMA arbitration,
+Events inside a meaningful access now run before its read/write effect; at the same
+timestamp, H/V transitions precede general callbacks, which precede the CPU effect.
+This is an explicit provisional end-access sampling policy, not proof of the 5A22's
+electrical phase or contested MMIO match windows. The CPU is not externally resumable
+mid-instruction, and interrupts still enter only at CPU boundaries. WRAM refresh stalls, DMA/HDMA arbitration,
 complete mapping and simultaneous-subsystem priority remain future work.
 The same unresolved per-cycle placement limits exact math-unit observation for
 instructions whose internal cycles occur before a result-register access; ordinary
 bus cycles and aggregate NOP/internal waits are deterministic and tested.
+
+The clock sink is reference infrastructure, not a measured final hot path. It is
+always detached before returning. One event budget covers the whole step. Callbacks
+may update peripheral inputs but must not reenter this CPU/bus or edit its clock
+objects. Bus reentry, overflow and in-flight clock failures latch a fail-stop fault:
+effects not yet started are suppressed, and later timed steps reject the machine.
+Effects/events already committed (including by a violating MMIO callback before
+reentry is detected) are not rolled back. The synchronous C interpreter
+may finish evaluating with open-bus bytes after the fault, so its resulting CPU state
+must not be resumed. Restore a complete valid checkpoint or reinitialize the complete
+machine, not just the bus. Reports separate charged clocks from actual elapsed time.
+See [access-clock audit](docs/cpu-access-timing-audit.md).
 
 `mipsnes2_hv_timing` owns a deterministic non-interlaced beam phase in SNES master
 clocks. It covers 262-line NTSC and 312-line PAL frames, 224/239-line VBlank starts,

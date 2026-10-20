@@ -114,7 +114,14 @@ short lines, verifies all valid H/V capture values, independent low/high selecto
 PPU2 open bits, WRIO gating and field/region/version composition. Bus integration
 enumerates all 128 system-bank mirrors, checks fallback and ignored writes, consumes
 WRIO/external edges and rejects inconsistent H/V-domain wiring. Its executed LDA
-fixture explicitly verifies the current pre-instruction snapshot approximation.
+fixture verifies sampling after three 8-clock fetches and one 6-clock register read.
+The access-clock executable checks 24 read/write trace combinations across CPU mode,
+M width, FastROM and 6/12-clock MMIO; every event tick 0-31 around an absolute
+load/store; HBlank-before/at/after reads; line-crossing SLHV and WRIO capture;
+shared budget exhaustion before and during an instruction; partial elapsed-versus-
+charged clock reports; raw read/write/internal and nested-step reentry; bus/clock
+overflow; scoped-sink cleanup and rejection of a faulted machine. It does not prove
+missing internal/dummy sequencing or physical MMIO edge timing.
 The cartridge regression executable covers explicit base LoROM/HiROM and documented
 Mode 25/35 ExHiROM ROM windows,
 power-of-two mirrors, unambiguous larger-region/smaller-tail repetition, mapper-bank
@@ -247,6 +254,8 @@ Programmable I/O-port evidence is recorded in
 [5a22-io-port-audit.md](5a22-io-port-audit.md).
 Non-interlaced PPU counter-register evidence is recorded in
 [hv-counter-latch-audit.md](hv-counter-latch-audit.md).
+Meaningful CPU access-clock ordering and fail-stop evidence is recorded in
+[cpu-access-timing-audit.md](cpu-access-timing-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in

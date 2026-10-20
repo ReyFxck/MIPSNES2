@@ -82,7 +82,9 @@ mid-instruction internal-cycle placement remain under research. A separate H/V
 component advances deterministic non-interlaced NTSC/PAL master-clock state, blank
 transitions, the NTSC short line, delayed NMI flag and stable-register H/V timer
 matches. A shared master-clock coordinator now advances H/V state and scheduler
-events from each atomic CPU-step delta with explicit same-timestamp ordering. A
+events before each meaningful CPU access takes effect, with explicit same-timestamp
+ordering and fail-stop error reporting. Missing internal cycles remain grouped at
+the instruction end. A
 caller-owned interrupt-line aggregator preserves independent timer/cartridge/
 expansion IRQ sources and can transfer CPU-I/O IRQ/NMI state at atomic CPU boundaries.
 Exact register-write/match windows, TIMEUP's narrow read exception, interlace,
@@ -95,7 +97,7 @@ remain incomplete. The programmable I/O port now covers `$4201/$4213`, caller-ow
 external pin levels and a consumable bit-7 falling edge. A caller-owned PPU counter
 component now implements `$2137/$213C/$213D/$213F`, WRIO/external-edge capture,
 independent byte selectors and a PPU2 open-bus latch. It samples the current H/V
-snapshot; exact within-instruction capture and WRIO's measured one-dot latency
+snapshot at each emitted access's end; exact internal/dummy placement and WRIO's measured one-dot latency
 difference remain incomplete. No rendering or PPU memory was added.
 Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,

@@ -126,9 +126,12 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Master timestamp units
 - [x] Clock ratio representation
 - [x] Event tie ordering
-- [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle pausing pending
+- [ ] [IN PROGRESS] CPU event horizon — meaningful accesses dispatch events before effects; complete cycle sequencing and pause/resume pending
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
 - [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
+- [x] Meaningful-access clock fanout before CPU read/write effects — provisional end-access sampling policy
+- [x] Shared per-step event budget across boundary, accesses and internal remainder
+- [x] In-flight timing fail-stop, reentrancy rejection and scoped clock-sink cleanup
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
