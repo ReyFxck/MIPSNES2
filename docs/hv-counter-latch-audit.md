@@ -85,8 +85,22 @@ Local GCC 13.3.0 commands, all from the repository root:
 
 An intermediate test build used a wrong fixture-helper name and failed compilation;
 the helper call was corrected before the successful clean suites. Local Clang and
-console cross-compilers are absent. GitHub cross-build evidence is pending the actual
-workflow runs. Real SNES/PS2/PSP and PCSX2/PPSSPP are not available.
+console cross-compilers are absent. Real SNES/PS2/PSP and PCSX2/PPSSPP are not available.
+
+GitHub Actions passed for implementation commit
+`0a4a35c23dd5cb299b0e06471f4eccd20a3a5092`:
+
+- [Host CI 39512827886](https://github.com/ReyFxck/MIPSNES2/actions/runs/39512827886)
+  — GCC/Clang release, full sanitizer tests and host artifacts passed;
+- [PS2 CI 39512827848](https://github.com/ReyFxck/MIPSNES2/actions/runs/39512827848)
+  — pinned toolchain, scaffold cross-build, artifact/checksum staging and upload passed;
+- [PSP CI 39512828169](https://github.com/ReyFxck/MIPSNES2/actions/runs/39512828169)
+  — pinned toolchain, scaffold cross-build, artifact/checksum staging and upload passed.
+
+All returned jobs and steps were inspected. Artifact names, nonzero sizes, digests
+and unexpired state were checked through the listings; archive contents were not
+downloaded. These remain development build outputs, not console-runtime or
+performance evidence.
 
 ## Canonical status changes
 
