@@ -112,6 +112,22 @@ bool mipsnes2_cpu_io_read(mipsnes2_cpu_io *io,
     case 0x4217:
         result = (uint8_t)(io->rdmpy >> 8);
         break;
+    case 0x4218:
+    case 0x4219:
+    case 0x421a:
+    case 0x421b:
+    case 0x421c:
+    case 0x421d:
+    case 0x421e:
+    case 0x421f: {
+        uint16_t register_index = (uint16_t)(offset - UINT16_C(0x4218));
+        uint16_t joypad = io->joypad_result[register_index >> 1];
+
+        result = (register_index & UINT16_C(1)) == 0U
+                     ? (uint8_t)joypad
+                     : (uint8_t)(joypad >> 8);
+        break;
+    }
     default:
         return false;
     }
@@ -174,6 +190,14 @@ bool mipsnes2_cpu_io_write(mipsnes2_cpu_io *io,
     case 0x4215:
     case 0x4216:
     case 0x4217:
+    case 0x4218:
+    case 0x4219:
+    case 0x421a:
+    case 0x421b:
+    case 0x421c:
+    case 0x421d:
+    case 0x421e:
+    case 0x421f:
         return true;
     default:
         return false;
@@ -195,14 +219,6 @@ void mipsnes2_cpu_io_set_hblank(mipsnes2_cpu_io *io, bool active)
 {
     if (io != NULL) {
         io->hblank = active;
-    }
-}
-
-void mipsnes2_cpu_io_set_auto_joypad_busy(mipsnes2_cpu_io *io,
-                                          bool active)
-{
-    if (io != NULL) {
-        io->auto_joypad_busy = active;
     }
 }
 
@@ -263,6 +279,46 @@ void mipsnes2_cpu_io_advance_math_cycles(mipsnes2_cpu_io *io,
 bool mipsnes2_cpu_io_math_busy(const mipsnes2_cpu_io *io)
 {
     return io != NULL && io->math_cycles_remaining != 0U;
+}
+
+bool mipsnes2_cpu_io_set_joypad_input(mipsnes2_cpu_io *io,
+                                      uint8_t index,
+                                      uint16_t value)
+{
+    if (io == NULL || index >= MIPSNES2_CPU_IO_JOYPAD_COUNT) {
+        return false;
+    }
+    io->joypad_input[index] = value;
+    return true;
+}
+
+bool mipsnes2_cpu_io_auto_joypad_enabled(const mipsnes2_cpu_io *io)
+{
+    return io != NULL &&
+           (io->nmitimen & NMITIMEN_JOYPAD_ENABLE) != 0U;
+}
+
+bool mipsnes2_cpu_io_begin_auto_joypad_read(mipsnes2_cpu_io *io)
+{
+    if (!mipsnes2_cpu_io_auto_joypad_enabled(io) ||
+        io->auto_joypad_busy) {
+        return false;
+    }
+    (void)memcpy(io->pending_joypad_result, io->joypad_input,
+                 sizeof(io->pending_joypad_result));
+    io->auto_joypad_busy = true;
+    return true;
+}
+
+bool mipsnes2_cpu_io_complete_auto_joypad_read(mipsnes2_cpu_io *io)
+{
+    if (io == NULL || !io->auto_joypad_busy) {
+        return false;
+    }
+    (void)memcpy(io->joypad_result, io->pending_joypad_result,
+                 sizeof(io->joypad_result));
+    io->auto_joypad_busy = false;
+    return true;
 }
 
 mipsnes2_cpu_io_irq_mode mipsnes2_cpu_io_irq_mode_get(

@@ -80,12 +80,14 @@ CPU-I/O regression executable independently covers NMITIMEN masks and transition
 9-bit H/V compare storage, RDNMI/TIMEUP acknowledgement, HVBJOY inputs, open-bus bit
 composition, distinct VBlank/NMI-flag inputs, multiplication/division registers,
 old-result visibility, exact 8/16-cycle completion, divide-by-zero and invalid/
-unimplemented accesses. The
+unimplemented accesses. It also covers four caller-owned controller inputs,
+snapshot isolation, `$4218-$421F`, read-only writes and enable/complete transitions. The
 H/V regression executable covers non-interlaced NTSC/PAL scanline/frame totals,
 HBlank/VBlank boundaries, overscan, field toggling, the NTSC short line, delayed NMI
 assertion, every valid HTIME value, V/HV match positions, short/final-line exceptions,
 out-of-range compare values, exact-boundary enabling, TIMEUP acknowledgement, overflow
-rejection and one-shot/chunked determinism with IRQ enabled. Timed CPU fixtures verify a slow NOP,
+rejection, exact 4224-clock automatic-joypad timing, normal/overscan start lines,
+late enable, disable while busy and one-shot/chunked determinism. Timed CPU fixtures verify a slow NOP,
 mixed FastROM-fetch/slow-WRAM LDA, an event timestamped inside an atomic instruction,
 emulation-mode NMI entry and visible bridge errors. The master-domain executable
 checks scheduler/H/V timestamp agreement, H/V-before-callback tie ordering, dispatch-
@@ -225,6 +227,8 @@ Atomic CPU-I/O interrupt handoff evidence is recorded in
 [interrupt-handoff-audit.md](interrupt-handoff-audit.md).
 Ricoh 5A22 multiplication/division register evidence is recorded in
 [5a22-math-register-audit.md](5a22-math-register-audit.md).
+Automatic controller-read evidence is recorded in
+[auto-joypad-audit.md](auto-joypad-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in

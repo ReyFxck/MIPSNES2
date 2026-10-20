@@ -497,6 +497,128 @@ static int test_irq_range_and_enable_boundary(void)
     return 0;
 }
 
+static uint16_t read_joypad_result(mipsnes2_cpu_io *cpu_io, uint8_t index)
+{
+    uint16_t offset = (uint16_t)(UINT16_C(0x4218) + index * 2U);
+    uint8_t low = 0U;
+    uint8_t high = 0U;
+
+    (void)mipsnes2_cpu_io_read(cpu_io, offset, 0U, &low);
+    (void)mipsnes2_cpu_io_read(cpu_io, (uint16_t)(offset + 1U), 0U, &high);
+    return (uint16_t)((uint16_t)low | ((uint16_t)high << 8));
+}
+
+static int test_auto_joypad_timing_and_snapshot(void)
+{
+    mipsnes2_hv_timing timing;
+    mipsnes2_cpu_io cpu_io;
+    uint8_t value;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(mipsnes2_cpu_io_set_joypad_input(
+        &cpu_io, 0U, UINT16_C(0x9080)));
+    CHECK(mipsnes2_cpu_io_set_joypad_input(
+        &cpu_io, 1U, UINT16_C(0x7060)));
+    CHECK(mipsnes2_cpu_io_set_joypad_input(
+        &cpu_io, 2U, UINT16_C(0x5040)));
+    CHECK(mipsnes2_cpu_io_set_joypad_input(
+        &cpu_io, 3U, UINT16_C(0x3020)));
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200), UINT8_C(1)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(advance_to_line_start(&timing, &cpu_io, UINT16_C(225)) == 0);
+    CHECK(cpu_io.vblank && !cpu_io.auto_joypad_busy);
+    CHECK(!timing.auto_joypad_start_consumed);
+
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK - 1U) ==
+          MIPSNES2_HV_OK);
+    CHECK(!cpu_io.auto_joypad_busy);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(timing.h_master_clock ==
+          MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK);
+    CHECK(timing.auto_joypad_start_consumed);
+    CHECK(timing.auto_joypad_clocks_remaining ==
+          MIPSNES2_HV_AUTO_JOYPAD_DURATION_CLOCKS);
+    CHECK(cpu_io.auto_joypad_busy);
+    CHECK(mipsnes2_cpu_io_read(&cpu_io, UINT16_C(0x4212), 0U, &value));
+    CHECK(value == UINT8_C(0x81));
+
+    CHECK(mipsnes2_cpu_io_set_joypad_input(
+        &cpu_io, 0U, UINT16_C(0xffff)));
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_AUTO_JOYPAD_DURATION_CLOCKS - 1U) ==
+          MIPSNES2_HV_OK);
+    CHECK(cpu_io.auto_joypad_busy);
+    CHECK(timing.auto_joypad_clocks_remaining == UINT16_C(1));
+    CHECK(read_joypad_result(&cpu_io, 0U) == 0U);
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!cpu_io.auto_joypad_busy);
+    CHECK(timing.auto_joypad_clocks_remaining == 0U);
+    CHECK(timing.v_counter == UINT16_C(228));
+    CHECK(timing.h_master_clock == UINT16_C(430));
+    CHECK(read_joypad_result(&cpu_io, 0U) == UINT16_C(0x9080));
+    CHECK(read_joypad_result(&cpu_io, 1U) == UINT16_C(0x7060));
+    CHECK(read_joypad_result(&cpu_io, 2U) == UINT16_C(0x5040));
+    CHECK(read_joypad_result(&cpu_io, 3U) == UINT16_C(0x3020));
+    return 0;
+}
+
+static int test_auto_joypad_enable_phase_and_overscan(void)
+{
+    mipsnes2_hv_timing timing;
+    mipsnes2_cpu_io cpu_io;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(advance_to_line_start(&timing, &cpu_io, UINT16_C(225)) == 0);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK) == MIPSNES2_HV_OK);
+    CHECK(timing.auto_joypad_start_consumed);
+    CHECK(!cpu_io.auto_joypad_busy);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200), UINT8_C(1)));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(5000)) ==
+          MIPSNES2_HV_OK);
+    CHECK(!cpu_io.auto_joypad_busy);
+
+    CHECK(advance_to_line_start(&timing, &cpu_io, 0U) == 0);
+    CHECK(!timing.auto_joypad_start_consumed);
+    CHECK(advance_to_line_start(&timing, &cpu_io, UINT16_C(225)) == 0);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK) == MIPSNES2_HV_OK);
+    CHECK(cpu_io.auto_joypad_busy);
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200), 0U));
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_AUTO_JOYPAD_DURATION_CLOCKS) == MIPSNES2_HV_OK);
+    CHECK(!cpu_io.auto_joypad_busy);
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200), UINT8_C(1)));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  true, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(advance_to_line_start(&timing, &cpu_io, UINT16_C(240)) == 0);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK) == MIPSNES2_HV_OK);
+    CHECK(timing.v_counter == UINT16_C(240));
+    CHECK(cpu_io.auto_joypad_busy);
+    CHECK(mipsnes2_hv_timing_advance(
+              &timing, &cpu_io,
+              MIPSNES2_HV_AUTO_JOYPAD_DURATION_CLOCKS) == MIPSNES2_HV_OK);
+    CHECK(!cpu_io.auto_joypad_busy);
+    CHECK(timing.v_counter == UINT16_C(243));
+    CHECK(timing.h_master_clock == UINT16_C(434));
+    return 0;
+}
+
 static int test_pal_frame_and_chunk_determinism(void)
 {
     mipsnes2_hv_timing whole;
@@ -511,9 +633,13 @@ static int test_pal_frame_and_chunk_determinism(void)
     CHECK(set_htime(&whole_io, UINT16_C(10)) == 0);
     CHECK(set_htime(&chunked_io, UINT16_C(10)) == 0);
     CHECK(mipsnes2_cpu_io_write(&whole_io, UINT16_C(0x4200),
-                                UINT8_C(0x90)));
+                                UINT8_C(0x91)));
     CHECK(mipsnes2_cpu_io_write(&chunked_io, UINT16_C(0x4200),
-                                UINT8_C(0x90)));
+                                UINT8_C(0x91)));
+    CHECK(mipsnes2_cpu_io_set_joypad_input(
+        &whole_io, 0U, UINT16_C(0xa5a5)));
+    CHECK(mipsnes2_cpu_io_set_joypad_input(
+        &chunked_io, 0U, UINT16_C(0xa5a5)));
     CHECK(mipsnes2_hv_timing_init(&whole, MIPSNES2_HV_STANDARD_PAL,
                                   false, &whole_io) == MIPSNES2_HV_OK);
     CHECK(mipsnes2_hv_timing_init(&chunked, MIPSNES2_HV_STANDARD_PAL,
@@ -589,8 +715,10 @@ int main(void)
     CHECK(test_v_and_hv_irq_positions() == 0);
     CHECK(test_v_irq_after_short_line_and_suppressed_h153() == 0);
     CHECK(test_irq_range_and_enable_boundary() == 0);
+    CHECK(test_auto_joypad_timing_and_snapshot() == 0);
+    CHECK(test_auto_joypad_enable_phase_and_overscan() == 0);
     CHECK(test_pal_frame_and_chunk_determinism() == 0);
     CHECK(test_advance_errors() == 0);
-    (void)puts("PASS: deterministic SNES H/V timing, blanking, NMI and IRQ foundation");
+    (void)puts("PASS: deterministic SNES H/V, interrupt and auto-joypad timing foundation");
     return 0;
 }

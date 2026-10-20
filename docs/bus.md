@@ -45,13 +45,15 @@ holes inside the B-bus/internal-I/O windows use the current deterministic open l
 instead of falling through to cartridge space. A cartridge read can explicitly
 decline an address, preserving that latch. PPU, APU and DMA callbacks remain routes
 only. The optional caller-owned CPU-I/O state implements `$4200`, `$4202-$420A`,
-`$4210-$4212` and `$4214-$4217`; unimplemented CPU-I/O addresses continue through
+`$4210-$4212` and `$4214-$421F`; unimplemented CPU-I/O addresses continue through
 the fallback route.
 
 NMITIMEN stores only the documented NMI, H/V IRQ-mode and automatic-joypad-enable
 bits. The compare registers retain nine bits. The non-interlaced H/V timing component
-supplies separate VBlank, HBlank and delayed NMI-flag transitions; other external
-code supplies auto-joypad-busy. The H/V component now supplies stable-register H/V
+supplies separate VBlank, HBlank and delayed NMI-flag transitions. It also drives a
+deterministic automatic-joypad busy interval and result commit from caller-supplied
+logical input snapshots; no platform input API is used. The H/V component supplies
+stable-register H/V
 timer-match signals. RDNMI/TIMEUP expose and acknowledge their latches, while HVBJOY
 reports current inputs. Reads combine implemented bits with the bus latch for
 currently unused/open bits. The components expose a gated NMI edge and timer IRQ
@@ -68,6 +70,15 @@ advances remaining aggregate internal cycles. Reads sample before their own cycl
 advanced, while writes advance an older job before a possible new trigger. Exact
 busy-operation collisions and internal-cycle placement inside an instruction remain
 unverified; the current deterministic retrigger policy replaces the pending job.
+
+When NMITIMEN bit 0 is enabled, the H/V component snapshots four 16-bit logical
+controller lines at H=298 on the first VBlank line. `$4212` bit 0 remains set for
+4224 master clocks, after which all eight bytes at `$4218-$421F` update atomically.
+The live input setters are a machine-wiring contract: PS2, PSP and host backends must
+translate input independently before calling it. The fixed start phase and retaining
+the old completed result while busy are deterministic foundation approximations;
+hardware research reports a varying phase and unreliable busy-time register data.
+Manual `$4016/$4017` access and nonstandard peripheral protocols remain absent.
 
 Every SNES-bus read/write updates access counters and charges the 5A22 6/8/12-master-
 clock class selected by its normalized address and current FastROM state. This is

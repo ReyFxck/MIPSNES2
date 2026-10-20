@@ -181,6 +181,12 @@ static uint16_t next_horizontal_boundary(const mipsnes2_hv_timing *timing,
         timing->h_master_clock < MIPSNES2_HV_NMI_FLAG_CLOCK) {
         next = MIPSNES2_HV_NMI_FLAG_CLOCK;
     }
+    if (timing->v_counter == vblank_start &&
+        !timing->auto_joypad_start_consumed &&
+        timing->h_master_clock < MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK &&
+        MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK < next) {
+        next = MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK;
+    }
     if (timing->h_master_clock < MIPSNES2_HV_HBLANK_END_CLOCK &&
         MIPSNES2_HV_HBLANK_END_CLOCK < next) {
         next = MIPSNES2_HV_HBLANK_END_CLOCK;
@@ -224,7 +230,30 @@ static void process_horizontal_boundary(mipsnes2_hv_timing *timing,
     if (timing->h_master_clock == MIPSNES2_HV_HBLANK_START_CLOCK) {
         mipsnes2_cpu_io_set_hblank(cpu_io, true);
     }
+    if (timing->h_master_clock == MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK &&
+        timing->v_counter == mipsnes2_hv_vblank_start_line(timing) &&
+        !timing->auto_joypad_start_consumed) {
+        timing->auto_joypad_start_consumed = true;
+        if (mipsnes2_cpu_io_begin_auto_joypad_read(cpu_io)) {
+            timing->auto_joypad_clocks_remaining =
+                MIPSNES2_HV_AUTO_JOYPAD_DURATION_CLOCKS;
+        }
+    }
     process_timer_boundary(timing, cpu_io);
+}
+
+static void advance_auto_joypad(mipsnes2_hv_timing *timing,
+                                mipsnes2_cpu_io *cpu_io,
+                                uint16_t master_clocks)
+{
+    if (timing->auto_joypad_clocks_remaining == 0U) {
+        return;
+    }
+    timing->auto_joypad_clocks_remaining =
+        (uint16_t)(timing->auto_joypad_clocks_remaining - master_clocks);
+    if (timing->auto_joypad_clocks_remaining == 0U) {
+        (void)mipsnes2_cpu_io_complete_auto_joypad_read(cpu_io);
+    }
 }
 
 static void advance_to_next_scanline(mipsnes2_hv_timing *timing,
@@ -238,6 +267,7 @@ static void advance_to_next_scanline(mipsnes2_hv_timing *timing,
     if (timing->v_counter == frame_scanlines) {
         timing->v_counter = 0U;
         timing->frame_count++;
+        timing->auto_joypad_start_consumed = false;
         mipsnes2_cpu_io_set_vblank(cpu_io, false);
     } else if (timing->v_counter ==
                mipsnes2_hv_vblank_start_line(timing)) {
@@ -271,6 +301,11 @@ mipsnes2_hv_result mipsnes2_hv_timing_advance(
         uint16_t distance = (uint16_t)(boundary - timing->h_master_clock);
         uint64_t step = master_clocks < distance ? master_clocks : distance;
 
+        if (timing->auto_joypad_clocks_remaining != 0U &&
+            timing->auto_joypad_clocks_remaining < step) {
+            step = timing->auto_joypad_clocks_remaining;
+        }
+
         if (boundary == mipsnes2_hv_scanline_master_clocks(timing) &&
             master_clocks >= distance &&
             timing->v_counter + 1U ==
@@ -283,6 +318,7 @@ mipsnes2_hv_result mipsnes2_hv_timing_advance(
             (uint16_t)(timing->h_master_clock + (uint16_t)step);
         timing->elapsed_master_clocks += step;
         master_clocks -= step;
+        advance_auto_joypad(timing, cpu_io, (uint16_t)step);
 
         if (timing->h_master_clock ==
             mipsnes2_hv_scanline_master_clocks(timing)) {

@@ -145,11 +145,11 @@ static int test_hvbjoy_and_read_only_writes(void)
     mipsnes2_cpu_io_init(&io, UINT8_C(2));
     mipsnes2_cpu_io_set_vblank(NULL, true);
     mipsnes2_cpu_io_set_hblank(NULL, true);
-    mipsnes2_cpu_io_set_auto_joypad_busy(NULL, true);
     mipsnes2_cpu_io_signal_nmi_flag(NULL);
     mipsnes2_cpu_io_set_vblank(&io, true);
     mipsnes2_cpu_io_set_hblank(&io, true);
-    mipsnes2_cpu_io_set_auto_joypad_busy(&io, true);
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4200), UINT8_C(1)));
+    CHECK(mipsnes2_cpu_io_begin_auto_joypad_read(&io));
     CHECK(mipsnes2_cpu_io_read(&io, UINT16_C(0x4212),
                                 UINT8_C(0x3e), &value));
     CHECK(value == UINT8_C(0xff));
@@ -161,10 +161,80 @@ static int test_hvbjoy_and_read_only_writes(void)
     CHECK(memcmp(&before, &io, sizeof(io)) == 0);
 
     mipsnes2_cpu_io_set_hblank(&io, false);
-    mipsnes2_cpu_io_set_auto_joypad_busy(&io, false);
+    CHECK(mipsnes2_cpu_io_complete_auto_joypad_read(&io));
     CHECK(mipsnes2_cpu_io_read(&io, UINT16_C(0x4212),
                                 UINT8_C(0x2a), &value));
     CHECK(value == UINT8_C(0xaa));
+    return 0;
+}
+
+static int test_auto_joypad_snapshot_and_result_registers(void)
+{
+    static const uint16_t first_inputs[MIPSNES2_CPU_IO_JOYPAD_COUNT] = {
+        UINT16_C(0x1234), UINT16_C(0xabcd),
+        UINT16_C(0x00f0), UINT16_C(0x8001)
+    };
+    mipsnes2_cpu_io io;
+    mipsnes2_cpu_io before;
+    uint8_t value;
+    uint8_t index;
+
+    mipsnes2_cpu_io_init(&io, UINT8_C(2));
+    CHECK(!mipsnes2_cpu_io_auto_joypad_enabled(NULL));
+    CHECK(!mipsnes2_cpu_io_auto_joypad_enabled(&io));
+    CHECK(!mipsnes2_cpu_io_set_joypad_input(NULL, 0U, UINT16_C(1)));
+    CHECK(!mipsnes2_cpu_io_set_joypad_input(
+        &io, MIPSNES2_CPU_IO_JOYPAD_COUNT, UINT16_C(1)));
+    CHECK(!mipsnes2_cpu_io_begin_auto_joypad_read(NULL));
+    CHECK(!mipsnes2_cpu_io_begin_auto_joypad_read(&io));
+    CHECK(!mipsnes2_cpu_io_complete_auto_joypad_read(NULL));
+    CHECK(!mipsnes2_cpu_io_complete_auto_joypad_read(&io));
+
+    for (index = 0U; index < MIPSNES2_CPU_IO_JOYPAD_COUNT; ++index) {
+        CHECK(io.joypad_input[index] == 0U);
+        CHECK(io.joypad_result[index] == 0U);
+        CHECK(mipsnes2_cpu_io_set_joypad_input(
+            &io, index, first_inputs[index]));
+    }
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4200), UINT8_C(0x01)));
+    CHECK(mipsnes2_cpu_io_auto_joypad_enabled(&io));
+    CHECK(mipsnes2_cpu_io_begin_auto_joypad_read(&io));
+    CHECK(io.auto_joypad_busy);
+    CHECK(!mipsnes2_cpu_io_begin_auto_joypad_read(&io));
+
+    CHECK(mipsnes2_cpu_io_set_joypad_input(&io, 0U, UINT16_C(0xffff)));
+    CHECK(mipsnes2_cpu_io_read(&io, UINT16_C(0x4218),
+                                UINT8_C(0xa5), &value));
+    CHECK(value == 0U);
+    CHECK(mipsnes2_cpu_io_complete_auto_joypad_read(&io));
+    CHECK(!io.auto_joypad_busy);
+    CHECK(!mipsnes2_cpu_io_complete_auto_joypad_read(&io));
+
+    for (index = 0U; index < MIPSNES2_CPU_IO_JOYPAD_COUNT; ++index) {
+        uint16_t offset = (uint16_t)(UINT16_C(0x4218) + index * 2U);
+
+        CHECK(io.joypad_result[index] == first_inputs[index]);
+        CHECK(mipsnes2_cpu_io_read(&io, offset, UINT8_C(0xa5), &value));
+        CHECK(value == (uint8_t)first_inputs[index]);
+        CHECK(mipsnes2_cpu_io_read(&io, (uint16_t)(offset + 1U),
+                                    UINT8_C(0xa5), &value));
+        CHECK(value == (uint8_t)(first_inputs[index] >> 8));
+    }
+
+    before = io;
+    for (index = 0U; index < 8U; ++index) {
+        CHECK(mipsnes2_cpu_io_write(
+            &io, (uint16_t)(UINT16_C(0x4218) + index),
+            (uint8_t)(UINT8_C(0x80) + index)));
+    }
+    CHECK(memcmp(&before, &io, sizeof(io)) == 0);
+
+    CHECK(mipsnes2_cpu_io_begin_auto_joypad_read(&io));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4200), 0U));
+    CHECK(!mipsnes2_cpu_io_auto_joypad_enabled(&io));
+    CHECK(io.auto_joypad_busy);
+    CHECK(mipsnes2_cpu_io_complete_auto_joypad_read(&io));
+    CHECK(io.joypad_result[0] == UINT16_MAX);
     return 0;
 }
 
@@ -259,7 +329,8 @@ int main(void)
     CHECK(test_nmi_gate_and_acknowledgement() == 0);
     CHECK(test_irq_latch_and_acknowledgement() == 0);
     CHECK(test_hvbjoy_and_read_only_writes() == 0);
+    CHECK(test_auto_joypad_snapshot_and_result_registers() == 0);
     CHECK(test_math_registers_and_cycle_boundaries() == 0);
-    (void)puts("PASS: Ricoh 5A22 CPU-I/O, math and interrupt-latch foundation");
+    (void)puts("PASS: Ricoh 5A22 CPU-I/O, math, joypad and interrupt foundation");
     return 0;
 }

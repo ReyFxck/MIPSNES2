@@ -73,7 +73,9 @@ the partial SNES map. ABORT, signal-level RESET/bus behavior, exact dummy/intern
 bus sequencing, full CPU event-horizon integration and broader independent validation
 remain. The first caller-owned CPU-I/O component now covers the documented
 interrupt/timer subset plus `$4202-$4206` multiplication/division inputs and
-`$4214-$4217` results. The math unit advances in processor cycles rather than SPU,
+`$4214-$4217` results. It also exposes caller-owned logical controller snapshots,
+`$4218-$421F` automatic-read results and a deterministic VBlank polling window.
+The math unit advances in processor cycles rather than SPU,
 host or master-clock output rates; exact busy-write collision behavior and
 mid-instruction internal-cycle placement remain under research. A separate H/V
 component advances deterministic non-interlaced NTSC/PAL master-clock state, blank
@@ -83,8 +85,8 @@ events from each atomic CPU-step delta with explicit same-timestamp ordering. A
 caller-owned interrupt-line aggregator preserves independent timer/cartridge/
 expansion IRQ sources and can transfer CPU-I/O IRQ/NMI state at atomic CPU boundaries.
 Exact register-write/match windows, TIMEUP's narrow read exception, interlace,
-mid-instruction event pausing and final simultaneous-subsystem priority remain
-incomplete.
+mid-instruction event pausing, real auto-joypad phase variation, serial controller
+ports/peripherals and final simultaneous-subsystem priority remain incomplete.
 Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.
