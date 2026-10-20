@@ -141,6 +141,13 @@ static uint8_t read_system_area(mipsnes2_snes_bus *bus,
     uint8_t value;
 
     if (offset >= UINT16_C(0x2100) && offset <= UINT16_C(0x213f)) {
+        if (bus->ppu_counters != NULL &&
+            mipsnes2_ppu_counters_read(
+                bus->ppu_counters, bus->hv_timing,
+                (bus->cpu_io_state->wrio & UINT8_C(0x80)) != 0U,
+                offset, bus->open_value, &value)) {
+            return value;
+        }
         return routed_read(bus->ppu, address, bus->open_value);
     }
     if (offset >= UINT16_C(0x2140) && offset <= UINT16_C(0x217f)) {
@@ -176,6 +183,10 @@ static void write_system_area(mipsnes2_snes_bus *bus,
                               uint8_t value)
 {
     if (offset >= UINT16_C(0x2100) && offset <= UINT16_C(0x213f)) {
+        if (bus->ppu_counters != NULL &&
+            mipsnes2_ppu_counters_write_ignored(offset)) {
+            return;
+        }
         routed_write(bus->ppu, address, value);
         return;
     }
@@ -194,6 +205,7 @@ static void write_system_area(mipsnes2_snes_bus *bus,
         }
         if (bus->cpu_io_state != NULL &&
             mipsnes2_cpu_io_write(bus->cpu_io_state, offset, value)) {
+            (void)mipsnes2_snes_bus_sync_hv_latch(bus);
             return;
         }
         routed_write(bus->cpu_io, address, value);
@@ -214,8 +226,14 @@ mipsnes2_snes_bus_result mipsnes2_snes_bus_init(
     mipsnes2_snes_bus *bus,
     const mipsnes2_snes_bus_config *config)
 {
+    uint16_t horizontal;
+
     if (bus == NULL || config == NULL || config->wram == NULL ||
-        config->wram_size < MIPSNES2_SNES_WRAM_SIZE) {
+        config->wram_size < MIPSNES2_SNES_WRAM_SIZE ||
+        ((config->ppu_counters != NULL || config->hv_timing != NULL) &&
+         (config->ppu_counters == NULL || config->hv_timing == NULL ||
+          config->cpu_io_state == NULL || !config->ppu_counters->initialized ||
+          !mipsnes2_hv_ppu_horizontal(config->hv_timing, &horizontal)))) {
         return MIPSNES2_SNES_BUS_INVALID_ARGUMENT;
     }
 
@@ -225,10 +243,25 @@ mipsnes2_snes_bus_result mipsnes2_snes_bus_init(
     bus->apu = config->apu;
     bus->cpu_io = config->cpu_io;
     bus->cpu_io_state = config->cpu_io_state;
+    bus->ppu_counters = config->ppu_counters;
+    bus->hv_timing = config->hv_timing;
     bus->dma = config->dma;
     bus->cartridge = config->cartridge;
     bus->open_value = config->initial_open_value;
     return MIPSNES2_SNES_BUS_OK;
+}
+
+bool mipsnes2_snes_bus_sync_hv_latch(mipsnes2_snes_bus *bus)
+{
+    uint16_t horizontal;
+
+    if (bus == NULL || bus->ppu_counters == NULL ||
+        !bus->ppu_counters->initialized || bus->cpu_io_state == NULL ||
+        !mipsnes2_hv_ppu_horizontal(bus->hv_timing, &horizontal) ||
+        !mipsnes2_cpu_io_take_hv_latch_edge(bus->cpu_io_state)) {
+        return false;
+    }
+    return mipsnes2_ppu_counters_capture(bus->ppu_counters, bus->hv_timing);
 }
 
 uint8_t mipsnes2_snes_bus_read(mipsnes2_snes_bus *bus,
@@ -243,6 +276,7 @@ uint8_t mipsnes2_snes_bus_read(mipsnes2_snes_bus *bus,
         return 0U;
     }
     address = mipsnes2_address24(address);
+    (void)mipsnes2_snes_bus_sync_hv_latch(bus);
     account_access(bus, address);
     if (wram_index(address, &index)) {
         value = bus->wram[index];
@@ -269,6 +303,7 @@ void mipsnes2_snes_bus_write(mipsnes2_snes_bus *bus,
         return;
     }
     address = mipsnes2_address24(address);
+    (void)mipsnes2_snes_bus_sync_hv_latch(bus);
     account_access(bus, address);
     mipsnes2_cpu_io_advance_math_cycles(bus->cpu_io_state, UINT64_C(1));
     if (wram_index(address, &index)) {

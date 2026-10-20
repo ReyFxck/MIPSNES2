@@ -9,6 +9,7 @@
 #include "core/bus/cpu_io.h"
 #include "core/bus/interface.h"
 #include "core/cartridge/interface.h"
+#include "core/ppu/counters.h"
 
 enum {
     MIPSNES2_SNES_WRAM_SIZE = 128 * 1024
@@ -28,6 +29,8 @@ typedef struct {
     mipsnes2_bus_interface apu;
     mipsnes2_bus_interface cpu_io;
     mipsnes2_cpu_io *cpu_io_state;
+    mipsnes2_ppu_counters *ppu_counters;
+    const mipsnes2_hv_timing *hv_timing;
     mipsnes2_bus_interface dma;
     mipsnes2_cartridge_interface cartridge;
 } mipsnes2_snes_bus_config;
@@ -38,6 +41,8 @@ typedef struct {
     mipsnes2_bus_interface apu;
     mipsnes2_bus_interface cpu_io;
     mipsnes2_cpu_io *cpu_io_state;
+    mipsnes2_ppu_counters *ppu_counters;
+    const mipsnes2_hv_timing *hv_timing;
     mipsnes2_bus_interface dma;
     mipsnes2_cartridge_interface cartridge;
     uint32_t wram_port_address;
@@ -64,5 +69,7 @@ mipsnes2_bus_interface mipsnes2_snes_bus_make_interface(
 bool mipsnes2_snes_bus_interface_matches(
     const mipsnes2_snes_bus *bus,
     mipsnes2_bus_interface interface);
+/* Call immediately after external I/O changes, before advancing emulated time. */
+bool mipsnes2_snes_bus_sync_hv_latch(mipsnes2_snes_bus *bus);
 
 #endif

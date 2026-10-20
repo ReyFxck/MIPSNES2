@@ -91,7 +91,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Low-bank WRAM mirrors
 - [ ] ROM fast path
 - [ ] [IN PROGRESS] SRAM windows — supported LoROM/HiROM/ExHiROM mappings verified
-- [x] PPU MMIO routing — callback route only
+- [x] PPU MMIO routing — optional counter-register state and callback fallback
 - [x] CPU I/O routing — callback route plus bus-owned `$420D`
 - [x] APU port routing — callback route only
 - [x] DMA register routing — callback route only
@@ -137,7 +137,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Determinism tests — scheduler foundation replay
 - [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio, H/V chunking and short common-domain runs verified; regional soak tests pending
 - [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math, programmable-I/O and controller subsets implemented
-- [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL phase and blank/NMI boundaries verified; interlace/dot latches pending
+- [ ] [IN PROGRESS] H/V counter model — non-interlaced phase and counter-register subset verified; interlace and exact capture timing pending
 - [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling pending
 - [ ] [IN PROGRESS] NMI edge and enable behavior — non-interlaced VBlank/NMI timing and atomic CPU delivery exist; exact sampling pending
 - [ ] [IN PROGRESS] Interrupt acknowledgement — RDNMI/TIMEUP base side effects exist; match-window/external IRQ cases absent
@@ -146,6 +146,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Automatic joypad polling timing — deterministic 4224-clock foundation exists; variable hardware phase, partial busy reads and manual-port contention pending
 - [x] Standard manual joypad serial foundation — `$4016/$4017` strobe, four lines, independent port clocks and post-word padding verified
 - [x] Programmable I/O-port foundation — `$4201/$4213`, wired-AND external levels and bit-7 falling-edge handoff verified
+- [x] Non-interlaced H/V counter-register foundation — dot projection, read selectors and deterministic WRIO bus adapter verified
+- [ ] Exact counter capture latency and held-low/repeated-latch hardware validation
 - [ ] SPC700 timer coordination
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing and atomic CPU input delivery host tests exist; exact-cycle cases pending
 - [x] 5A22 CPU-I/O register/latch foundation

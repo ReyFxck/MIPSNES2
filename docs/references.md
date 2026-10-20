@@ -50,6 +50,8 @@ substitute for real PS2 or PSP evidence.
 
 ## PPU, DMA and timing
 
+- [Nintendo SNES Development Manual, Book I](https://floating.muncher.se/bot/manual/book1_text.pdf) — chapter 11 (2-11-1), programming caution 24.1 and PPU register pages 2-27-20/22/23 define software H/V capture, nine-bit readout, selector reset and field/latch/region/version status. Inspected on 2026-10-20; no manual asset is committed.
+- [fullsnes: PPU timers and status](https://problemkaputt.de/fullsnes.htm#snespputimersandstatus) — firsthand hardware-research register and latch observations; the timing sections distinguish normal long dots 323/327 from the NTSC short line. Its unconditional status-clear summary differs from Anomie's WRIO-gated description; MIPSNES2 records the conflict in the counter audit rather than claiming hardware resolution.
 - [SNESdev Wiki: SNES PPU for NES developers](https://snes.nesdev.org/wiki/SNES_PPU_for_NES_developers) — useful conceptual PPU orientation, not a complete behavior contract.
 - [SNESdev Wiki: timing](https://snes.nesdev.org/wiki/Timing) — scanline/frame clocks and CPU access timing.
 - [fullsnes hardware specification: SNES Timings](https://problemkaputt.de/fullsnes.htm#snestimings) — independent hardware-research sections for H/V counters, regional frame geometry, long/short scanlines and event positions. The non-interlaced H/V foundation was audited against these sections on 2026-10-19; disputed and revision-specific behavior still requires targeted hardware tests.

@@ -109,6 +109,12 @@ ordering, timing-overflow transactionality and an executed multiply sequence. Th
 fixtures validate meaningful-access
 timing, not missing dummy cycles, mid-instruction pause/resume, WRAM refresh, complete
 SNES interrupt generation or complete cartridge mapping.
+The PPU-counter executable enumerates every master-clock position on normal and NTSC
+short lines, verifies all valid H/V capture values, independent low/high selectors,
+PPU2 open bits, WRIO gating and field/region/version composition. Bus integration
+enumerates all 128 system-bank mirrors, checks fallback and ignored writes, consumes
+WRIO/external edges and rejects inconsistent H/V-domain wiring. Its executed LDA
+fixture explicitly verifies the current pre-instruction snapshot approximation.
 The cartridge regression executable covers explicit base LoROM/HiROM and documented
 Mode 25/35 ExHiROM ROM windows,
 power-of-two mirrors, unambiguous larger-region/smaller-tail repetition, mapper-bank
@@ -239,6 +245,8 @@ Manual standard-controller serial-port evidence is recorded in
 [manual-joypad-audit.md](manual-joypad-audit.md).
 Programmable I/O-port evidence is recorded in
 [5a22-io-port-audit.md](5a22-io-port-audit.md).
+Non-interlaced PPU counter-register evidence is recorded in
+[hv-counter-latch-audit.md](hv-counter-latch-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in
