@@ -85,8 +85,12 @@ events from each atomic CPU-step delta with explicit same-timestamp ordering. A
 caller-owned interrupt-line aggregator preserves independent timer/cartridge/
 expansion IRQ sources and can transfer CPU-I/O IRQ/NMI state at atomic CPU boundaries.
 Exact register-write/match windows, TIMEUP's narrow read exception, interlace,
-mid-instruction event pausing, real auto-joypad phase variation, serial controller
-ports/peripherals and final simultaneous-subsystem priority remain incomplete.
+mid-instruction event pausing, real auto-joypad phase variation, nonstandard controller
+peripherals and final simultaneous-subsystem priority remain incomplete. The two
+standard serial controller ports now expose deterministic `$4016/$4017` strobe,
+snapshot and 16-bit shifting for four logical lines. Multitap/mouse/light-gun
+protocols, output-pin wiring and hardware-faithful contention with automatic polling
+remain incomplete.
 Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.

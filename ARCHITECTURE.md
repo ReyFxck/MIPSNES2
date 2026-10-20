@@ -69,7 +69,10 @@ implements NMITIMEN, the 9-bit H/V compare values, RDNMI, TIMEUP, HVBJOY and the
 unsigned 8x8 multiply/16-by-8 divide register set. It accepts four caller-owned
 logical 16-bit controller inputs and exposes completed automatic reads through
 `$4218-$421F`; input sampling remains outside the core and no platform controller API
-crosses this boundary. Math triggers retain old visible
+crosses this boundary. The same words feed the standard manual serial-port
+foundation: a `$4016` falling strobe snapshots all four lines, and `$4016`/`$4017`
+independently shift the paired first/third and second/fourth lines. This is
+platform-neutral CPU-I/O state, not a host controller backend. Math triggers retain old visible
 results until an 8- or 16-processor-cycle countdown completes; divide-by-zero yields
 `FFFF` plus the dividend remainder. CPU-bus reads clock the unit after sampling and
 writes clock it before latching the new value, so the trigger write itself is not
@@ -86,8 +89,10 @@ writes, repeated reprogrammed matches in one scanline or the narrow read-at-matc
 TIMEUP exception. Automatic joypad polling uses a deterministic H=298 start on the
 first VBlank line and a 4224-master-clock busy period. The duration and atomic result
 commit are evidence-backed; the hardware's varying start phase and busy-time partial
-register contents remain deliberately approximated. CPU-I/O does not implement the
-serial `$4016/$4017` controller protocol or combine cartridge IRQs.
+register contents remain deliberately approximated. Manual shifting is intentionally
+independent of automatic polling until their physical contention is verified.
+CPU-I/O does not implement nonstandard peripheral protocols, wire the two auxiliary
+`$4016` output pins to devices, or combine cartridge IRQs.
 
 `mipsnes2_interrupt_lines` is the machine-wiring layer between independent IRQ/NMI
 producers and the single CPU input pair. Its bitmask keeps internal timer, cartridge

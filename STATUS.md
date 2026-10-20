@@ -25,9 +25,10 @@ scheduler/H/V advancement evidence is in
 [docs/master-timing-fanout-audit.md](docs/master-timing-fanout-audit.md), and atomic
 CPU-I/O interrupt handoff evidence is in
 [docs/interrupt-handoff-audit.md](docs/interrupt-handoff-audit.md). Ricoh 5A22 math
-and automatic-controller evidence is in
+and controller evidence is in
 [docs/5a22-math-register-audit.md](docs/5a22-math-register-audit.md) and
-[docs/auto-joypad-audit.md](docs/auto-joypad-audit.md).
+[docs/auto-joypad-audit.md](docs/auto-joypad-audit.md), with manual serial-port
+evidence in [docs/manual-joypad-audit.md](docs/manual-joypad-audit.md).
 
 ## State and evidence rules
 
@@ -611,14 +612,27 @@ those boundaries. Host tests cover disabled/late enable, disable while busy, fou
 result words, read-only writes, snapshot isolation, exact start/completion, regional
 chunking and SNES-bus mirrors. Hardware research reports a phase that varies within
 a window, and actual busy-time result bits are unreliable; the fixed start and
-old-result visibility are documented deterministic approximations. Serial
-`$4016/$4017`, peripheral protocols and real-console validation remain incomplete.
+old-result visibility are documented deterministic approximations. Standard serial
+`$4016/$4017` behavior is added by the following milestone; peripheral protocols and
+real-console validation remain incomplete.
 Local GCC default, release and ASan+UBSan verification pass; LeakSanitizer requires
 disabling locally because the managed runtime blocks `/proc` task inspection. Local
 Clang, PS2SDK and PSPSDK are unavailable. GitHub Host GCC/Clang release, sanitizer
 and artifact jobs plus pinned PS2/PSP cross-build, artifact and checksum jobs passed
 for implementation commit `3c56b6b1e3687b5eeacffebbab1ef3b1ed8a0f03`. Exact scope
 and run IDs are in docs/auto-joypad-audit.md. No console runtime,
+compatibility or performance result is claimed.
+
+The manual-joypad foundation on 2026-10-20 adds standard-controller serial reads on
+`$4016/$4017`. A `$4016` high-to-low strobe transition snapshots four caller-owned
+16-bit lines; the two physical ports shift their paired lines independently in the
+documented B-through-R order and then report caller-owned connectivity. Host tests
+cover live high-strobe reads, falling-edge isolation, all bits on all four lines,
+independent port clocks, post-word behavior, register return masks, SNES-bus mirrors
+and deterministic coexistence with automatic polling. Auxiliary output wiring,
+nonstandard peripherals and hardware contention between manual and automatic reads
+remain incomplete. Local and GitHub verification evidence is recorded in
+[docs/manual-joypad-audit.md](docs/manual-joypad-audit.md); no console runtime,
 compatibility or performance result is claimed.
 
 ## Current blockers and diagnostic exceptions
@@ -1090,14 +1104,14 @@ platform persistence remains incomplete.
 
 ## Interrupts and timers
 
-- [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math and `$4218-$421F` automatic-joypad subsets implemented
+- [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math, `$4016/$4017` standard-controller and `$4218-$421F` automatic-joypad subsets implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL master-clock phase, blanking and NTSC short line verified; interlace/dot latches absent
 - [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling incomplete
 - [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch, non-interlaced VBlank timing and atomic CPU delivery exist; exact within-instruction sampling incomplete
 - [ ] [IN PROGRESS] Interrupt acknowledgement — base RDNMI/TIMEUP reads exist; match-window/external IRQ cases absent
 - [ ] [IN PROGRESS] Interrupt ordering — CPU NMI-over-IRQ priority and source aggregation verified; simultaneous subsystem timing pending
 - [ ] [IN PROGRESS] CPU math register timing — 8/16-cycle completion and result semantics verified; busy collisions and exact internal-cycle placement pending
-- [ ] [IN PROGRESS] Automatic joypad polling timing — 4224-clock window and result commit verified with a fixed deterministic start; hardware phase variation, busy-time partial data and serial ports pending
+- [ ] [IN PROGRESS] Automatic joypad polling timing — 4224-clock window and result commit verified with a fixed deterministic start; hardware phase variation, busy-time partial data and manual-port contention pending
 - [ ] SPC700 timer coordination
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing and atomic CPU input delivery fixtures exist; exact cycle-boundary cases pending
 
@@ -1114,6 +1128,9 @@ platform persistence remains incomplete.
 - [x] Math-result read boundary and CPU-bus cycle integration
 - [x] Four logical controller snapshots and `$4218-$421F` result registers
 - [x] VBlank auto-joypad busy window and atomic completion
+- [x] Standard manual joypad strobe and four serial data lines on `$4016/$4017`
+- [x] Independent manual port clocks, 16-bit order and connected padding
+- [ ] Auxiliary controller-output wiring and nonstandard peripheral protocols
 - [ ] Busy-operation collision/retrigger hardware behavior
 
 ### Verified H/V foundation subset

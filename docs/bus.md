@@ -44,9 +44,9 @@ select that address. `$420D` write bit 0 controls the bus's FastROM state. Reser
 holes inside the B-bus/internal-I/O windows use the current deterministic open latch
 instead of falling through to cartridge space. A cartridge read can explicitly
 decline an address, preserving that latch. PPU, APU and DMA callbacks remain routes
-only. The optional caller-owned CPU-I/O state implements `$4200`, `$4202-$420A`,
-`$4210-$4212` and `$4214-$421F`; unimplemented CPU-I/O addresses continue through
-the fallback route.
+only. The optional caller-owned CPU-I/O state implements manual controller ports
+`$4016/$4017`, `$4200`, `$4202-$420A`, `$4210-$4212` and `$4214-$421F`;
+unimplemented CPU-I/O addresses continue through the fallback route.
 
 NMITIMEN stores only the documented NMI, H/V IRQ-mode and automatic-joypad-enable
 bits. The compare registers retain nine bits. The non-interlaced H/V timing component
@@ -78,7 +78,17 @@ The live input setters are a machine-wiring contract: PS2, PSP and host backends
 translate input independently before calling it. The fixed start phase and retaining
 the old completed result while busy are deterministic foundation approximations;
 hardware research reports a varying phase and unreliable busy-time register data.
-Manual `$4016/$4017` access and nonstandard peripheral protocols remain absent.
+
+Writing `$4016` bit 0 high holds standard pads at their live B-button bit. A high-to-
+low transition snapshots all four 16-bit standard-controller words. Low-strobe reads
+of `$4016` shift JOY1/JOY3 together, while `$4017` independently shifts JOY2/JOY4;
+the order is B, Y, Select, Start, directions, A, X, L, R, then four zero ID bits.
+After bit 16, each line returns its caller-supplied connected/disconnected value.
+`$4016` bits 2-7 and `$4017` bits 5-7 retain the bus latch; `$4017` bits 2-4 use the
+documented fixed high return. Output bits 1-2 are retained but not yet connected to a
+peripheral. Manual and automatic snapshots are deterministic independent mechanisms;
+their physical contention is not yet claimed. Multitap, mouse, Super Scope and other
+nonstandard peripheral protocols remain absent.
 
 Every SNES-bus read/write updates access counters and charges the 5A22 6/8/12-master-
 clock class selected by its normalized address and current FastROM state. This is

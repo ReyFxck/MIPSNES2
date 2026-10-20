@@ -81,7 +81,10 @@ CPU-I/O regression executable independently covers NMITIMEN masks and transition
 composition, distinct VBlank/NMI-flag inputs, multiplication/division registers,
 old-result visibility, exact 8/16-cycle completion, divide-by-zero and invalid/
 unimplemented accesses. It also covers four caller-owned controller inputs,
-snapshot isolation, `$4218-$421F`, read-only writes and enable/complete transitions. The
+snapshot isolation, `$4218-$421F`, read-only writes and enable/complete transitions.
+Manual-port cases cover live high-strobe B bits, falling-edge snapshots, independent
+port clocks, all 16 bits on all four lines, post-word connected padding, open/fixed
+return bits and deterministic coexistence with automatic polling. The
 H/V regression executable covers non-interlaced NTSC/PAL scanline/frame totals,
 HBlank/VBlank boundaries, overscan, field toggling, the NTSC short line, delayed NMI
 assertion, every valid HTIME value, V/HV match positions, short/final-line exceptions,
@@ -229,6 +232,8 @@ Ricoh 5A22 multiplication/division register evidence is recorded in
 [5a22-math-register-audit.md](5a22-math-register-audit.md).
 Automatic controller-read evidence is recorded in
 [auto-joypad-audit.md](auto-joypad-audit.md).
+Manual standard-controller serial-port evidence is recorded in
+[manual-joypad-audit.md](manual-joypad-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in
