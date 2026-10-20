@@ -128,6 +128,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Event tie ordering
 - [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle pausing pending
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
+- [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
@@ -137,14 +138,14 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio, H/V chunking and short common-domain runs verified; regional soak tests pending
 - [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` foundation implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL phase and blank/NMI boundaries verified; interlace/dot latches pending
-- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches exist; exact write/match windows, interlace and scheduler/CPU delivery pending
-- [ ] [IN PROGRESS] NMI edge and enable behavior — non-interlaced VBlank/NMI timing exists; central scheduler/CPU delivery pending
+- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling pending
+- [ ] [IN PROGRESS] NMI edge and enable behavior — non-interlaced VBlank/NMI timing and atomic CPU delivery exist; exact sampling pending
 - [ ] [IN PROGRESS] Interrupt acknowledgement — RDNMI/TIMEUP base side effects exist; match-window/external IRQ cases absent
-- [ ] Pending interrupt ordering
+- [ ] [IN PROGRESS] Interrupt ordering — CPU NMI-over-IRQ priority and independent IRQ-source aggregation verified; subsystem ties pending
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus-routing, H/V compare and atomic common-domain host tests exist; CPU input delivery pending
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing and atomic CPU input delivery host tests exist; exact-cycle cases pending
 - [x] 5A22 CPU-I/O register/latch foundation
 - [x] Non-interlaced NTSC/PAL H/V timing foundation
 - [x] Stable-register non-interlaced H/V timer-IRQ foundation

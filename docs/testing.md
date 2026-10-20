@@ -88,9 +88,13 @@ mixed FastROM-fetch/slow-WRAM LDA, an event timestamped inside an atomic instruc
 emulation-mode NMI entry and visible bridge errors. The master-domain executable
 checks scheduler/H/V timestamp agreement, H/V-before-callback tie ordering, dispatch-
 budget exhaustion, same-time insertion, invalid/reentrant paths and chunk equivalence.
+The interrupt-line executable verifies source independence, CPU-I/O timer and NMI
+sampling, one-shot NMI transfer and aggregate CPU-level driving.
 The SNES-bus fixture additionally advances repeated NOPs through the H/V-aware bridge,
-verifying clock lockstep and timer-latch assertion without claiming automatic CPU IRQ
-delivery. These fixtures validate meaningful-access
+verifying clock lockstep and timer-latch assertion. Its interrupt-aware cases verify
+post-step timer delivery, TIMEUP acknowledgement without erasing cartridge IRQ,
+source deassertion, NMI delivery and simultaneous NMI/IRQ priority at the next atomic
+CPU boundary. These fixtures validate meaningful-access
 timing, not missing dummy cycles, mid-instruction pause/resume, WRAM refresh, complete
 SNES interrupt generation or complete cartridge mapping.
 The cartridge regression executable covers explicit base LoROM/HiROM and documented
@@ -213,6 +217,8 @@ Stable-register H/V timer-match evidence is recorded in
 [hv-irq-foundation-audit.md](hv-irq-foundation-audit.md).
 Shared scheduler/H/V master-clock fanout evidence is recorded in
 [master-timing-fanout-audit.md](master-timing-fanout-audit.md).
+Atomic CPU-I/O interrupt handoff evidence is recorded in
+[interrupt-handoff-audit.md](interrupt-handoff-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in

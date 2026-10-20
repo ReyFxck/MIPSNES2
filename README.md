@@ -76,9 +76,11 @@ documented `$4200`, `$4207-$420A` and `$4210-$4212` foundation. A separate H/V
 component advances deterministic non-interlaced NTSC/PAL master-clock state, blank
 transitions, the NTSC short line, delayed NMI flag and stable-register H/V timer
 matches. A shared master-clock coordinator now advances H/V state and scheduler
-events from each atomic CPU-step delta with explicit same-timestamp ordering. Exact
-register-write/match windows, TIMEUP's narrow read exception, interlace,
-mid-instruction event pausing and automatic CPU interrupt-line delivery remain
+events from each atomic CPU-step delta with explicit same-timestamp ordering. A
+caller-owned interrupt-line aggregator preserves independent timer/cartridge/
+expansion IRQ sources and can transfer CPU-I/O IRQ/NMI state at atomic CPU boundaries.
+Exact register-write/match windows, TIMEUP's narrow read exception, interlace,
+mid-instruction event pausing and final simultaneous-subsystem priority remain
 incomplete.
 Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,

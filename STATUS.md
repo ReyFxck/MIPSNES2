@@ -22,7 +22,9 @@ timing evidence is in
 register H/V timer-match evidence is in
 [docs/hv-irq-foundation-audit.md](docs/hv-irq-foundation-audit.md), and shared
 scheduler/H/V advancement evidence is in
-[docs/master-timing-fanout-audit.md](docs/master-timing-fanout-audit.md).
+[docs/master-timing-fanout-audit.md](docs/master-timing-fanout-audit.md), and atomic
+CPU-I/O interrupt handoff evidence is in
+[docs/interrupt-handoff-audit.md](docs/interrupt-handoff-audit.md).
 
 ## State and evidence rules
 
@@ -568,6 +570,19 @@ PS2/PSP cross-build, artifact and checksum jobs passed for implementation commit
 `f0c863d16c31140f8fd23352c9e68bffaf534c24`. Exact scope and run IDs are in
 docs/master-timing-fanout-audit.md. No console runtime or hardware result is claimed.
 
+The interrupt-line handoff milestone on 2026-10-19 adds caller-owned source
+aggregation for internal timer, cartridge and expansion IRQ levels plus an NMI-edge
+latch. The interrupt-aware H/V CPU bridge samples CPU-I/O before and after one atomic
+step, preserving unrelated IRQ sources and transferring NMI/IRQ state into the
+existing 65C816 input contract. Host fixtures cover TIMEUP acknowledgement with
+cartridge IRQ retained, deassertion, post-step timer delivery, NMI vector entry and
+simultaneous NMI-over-IRQ priority. Exact within-instruction sampling and complete
+subsystem priority remain incomplete. Local default GCC verification passes;
+release and ASan+UBSan verification also pass. GitHub Host GCC/Clang plus pinned
+PS2/PSP cross-build, artifact and checksum jobs passed for implementation commit
+`9ed34802ca8d436f70f0f9d8b96563184f65d3ab`. Exact scope and run IDs are in
+docs/interrupt-handoff-audit.md. No console runtime or hardware result is claimed.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -1039,14 +1054,14 @@ platform persistence remains incomplete.
 
 - [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` subset implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL master-clock phase, blanking and NTSC short line verified; interlace/dot latches absent
-- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches exist; exact write/match windows, interlace and scheduler/CPU delivery incomplete
-- [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch and non-interlaced VBlank/NMI timing exist; central scheduler/CPU delivery incomplete
+- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling incomplete
+- [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch, non-interlaced VBlank timing and atomic CPU delivery exist; exact within-instruction sampling incomplete
 - [ ] [IN PROGRESS] Interrupt acknowledgement — base RDNMI/TIMEUP reads exist; match-window/external IRQ cases absent
-- [ ] Pending interrupt ordering
+- [ ] [IN PROGRESS] Interrupt ordering — CPU NMI-over-IRQ priority and source aggregation verified; simultaneous subsystem timing pending
 - [ ] CPU math register timing
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, SNES-bus routing, H/V compare and atomic common-domain fixtures exist; CPU input delivery pending
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing and atomic CPU input delivery fixtures exist; exact cycle-boundary cases pending
 
 ### Verified CPU-I/O foundation subset
 
@@ -1079,7 +1094,16 @@ platform persistence remains incomplete.
 - [x] Deterministic H/V-before-general-callback ordering at equal timestamps
 - [x] Event-budget exhaustion preserves aligned domain state
 - [x] Atomic CPU-step delta advances scheduler and H/V together
-- [ ] Automatic CPU-I/O IRQ/NMI delivery into 65C816 inputs
+- [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
+
+### Interrupt-line aggregation subset
+
+- [x] Caller-owned independent IRQ source bitmask
+- [x] CPU-I/O timer source update preserves cartridge/expansion IRQ sources
+- [x] CPU-I/O NMI edge transfers once into the CPU input latch
+- [x] Pre/post atomic-step input sampling contract
+- [x] Simultaneous NMI/IRQ follows existing CPU NMI priority
+- [ ] Exact within-instruction interrupt sampling
 
 ## DMA / HDMA
 
@@ -1241,7 +1265,7 @@ platform persistence remains incomplete.
 - [ ] PPU logic fixtures
 - [ ] SPC700 fixtures
 - [ ] DSP sample fixtures
-- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes, shared H/V fanout, timed CPU steps and IRQ/NMI boundary
+- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes, shared H/V fanout, IRQ-source aggregation and timed CPU boundaries
 - [ ] DMA/HDMA fixtures
 - [ ] Licensed test-ROM runner
 - [ ] Deterministic replay harness

@@ -22,7 +22,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
-| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, atomic CPU-step bridge, non-interlaced H/V phase and shared master-clock coordinator |
+| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, atomic CPU-step bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Build probe only |
@@ -73,6 +73,13 @@ exports a latched NMI edge and timer-IRQ level without depending on host or plat
 APIs. The H/V component does not yet model exact mid-instruction timer-register
 writes, repeated reprogrammed matches in one scanline or the narrow read-at-match
 TIMEUP exception. CPU-I/O does not poll joypads or combine cartridge IRQs.
+
+`mipsnes2_interrupt_lines` is the machine-wiring layer between independent IRQ/NMI
+producers and the single CPU input pair. Its bitmask keeps internal timer, cartridge
+and expansion IRQ levels independent, so acknowledging TIMEUP cannot erase another
+asserted source. It consumes the CPU-I/O NMI edge into its own pending latch and
+drives the existing 65C816 input API only at an explicit CPU boundary. This is not a
+new emulated chip and contains no platform behavior.
 
 The cartridge-slot interface differs intentionally from ordinary MMIO callbacks: a
 read/write returns whether the cartridge decoded that address. A declined read leaves
@@ -210,6 +217,10 @@ exhaustion leaves both domains aligned at the stopped event timestamp. The optio
 `mipsnes2_cpu_timed_step_hv` entry point feeds one atomic CPU step's elapsed delta
 through this coordinator. The older scheduler-only entry point remains available for
 focused tests and callers that have not constructed H/V and CPU-I/O state.
+`mipsnes2_cpu_timed_step_hv_interrupts` additionally samples CPU-I/O plus the caller's
+other IRQ sources before and after the atomic step. Inputs visible before the step can
+enter the CPU immediately; transitions during the step become CPU inputs for the next
+boundary. The report distinguishes NMI-edge delivery from the resulting IRQ level.
 
 This bridge is intentionally partial. The interpreter does not expose all W65C816
 dummy reads/writes, internal-cycle positions or MLB state, so the remaining-cycle
@@ -366,6 +377,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-19: The H/V component and event scheduler share an explicit coordinator
   that rejects clock-domain divergence, advances H/V before same-timestamp callbacks
   and preserves alignment on event-budget exhaustion. CPU stepping remains atomic;
-  exact within-instruction boundaries and CPU interrupt-line delivery remain open.
+  exact within-instruction boundaries remain open.
+- 2026-10-19: CPU interrupt wiring uses a caller-owned source bitmask rather than
+  letting the H/V timer overwrite the CPU IRQ input. CPU-I/O NMI/IRQ state is sampled
+  at atomic CPU boundaries; exact within-instruction sampling and final subsystem tie
+  priorities remain open.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
