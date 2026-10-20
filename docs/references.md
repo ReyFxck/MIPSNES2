@@ -29,6 +29,8 @@ substitute for real PS2 or PSP evidence.
 - [SNESdev Wiki: CPU and hardware contents](https://snes.nesdev.org/wiki/SNESdev_Wiki) — navigation hub for Ricoh 5A22 differences, vectors, timing and development practice. Community-maintained; confirm edge cases with tests or stronger evidence.
 - [SNESdev Wiki: timing](https://snes.nesdev.org/wiki/Timing) — 5A22 master-clock conversion and 6/8/12-master-clock access classes. This complements rather than replaces WDC processor-cycle tables.
 - [SNESdev Wiki: version differences](https://snes.nesdev.org/wiki/Version_differences) — revision-specific S-CPU/PPU behavior that must be kept distinct from universal behavior.
+- [Nintendo SNES Development Manual, Book I](https://floating.muncher.se/bot/manual/book1_text.pdf) — manufacturer reference. Chapter 15 and internal pages 2-28-1 through 2-28-2 specify unsigned CPU multiplication/division, operands, results, divide-by-zero and approximate/exact 8/16-machine-cycle completion. Link only; do not commit a manual copy without verified redistribution rights.
+- [SNESdev Wiki: multiplication](https://snes.nesdev.org/wiki/Multiplication) and [division](https://snes.nesdev.org/wiki/Division) — community register/timing summaries and links to independent hardware tests. Busy-operation warnings remain research leads rather than verified MIPSNES2 behavior.
 
 ## SNES bus, cartridge and registers
 

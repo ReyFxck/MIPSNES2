@@ -168,12 +168,98 @@ static int test_hvbjoy_and_read_only_writes(void)
     return 0;
 }
 
+static int read_math(mipsnes2_cpu_io *io, uint16_t offset,
+                     uint8_t *value)
+{
+    return mipsnes2_cpu_io_read(io, offset, UINT8_C(0xa5), value) ? 0 : 1;
+}
+
+static int test_math_registers_and_cycle_boundaries(void)
+{
+    mipsnes2_cpu_io io;
+    mipsnes2_cpu_io before;
+    uint8_t value;
+
+    mipsnes2_cpu_io_init(&io, UINT8_C(2));
+    CHECK(!mipsnes2_cpu_io_math_busy(NULL));
+    mipsnes2_cpu_io_advance_math_cycles(NULL, UINT64_MAX);
+    CHECK(!mipsnes2_cpu_io_math_busy(&io));
+    CHECK(io.rddiv == 0U && io.rdmpy == 0U);
+
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4202), UINT8_C(0x2a)));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4203), UINT8_C(0x81)));
+    CHECK(io.wrmpya == UINT8_C(0x2a));
+    CHECK(io.wrmpyb == UINT8_C(0x81));
+    CHECK(io.math_operation == MIPSNES2_CPU_IO_MATH_MULTIPLY);
+    CHECK(io.math_cycles_remaining == UINT8_C(8));
+    CHECK(mipsnes2_cpu_io_math_busy(&io));
+    CHECK(read_math(&io, UINT16_C(0x4216), &value) == 0 && value == 0U);
+    mipsnes2_cpu_io_advance_math_cycles(&io, UINT64_C(7));
+    CHECK(io.math_cycles_remaining == UINT8_C(1));
+    CHECK(io.rddiv == 0U && io.rdmpy == 0U);
+    mipsnes2_cpu_io_advance_math_cycles(&io, 0U);
+    CHECK(io.math_cycles_remaining == UINT8_C(1));
+    mipsnes2_cpu_io_advance_math_cycles(&io, UINT64_C(1));
+    CHECK(!mipsnes2_cpu_io_math_busy(&io));
+    CHECK(io.math_operation == MIPSNES2_CPU_IO_MATH_IDLE);
+    CHECK(io.rddiv == UINT16_C(0x0081));
+    CHECK(io.rdmpy == UINT16_C(0x152a));
+    CHECK(read_math(&io, UINT16_C(0x4214), &value) == 0 &&
+          value == UINT8_C(0x81));
+    CHECK(read_math(&io, UINT16_C(0x4215), &value) == 0 && value == 0U);
+    CHECK(read_math(&io, UINT16_C(0x4216), &value) == 0 &&
+          value == UINT8_C(0x2a));
+    CHECK(read_math(&io, UINT16_C(0x4217), &value) == 0 &&
+          value == UINT8_C(0x15));
+
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4204), UINT8_C(0x34)));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4205), UINT8_C(0x12)));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4206), UINT8_C(0x11)));
+    CHECK(io.wrdiv == UINT16_C(0x1234));
+    CHECK(io.wrdivb == UINT8_C(0x11));
+    CHECK(io.math_operation == MIPSNES2_CPU_IO_MATH_DIVIDE);
+    CHECK(io.math_cycles_remaining == UINT8_C(16));
+    CHECK(io.rddiv == UINT16_C(0x0081) && io.rdmpy == UINT16_C(0x152a));
+    mipsnes2_cpu_io_advance_math_cycles(&io, UINT64_C(15));
+    CHECK(io.math_cycles_remaining == UINT8_C(1));
+    CHECK(io.rddiv == UINT16_C(0x0081) && io.rdmpy == UINT16_C(0x152a));
+    mipsnes2_cpu_io_advance_math_cycles(&io, UINT64_MAX);
+    CHECK(io.rddiv == UINT16_C(0x0112));
+    CHECK(io.rdmpy == UINT16_C(0x0002));
+
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4206), 0U));
+    mipsnes2_cpu_io_advance_math_cycles(&io, UINT64_C(16));
+    CHECK(io.rddiv == UINT16_MAX && io.rdmpy == UINT16_C(0x1234));
+
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4202), UINT8_C(9)));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4203), UINT8_C(9)));
+    mipsnes2_cpu_io_advance_math_cycles(&io, UINT64_C(3));
+    CHECK(io.math_cycles_remaining == UINT8_C(5));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4202), UINT8_C(4)));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4203), UINT8_C(5)));
+    CHECK(io.math_cycles_remaining == UINT8_C(8));
+    mipsnes2_cpu_io_advance_math_cycles(&io, UINT64_C(8));
+    CHECK(io.rddiv == UINT16_C(5) && io.rdmpy == UINT16_C(20));
+
+    before = io;
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4214), UINT8_C(0xaa)));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4215), UINT8_C(0xbb)));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4216), UINT8_C(0xcc)));
+    CHECK(mipsnes2_cpu_io_write(&io, UINT16_C(0x4217), UINT8_C(0xdd)));
+    CHECK(memcmp(&before, &io, sizeof(io)) == 0);
+    CHECK(mipsnes2_cpu_io_read(&io, UINT16_C(0x4202),
+                                UINT8_C(0x6c), &value));
+    CHECK(value == UINT8_C(0x6c));
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_initialization_and_timer_registers() == 0);
     CHECK(test_nmi_gate_and_acknowledgement() == 0);
     CHECK(test_irq_latch_and_acknowledgement() == 0);
     CHECK(test_hvbjoy_and_read_only_writes() == 0);
-    (void)puts("PASS: Ricoh 5A22 CPU-I/O register and interrupt-latch foundation");
+    CHECK(test_math_registers_and_cycle_boundaries() == 0);
+    (void)puts("PASS: Ricoh 5A22 CPU-I/O, math and interrupt-latch foundation");
     return 0;
 }

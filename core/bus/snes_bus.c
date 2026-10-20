@@ -253,6 +253,7 @@ uint8_t mipsnes2_snes_bus_read(mipsnes2_snes_bus *bus,
                     ? read_system_area(bus, address, offset)
                     : cartridge_read(bus, address);
     }
+    mipsnes2_cpu_io_advance_math_cycles(bus->cpu_io_state, UINT64_C(1));
     bus->open_value = value;
     return value;
 }
@@ -269,6 +270,7 @@ void mipsnes2_snes_bus_write(mipsnes2_snes_bus *bus,
     }
     address = mipsnes2_address24(address);
     account_access(bus, address);
+    mipsnes2_cpu_io_advance_math_cycles(bus->cpu_io_state, UINT64_C(1));
     if (wram_index(address, &index)) {
         bus->wram[index] = value;
     } else {
@@ -300,6 +302,8 @@ mipsnes2_snes_bus_result mipsnes2_snes_bus_account_internal_cycles(
     if (!add_master_clocks(bus, clocks)) {
         return MIPSNES2_SNES_BUS_TIMING_OVERFLOW;
     }
+    mipsnes2_cpu_io_advance_math_cycles(bus->cpu_io_state,
+                                        processor_cycles);
     return MIPSNES2_SNES_BUS_OK;
 }
 

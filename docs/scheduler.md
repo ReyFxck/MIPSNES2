@@ -144,6 +144,15 @@ The remainder is charged as 6-clock internal cycles before advancing the schedul
 Visible mismatches, counter regressions, overflow and scheduler-budget errors are
 reported. Reset bus accesses are not yet driven through this bridge.
 
+The CPU-I/O math unit uses the processor-cycle domain: each completed SNES CPU-bus
+access advances one cycle and the bridge advances the remaining aggregate internal
+cycles. It therefore does not change its 8/16-cycle latency with FastROM or slow-I/O
+master-clock classes. Result reads sample before advancing their access cycle and a
+trigger write begins only after an older operation has advanced through that write
+cycle. Exact internal-cycle positions are still unavailable, so result observation
+inside an instruction with earlier internal cycles remains outside the verified
+contract.
+
 The mapping expectations come from fullsnes' hardware-research sections **SNES Timing
 Oscillators** and **CPU Clock Cycles / SNES Memory Speed**, cross-checked against the
 WDC W65C816S cycle/bus tables. fullsnes identifies the SNES master clocks and the
@@ -182,6 +191,9 @@ sampling, NMI edge transfer, TIMEUP acknowledgement with cartridge IRQ retained 
 CPU input driving. The SNES-bus integration fixture covers timer assertion after an
 atomic step, external-source preservation/clear, NMI delivery and simultaneous
 NMI-plus-IRQ priority into the existing NMI vector path.
+CPU-I/O and SNES-bus fixtures additionally cover 8/16-cycle math completion,
+old-result boundaries, division by zero, bus/internal-cycle advancement and an
+executed STA/NOP/LDA multiply sequence.
 
 Future tests must add simultaneous PPU/IRQ/NMI/DMA cases, CPU pause/resume at actual
 bus cycles, interlaced frame boundaries, exact mid-instruction timer-register writes,
@@ -211,6 +223,9 @@ remain incomplete or unverified; document implementation evidence before promoti
 
 Sources:
 
+- [Nintendo SNES Development Manual, Book I](https://floating.muncher.se/bot/manual/book1_text.pdf),
+  chapter 15 and internal pages 2-28-1 through 2-28-2 for 8/16-machine-cycle
+  math-unit completion, inspected 2026-10-20;
 - [fullsnes hardware specification](https://problemkaputt.de/fullsnes.htm), sections
   `SNES Timing Oscillators`, `CPU Clock Cycles / SNES Memory Speed`, `SNES Timing H/V
   Counters` and `SNES Timing H/V Events`, inspected 2026-10-19;

@@ -7,8 +7,33 @@ enum {
     NMITIMEN_JOYPAD_ENABLE = 0x01,
     NMITIMEN_IRQ_MASK = 0x30,
     NMITIMEN_NMI_ENABLE = 0x80,
-    NMITIMEN_IMPLEMENTED_MASK = 0xb1
+    NMITIMEN_IMPLEMENTED_MASK = 0xb1,
+    MULTIPLY_CYCLES = 8,
+    DIVIDE_CYCLES = 16
 };
+
+static void start_multiply(mipsnes2_cpu_io *io, uint8_t multiplier)
+{
+    io->wrmpyb = multiplier;
+    io->pending_rddiv = multiplier;
+    io->pending_rdmpy = (uint16_t)((uint16_t)io->wrmpya * multiplier);
+    io->math_cycles_remaining = MULTIPLY_CYCLES;
+    io->math_operation = MIPSNES2_CPU_IO_MATH_MULTIPLY;
+}
+
+static void start_divide(mipsnes2_cpu_io *io, uint8_t divisor)
+{
+    io->wrdivb = divisor;
+    if (divisor == 0U) {
+        io->pending_rddiv = UINT16_MAX;
+        io->pending_rdmpy = io->wrdiv;
+    } else {
+        io->pending_rddiv = (uint16_t)(io->wrdiv / divisor);
+        io->pending_rdmpy = (uint16_t)(io->wrdiv % divisor);
+    }
+    io->math_cycles_remaining = DIVIDE_CYCLES;
+    io->math_operation = MIPSNES2_CPU_IO_MATH_DIVIDE;
+}
 
 static bool nmi_gate_active(const mipsnes2_cpu_io *io)
 {
@@ -47,6 +72,11 @@ bool mipsnes2_cpu_io_read(mipsnes2_cpu_io *io,
     }
     switch (offset) {
     case 0x4200:
+    case 0x4202:
+    case 0x4203:
+    case 0x4204:
+    case 0x4205:
+    case 0x4206:
     case 0x4207:
     case 0x4208:
     case 0x4209:
@@ -69,6 +99,18 @@ bool mipsnes2_cpu_io_read(mipsnes2_cpu_io *io,
                            (io->vblank ? UINT8_C(0x80) : 0U) |
                            (io->hblank ? UINT8_C(0x40) : 0U) |
                            (io->auto_joypad_busy ? UINT8_C(0x01) : 0U));
+        break;
+    case 0x4214:
+        result = (uint8_t)io->rddiv;
+        break;
+    case 0x4215:
+        result = (uint8_t)(io->rddiv >> 8);
+        break;
+    case 0x4216:
+        result = (uint8_t)io->rdmpy;
+        break;
+    case 0x4217:
+        result = (uint8_t)(io->rdmpy >> 8);
         break;
     default:
         return false;
@@ -95,6 +137,22 @@ bool mipsnes2_cpu_io_write(mipsnes2_cpu_io *io,
         }
         latch_nmi_rising_edge(io, nmi_was_active);
         return true;
+    case 0x4202:
+        io->wrmpya = value;
+        return true;
+    case 0x4203:
+        start_multiply(io, value);
+        return true;
+    case 0x4204:
+        io->wrdiv = (uint16_t)((io->wrdiv & UINT16_C(0xff00)) | value);
+        return true;
+    case 0x4205:
+        io->wrdiv = (uint16_t)((io->wrdiv & UINT16_C(0x00ff)) |
+                               ((uint16_t)value << 8));
+        return true;
+    case 0x4206:
+        start_divide(io, value);
+        return true;
     case 0x4207:
         io->htime = (uint16_t)((io->htime & UINT16_C(0x0100)) | value);
         return true;
@@ -112,6 +170,10 @@ bool mipsnes2_cpu_io_write(mipsnes2_cpu_io *io,
     case 0x4210:
     case 0x4211:
     case 0x4212:
+    case 0x4214:
+    case 0x4215:
+    case 0x4216:
+    case 0x4217:
         return true;
     default:
         return false;
@@ -178,6 +240,29 @@ bool mipsnes2_cpu_io_take_nmi_edge(mipsnes2_cpu_io *io)
 bool mipsnes2_cpu_io_irq_asserted(const mipsnes2_cpu_io *io)
 {
     return io != NULL && io->irq_flag;
+}
+
+void mipsnes2_cpu_io_advance_math_cycles(mipsnes2_cpu_io *io,
+                                         uint64_t processor_cycles)
+{
+    if (io == NULL || io->math_cycles_remaining == 0U ||
+        processor_cycles == 0U) {
+        return;
+    }
+    if (processor_cycles < io->math_cycles_remaining) {
+        io->math_cycles_remaining =
+            (uint8_t)(io->math_cycles_remaining - processor_cycles);
+        return;
+    }
+    io->rddiv = io->pending_rddiv;
+    io->rdmpy = io->pending_rdmpy;
+    io->math_cycles_remaining = 0U;
+    io->math_operation = MIPSNES2_CPU_IO_MATH_IDLE;
+}
+
+bool mipsnes2_cpu_io_math_busy(const mipsnes2_cpu_io *io)
+{
+    return io != NULL && io->math_cycles_remaining != 0U;
 }
 
 mipsnes2_cpu_io_irq_mode mipsnes2_cpu_io_irq_mode_get(

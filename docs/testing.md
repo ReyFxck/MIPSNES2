@@ -78,7 +78,9 @@ ports, MMIO callback ranges, cartridge fallthrough, `$420D`, FastROM timing,
 CPU-I/O state/fallback routing, 24-bit normalization and counter overflow. The
 CPU-I/O regression executable independently covers NMITIMEN masks and transitions,
 9-bit H/V compare storage, RDNMI/TIMEUP acknowledgement, HVBJOY inputs, open-bus bit
-composition, distinct VBlank/NMI-flag inputs and invalid/unimplemented accesses. The
+composition, distinct VBlank/NMI-flag inputs, multiplication/division registers,
+old-result visibility, exact 8/16-cycle completion, divide-by-zero and invalid/
+unimplemented accesses. The
 H/V regression executable covers non-interlaced NTSC/PAL scanline/frame totals,
 HBlank/VBlank boundaries, overscan, field toggling, the NTSC short line, delayed NMI
 assertion, every valid HTIME value, V/HV match positions, short/final-line exceptions,
@@ -94,7 +96,9 @@ The SNES-bus fixture additionally advances repeated NOPs through the H/V-aware b
 verifying clock lockstep and timer-latch assertion. Its interrupt-aware cases verify
 post-step timer delivery, TIMEUP acknowledgement without erasing cartridge IRQ,
 source deassertion, NMI delivery and simultaneous NMI/IRQ priority at the next atomic
-CPU boundary. These fixtures validate meaningful-access
+CPU boundary. They also verify CPU-bus/internal-cycle math progress, completion-read
+ordering, timing-overflow transactionality and an executed multiply sequence. These
+fixtures validate meaningful-access
 timing, not missing dummy cycles, mid-instruction pause/resume, WRAM refresh, complete
 SNES interrupt generation or complete cartridge mapping.
 The cartridge regression executable covers explicit base LoROM/HiROM and documented
@@ -219,6 +223,8 @@ Shared scheduler/H/V master-clock fanout evidence is recorded in
 [master-timing-fanout-audit.md](master-timing-fanout-audit.md).
 Atomic CPU-I/O interrupt handoff evidence is recorded in
 [interrupt-handoff-audit.md](interrupt-handoff-audit.md).
+Ricoh 5A22 multiplication/division register evidence is recorded in
+[5a22-math-register-audit.md](5a22-math-register-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in

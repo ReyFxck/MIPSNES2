@@ -71,8 +71,11 @@ verified. Opcode dispatch and the generic scheduler/event foundation are complet
 Meaningful CPU bus accesses now receive address-dependent Ricoh 5A22 timing through
 the partial SNES map. ABORT, signal-level RESET/bus behavior, exact dummy/internal
 bus sequencing, full CPU event-horizon integration and broader independent validation
-remain. The first caller-owned CPU-I/O register/latch component now covers the
-documented `$4200`, `$4207-$420A` and `$4210-$4212` foundation. A separate H/V
+remain. The first caller-owned CPU-I/O component now covers the documented
+interrupt/timer subset plus `$4202-$4206` multiplication/division inputs and
+`$4214-$4217` results. The math unit advances in processor cycles rather than SPU,
+host or master-clock output rates; exact busy-write collision behavior and
+mid-instruction internal-cycle placement remain under research. A separate H/V
 component advances deterministic non-interlaced NTSC/PAL master-clock state, blank
 transitions, the NTSC short line, delayed NMI flag and stable-register H/V timer
 matches. A shared master-clock coordinator now advances H/V state and scheduler
