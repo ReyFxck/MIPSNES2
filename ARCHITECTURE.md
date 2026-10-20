@@ -16,7 +16,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
-| core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches, mirrors, MMIO routes, FastROM state and per-access clocks |
+| core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
 | core/ppu | State/registers, rendering and timing, not presentation | Directory only |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
@@ -65,7 +65,15 @@ to 24 bits and adds the address-dependent master-clock count. Cartridge callback
 receive logical addresses; the base mapper now implements the supported subset below.
 
 The optional caller-owned `mipsnes2_cpu_io` state sits behind that CPU-I/O route. It
-implements NMITIMEN, the 9-bit H/V compare values, RDNMI, TIMEUP and HVBJOY. The
+implements NMITIMEN, the 9-bit H/V compare values, RDNMI, TIMEUP, HVBJOY and the
+unsigned 8x8 multiply/16-by-8 divide register set. Math triggers retain old visible
+results until an 8- or 16-processor-cycle countdown completes; divide-by-zero yields
+`FFFF` plus the dividend remainder. CPU-bus reads clock the unit after sampling and
+writes clock it before latching the new value, so the trigger write itself is not
+counted as elapsed work. Aggregate internal cycles are advanced at the instruction
+boundary. Busy-time retriggering currently deterministically replaces the pending
+job, but that is an explicit unverified approximation rather than a hardware claim.
+The
 separate caller-owned H/V component supplies non-interlaced NTSC/PAL blank, NMI-flag
 and stable-register H/V timer-match transitions. VBlank status and the RDNMI flag are
 distinct inputs because the flag begins two master clocks after VBlank. CPU-I/O
@@ -229,6 +237,9 @@ Events timestamped inside an instruction retain their scheduled timestamp but ar
 dispatched after the atomic CPU step; they can affect the following CPU boundary,
 not pause the active instruction. WRAM refresh stalls, DMA/HDMA arbitration,
 complete mapping and simultaneous-subsystem priority remain future work.
+The same unresolved per-cycle placement limits exact math-unit observation for
+instructions whose internal cycles occur before a result-register access; ordinary
+bus cycles and aggregate NOP/internal waits are deterministic and tested.
 
 `mipsnes2_hv_timing` owns a deterministic non-interlaced beam phase in SNES master
 clocks. It covers 262-line NTSC and 312-line PAL frames, 224/239-line VBlank starts,
@@ -382,5 +393,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   letting the H/V timer overwrite the CPU IRQ input. CPU-I/O NMI/IRQ state is sampled
   at atomic CPU boundaries; exact within-instruction sampling and final subsystem tie
   priorities remain open.
+- 2026-10-20: The CPU-I/O math unit uses explicit processor-cycle countdowns, not
+  master-clock or platform-audio time. Reads sample before advancing their bus cycle;
+  writes advance an existing job before latching a new trigger. Busy retriggering is
+  deterministic but remains an acknowledged approximation pending hardware evidence.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

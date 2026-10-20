@@ -346,6 +346,60 @@ static int test_cpu_io_state_routing(void)
     return 0;
 }
 
+static int test_cpu_io_math_bus_cycles(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_snes_bus_config config = base_config();
+    mipsnes2_cpu_io cpu_io;
+    unsigned cycle;
+
+    (void)memset(wram, 0, sizeof(wram));
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    config.cpu_io_state = &cpu_io;
+    CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_OK);
+
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004202), UINT8_C(6));
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x804203), UINT8_C(7));
+    CHECK(cpu_io.math_cycles_remaining == UINT8_C(8));
+    for (cycle = 0U; cycle < 7U; ++cycle) {
+        (void)mipsnes2_snes_bus_read(&bus, UINT32_C(0x7e0000));
+    }
+    CHECK(cpu_io.math_cycles_remaining == UINT8_C(1));
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x004216)) == 0U);
+    CHECK(!mipsnes2_cpu_io_math_busy(&cpu_io));
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x804216)) ==
+          UINT8_C(42));
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x004217)) == 0U);
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x004214)) ==
+          UINT8_C(7));
+
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004204), UINT8_C(0x34));
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004205), UINT8_C(0x12));
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004206), UINT8_C(0x11));
+    CHECK(cpu_io.math_cycles_remaining == UINT8_C(16));
+    CHECK(mipsnes2_snes_bus_account_internal_cycles(
+              &bus, UINT64_C(15)) == MIPSNES2_SNES_BUS_OK);
+    CHECK(cpu_io.math_cycles_remaining == UINT8_C(1));
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x004214)) ==
+          UINT8_C(7));
+    CHECK(!mipsnes2_cpu_io_math_busy(&cpu_io));
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x004214)) ==
+          UINT8_C(0x12));
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x004215)) ==
+          UINT8_C(0x01));
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x004216)) ==
+          UINT8_C(0x02));
+
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004206), 0U);
+    CHECK(cpu_io.math_cycles_remaining == UINT8_C(16));
+    bus.master_clocks = UINT64_MAX - UINT64_C(5);
+    CHECK(mipsnes2_snes_bus_account_internal_cycles(
+              &bus, UINT64_C(1)) ==
+          MIPSNES2_SNES_BUS_TIMING_OVERFLOW);
+    CHECK(cpu_io.math_cycles_remaining == UINT8_C(16));
+    return 0;
+}
+
 static void pulse_nmi(void *opaque,
                       mipsnes2_master_clock timestamp,
                       mipsnes2_scheduler_token token)
@@ -457,6 +511,57 @@ static int test_timed_cpu_steps(void)
           MIPSNES2_CPU_TIMING_INVALID_ARGUMENT);
     CHECK(mipsnes2_cpu_timed_step(&cpu, &bus, &scheduler, 8U, NULL) ==
           MIPSNES2_CPU_TIMING_INVALID_ARGUMENT);
+    return 0;
+}
+
+static int test_timed_cpu_math_progress(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_io cpu_io;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_cpu_timing_report report;
+    unsigned step;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(initialize_cpu_bus_with_io(&bus, &cpu, &cpu_io) == 0);
+    mipsnes2_scheduler_init(&scheduler);
+    cartridge.bank00[0x8000] = UINT8_C(0xa9); /* LDA #$06 */
+    cartridge.bank00[0x8001] = UINT8_C(0x06);
+    cartridge.bank00[0x8002] = UINT8_C(0x8d); /* STA $4202 */
+    cartridge.bank00[0x8003] = UINT8_C(0x02);
+    cartridge.bank00[0x8004] = UINT8_C(0x42);
+    cartridge.bank00[0x8005] = UINT8_C(0xa9); /* LDA #$07 */
+    cartridge.bank00[0x8006] = UINT8_C(0x07);
+    cartridge.bank00[0x8007] = UINT8_C(0x8d); /* STA $4203 */
+    cartridge.bank00[0x8008] = UINT8_C(0x03);
+    cartridge.bank00[0x8009] = UINT8_C(0x42);
+    for (step = 0U; step < 4U; ++step) {
+        cartridge.bank00[0x800aU + step] = UINT8_C(0xea);
+    }
+    cartridge.bank00[0x800e] = UINT8_C(0xad); /* LDA $4216 */
+    cartridge.bank00[0x800f] = UINT8_C(0x16);
+    cartridge.bank00[0x8010] = UINT8_C(0x42);
+
+    for (step = 0U; step < 4U; ++step) {
+        CHECK(mipsnes2_cpu_timed_step(
+                  &cpu, &bus, &scheduler, 8U, &report) ==
+              MIPSNES2_CPU_TIMING_OK);
+    }
+    CHECK(cpu_io.math_cycles_remaining == UINT8_C(8));
+    for (step = 0U; step < 4U; ++step) {
+        CHECK(mipsnes2_cpu_timed_step(
+                  &cpu, &bus, &scheduler, 8U, &report) ==
+              MIPSNES2_CPU_TIMING_OK);
+        CHECK(report.processor_cycles == UINT64_C(2));
+        CHECK(cpu_io.math_cycles_remaining == (uint8_t)(6U - step * 2U));
+    }
+    CHECK(!mipsnes2_cpu_io_math_busy(&cpu_io));
+    CHECK(mipsnes2_cpu_timed_step(
+              &cpu, &bus, &scheduler, 8U, &report) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK((uint8_t)cpu.a == UINT8_C(42));
+    CHECK(cpu.pc == UINT16_C(0x8011));
     return 0;
 }
 
@@ -616,7 +721,9 @@ int main(void)
     CHECK(test_wram_port_and_fastrom_timing() == 0);
     CHECK(test_mmio_and_cartridge_routing() == 0);
     CHECK(test_cpu_io_state_routing() == 0);
+    CHECK(test_cpu_io_math_bus_cycles() == 0);
     CHECK(test_timed_cpu_steps() == 0);
+    CHECK(test_timed_cpu_math_progress() == 0);
     CHECK(test_timed_cpu_hv_steps() == 0);
     CHECK(test_timed_cpu_interrupt_handoff() == 0);
     (void)puts("PASS: SNES bus and timed CPU/H-V/interrupt foundation");

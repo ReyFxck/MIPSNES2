@@ -583,6 +583,22 @@ PS2/PSP cross-build, artifact and checksum jobs passed for implementation commit
 `9ed34802ca8d436f70f0f9d8b96563184f65d3ab`. Exact scope and run IDs are in
 docs/interrupt-handoff-audit.md. No console runtime or hardware result is claimed.
 
+The Ricoh 5A22 math-register milestone on 2026-10-20 adds caller-owned `$4202-$4206`
+operands/triggers and `$4214-$4217` result state. Unsigned multiply and divide commit
+atomically after explicit 8- and 16-processor-cycle countdowns; division by zero
+returns quotient `FFFF` and the dividend as remainder. The partial SNES bus advances
+one math cycle per completed CPU bus cycle and advances aggregate internal cycles at
+the existing atomic instruction boundary. Deterministic host tests cover old-result
+visibility, exact completion boundaries, write-only/open-bus and read-only behavior,
+division by zero, timing-overflow transactionality and an executed STA/NOP/LDA path.
+Busy retrigger behavior and exact placement of currently aggregated internal cycles
+remain unverified, so the broad task stays in progress. Local GCC default verification
+plus release and ASan+UBSan verification pass; local LeakSanitizer is blocked by the
+managed runtime's `/proc` restriction. GitHub Host GCC/Clang plus pinned PS2/PSP
+cross-build, artifact and checksum jobs passed for implementation commit
+`80ef8bd12755eff1ada6d442b0696d94966d8888`. Exact workflow evidence is recorded in
+docs/5a22-math-register-audit.md. No console runtime or hardware result is claimed.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -1052,13 +1068,13 @@ platform persistence remains incomplete.
 
 ## Interrupts and timers
 
-- [ ] [IN PROGRESS] CPU I/O registers — `$4200`, `$4207-$420A` and `$4210-$4212` subset implemented
+- [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer subset plus `$4202-$4206` and `$4214-$4217` math subset implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL master-clock phase, blanking and NTSC short line verified; interlace/dot latches absent
 - [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling incomplete
 - [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch, non-interlaced VBlank timing and atomic CPU delivery exist; exact within-instruction sampling incomplete
 - [ ] [IN PROGRESS] Interrupt acknowledgement — base RDNMI/TIMEUP reads exist; match-window/external IRQ cases absent
 - [ ] [IN PROGRESS] Interrupt ordering — CPU NMI-over-IRQ priority and source aggregation verified; simultaneous subsystem timing pending
-- [ ] CPU math register timing
+- [ ] [IN PROGRESS] CPU math register timing — 8/16-cycle completion and result semantics verified; busy collisions and exact internal-cycle placement pending
 - [ ] Automatic joypad polling timing
 - [ ] SPC700 timer coordination
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing and atomic CPU input delivery fixtures exist; exact cycle-boundary cases pending
@@ -1070,6 +1086,11 @@ platform persistence remains incomplete.
 - [x] RDNMI/TIMEUP/HVBJOY read composition and side effects
 - [x] NMI gated-edge and timer-IRQ latch handoff
 - [x] Partial SNES-bus CPU-I/O state routing
+- [x] Unsigned 8-bit multiply with 8-processor-cycle completion
+- [x] Unsigned 16-by-8 divide with 16-processor-cycle completion
+- [x] Divide-by-zero quotient/remainder behavior
+- [x] Math-result read boundary and CPU-bus cycle integration
+- [ ] Busy-operation collision/retrigger hardware behavior
 
 ### Verified H/V foundation subset
 
@@ -1265,7 +1286,7 @@ platform persistence remains incomplete.
 - [ ] PPU logic fixtures
 - [ ] SPC700 fixtures
 - [ ] DSP sample fixtures
-- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes, shared H/V fanout, IRQ-source aggregation and timed CPU boundaries
+- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes/math cycles, shared H/V fanout, IRQ-source aggregation and timed CPU boundaries
 - [ ] DMA/HDMA fixtures
 - [ ] Licensed test-ROM runner
 - [ ] Deterministic replay harness
