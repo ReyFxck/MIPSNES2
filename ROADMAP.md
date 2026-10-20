@@ -136,14 +136,14 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
 - [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio, H/V chunking and short common-domain runs verified; regional soak tests pending
-- [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer and math-register subsets implemented
+- [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math and automatic-joypad subsets implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL phase and blank/NMI boundaries verified; interlace/dot latches pending
 - [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling pending
 - [ ] [IN PROGRESS] NMI edge and enable behavior — non-interlaced VBlank/NMI timing and atomic CPU delivery exist; exact sampling pending
 - [ ] [IN PROGRESS] Interrupt acknowledgement — RDNMI/TIMEUP base side effects exist; match-window/external IRQ cases absent
 - [ ] [IN PROGRESS] Interrupt ordering — CPU NMI-over-IRQ priority and independent IRQ-source aggregation verified; subsystem ties pending
 - [ ] [IN PROGRESS] CPU math register timing — 8/16 processor-cycle completion and result semantics verified; busy collisions and exact internal-cycle placement pending
-- [ ] Automatic joypad polling timing
+- [ ] [IN PROGRESS] Automatic joypad polling timing — deterministic 4224-clock foundation exists; variable hardware phase, partial busy reads and serial protocol pending
 - [ ] SPC700 timer coordination
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing and atomic CPU input delivery host tests exist; exact-cycle cases pending
 - [x] 5A22 CPU-I/O register/latch foundation

@@ -14,7 +14,9 @@ enum {
     MIPSNES2_HV_PAL_SCANLINES = 312,
     MIPSNES2_HV_HBLANK_END_CLOCK = 4,
     MIPSNES2_HV_NMI_FLAG_CLOCK = 2,
-    MIPSNES2_HV_HBLANK_START_CLOCK = 1096
+    MIPSNES2_HV_HBLANK_START_CLOCK = 1096,
+    MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK = 298,
+    MIPSNES2_HV_AUTO_JOYPAD_DURATION_CLOCKS = 4224
 };
 
 typedef enum {
@@ -33,10 +35,12 @@ typedef struct {
     uint64_t frame_count;
     uint16_t h_master_clock;
     uint16_t v_counter;
+    uint16_t auto_joypad_clocks_remaining;
     mipsnes2_hv_standard standard;
     bool overscan;
     bool field;
     bool timer_event_consumed;
+    bool auto_joypad_start_consumed;
     bool initialized;
 } mipsnes2_hv_timing;
 

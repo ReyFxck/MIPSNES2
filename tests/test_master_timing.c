@@ -271,6 +271,45 @@ static int test_chunked_determinism(void)
     return 0;
 }
 
+static int test_auto_joypad_master_clock_boundaries(void)
+{
+    mipsnes2_scheduler scheduler;
+    mipsnes2_hv_timing hv_timing;
+    mipsnes2_cpu_io cpu_io;
+    mipsnes2_master_timing_report report;
+    const uint64_t start =
+        UINT64_C(225) * MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS +
+        MIPSNES2_HV_AUTO_JOYPAD_START_CLOCK;
+
+    CHECK(initialize_domain(&scheduler, &hv_timing, &cpu_io) == 0);
+    CHECK(mipsnes2_cpu_io_set_joypad_input(
+        &cpu_io, 0U, UINT16_C(0x8040)));
+    CHECK(mipsnes2_cpu_io_write(&cpu_io, UINT16_C(0x4200), UINT8_C(1)));
+    CHECK(mipsnes2_master_timing_run_until(
+              &scheduler, &hv_timing, &cpu_io, start - 1U, 0U,
+              &report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(!cpu_io.auto_joypad_busy);
+    CHECK(mipsnes2_master_timing_run_until(
+              &scheduler, &hv_timing, &cpu_io, start, 0U,
+              &report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(cpu_io.auto_joypad_busy);
+    CHECK(hv_timing.auto_joypad_clocks_remaining ==
+          MIPSNES2_HV_AUTO_JOYPAD_DURATION_CLOCKS);
+    CHECK(mipsnes2_master_timing_run_until(
+              &scheduler, &hv_timing, &cpu_io,
+              start + MIPSNES2_HV_AUTO_JOYPAD_DURATION_CLOCKS - 1U,
+              0U, &report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(cpu_io.auto_joypad_busy);
+    CHECK(mipsnes2_master_timing_run_until(
+              &scheduler, &hv_timing, &cpu_io,
+              start + MIPSNES2_HV_AUTO_JOYPAD_DURATION_CLOCKS,
+              0U, &report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(!cpu_io.auto_joypad_busy);
+    CHECK(cpu_io.joypad_result[0] == UINT16_C(0x8040));
+    CHECK(scheduler.now == hv_timing.elapsed_master_clocks);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_validation_and_plain_advance() == 0);
@@ -278,6 +317,7 @@ int main(void)
     CHECK(test_event_budget_and_same_time_insertion() == 0);
     CHECK(test_failures_do_not_desynchronize_valid_domain() == 0);
     CHECK(test_chunked_determinism() == 0);
-    (void)puts("PASS: shared scheduler/H-V master-clock domain");
+    CHECK(test_auto_joypad_master_clock_boundaries() == 0);
+    (void)puts("PASS: shared scheduler/H-V/auto-joypad master-clock domain");
     return 0;
 }

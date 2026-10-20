@@ -24,7 +24,10 @@ register H/V timer-match evidence is in
 scheduler/H/V advancement evidence is in
 [docs/master-timing-fanout-audit.md](docs/master-timing-fanout-audit.md), and atomic
 CPU-I/O interrupt handoff evidence is in
-[docs/interrupt-handoff-audit.md](docs/interrupt-handoff-audit.md).
+[docs/interrupt-handoff-audit.md](docs/interrupt-handoff-audit.md). Ricoh 5A22 math
+and automatic-controller evidence is in
+[docs/5a22-math-register-audit.md](docs/5a22-math-register-audit.md) and
+[docs/auto-joypad-audit.md](docs/auto-joypad-audit.md).
 
 ## State and evidence rules
 
@@ -599,6 +602,23 @@ cross-build, artifact and checksum jobs passed for implementation commit
 `80ef8bd12755eff1ada6d442b0696d94966d8888`. Exact workflow evidence is recorded in
 docs/5a22-math-register-audit.md. No console runtime or hardware result is claimed.
 
+The automatic-joypad foundation on 2026-10-20 adds four caller-owned logical
+controller inputs, snapshots them at a deterministic read start, keeps the previous
+results visible while busy and commits `$4218-$421F` atomically after 4224 SNES
+master clocks. The H/V component starts the operation at H=298 on the first VBlank
+line for normal and overscan modes, and the shared master-clock coordinator preserves
+those boundaries. Host tests cover disabled/late enable, disable while busy, four
+result words, read-only writes, snapshot isolation, exact start/completion, regional
+chunking and SNES-bus mirrors. Hardware research reports a phase that varies within
+a window, and actual busy-time result bits are unreliable; the fixed start and
+old-result visibility are documented deterministic approximations. Serial
+`$4016/$4017`, peripheral protocols and real-console validation remain incomplete.
+Local GCC default, release and ASan+UBSan verification pass; LeakSanitizer requires
+disabling locally because the managed runtime blocks `/proc` task inspection. Local
+Clang, PS2SDK and PSPSDK are unavailable; GitHub CI evidence is pending. Exact scope
+is in docs/auto-joypad-audit.md. No console runtime,
+compatibility or performance result is claimed.
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -1068,14 +1088,14 @@ platform persistence remains incomplete.
 
 ## Interrupts and timers
 
-- [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer subset plus `$4202-$4206` and `$4214-$4217` math subset implemented
+- [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math and `$4218-$421F` automatic-joypad subsets implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL master-clock phase, blanking and NTSC short line verified; interlace/dot latches absent
 - [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling incomplete
 - [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch, non-interlaced VBlank timing and atomic CPU delivery exist; exact within-instruction sampling incomplete
 - [ ] [IN PROGRESS] Interrupt acknowledgement — base RDNMI/TIMEUP reads exist; match-window/external IRQ cases absent
 - [ ] [IN PROGRESS] Interrupt ordering — CPU NMI-over-IRQ priority and source aggregation verified; simultaneous subsystem timing pending
 - [ ] [IN PROGRESS] CPU math register timing — 8/16-cycle completion and result semantics verified; busy collisions and exact internal-cycle placement pending
-- [ ] Automatic joypad polling timing
+- [ ] [IN PROGRESS] Automatic joypad polling timing — 4224-clock window and result commit verified with a fixed deterministic start; hardware phase variation, busy-time partial data and serial ports pending
 - [ ] SPC700 timer coordination
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing and atomic CPU input delivery fixtures exist; exact cycle-boundary cases pending
 
@@ -1090,6 +1110,8 @@ platform persistence remains incomplete.
 - [x] Unsigned 16-by-8 divide with 16-processor-cycle completion
 - [x] Divide-by-zero quotient/remainder behavior
 - [x] Math-result read boundary and CPU-bus cycle integration
+- [x] Four logical controller snapshots and `$4218-$421F` result registers
+- [x] VBlank auto-joypad busy window and atomic completion
 - [ ] Busy-operation collision/retrigger hardware behavior
 
 ### Verified H/V foundation subset
@@ -1286,7 +1308,7 @@ platform persistence remains incomplete.
 - [ ] PPU logic fixtures
 - [ ] SPC700 fixtures
 - [ ] DSP sample fixtures
-- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes/math cycles, shared H/V fanout, IRQ-source aggregation and timed CPU boundaries
+- [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes/math and joypad timing, shared H/V fanout, IRQ-source aggregation and timed CPU boundaries
 - [ ] DMA/HDMA fixtures
 - [ ] Licensed test-ROM runner
 - [ ] Deterministic replay harness

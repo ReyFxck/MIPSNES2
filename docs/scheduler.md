@@ -22,6 +22,7 @@ Implemented and host-verified behavior:
 - a caller-owned non-interlaced NTSC/PAL H/V master-clock component;
 - deterministic HBlank/VBlank, field, NTSC short-line and delayed NMI transitions;
 - stable-register H/V/HV timer-match generation into the CPU-I/O TIMEUP latch;
+- VBlank automatic-joypad start, busy countdown and atomic result completion;
 - coordinated H/V and scheduler advancement in one checked master-clock domain;
 - deterministic H/V-before-callback ordering at equal timestamps;
 - independent timer/cartridge/expansion IRQ-source aggregation;
@@ -61,10 +62,14 @@ The API advances only from explicit master-clock deltas and gives identical stat
 one-shot and chunked input. Interlace, PAL's interlaced long line, normal-line long-
 dot positions, PPU counter latching, dynamic SETINI, exact within-instruction timer
 register writes, repeated reprogrammed matches in one scanline, TIMEUP's narrow
-read-at-match exception and joypad poll timing remain absent. See
+read-at-match exception remain absent. Automatic joypad polling currently begins at
+the deterministic H=298 point on the first VBlank line and completes 4224 master
+clocks later. Real hardware varies the start phase within a measured window, so the
+fixed phase is not claimed as final hardware behavior. See
 [H/V timing audit](hv-timing-foundation-audit.md),
 [H/V timer IRQ audit](hv-irq-foundation-audit.md) and
-[master-timing fanout audit](master-timing-fanout-audit.md).
+[master-timing fanout audit](master-timing-fanout-audit.md), plus the
+[automatic joypad audit](auto-joypad-audit.md).
 
 ## Shared master-clock domain
 
@@ -180,9 +185,12 @@ instruction, NMI-entry elapsed clocks and timing-bridge error paths.
 HBlank/VBlank boundaries, delayed NMI assertion, overscan, field/short-line behavior,
 overflow handling, every valid HTIME value, V/HV match positions, short/final-line
 exceptions, out-of-range compares and one-shot/chunked determinism with IRQ enabled.
+It also covers exact automatic-joypad start/completion boundaries, normal/overscan
+VBlank selection, late enable, disable while busy, snapshots and chunk equivalence.
 `tests/test_master_timing.c` covers domain validation, plain and chunked advancement,
 H/V-before-callback observation at an equal timestamp, event-budget exhaustion,
-same-time insertion, reentrant-run rejection and failure-state alignment. The SNES-
+same-time insertion, reentrant-run rejection, failure-state alignment and exact
+automatic-joypad boundaries. The SNES-
 bus fixture also drives repeated NOPs through the H/V-aware CPU bridge and verifies
 clock lockstep and timer-latch assertion without pretending that the CPU IRQ line is
 connected automatically.
@@ -193,7 +201,8 @@ atomic step, external-source preservation/clear, NMI delivery and simultaneous
 NMI-plus-IRQ priority into the existing NMI vector path.
 CPU-I/O and SNES-bus fixtures additionally cover 8/16-cycle math completion,
 old-result boundaries, division by zero, bus/internal-cycle advancement and an
-executed STA/NOP/LDA multiply sequence.
+executed STA/NOP/LDA multiply sequence. They cover the four automatic-joypad result
+words, read-only behavior, snapshot isolation and mirrored SNES-bus reads.
 
 Future tests must add simultaneous PPU/IRQ/NMI/DMA cases, CPU pause/resume at actual
 bus cycles, interlaced frame boundaries, exact mid-instruction timer-register writes,
@@ -217,6 +226,7 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [x] Determinism tests — scheduler foundation replay
 - [x] Shared CPU/scheduler/H/V domain — atomic fanout and failure alignment verified
 - [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
+- [x] Deterministic automatic-joypad foundation — fixed VBlank start, 4224-clock busy window and atomic results verified
 - [ ] [IN PROGRESS] Long-run clock drift tests — ratio, H/V chunking and short shared-domain runs verified; regional soak tests pending
 
 ## Research and decisions

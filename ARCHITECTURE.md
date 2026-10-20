@@ -66,7 +66,10 @@ receive logical addresses; the base mapper now implements the supported subset b
 
 The optional caller-owned `mipsnes2_cpu_io` state sits behind that CPU-I/O route. It
 implements NMITIMEN, the 9-bit H/V compare values, RDNMI, TIMEUP, HVBJOY and the
-unsigned 8x8 multiply/16-by-8 divide register set. Math triggers retain old visible
+unsigned 8x8 multiply/16-by-8 divide register set. It accepts four caller-owned
+logical 16-bit controller inputs and exposes completed automatic reads through
+`$4218-$421F`; input sampling remains outside the core and no platform controller API
+crosses this boundary. Math triggers retain old visible
 results until an 8- or 16-processor-cycle countdown completes; divide-by-zero yields
 `FFFF` plus the dividend remainder. CPU-bus reads clock the unit after sampling and
 writes clock it before latching the new value, so the trigger write itself is not
@@ -80,7 +83,11 @@ distinct inputs because the flag begins two master clocks after VBlank. CPU-I/O
 exports a latched NMI edge and timer-IRQ level without depending on host or platform
 APIs. The H/V component does not yet model exact mid-instruction timer-register
 writes, repeated reprogrammed matches in one scanline or the narrow read-at-match
-TIMEUP exception. CPU-I/O does not poll joypads or combine cartridge IRQs.
+TIMEUP exception. Automatic joypad polling uses a deterministic H=298 start on the
+first VBlank line and a 4224-master-clock busy period. The duration and atomic result
+commit are evidence-backed; the hardware's varying start phase and busy-time partial
+register contents remain deliberately approximated. CPU-I/O does not implement the
+serial `$4016/$4017` controller protocol or combine cartridge IRQs.
 
 `mipsnes2_interrupt_lines` is the machine-wiring layer between independent IRQ/NMI
 producers and the single CPU input pair. Its bitmask keeps internal timer, cartridge
