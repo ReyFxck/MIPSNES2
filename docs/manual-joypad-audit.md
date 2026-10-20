@@ -59,8 +59,20 @@ Local verification before publication:
 - `python3 tools/check_repository.py` — passed.
 
 Local Clang, PS2SDK and PSPSDK are unavailable. GitHub CI is therefore the Clang and
-console cross-build gate; its results will be recorded only after the workflows
-finish.
+console cross-build gate.
+
+GitHub Actions passed for implementation commit
+`fb25e877b3e5a6b1df527c486bac9aa1bed2c98d`:
+
+- Host CI run `39510314845` — GCC and Clang release builds, full sanitizer suites
+  and host artifact uploads passed;
+- PS2 CI run `39510314808` — pinned toolchain installation, scaffold cross-build,
+  development artifact and SHA-256 staging/upload passed;
+- PSP CI run `39510315037` — pinned toolchain installation, scaffold cross-build,
+  development artifact and SHA-256 staging/upload passed.
+
+All returned jobs and individual workflow steps were inspected. These are build
+results, not emulator execution or real-console validation.
 
 ## Explicitly incomplete
 
