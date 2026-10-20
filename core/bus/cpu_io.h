@@ -40,6 +40,8 @@ typedef struct {
     uint8_t wrmpya;
     uint8_t wrmpyb;
     uint8_t wrdivb;
+    uint8_t wrio;
+    uint8_t io_port_input;
     uint8_t math_cycles_remaining;
     uint8_t manual_joypad_index[MIPSNES2_CPU_IO_JOYPAD_PORT_COUNT];
     uint8_t joypad_output;
@@ -52,6 +54,7 @@ typedef struct {
     bool hblank;
     bool auto_joypad_busy;
     bool nmi_edge_pending;
+    bool hv_latch_edge_pending;
     bool joypad_strobe;
 } mipsnes2_cpu_io;
 
@@ -68,6 +71,9 @@ void mipsnes2_cpu_io_set_hblank(mipsnes2_cpu_io *io, bool active);
 void mipsnes2_cpu_io_signal_nmi_flag(mipsnes2_cpu_io *io);
 void mipsnes2_cpu_io_signal_timer_irq(mipsnes2_cpu_io *io);
 bool mipsnes2_cpu_io_take_nmi_edge(mipsnes2_cpu_io *io);
+bool mipsnes2_cpu_io_set_io_port_input(mipsnes2_cpu_io *io,
+                                       uint8_t value);
+bool mipsnes2_cpu_io_take_hv_latch_edge(mipsnes2_cpu_io *io);
 bool mipsnes2_cpu_io_irq_asserted(const mipsnes2_cpu_io *io);
 void mipsnes2_cpu_io_advance_math_cycles(mipsnes2_cpu_io *io,
                                          uint64_t processor_cycles);

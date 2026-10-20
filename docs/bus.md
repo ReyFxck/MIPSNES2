@@ -45,8 +45,9 @@ holes inside the B-bus/internal-I/O windows use the current deterministic open l
 instead of falling through to cartridge space. A cartridge read can explicitly
 decline an address, preserving that latch. PPU, APU and DMA callbacks remain routes
 only. The optional caller-owned CPU-I/O state implements manual controller ports
-`$4016/$4017`, `$4200`, `$4202-$420A`, `$4210-$4212` and `$4214-$421F`;
-unimplemented CPU-I/O addresses continue through the fallback route.
+`$4016/$4017`, `$4200-$420A` and `$4210-$421F`. `$420B/$420C` remain on the DMA
+route/fallback, while the bus itself owns `$420D`; other unimplemented CPU-I/O
+addresses continue through the fallback route.
 
 NMITIMEN stores only the documented NMI, H/V IRQ-mode and automatic-joypad-enable
 bits. The compare registers retain nine bits. The non-interlaced H/V timing component
@@ -89,6 +90,13 @@ documented fixed high return. Output bits 1-2 are retained but not yet connected
 peripheral. Manual and automatic snapshots are deterministic independent mechanisms;
 their physical contention is not yet claimed. Multitap, mouse, Super Scope and other
 nonstandard peripheral protocols remain absent.
+
+`$4201` stores the eight programmable output levels and initializes to `FF`; `$4213`
+returns those levels wired-AND with a caller-owned external input value that also
+defaults high. This models the open-collector rule without embedding a peripheral.
+A combined bit-7 high-to-low transition produces a consumable H/V-latch request.
+Actual PPU counter capture, `$2137/$213C/$213D/$213F` behavior and device routing are
+not implemented, and reset versus power-on retention still needs machine-level work.
 
 Every SNES-bus read/write updates access counters and charges the 5A22 6/8/12-master-
 clock class selected by its normalized address and current FastROM state. This is
