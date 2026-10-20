@@ -100,7 +100,7 @@ Every suite runs all 14 C test executables, the host smoke script and repository
 checker. ASan and UBSan remain active; leak detection alone is disabled for the
 documented managed-runtime `/proc` restriction. Local Clang is unavailable.
 `make -C platform/ps2` exits 2 (PS2SDK unset); `make -C platform/psp` exits 2
-(`psp-config` absent). GitHub cross-build verification remains a pre-merge gate.
+(`psp-config` absent). The GitHub cross-build gate passed as recorded below.
 No real SNES, PS2, PSP, PCSX2 or PPSSPP validation has been performed. There are no
 performance or compatibility measurements. `PERFORMANCE.md` and `COMPATIBILITY.md`
 remain unchanged.
@@ -116,6 +116,28 @@ names/signatures; those calls were corrected. A later incremental run encountere
 an old `build/host/test-master-timing` file without execute permission. A fresh
 build directory compiled every executable and passed all tests; no permission
 override or test exclusion was used.
+
+GitHub Actions passed for implementation head
+`acc96f8420e3e998d21a7170468df8c7347d244f` in
+[PR #46](https://github.com/ReyFxck/MIPSNES2/pull/46):
+
+- [Host CI 39514869076](https://github.com/ReyFxck/MIPSNES2/actions/runs/39514869076)
+  — GCC and Clang release/sanitizer suites, artifact/checksum staging and upload;
+- [PS2 CI 39514868998](https://github.com/ReyFxck/MIPSNES2/actions/runs/39514868998)
+  — pinned toolchain, scaffold cross-build, artifact/checksum staging and upload;
+- [PSP CI 39514868882](https://github.com/ReyFxck/MIPSNES2/actions/runs/39514868882)
+  — pinned toolchain, scaffold cross-build, artifact/checksum staging and upload.
+
+Every returned job and step was inspected and succeeded. These PR runs tested
+GitHub's synthetic merge `7c0c081dfff5683c6f9a0710e6fbb01e9da86807`.
+All four artifact listings had nonzero sizes, SHA-256 digests and unexpired state;
+archive contents were not downloaded. Local and uploaded implementation Git tree
+hashes matched exactly: `ca41c4aa7a0484ff1cae88120978c6bdaf7c42bc`.
+An evidence-only documentation follow-up still requires its own final CI gate before
+merge; its run links belong in the PR record to avoid self-referential commits.
+
+Branch cleanup remains blocked: the connected GitHub plugin exposes no branch/ref
+deletion operation. No alternative remote method was used and no branch was deleted.
 
 ## STATUS changes and next gate
 
