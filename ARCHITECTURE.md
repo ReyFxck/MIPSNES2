@@ -94,6 +94,12 @@ independent of automatic polling until their physical contention is verified.
 CPU-I/O does not implement nonstandard peripheral protocols, wire the two auxiliary
 `$4016` output pins to devices, or combine cartridge IRQs.
 
+The same CPU-I/O component owns the programmable `$4201` output latch and `$4213`
+combined pin read. Caller-owned external levels are wired-AND with the output latch,
+matching open-collector lines where either side can pull low. A combined bit-7
+high-to-low transition is retained as a one-shot H/V-latch request for future machine
+wiring. The core does not call the PPU directly, and no H/V counter latch is claimed.
+
 `mipsnes2_interrupt_lines` is the machine-wiring layer between independent IRQ/NMI
 producers and the single CPU input pair. Its bitmask keeps internal timer, cartridge
 and expansion IRQ levels independent, so acknowledging TIMEUP cannot erase another

@@ -49,6 +49,20 @@ static void latch_nmi_rising_edge(mipsnes2_cpu_io *io,
     }
 }
 
+static uint8_t io_port_level(const mipsnes2_cpu_io *io)
+{
+    return io->wrio & io->io_port_input;
+}
+
+static void latch_hv_falling_edge(mipsnes2_cpu_io *io,
+                                  uint8_t previous_level)
+{
+    if ((previous_level & UINT8_C(0x80)) != 0U &&
+        (io_port_level(io) & UINT8_C(0x80)) == 0U) {
+        io->hv_latch_edge_pending = true;
+    }
+}
+
 static void latch_manual_joypads(mipsnes2_cpu_io *io)
 {
     (void)memcpy(io->manual_joypad_latch, io->joypad_input,
@@ -104,6 +118,8 @@ void mipsnes2_cpu_io_init(mipsnes2_cpu_io *io, uint8_t cpu_version)
     (void)memset(io, 0, sizeof(*io));
     io->htime = UINT16_C(0x01ff);
     io->vtime = UINT16_C(0x01ff);
+    io->wrio = UINT8_MAX;
+    io->io_port_input = UINT8_MAX;
     io->cpu_version = cpu_version & UINT8_C(0x0f);
 }
 
@@ -125,6 +141,7 @@ bool mipsnes2_cpu_io_read(mipsnes2_cpu_io *io,
         result = read_manual_joypad_port(io, 1U, open_bus);
         break;
     case 0x4200:
+    case 0x4201:
     case 0x4202:
     case 0x4203:
     case 0x4204:
@@ -152,6 +169,9 @@ bool mipsnes2_cpu_io_read(mipsnes2_cpu_io *io,
                            (io->vblank ? UINT8_C(0x80) : 0U) |
                            (io->hblank ? UINT8_C(0x40) : 0U) |
                            (io->auto_joypad_busy ? UINT8_C(0x01) : 0U));
+        break;
+    case 0x4213:
+        result = io_port_level(io);
         break;
     case 0x4214:
         result = (uint8_t)io->rddiv;
@@ -219,6 +239,13 @@ bool mipsnes2_cpu_io_write(mipsnes2_cpu_io *io,
         }
         latch_nmi_rising_edge(io, nmi_was_active);
         return true;
+    case 0x4201: {
+        uint8_t previous_level = io_port_level(io);
+
+        io->wrio = value;
+        latch_hv_falling_edge(io, previous_level);
+        return true;
+    }
     case 0x4202:
         io->wrmpya = value;
         return true;
@@ -252,6 +279,7 @@ bool mipsnes2_cpu_io_write(mipsnes2_cpu_io *io,
     case 0x4210:
     case 0x4211:
     case 0x4212:
+    case 0x4213:
     case 0x4214:
     case 0x4215:
     case 0x4216:
@@ -316,6 +344,32 @@ bool mipsnes2_cpu_io_take_nmi_edge(mipsnes2_cpu_io *io)
     }
     pending = io->nmi_edge_pending;
     io->nmi_edge_pending = false;
+    return pending;
+}
+
+bool mipsnes2_cpu_io_set_io_port_input(mipsnes2_cpu_io *io,
+                                       uint8_t value)
+{
+    uint8_t previous_level;
+
+    if (io == NULL) {
+        return false;
+    }
+    previous_level = io_port_level(io);
+    io->io_port_input = value;
+    latch_hv_falling_edge(io, previous_level);
+    return true;
+}
+
+bool mipsnes2_cpu_io_take_hv_latch_edge(mipsnes2_cpu_io *io)
+{
+    bool pending;
+
+    if (io == NULL) {
+        return false;
+    }
+    pending = io->hv_latch_edge_pending;
+    io->hv_latch_edge_pending = false;
     return pending;
 }
 

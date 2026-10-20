@@ -85,6 +85,9 @@ snapshot isolation, `$4218-$421F`, read-only writes and enable/complete transiti
 Manual-port cases cover live high-strobe B bits, falling-edge snapshots, independent
 port clocks, all 16 bits on all four lines, post-word connected padding, open/fixed
 return bits and deterministic coexistence with automatic polling. The
+programmable-I/O cases cover the `FF` initialization contract, write-only reads,
+wired-AND external levels, read-only writes, bit-7 falling edges and one-shot edge
+consumption. The
 H/V regression executable covers non-interlaced NTSC/PAL scanline/frame totals,
 HBlank/VBlank boundaries, overscan, field toggling, the NTSC short line, delayed NMI
 assertion, every valid HTIME value, V/HV match positions, short/final-line exceptions,
@@ -234,6 +237,8 @@ Automatic controller-read evidence is recorded in
 [auto-joypad-audit.md](auto-joypad-audit.md).
 Manual standard-controller serial-port evidence is recorded in
 [manual-joypad-audit.md](manual-joypad-audit.md).
+Programmable I/O-port evidence is recorded in
+[5a22-io-port-audit.md](5a22-io-port-audit.md).
 Base LoROM/HiROM evidence is recorded in
 [cartridge-foundation-audit.md](cartridge-foundation-audit.md).
 Image/header analysis evidence is recorded in

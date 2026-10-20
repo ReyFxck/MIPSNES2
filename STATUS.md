@@ -29,6 +29,8 @@ and controller evidence is in
 [docs/5a22-math-register-audit.md](docs/5a22-math-register-audit.md) and
 [docs/auto-joypad-audit.md](docs/auto-joypad-audit.md), with manual serial-port
 evidence in [docs/manual-joypad-audit.md](docs/manual-joypad-audit.md).
+Programmable I/O-port evidence is in
+[docs/5a22-io-port-audit.md](docs/5a22-io-port-audit.md).
 
 ## State and evidence rules
 
@@ -635,6 +637,15 @@ remain incomplete. Local and GitHub verification evidence is recorded in
 [docs/manual-joypad-audit.md](docs/manual-joypad-audit.md); no console runtime,
 compatibility or performance result is claimed.
 
+The programmable I/O-port foundation on 2026-10-20 adds `$4201` WRIO and `$4213`
+RDIO. The caller owns external pin levels; reads combine them with the output latch
+using open-collector wired-AND behavior. Combined bit-7 falling edges are retained
+for one-shot machine handoff without making CPU-I/O depend on PPU code. Host tests
+cover initialization, read/write behavior, external pulls, falling/rising/no-change
+edges, acknowledgement and SNES-bus mirrors. Actual PPU H/V counter capture,
+peripheral wiring, reset-versus-power retention and real-hardware validation remain
+incomplete. Exact evidence is in [docs/5a22-io-port-audit.md](docs/5a22-io-port-audit.md).
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -1104,7 +1115,7 @@ platform persistence remains incomplete.
 
 ## Interrupts and timers
 
-- [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math, `$4016/$4017` standard-controller and `$4218-$421F` automatic-joypad subsets implemented
+- [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math, `$4201/$4213` programmable-I/O and controller subsets implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL master-clock phase, blanking and NTSC short line verified; interlace/dot latches absent
 - [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling incomplete
 - [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch, non-interlaced VBlank timing and atomic CPU delivery exist; exact within-instruction sampling incomplete
@@ -1130,6 +1141,9 @@ platform persistence remains incomplete.
 - [x] VBlank auto-joypad busy window and atomic completion
 - [x] Standard manual joypad strobe and four serial data lines on `$4016/$4017`
 - [x] Independent manual port clocks, 16-bit order and connected padding
+- [x] WRIO/RDIO programmable I/O latch and wired-AND external levels
+- [x] Programmable I/O bit-7 falling-edge handoff
+- [ ] PPU H/V counter-latch consumption and register behavior
 - [ ] Auxiliary controller-output wiring and nonstandard peripheral protocols
 - [ ] Busy-operation collision/retrigger hardware behavior
 

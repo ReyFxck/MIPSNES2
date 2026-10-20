@@ -333,16 +333,14 @@ static int test_cpu_io_state_routing(void)
     CHECK(mipsnes2_cpu_io_take_nmi_edge(&cpu_io_state));
 
     mipsnes2_snes_bus_write(&bus, UINT32_C(0x004201), UINT8_C(0x91));
-    CHECK(fallback.writes == 1U &&
-          fallback.last_address == UINT32_C(0x004201));
+    CHECK(fallback.writes == 0U);
     CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x804213)) ==
-          UINT8_C(0x3c));
-    CHECK(fallback.reads == 1U &&
-          fallback.last_address == UINT32_C(0x804213));
+          UINT8_C(0x91));
+    CHECK(fallback.reads == 0U);
 
     mipsnes2_snes_bus_write(&bus, UINT32_C(0x80420d), UINT8_C(1));
     CHECK(bus.fastrom_enabled);
-    CHECK(fallback.writes == 1U);
+    CHECK(fallback.writes == 0U);
 
     CHECK(mipsnes2_cpu_io_set_joypad_input(
         &cpu_io_state, 0U, UINT16_C(0x8124)));
@@ -354,7 +352,7 @@ static int test_cpu_io_state_routing(void)
           UINT8_C(0x24));
     CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x804219)) ==
           UINT8_C(0x81));
-    CHECK(fallback.reads == 1U);
+    CHECK(fallback.reads == 0U);
 
     CHECK(mipsnes2_cpu_io_set_joypad_input(
         &cpu_io_state, 0U, UINT16_C(0x8000)));
@@ -363,7 +361,12 @@ static int test_cpu_io_state_routing(void)
     bus.open_value = UINT8_C(0x54);
     CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x004016)) ==
           UINT8_C(0x55));
-    CHECK(fallback.reads == 1U && fallback.writes == 1U);
+    CHECK(fallback.reads == 0U && fallback.writes == 0U);
+
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004201), UINT8_C(0x5a));
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x804213)) ==
+          UINT8_C(0x5a));
+    CHECK(fallback.reads == 0U && fallback.writes == 0U);
     return 0;
 }
 

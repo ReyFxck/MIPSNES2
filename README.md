@@ -90,7 +90,9 @@ peripherals and final simultaneous-subsystem priority remain incomplete. The two
 standard serial controller ports now expose deterministic `$4016/$4017` strobe,
 snapshot and 16-bit shifting for four logical lines. Multitap/mouse/light-gun
 protocols, output-pin wiring and hardware-faithful contention with automatic polling
-remain incomplete.
+remain incomplete. The programmable I/O port now covers `$4201/$4213`, caller-owned
+external pin levels and a consumable bit-7 falling edge; actual PPU H/V counter
+latching remains future PPU integration.
 Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.
