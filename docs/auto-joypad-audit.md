@@ -79,9 +79,9 @@ results, not emulator or real-console execution.
 
 - measured phase evolution and motherboard/revision differences;
 - hardware-faithful partial result contents while busy;
-- manual `$4016/$4017` serial reads and strobe behavior;
+- electrical/cycle-level contention with the later manual `$4016/$4017` foundation;
 - multitap, mouse, Super Scope and other peripheral protocols;
-- interaction with manual reads, writes and DMA during an automatic read;
+- hardware interaction with manual reads, writes and DMA during an automatic read;
 - real PS2 and PSP input-backend wiring;
 - real SNES hardware validation of edge cases;
 - save-state serialization of the new in-flight state.

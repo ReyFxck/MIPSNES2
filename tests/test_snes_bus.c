@@ -355,6 +355,15 @@ static int test_cpu_io_state_routing(void)
     CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x804219)) ==
           UINT8_C(0x81));
     CHECK(fallback.reads == 1U);
+
+    CHECK(mipsnes2_cpu_io_set_joypad_input(
+        &cpu_io_state, 0U, UINT16_C(0x8000)));
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004016), UINT8_C(1));
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x804016), 0U);
+    bus.open_value = UINT8_C(0x54);
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x004016)) ==
+          UINT8_C(0x55));
+    CHECK(fallback.reads == 1U && fallback.writes == 1U);
     return 0;
 }
 

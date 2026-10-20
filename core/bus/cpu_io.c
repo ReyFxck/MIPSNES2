@@ -49,6 +49,53 @@ static void latch_nmi_rising_edge(mipsnes2_cpu_io *io,
     }
 }
 
+static void latch_manual_joypads(mipsnes2_cpu_io *io)
+{
+    (void)memcpy(io->manual_joypad_latch, io->joypad_input,
+                 sizeof(io->manual_joypad_latch));
+    io->manual_joypad_connected_mask = io->joypad_connected_mask;
+    io->manual_joypad_index[0] = 0U;
+    io->manual_joypad_index[1] = 0U;
+}
+
+static uint8_t manual_joypad_bit(const mipsnes2_cpu_io *io,
+                                 uint8_t line,
+                                 uint8_t port)
+{
+    uint8_t index;
+
+    if (io->joypad_strobe) {
+        return (uint8_t)((io->joypad_input[line] >> 15) & UINT16_C(1));
+    }
+    index = io->manual_joypad_index[port];
+    if (index < UINT8_C(16)) {
+        return (uint8_t)((io->manual_joypad_latch[line] >>
+                          (15U - index)) & UINT16_C(1));
+    }
+    return (io->manual_joypad_connected_mask & (uint8_t)(1U << line)) != 0U
+               ? UINT8_C(1)
+               : UINT8_C(0);
+}
+
+static uint8_t read_manual_joypad_port(mipsnes2_cpu_io *io,
+                                       uint8_t port,
+                                       uint8_t open_bus)
+{
+    uint8_t first_line = port;
+    uint8_t second_line = (uint8_t)(port + 2U);
+    uint8_t fixed = port == 0U ? (uint8_t)(open_bus & UINT8_C(0xfc))
+                               : (uint8_t)((open_bus & UINT8_C(0xe0)) |
+                                           UINT8_C(0x1c));
+    uint8_t result = (uint8_t)(fixed |
+                     manual_joypad_bit(io, first_line, port) |
+                     (uint8_t)(manual_joypad_bit(io, second_line, port) << 1));
+
+    if (!io->joypad_strobe && io->manual_joypad_index[port] < UINT8_C(16)) {
+        io->manual_joypad_index[port]++;
+    }
+    return result;
+}
+
 void mipsnes2_cpu_io_init(mipsnes2_cpu_io *io, uint8_t cpu_version)
 {
     if (io == NULL) {
@@ -71,6 +118,12 @@ bool mipsnes2_cpu_io_read(mipsnes2_cpu_io *io,
         return false;
     }
     switch (offset) {
+    case 0x4016:
+        result = read_manual_joypad_port(io, 0U, open_bus);
+        break;
+    case 0x4017:
+        result = read_manual_joypad_port(io, 1U, open_bus);
+        break;
     case 0x4200:
     case 0x4202:
     case 0x4203:
@@ -145,6 +198,19 @@ bool mipsnes2_cpu_io_write(mipsnes2_cpu_io *io,
         return false;
     }
     switch (offset) {
+    case 0x4016: {
+        bool next_strobe = (value & UINT8_C(1)) != 0U;
+
+        io->joypad_output = value & UINT8_C(7);
+        if (io->joypad_strobe && !next_strobe) {
+            latch_manual_joypads(io);
+        } else if (next_strobe) {
+            io->manual_joypad_index[0] = 0U;
+            io->manual_joypad_index[1] = 0U;
+        }
+        io->joypad_strobe = next_strobe;
+        return true;
+    }
     case 0x4200:
         nmi_was_active = nmi_gate_active(io);
         io->nmitimen = value & UINT8_C(NMITIMEN_IMPLEMENTED_MASK);
@@ -289,6 +355,24 @@ bool mipsnes2_cpu_io_set_joypad_input(mipsnes2_cpu_io *io,
         return false;
     }
     io->joypad_input[index] = value;
+    return true;
+}
+
+bool mipsnes2_cpu_io_set_joypad_connected(mipsnes2_cpu_io *io,
+                                          uint8_t index,
+                                          bool connected)
+{
+    uint8_t mask;
+
+    if (io == NULL || index >= MIPSNES2_CPU_IO_JOYPAD_COUNT) {
+        return false;
+    }
+    mask = (uint8_t)(1U << index);
+    if (connected) {
+        io->joypad_connected_mask |= mask;
+    } else {
+        io->joypad_connected_mask &= (uint8_t)~mask;
+    }
     return true;
 }
 
