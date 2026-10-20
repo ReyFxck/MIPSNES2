@@ -594,7 +594,9 @@ division by zero, timing-overflow transactionality and an executed STA/NOP/LDA p
 Busy retrigger behavior and exact placement of currently aggregated internal cycles
 remain unverified, so the broad task stays in progress. Local GCC default verification
 plus release and ASan+UBSan verification pass; local LeakSanitizer is blocked by the
-managed runtime's `/proc` restriction. GitHub workflow evidence is recorded in
+managed runtime's `/proc` restriction. GitHub Host GCC/Clang plus pinned PS2/PSP
+cross-build, artifact and checksum jobs passed for implementation commit
+`80ef8bd12755eff1ada6d442b0696d94966d8888`. Exact workflow evidence is recorded in
 docs/5a22-math-register-audit.md. No console runtime or hardware result is claimed.
 
 ## Current blockers and diagnostic exceptions

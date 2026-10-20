@@ -70,5 +70,16 @@ environment. The documented local retry disabled leak detection only; ASan and U
 remained enabled and passed. GitHub's sanitizer job remains the full remote gate.
 
 Local Clang, PS2SDK and PSPSDK executables were unavailable. GitHub Host/PS2/PSP
-workflow evidence will be appended only after those exact runs complete.
+workflow evidence for implementation commit
+`80ef8bd12755eff1ada6d442b0696d94966d8888`:
+
+- Host CI run `39460079089` — GCC and Clang release, sanitizer, tests and artifact
+  staging/upload passed;
+- PS2 CI run `39460079102` — pinned toolchain installation, scaffold cross-build,
+  artifact staging/upload and SHA-256 generation passed;
+- PSP CI run `39460079104` — pinned toolchain installation, scaffold cross-build,
+  artifact staging/upload and SHA-256 generation passed.
+
+All reported jobs and steps were inspected through the GitHub integration. A final
+documentation-head workflow pass is required before merge.
 - No emulator, PCSX2, PPSSPP, real PS2 or real PSP runtime was executed.
