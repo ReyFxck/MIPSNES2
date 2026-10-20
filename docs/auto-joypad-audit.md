@@ -60,8 +60,20 @@ Local verification so far:
 The first sanitizer invocation compiled successfully but LeakSanitizer stopped before
 the tests because this managed environment prevents `/proc/<pid>/task` inspection.
 The rerun disabled leak detection only; AddressSanitizer and UndefinedBehaviorSanitizer
-remained enabled. Local Clang, PS2SDK and PSPSDK are unavailable. GitHub Host, PS2
-and PSP workflow results are pending.
+remained enabled. Local Clang, PS2SDK and PSPSDK are unavailable.
+
+GitHub Actions passed for implementation commit
+`3c56b6b1e3687b5eeacffebbab1ef3b1ed8a0f03`:
+
+- Host CI run `39461739034` — GCC and Clang release builds, full sanitizer suites
+  and host artifact upload passed;
+- PS2 CI run `39461739142` — pinned toolchain installation, scaffold cross-build,
+  development artifact and SHA-256 staging/upload passed;
+- PSP CI run `39461739185` — pinned toolchain installation, scaffold cross-build,
+  development artifact and SHA-256 staging/upload passed.
+
+All returned jobs and individual workflow steps were inspected. These are build
+results, not emulator or real-console execution.
 
 ## Explicitly incomplete
 

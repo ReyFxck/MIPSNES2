@@ -615,8 +615,10 @@ old-result visibility are documented deterministic approximations. Serial
 `$4016/$4017`, peripheral protocols and real-console validation remain incomplete.
 Local GCC default, release and ASan+UBSan verification pass; LeakSanitizer requires
 disabling locally because the managed runtime blocks `/proc` task inspection. Local
-Clang, PS2SDK and PSPSDK are unavailable; GitHub CI evidence is pending. Exact scope
-is in docs/auto-joypad-audit.md. No console runtime,
+Clang, PS2SDK and PSPSDK are unavailable. GitHub Host GCC/Clang release, sanitizer
+and artifact jobs plus pinned PS2/PSP cross-build, artifact and checksum jobs passed
+for implementation commit `3c56b6b1e3687b5eeacffebbab1ef3b1ed8a0f03`. Exact scope
+and run IDs are in docs/auto-joypad-audit.md. No console runtime,
 compatibility or performance result is claimed.
 
 ## Current blockers and diagnostic exceptions
