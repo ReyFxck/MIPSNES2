@@ -59,8 +59,9 @@ values outside the regional frame do not match; H=153 is suppressed on the NTSC
 short line and on the last line. These rules cover stable register state only.
 
 The API advances only from explicit master-clock deltas and gives identical state for
-one-shot and chunked input. Interlace, PAL's interlaced long line, normal-line long-
-dot positions, PPU counter latching, dynamic SETINI, exact within-instruction timer
+one-shot and chunked input. The PPU horizontal projection now accounts for six-clock
+dots 323/327 on normal lines and their absence on the NTSC short line; the 5A22 timer
+comparison formula is unchanged. Interlace, PAL's interlaced long line, dynamic SETINI, exact within-instruction timer
 register writes, repeated reprogrammed matches in one scanline, TIMEUP's narrow
 read-at-match exception remain absent. Automatic joypad polling currently begins at
 the deterministic H=298 point on the first VBlank line and completes 4224 master
@@ -70,6 +71,12 @@ fixed phase is not claimed as final hardware behavior. See
 [H/V timer IRQ audit](hv-irq-foundation-audit.md) and
 [master-timing fanout audit](master-timing-fanout-audit.md), plus the
 [automatic joypad audit](auto-joypad-audit.md).
+
+The optional PPU counter adapter reads this H/V snapshot at the bus boundary, not at
+individual cycles within an atomic instruction. Its external edge handoff must be
+synchronized before advancing the shared domain. Exact capture latency and repeated/
+held-low behavior remain research work; [counter audit](hv-counter-latch-audit.md)
+records the chosen deterministic foundation policies.
 
 ## Shared master-clock domain
 

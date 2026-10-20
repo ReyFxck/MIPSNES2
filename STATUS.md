@@ -31,6 +31,8 @@ and controller evidence is in
 evidence in [docs/manual-joypad-audit.md](docs/manual-joypad-audit.md).
 Programmable I/O-port evidence is in
 [docs/5a22-io-port-audit.md](docs/5a22-io-port-audit.md).
+The counter-register foundation is scoped in
+[docs/hv-counter-latch-audit.md](docs/hv-counter-latch-audit.md).
 
 ## State and evidence rules
 
@@ -646,6 +648,16 @@ edges, acknowledgement and SNES-bus mirrors. Actual PPU H/V counter capture,
 peripheral wiring, reset-versus-power retention and real-hardware validation remain
 incomplete. Exact evidence is in [docs/5a22-io-port-audit.md](docs/5a22-io-port-audit.md).
 
+The non-interlaced counter-register foundation on 2026-10-20 adds caller-owned
+`$2137/$213C/$213D/$213F` state, low/high selectors, PPU2 open bus, region/version/
+field status and WRIO/external-edge handoff through the optional SNES-bus adapter.
+Clock-by-clock fixtures cover normal and NTSC short-line H positions, all valid H/V
+values, bus mirrors and an executed atomic CPU read. The component samples the
+supplied H/V timestamp; exact within-instruction capture, WRIO's one-dot relative
+latency and contested held-low/repeated-latch behavior remain unverified. This adds
+no renderer or PPU memory. Evidence and limitations are in
+[docs/hv-counter-latch-audit.md](docs/hv-counter-latch-audit.md).
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -1011,7 +1023,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Low-bank WRAM mirrors
 - [ ] ROM fast path
 - [ ] [IN PROGRESS] SRAM windows — base LoROM/HiROM power-of-two mappings exist; broader boards absent
-- [x] PPU MMIO routing — callback route only; PPU registers remain unimplemented
+- [x] PPU MMIO routing — optional counter-register state with callback fallback; broader PPU registers remain unimplemented
 - [x] CPU I/O routing — callback route plus bus-owned `$420D`; CPU-I/O registers remain incomplete
 - [x] APU port routing — callback route only; APU ports remain unimplemented
 - [x] DMA register routing — callback route only; DMA registers remain unimplemented
@@ -1116,7 +1128,7 @@ platform persistence remains incomplete.
 ## Interrupts and timers
 
 - [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math, `$4201/$4213` programmable-I/O and controller subsets implemented
-- [ ] [IN PROGRESS] H/V counter model — non-interlaced NTSC/PAL master-clock phase, blanking and NTSC short line verified; interlace/dot latches absent
+- [ ] [IN PROGRESS] H/V counter model — non-interlaced phase, long-dot projection and counter-register subset verified; interlace and exact capture timing absent
 - [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling incomplete
 - [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch, non-interlaced VBlank timing and atomic CPU delivery exist; exact within-instruction sampling incomplete
 - [ ] [IN PROGRESS] Interrupt acknowledgement — base RDNMI/TIMEUP reads exist; match-window/external IRQ cases absent
@@ -1143,7 +1155,7 @@ platform persistence remains incomplete.
 - [x] Independent manual port clocks, 16-bit order and connected padding
 - [x] WRIO/RDIO programmable I/O latch and wired-AND external levels
 - [x] Programmable I/O bit-7 falling-edge handoff
-- [ ] PPU H/V counter-latch consumption and register behavior
+- [ ] [IN PROGRESS] PPU H/V counter-latch consumption and register behavior — deterministic adapter exists; exact capture timing and held-low cases pending
 - [ ] Auxiliary controller-output wiring and nonstandard peripheral protocols
 - [ ] Busy-operation collision/retrigger hardware behavior
 
@@ -1155,6 +1167,10 @@ platform persistence remains incomplete.
 - [x] NTSC field alternation and 1360-clock short scanline
 - [x] PAL 312-line non-interlaced frame geometry
 - [x] One-shot/chunked H/V advancement determinism
+- [x] Normal-line long-dot and NTSC short-line PPU H projection
+- [x] Counter low/high selectors and PPU2 open-bus subset
+- [x] Counter field/region/version status and selector reset
+- [x] Optional WRIO/external-edge to counter-register bus adapter
 
 ### H/V timer-IRQ foundation subset
 
@@ -1198,7 +1214,7 @@ platform persistence remains incomplete.
 
 ## PPU
 
-- [ ] PPU register model
+- [ ] [IN PROGRESS] PPU register model — H/V counter subset only
 - [ ] VRAM
 - [ ] CGRAM
 - [ ] OAM
@@ -1222,13 +1238,13 @@ platform persistence remains incomplete.
 - [ ] Hires
 - [ ] Interlace
 - [ ] Overscan
-- [ ] Relevant latching behavior
-- [ ] Relevant open-bus behavior
+- [ ] [IN PROGRESS] Relevant latching behavior — deterministic H/V subset; exact access timing pending
+- [ ] [IN PROGRESS] Relevant open-bus behavior — counter-register PPU2 subset only
 - [ ] Scanline integration
 - [ ] VRAM port increment/remap behavior
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
-- [ ] PPU tests
+- [ ] [IN PROGRESS] PPU tests — H/V counter fixtures only
 - [ ] Reference renderer integration
 
 ## SPC700

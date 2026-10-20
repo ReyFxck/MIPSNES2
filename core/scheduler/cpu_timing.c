@@ -81,6 +81,9 @@ static mipsnes2_cpu_timing_result timed_step(
     if (hv_timing != NULL && bus->cpu_io_state == NULL) {
         return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
     }
+    if (bus->ppu_counters != NULL && bus->hv_timing != hv_timing) {
+        return MIPSNES2_CPU_TIMING_DOMAIN_MISMATCH;
+    }
     if (interrupt_lines != NULL && hv_timing == NULL) {
         return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
     }

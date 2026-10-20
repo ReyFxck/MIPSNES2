@@ -52,7 +52,8 @@ SRAM writes carry a revisioned dirty-state handoff so platform save backends can
 acknowledge stale asynchronous data.
 No-match and ambiguous images are rejected instead of guessed. There is no file loader,
 unofficial ExLoROM, padded/board-specific irregular mapping or enhancement hardware.
-No PPU, APU, ROM runner, compatibility or performance claim exists.
+Only the PPU counter-register subset exists; there is no renderer, PPU memory,
+APU, ROM runner, compatibility or performance claim.
 
 Current milestone: Phase 4 — Ricoh 5A22 interrupt/timer foundation.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and
@@ -91,8 +92,11 @@ standard serial controller ports now expose deterministic `$4016/$4017` strobe,
 snapshot and 16-bit shifting for four logical lines. Multitap/mouse/light-gun
 protocols, output-pin wiring and hardware-faithful contention with automatic polling
 remain incomplete. The programmable I/O port now covers `$4201/$4213`, caller-owned
-external pin levels and a consumable bit-7 falling edge; actual PPU H/V counter
-latching remains future PPU integration.
+external pin levels and a consumable bit-7 falling edge. A caller-owned PPU counter
+component now implements `$2137/$213C/$213D/$213F`, WRIO/external-edge capture,
+independent byte selectors and a PPU2 open-bus latch. It samples the current H/V
+snapshot; exact within-instruction capture and WRIO's measured one-dot latency
+difference remain incomplete. No rendering or PPU memory was added.
 Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.

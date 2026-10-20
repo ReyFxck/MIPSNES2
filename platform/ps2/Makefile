@@ -3,7 +3,7 @@ ifeq ($(strip $(PS2SDK)),)
 $(error PS2SDK is unset; see docs/ps2.md)
 endif
 EE_BIN = mipsnes2-ps2.elf
-EE_OBJS = main.o log.o bus.o cpu_io.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
+EE_OBJS = main.o log.o bus.o cpu_io.o ppu_counters.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
 	cartridge_prepare.o
@@ -21,6 +21,9 @@ bus.o: ../../core/bus/bus.c ../../core/bus/bus.h ../../core/bus/interface.h ../.
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 cpu_io.o: ../../core/bus/cpu_io.c ../../core/bus/cpu_io.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+ppu_counters.o: ../../core/ppu/counters.c ../../core/ppu/counters.h ../../core/scheduler/hv_timing.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 snes_bus.o: ../../core/bus/snes_bus.c ../../core/bus/snes_bus.h ../../core/bus/cpu_io.h ../../core/bus/interface.h ../../core/cartridge/interface.h ../../core/common/address.h ../../core/scheduler/5a22_timing.h

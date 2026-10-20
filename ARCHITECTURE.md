@@ -18,7 +18,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
-| core/ppu | State/registers, rendering and timing, not presentation | Directory only |
+| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counter-register subset only; no renderer or PPU memory |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
@@ -97,8 +97,26 @@ CPU-I/O does not implement nonstandard peripheral protocols, wire the two auxili
 The same CPU-I/O component owns the programmable `$4201` output latch and `$4213`
 combined pin read. Caller-owned external levels are wired-AND with the output latch,
 matching open-collector lines where either side can pull low. A combined bit-7
-high-to-low transition is retained as a one-shot H/V-latch request for future machine
-wiring. The core does not call the PPU directly, and no H/V counter latch is claimed.
+high-to-low transition is retained as a one-shot H/V-latch request. CPU-I/O itself
+does not call the PPU. The optional SNES-bus counter adapter consumes the request.
+
+`mipsnes2_ppu_counters` owns only the latched nine-bit H/V values, separate low/high
+read selectors, latch flag, caller-selected PPU2 version and PPU2 open-bus byte.
+`$2137` captures the supplied non-interlaced H/V snapshot when WRIO bit 7 enables it;
+`$213C/$213D` read the values and `$213F` reports field/region/version plus resets
+the selectors. H conversion accounts for six-clock dots 323 and 327 on normal lines
+and four-clock dots throughout the NTSC short line. This does not change the 5A22's
+timer formula. The bus can optionally bind this state, CPU-I/O and the same H/V object
+used by the timing bridge; a different or absent bridge H/V domain is rejected.
+Other PPU accesses still use the existing callback, not fake register behavior.
+
+WRIO writes are synchronized immediately at the bus boundary. External input setters
+require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending
+edge has no timestamp and coalesces multiple unsynchronized edges. During an atomic
+CPU instruction, captures see its starting H/V snapshot rather than exact bus-cycle
+time. The measured WRIO-versus-SLHV latency, held-low flag behavior and repeated
+capture details remain documented hardware-validation gaps. See the
+[counter audit](docs/hv-counter-latch-audit.md).
 
 `mipsnes2_interrupt_lines` is the machine-wiring layer between independent IRQ/NMI
 producers and the single CPU input pair. Its bitmask keeps internal timer, cartridge

@@ -170,6 +170,31 @@ mipsnes2_hv_result mipsnes2_hv_timing_init(
     return MIPSNES2_HV_OK;
 }
 
+bool mipsnes2_hv_ppu_horizontal(const mipsnes2_hv_timing *timing,
+                                uint16_t *horizontal)
+{
+    uint16_t clocks;
+    uint16_t length = mipsnes2_hv_scanline_master_clocks(timing);
+
+    if (length == 0U || horizontal == NULL ||
+        timing->v_counter >= mipsnes2_hv_frame_scanlines(timing) ||
+        timing->h_master_clock >= length) {
+        return false;
+    }
+    clocks = timing->h_master_clock;
+    if (length == MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS) {
+        /* Dots 323 and 327 last six clocks rather than four. */
+        if (clocks >= UINT16_C(1312)) {
+            clocks = (uint16_t)(clocks - 2U);
+        }
+        if (clocks >= UINT16_C(1294)) {
+            clocks = (uint16_t)(clocks - 2U);
+        }
+    }
+    *horizontal = (uint16_t)(clocks / 4U);
+    return true;
+}
+
 static uint16_t next_horizontal_boundary(const mipsnes2_hv_timing *timing,
                                          const mipsnes2_cpu_io *cpu_io)
 {

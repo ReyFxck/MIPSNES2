@@ -739,6 +739,120 @@ static int test_timed_cpu_interrupt_handoff(void)
     return 0;
 }
 
+static int test_ppu_counter_wiring(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_snes_bus before_bus;
+    mipsnes2_snes_bus_config config = base_config();
+    mipsnes2_ppu_counters counters;
+    mipsnes2_ppu_counters before_counters;
+    mipsnes2_cpu_io io;
+    mipsnes2_hv_timing timing;
+    mipsnes2_hv_timing wrong_timing;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_timing_report report;
+    route_capture fallback;
+    unsigned bank;
+
+    (void)memset(&fallback, 0, sizeof(fallback));
+    fallback.read_value = UINT8_C(0x55);
+    config.ppu = capture_interface(&fallback);
+    mipsnes2_cpu_io_init(&io, 2U);
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &io) == MIPSNES2_HV_OK);
+    mipsnes2_ppu_counters_init(&counters, 3U, UINT8_C(0xa4));
+    config.ppu_counters = &counters;
+    (void)memset(&bus, 0x5a, sizeof(bus));
+    before_bus = bus;
+    CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_INVALID_ARGUMENT);
+    CHECK(memcmp(&before_bus, &bus, sizeof(bus)) == 0);
+    config.hv_timing = &timing;
+    CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_INVALID_ARGUMENT);
+    config.cpu_io_state = &io;
+    counters.initialized = false;
+    CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_INVALID_ARGUMENT);
+    counters.initialized = true;
+    CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_OK);
+    CHECK(!mipsnes2_snes_bus_sync_hv_latch(NULL));
+    CHECK(!mipsnes2_snes_bus_sync_hv_latch(&bus));
+
+    timing.h_master_clock = 1298U;
+    timing.v_counter = 260U;
+    for (bank = 0U; bank < 256U; ++bank) {
+        uint32_t base;
+
+        if ((bank & 0x40U) != 0U) {
+            continue;
+        }
+        base = (uint32_t)bank << 16;
+        bus.open_value = UINT8_C(0x5a);
+        CHECK(mipsnes2_snes_bus_read(&bus, base | UINT32_C(0x2137)) == UINT8_C(0x5a));
+        CHECK(counters.horizontal == 324U && counters.vertical == 260U);
+        CHECK(mipsnes2_snes_bus_read(&bus, base | UINT32_C(0x213c)) == UINT8_C(0x44));
+        CHECK(mipsnes2_snes_bus_read(&bus, base | UINT32_C(0x213d)) == UINT8_C(0x04));
+        CHECK(mipsnes2_snes_bus_read(&bus, base | UINT32_C(0x213c)) == UINT8_C(0x05));
+        CHECK(mipsnes2_snes_bus_read(&bus, base | UINT32_C(0x213d)) == UINT8_C(0x05));
+        CHECK(mipsnes2_snes_bus_read(&bus, base | UINT32_C(0x213f)) == UINT8_C(0x43));
+    }
+    CHECK(bus.access_count == UINT64_C(128) * 6U);
+    CHECK(bus.master_clocks == bus.access_count * 6U);
+    CHECK(fallback.reads == 0U && fallback.writes == 0U);
+    before_counters = counters;
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x802137), 0U);
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x80213c), 0U);
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x80213d), 0U);
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x80213f), 0U);
+    CHECK(memcmp(&before_counters, &counters, sizeof(counters)) == 0);
+    CHECK(fallback.writes == 0U);
+    CHECK(mipsnes2_snes_bus_read(&bus, UINT32_C(0x00213e)) == UINT8_C(0x55));
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x002100), UINT8_C(0x80));
+    CHECK(fallback.reads == 1U && fallback.writes == 1U);
+
+    timing.h_master_clock = 800U;
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x804201), UINT8_C(0x7f));
+    CHECK(counters.horizontal == 200U && counters.latched);
+    CHECK(!io.hv_latch_edge_pending);
+    timing.h_master_clock = 1000U;
+    (void)mipsnes2_snes_bus_read(&bus, UINT32_C(0x002137));
+    CHECK(counters.horizontal == 200U);
+    CHECK((mipsnes2_snes_bus_read(&bus, UINT32_C(0x00213f)) & UINT8_C(0x40)) != 0U);
+    CHECK(counters.latched);
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x004201), UINT8_MAX);
+    CHECK(mipsnes2_cpu_io_set_io_port_input(&io, UINT8_C(0x7f)));
+    timing.h_master_clock = 1364U;
+    CHECK(!mipsnes2_snes_bus_sync_hv_latch(&bus));
+    CHECK(io.hv_latch_edge_pending);
+    timing.h_master_clock = 1000U;
+    CHECK(mipsnes2_snes_bus_sync_hv_latch(&bus));
+    CHECK(counters.horizontal == 250U);
+    CHECK(!mipsnes2_snes_bus_sync_hv_latch(&bus));
+    (void)mipsnes2_snes_bus_read(&bus, UINT32_C(0x00213f));
+    CHECK(!counters.latched);
+
+    /* CPU access sees the explicit pre-instruction H/V snapshot, not cycle-perfect time. */
+    CHECK(initialize_cpu_bus_with_io(&bus, &cpu, &io) == 0);
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &io) == MIPSNES2_HV_OK);
+    bus.ppu_counters = &counters;
+    bus.hv_timing = &timing;
+    mipsnes2_scheduler_init(&scheduler);
+    cartridge.bank00[0x8000] = UINT8_C(0xad);
+    cartridge.bank00[0x8001] = UINT8_C(0x37);
+    cartridge.bank00[0x8002] = UINT8_C(0x21);
+    CHECK(mipsnes2_cpu_timed_step_hv(&cpu, &bus, &scheduler, &timing,
+                                     8U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(counters.horizontal == 0U && counters.vertical == 0U);
+    CHECK(timing.h_master_clock == 30U && scheduler.now == 30U);
+    wrong_timing = timing;
+    CHECK(mipsnes2_cpu_timed_step_hv(&cpu, &bus, &scheduler, &wrong_timing,
+                                     8U, &report) == MIPSNES2_CPU_TIMING_DOMAIN_MISMATCH);
+    CHECK(mipsnes2_cpu_timed_step(&cpu, &bus, &scheduler, 8U, &report) ==
+          MIPSNES2_CPU_TIMING_DOMAIN_MISMATCH);
+    CHECK(cpu.pc == UINT16_C(0x8003));
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_init_and_wram_mapping() == 0);
@@ -750,6 +864,7 @@ int main(void)
     CHECK(test_timed_cpu_math_progress() == 0);
     CHECK(test_timed_cpu_hv_steps() == 0);
     CHECK(test_timed_cpu_interrupt_handoff() == 0);
+    CHECK(test_ppu_counter_wiring() == 0);
     (void)puts("PASS: SNES bus and timed CPU/H-V/interrupt foundation");
     return 0;
 }

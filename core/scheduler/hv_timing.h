@@ -58,5 +58,7 @@ uint16_t mipsnes2_hv_scanline_master_clocks(
 uint16_t mipsnes2_hv_frame_scanlines(const mipsnes2_hv_timing *timing);
 uint16_t mipsnes2_hv_vblank_start_line(
     const mipsnes2_hv_timing *timing);
+bool mipsnes2_hv_ppu_horizontal(const mipsnes2_hv_timing *timing,
+                                uint16_t *horizontal);
 
 #endif

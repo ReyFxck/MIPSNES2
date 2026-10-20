@@ -32,7 +32,7 @@ address it receives.
 |---|---|
 | `7E:0000-7F:FFFF` | Direct 128 KiB WRAM |
 | `00-3F/80-BF:0000-1FFF` | Mirror of WRAM `00000-01FFF` |
-| `00-3F/80-BF:2100-213F` | PPU callback route |
+| `00-3F/80-BF:2100-213F` | Optional counter-register state, otherwise PPU callback route |
 | `00-3F/80-BF:2140-217F` | APU-port callback route |
 | `00-3F/80-BF:2180-2183` | WRAM data/address ports |
 | `00-3F/80-BF:4000-421F` | CPU-I/O route, including optional register state; bus owns `$420D` |
@@ -43,8 +43,8 @@ The `$2180` data port auto-increments and wraps its 17-bit address; `$2181-$2183
 select that address. `$420D` write bit 0 controls the bus's FastROM state. Reserved
 holes inside the B-bus/internal-I/O windows use the current deterministic open latch
 instead of falling through to cartridge space. A cartridge read can explicitly
-decline an address, preserving that latch. PPU, APU and DMA callbacks remain routes
-only. The optional caller-owned CPU-I/O state implements manual controller ports
+decline an address, preserving that latch. APU and DMA callbacks remain routes only;
+PPU registers beyond the counter subset still use callbacks. The optional caller-owned CPU-I/O state implements manual controller ports
 `$4016/$4017`, `$4200-$420A` and `$4210-$421F`. `$420B/$420C` remain on the DMA
 route/fallback, while the bus itself owns `$420D`; other unimplemented CPU-I/O
 addresses continue through the fallback route.
@@ -95,8 +95,19 @@ nonstandard peripheral protocols remain absent.
 returns those levels wired-AND with a caller-owned external input value that also
 defaults high. This models the open-collector rule without embedding a peripheral.
 A combined bit-7 high-to-low transition produces a consumable H/V-latch request.
-Actual PPU counter capture, `$2137/$213C/$213D/$213F` behavior and device routing are
-not implemented, and reset versus power-on retention still needs machine-level work.
+The optional counter adapter now consumes it into `$213C/$213D`, with `$2137`
+software capture and `$213F` status/selector reset. Configuration must bind initialized
+counter and H/V objects plus CPU-I/O together or is rejected without changing the bus.
+All system-bank mirrors share the same state. Other PPU registers retain fallback
+routing. Reads of `$2137` return CPU open bus without altering the PPU2 latch;
+counter high reads and `$213F` use their distinct PPU2 latch. No complete PPU bus-domain
+model is claimed until CGRAM and other PPU2 reads participate.
+
+The adapter samples the current explicit H/V timestamp. Atomic timed CPU steps do
+not yet advance H/V at each access, so accesses within one instruction see its start
+snapshot. WRIO writes consume edges immediately; external callers must synchronize
+after changing pin levels and before advancing time. Device wiring, exact access
+latency and reset retention remain incomplete. See [ppu.md](ppu.md).
 
 Every SNES-bus read/write updates access counters and charges the 5A22 6/8/12-master-
 clock class selected by its normalized address and current FastROM state. This is
