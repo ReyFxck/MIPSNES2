@@ -33,8 +33,8 @@ Programmable I/O-port evidence is in
 [docs/5a22-io-port-audit.md](docs/5a22-io-port-audit.md).
 The counter-register foundation is scoped in
 [docs/hv-counter-latch-audit.md](docs/hv-counter-latch-audit.md).
-Meaningful CPU access-clock ordering is scoped in
-[docs/cpu-access-timing-audit.md](docs/cpu-access-timing-audit.md).
+The rejected in-callback access-clock experiment is documented in
+[docs/cpu-access-timing-postmortem.md](docs/cpu-access-timing-postmortem.md).
 
 ## State and evidence rules
 
@@ -660,15 +660,11 @@ latency and contested held-low/repeated-latch behavior remain unverified. This a
 no renderer or PPU memory. Evidence and limitations are in
 [docs/hv-counter-latch-audit.md](docs/hv-counter-latch-audit.md).
 
-The CPU access-clock milestone on 2026-10-20 advances the shared scheduler/H/V
-domain before every emitted meaningful read/write effect, then charges the existing
-aggregate internal remainder. Equal-time callbacks see H/V transitions before the
-CPU effect. Host fixtures verify mixed access speeds, widths/modes, event phases,
-register observation and fail-stop failure paths. The old pre-instruction counter
-snapshot is removed, but missing internal/dummy sequencing, physical MMIO phase,
-refresh, arbitration and mid-instruction pause/resume remain incomplete. No opcode
-was added; no runtime/performance result is claimed. Evidence and recovery limits
-are in [docs/cpu-access-timing-audit.md](docs/cpu-access-timing-audit.md).
+The 2026-10-20 in-callback access-clock experiment was reverted after review. It
+could partially commit CPU, bus and scheduler state when event dispatch failed because
+the instruction-atomic interpreter has no pause/resume contract. No timing task is
+credited for that rejected design. The safe prerequisite and evidence are in
+[docs/cpu-access-timing-postmortem.md](docs/cpu-access-timing-postmortem.md).
 
 ## Current blockers and diagnostic exceptions
 
@@ -1043,7 +1039,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
 - [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` exist; remaining SNES register effects absent
-- [ ] [IN PROGRESS] Access timing — meaningful 5A22 accesses advance events/H/V before effects; dummy/internal placement, physical MMIO phase, refresh and arbitration absent
+- [ ] [IN PROGRESS] Access timing — meaningful accesses use 5A22 6/8/12 clocks and atomic CPU steps advance the scheduler; dummy/internal placement, refresh and arbitration absent
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO, base LoROM/HiROM and Mode 25/35 ExHiROM boundaries verified; padded/ExLoROM/enhancement maps absent
 - [ ] Page/block mapping benchmark
 
@@ -1127,7 +1123,7 @@ platform persistence remains incomplete.
 - [x] Master timestamp units — unsigned 64-bit SNES master clocks
 - [x] Clock ratio representation — exact reduced rational with carried remainder
 - [x] Event tie ordering — timestamp, explicit priority, insertion token
-- [ ] [IN PROGRESS] CPU event horizon — meaningful accesses dispatch events before effects; complete cycle sequencing and pause/resume pending
+- [ ] [IN PROGRESS] CPU event horizon — atomic timed CPU steps exist; mid-instruction bus-cycle pausing pending
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment, transactional H/V slices and provisional same-time ordering verified
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
@@ -1199,9 +1195,7 @@ platform persistence remains incomplete.
 - [x] Event-budget exhaustion preserves aligned domain state
 - [x] Atomic CPU-step delta advances scheduler and H/V together
 - [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
-- [x] Meaningful-access clock fanout before CPU read/write effects — provisional end-access sampling policy
-- [x] Shared per-step event budget across boundary, accesses and internal remainder
-- [x] In-flight timing fail-stop, reentrancy rejection and scoped clock-sink cleanup
+- [ ] Resumable CPU cycle/micro-operation contract before meaningful-access event dispatch
 
 ### Interrupt-line aggregation subset
 
