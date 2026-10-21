@@ -53,8 +53,18 @@ measurement was made.
 
 ## GitHub Actions
 
-Pending publication. This section must be updated with actual workflow runs before
-the pull request is merged. Workflow YAML existing is not treated as successful CI.
+The first pull-request head `4b31e0ca288be0f979a4c6faa2da5b16a918a6f7`
+completed all applicable workflows successfully:
+
+| Workflow | Run | Verified result |
+|---|---:|---|
+| Host CI | `39628949513` | GCC and Clang release builds/tests, sanitizer builds/tests and host artifact upload passed |
+| PS2 CI | `39628949487` | Pinned-toolchain scaffold cross-build, artifact staging, SHA-256 generation and upload passed |
+| PSP CI | `39628949514` | Pinned-toolchain scaffold cross-build, artifact staging, SHA-256 generation and upload passed |
+
+These are compilation and automated-test results, not PCSX2, PPSSPP or real-hardware
+runtime validation. The documentation-only commit recording this evidence must also
+pass the same required workflows before merge.
 
 ## Verified behavior
 
