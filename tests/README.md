@@ -9,3 +9,7 @@ revisioned SRAM dirty-state/acknowledgement tests,
 black-box host CLI smoke tests and repository
 consistency checks.
 See [testing policy](../docs/testing.md). No external test ROM is committed yet.
+
+The CPU suite includes boundary-visible ABORT vectors, native/emulation stack layouts,
+priority, WAI restart-address behavior and invalid-bus diagnostics. It does not claim
+physical mid-instruction ABORT sampling or rollback.

@@ -69,7 +69,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
 - [x] IRQ CPU input and entry
 - [x] NMI CPU input and entry
-- [ ] ABORT input and entry
+- [ ] [IN PROGRESS] ABORT input and entry — boundary-visible contract verified; mid-instruction rollback/sampling pending
 - [ ] [IN PROGRESS] RESET
 - [x] BRK
 - [x] COP
@@ -80,7 +80,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Timing model — meaningful-access 5A22 clocks integrated; exact cycle sequencing pending
 - [x] CPU automated tests for all 256 opcode values
 - [ ] [IN PROGRESS] CPU regression tests — broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — atomic scheduler/5A22 bridge exists; exact cycle boundaries and ABORT pending
+- [ ] [IN PROGRESS] Complete interpreter integration — boundary-visible ABORT and atomic scheduler/5A22 bridge exist; exact cycle boundaries and mid-instruction ABORT pending
 
 ## Phase 3 — Bus and Cartridge
 

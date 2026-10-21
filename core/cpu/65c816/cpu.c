@@ -994,6 +994,7 @@ static uint64_t direct_base_cycles(const mipsnes2_cpu *cpu, bool indexed)
 typedef enum {
     INTERRUPT_IRQ,
     INTERRUPT_NMI,
+    INTERRUPT_ABORT,
     INTERRUPT_BRK,
     INTERRUPT_COP
 } interrupt_kind;
@@ -1005,6 +1006,8 @@ static uint16_t interrupt_vector(const mipsnes2_cpu *cpu,
         switch (kind) {
         case INTERRUPT_COP:
             return UINT16_C(0xfff4);
+        case INTERRUPT_ABORT:
+            return UINT16_C(0xfff8);
         case INTERRUPT_NMI:
             return UINT16_C(0xfffa);
         case INTERRUPT_IRQ:
@@ -1018,6 +1021,8 @@ static uint16_t interrupt_vector(const mipsnes2_cpu *cpu,
         return UINT16_C(0xffe4);
     case INTERRUPT_BRK:
         return UINT16_C(0xffe6);
+    case INTERRUPT_ABORT:
+        return UINT16_C(0xffe8);
     case INTERRUPT_NMI:
         return UINT16_C(0xffea);
     case INTERRUPT_IRQ:
@@ -1123,6 +1128,7 @@ mipsnes2_cpu_result mipsnes2_cpu_reset(mipsnes2_cpu *cpu)
     cpu->instruction_cycles = 0U;
     cpu->waiting = false;
     cpu->clock_stopped = false;
+    cpu->abort_pending = false;
     cpu->nmi_pending = false;
     cpu->stopped = false;
     cpu->stop_reason = MIPSNES2_CPU_OK;
@@ -1135,6 +1141,13 @@ void mipsnes2_cpu_set_irq(mipsnes2_cpu *cpu, bool asserted)
 {
     if (cpu != NULL) {
         cpu->irq_level = asserted;
+    }
+}
+
+void mipsnes2_cpu_pulse_abort(mipsnes2_cpu *cpu)
+{
+    if (cpu != NULL) {
+        cpu->abort_pending = true;
     }
 }
 
@@ -1159,6 +1172,17 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     }
     if (cpu->clock_stopped) {
         return MIPSNES2_CPU_CLOCK_STOPPED;
+    }
+    if (cpu->abort_pending) {
+        cpu->abort_pending = false;
+        if (cpu->waiting) {
+            /* WDC 7.13: ABORT does not release WAI; a later interrupt
+             * must return to the WAI opcode rather than its successor. */
+            cpu->pbr = (uint8_t)(cpu->last_opcode_address >> 16);
+            cpu->pc = (uint16_t)cpu->last_opcode_address;
+        } else {
+            return enter_interrupt(cpu, INTERRUPT_ABORT);
+        }
     }
     if (cpu->nmi_pending) {
         cpu->waiting = false;

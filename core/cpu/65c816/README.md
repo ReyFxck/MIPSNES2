@@ -9,7 +9,8 @@ families and every ORA/AND/EOR/CMP form, including their two stack-relative mode
 plus every ADC/SBC addressing form in binary and packed-BCD decimal modes, every
 ASL/LSR/ROL/ROR form, memory INC/DEC, TSB/TRB, STZ, every stack push/pull form and
 every jump/subroutine call/return form, BRK/COP/RTI/WDM, MVP/MVN, WAI/STP and the
-IRQ/NMI instruction-boundary contract is covered. Read
+IRQ/NMI plus boundary-visible ABORT contract is covered. Read
 [docs/65c816.md](../../../docs/65c816.md) for the exact implemented opcode list,
-timing contract and known limits. ABORT, signal-level reset/bus behavior, 5A22 timing
-and scheduler integration remain incomplete; do not infer a complete SNES CPU subsystem.
+timing contract and known limits. Mid-instruction ABORT rollback/sampling,
+signal-level reset/bus behavior, exact 5A22 timing and scheduler integration remain
+incomplete; do not infer a complete SNES CPU subsystem.

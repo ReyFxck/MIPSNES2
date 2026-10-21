@@ -24,7 +24,7 @@ substitute for real PS2 or PSP evidence.
 
 ## 65C816 and SNES CPU
 
-- [WDC W65C816S datasheet (March 13, 2024)](https://www.westerndesigncenter.com/wdc/documentation/w65c816s.pdf) — primary register, instruction, addressing, flag, signal and processor-cycle reference. Record the revision date because WDC updates this PDF in place.
+- [WDC W65C816S datasheet (March 13, 2024)](https://www.westerndesigncenter.com/wdc/documentation/w65c816s.pdf) — primary register, instruction, addressing, flag, signal and processor-cycle reference. Sections 2.13, 7.4, 7.13 and 7.19 plus Tables 5-2, 5-3 and 5-7 entry 22a define the current ABORT foundation and its explicit mid-instruction limits. Record the revision date because WDC updates this PDF in place.
 - [WDC documentation index](https://www.westerndesigncenter.com/wdc/documentation.php) — manufacturer index for the W65C02/W65C816 assembly programming manual and related datasheets.
 - [SNESdev Wiki: CPU and hardware contents](https://snes.nesdev.org/wiki/SNESdev_Wiki) — navigation hub for Ricoh 5A22 differences, vectors, timing and development practice. Community-maintained; confirm edge cases with tests or stronger evidence.
 - [SNESdev Wiki: timing](https://snes.nesdev.org/wiki/Timing) — 5A22 master-clock conversion and 6/8/12-master-clock access classes. This complements rather than replaces WDC processor-cycle tables.
