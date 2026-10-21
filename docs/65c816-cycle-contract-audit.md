@@ -77,8 +77,17 @@ arbitration remain future work.
 - `make -C platform/ps2` — not run to compilation: `PS2SDK` is unset.
 - `make -C platform/psp` — not run to compilation: `psp-config` is unavailable.
 
+GitHub PR #49 initial review head
+`d6c0832f064c44f611de52b2fb7e4d97f7f25421` used exact source tree
+`88c739c5cda66c0aadb6a96947957c2e0c9f81d1` and passed:
+
+- Host CI run `39674430063`: GCC and Clang release plus sanitizer jobs;
+- PS2 CI run `39674429865`: pinned-toolchain scaffold cross-build, artifact and checksum;
+- PSP CI run `39674429960`: pinned-toolchain scaffold cross-build, artifact and checksum.
+
 Clang, PS2SDK and PSPSDK are unavailable locally. GitHub Host, PS2 and PSP workflow
-results must be inspected before merge. No real SNES, PS2, PSP, PCSX2 or PPSSPP test
-and no performance measurement was performed. `LICENSE` remains byte-for-byte
+results above were inspected before the documentation-only audit follow-up. No real
+SNES, PS2, PSP, PCSX2 or PPSSPP test and no performance measurement was performed.
+`LICENSE` remains byte-for-byte
 GPL-3.0 with SHA-256
 `3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986`.
