@@ -14,6 +14,7 @@ HOST = $(BUILD_DIR)/mipsnes2-host
 TEST = $(BUILD_DIR)/test-contracts
 TEST_NOLOG = $(BUILD_DIR)/test-contracts-nolog
 TEST_CPU_BUS = $(BUILD_DIR)/test-cpu-bus
+TEST_CPU_CYCLES = $(BUILD_DIR)/test-cpu-cycles
 TEST_CPU_IO = $(BUILD_DIR)/test-cpu-io
 TEST_PPU_COUNTERS = $(BUILD_DIR)/test-ppu-counters
 TEST_HV_TIMING = $(BUILD_DIR)/test-hv-timing
@@ -100,6 +101,9 @@ $(TEST_NOLOG): tests/test_contracts.c core/common/log.c core/common/log.h core/c
 $(TEST_CPU_BUS): tests/test_cpu_bus.c core/bus/bus.h core/cpu/65c816/cpu.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_CPU_CYCLES): tests/test_cpu_cycles.c core/cpu/65c816/cpu.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(TEST_CPU_IO): tests/test_cpu_io.c core/bus/cpu_io.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -133,10 +137,11 @@ $(TEST_CARTRIDGE_PREPARE): tests/test_cartridge_prepare.c core/cartridge/prepare
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
+	$(TEST_CPU_CYCLES)
 	$(TEST_CPU_IO)
 	$(TEST_PPU_COUNTERS)
 	$(TEST_HV_TIMING)

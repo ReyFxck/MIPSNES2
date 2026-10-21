@@ -234,6 +234,30 @@ absolute RMW forms retain their established bank-zero/DBR address rules. The cur
 bus interface exposes final writes and aggregate instruction cycles, not the W65C816
 dummy/modify write sequence or MLB signaling.
 
+## Incremental CPU operation contract
+
+`mipsnes2_cpu_cycle_state` is caller-owned resumable state. A caller begins one
+instruction, peeks at the next descriptor without changing CPU or bus state, then
+commits that exact descriptor once. Descriptors distinguish zero-time control,
+logical 24-bit reads, writes, internal processor cycles and an explicit
+`LEGACY_ATOMIC` remainder. A changed descriptor is rejected as stale before an
+effect. Active state must be retained and resumed; interleaving another CPU step or
+discarding a partially committed cursor is not supported by this foundation.
+
+The first migrated sequences are opcode fetch plus `NOP` (`EA`), immediate `LDA`
+(`A9`), absolute `STA` (`8D`), `REP` (`C2`) and `SEP` (`E2`). They expose width-
+selected operand bytes, the final flag/internal action and low-before-high writes as
+applicable. `mipsnes2_cpu_step` drives this same contract to completion, preserving
+the established instruction API. The remaining 251 opcodes return an explicit
+legacy-atomic operation after their opcode fetch and use the existing evaluator for
+the remainder.
+
+This is deliberately not wired into the scheduler yet. Interrupt entry, remaining
+opcodes, dummy cycles and undocumented/signal-level bus activity are still atomic or
+absent. Consequently the central timed-step bridge remains instruction-atomic and
+must not dispatch events from bus callbacks. Scope and verification are recorded in
+[the cycle-contract audit](docs/65c816-cycle-contract-audit.md).
+
 ## Scheduler and timing foundation
 
 The caller-owned scheduler uses unsigned 64-bit SNES master-clock timestamps and no
@@ -278,9 +302,11 @@ instructions whose internal cycles occur before a result-register access; ordina
 bus cycles and aggregate NOP/internal waits are deterministic and tested.
 
 An attempted synchronous clock sink inside bus callbacks was removed after review:
-the interpreter cannot abort or resume an instruction, so an event-budget failure
-could leave CPU, memory and scheduler state partially committed. Meaningful-access
-event dispatch must wait for an explicit resumable cycle/micro-operation contract.
+the then-atomic interpreter could not abort or resume an instruction, so an event-
+budget failure could leave CPU, memory and scheduler state partially committed.
+Meaningful-access event dispatch must wait until the incremental CPU-operation
+contract covers every path the bridge can execute, including interrupt entry, and
+has explicit scheduler failure/cancellation handling.
 The analysis is retained in the
 [access-timing post-mortem](docs/cpu-access-timing-postmortem.md).
 
@@ -444,5 +470,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   stack/status effects, interrupt priority and WAI no-wake/restart-address behavior
   at CPU boundaries. Physical mid-instruction rollback and cycle-sensitive exceptions
   remain blocked on a resumable CPU cycle/micro-operation contract.
+- 2026-10-21: A caller-owned peek/commit CPU-operation cursor exposes exact-once
+  sequences for opcode fetch and `NOP`, immediate `LDA`, absolute `STA`, `REP` and
+  `SEP`. The other 251 opcodes and interrupt entry remain explicitly atomic, and the
+  scheduler is not yet connected to the cursor.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

@@ -54,6 +54,16 @@ WRIO-to-SLHV latency, WRAM refresh and simultaneous subsystem priorities remain
 hardware-research tasks. A resumable software contract does not by itself settle
 those hardware questions.
 
+### 2026-10-21 progress
+
+The first caller-owned peek/commit cursor now satisfies the no-effect-before-peek and
+exact-once-commit shape for opcode fetch plus `EA/A9/8D/C2/E2`. It also exposes an
+honest legacy-atomic remainder for every other opcode. This is only a foundation:
+the other 251 opcode remainders, interrupt entry, dummy cycles, cancellation recovery
+and scheduler wiring still do not satisfy this section's complete gate. The rejected
+in-callback design therefore remains disabled. See
+[65c816-cycle-contract-audit.md](65c816-cycle-contract-audit.md).
+
 ## Scope preserved
 
 The experiment added no opcode. Removing it does not change the verified 256-opcode

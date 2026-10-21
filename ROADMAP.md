@@ -80,7 +80,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Timing model — meaningful-access 5A22 clocks integrated; exact cycle sequencing pending
 - [x] CPU automated tests for all 256 opcode values
 - [ ] [IN PROGRESS] CPU regression tests — broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — boundary-visible ABORT and atomic scheduler/5A22 bridge exist; exact cycle boundaries and mid-instruction ABORT pending
+- [ ] [IN PROGRESS] Complete interpreter integration — boundary-visible ABORT, five resumable opcode sequences and atomic scheduler/5A22 bridge exist; remaining cycle boundaries and mid-instruction ABORT pending
 
 ## Phase 3 — Bus and Cartridge
 
@@ -126,10 +126,10 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Master timestamp units
 - [x] Clock ratio representation
 - [x] Event tie ordering
-- [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle pausing pending
+- [ ] [IN PROGRESS] CPU event horizon — caller-owned operation cursor exists for five opcodes, while the timed bridge remains atomic and general mid-instruction pausing is pending
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
 - [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
-- [ ] Resumable CPU cycle/micro-operation contract before meaningful-access event dispatch
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation for `EA/A9/8D/C2/E2`; remaining opcodes, interrupt entry, dummy cycles and scheduler wiring pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization

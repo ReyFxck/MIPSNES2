@@ -37,6 +37,8 @@ The rejected in-callback access-clock experiment is documented in
 [docs/cpu-access-timing-postmortem.md](docs/cpu-access-timing-postmortem.md).
 Boundary-visible 65C816 ABORT evidence is recorded in
 [docs/65c816-abort-foundation-audit.md](docs/65c816-abort-foundation-audit.md).
+The initial caller-owned CPU operation cursor is scoped in
+[docs/65c816-cycle-contract-audit.md](docs/65c816-cycle-contract-audit.md).
 
 ## State and evidence rules
 
@@ -713,14 +715,17 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STP
 - [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
-- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; exact dummy/internal sequencing, refresh and arbitration pending
+- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; five opcodes have resumable operation sequences, while remaining exact dummy/internal sequencing, refresh and arbitration are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, boundary-visible ABORT and atomic scheduler/5A22 bridge exist; exact cycle boundaries and mid-instruction ABORT pending
+- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, boundary-visible ABORT, five resumable opcode sequences and the atomic scheduler/5A22 bridge exist; remaining cycle boundaries and mid-instruction ABORT pending
 
 ### Verified 65C816 foundation subset
 
 - [x] Caller-owned register/mode/bus/diagnostic state
+- [x] Caller-owned peek/commit operation cursor for `EA`, `A9`, `8D`, `C2` and `E2`
+- [x] Exact-once/stale-descriptor host tests for the initial resumable operation subset
+- [ ] Remaining 251 opcode remainders and interrupt entries migrated from legacy-atomic execution
 - [x] Reset vector fetch from logical 00:FFFC-D
 - [x] Pre-reset and invalid-bus diagnostic stops
 - [x] Boundary-visible ABORT vectors, stack/status effects, priority and WAI restart-address behavior
@@ -1198,7 +1203,7 @@ platform persistence remains incomplete.
 - [x] Event-budget exhaustion preserves aligned domain state
 - [x] Atomic CPU-step delta advances scheduler and H/V together
 - [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
-- [ ] Resumable CPU cycle/micro-operation contract before meaningful-access event dispatch
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation verified for five opcodes; remaining 251 opcodes, interrupt entry, dummy cycles and scheduler integration pending
 
 ### Interrupt-line aggregation subset
 
