@@ -157,10 +157,14 @@ Visible mismatches, counter regressions, overflow and scheduler-budget errors ar
 reported. Reset bus accesses are not yet driven through this bridge.
 
 Scheduler dispatch from inside the instruction-atomic CPU was attempted and rejected.
-If an event budget or callback failed after part of an instruction, the existing API
-could neither roll back nor resume safely. Per-access advancement therefore requires
-a resumable cycle/micro-operation contract first. See the
-[access-timing post-mortem](cpu-access-timing-postmortem.md).
+If an event budget or callback failed after part of an instruction, that API could
+neither roll back nor resume safely. The CPU now has a caller-owned, exact-once
+peek/commit foundation for opcode fetch and five opcodes, but the other 251 opcodes,
+interrupt entry and dummy cycles remain explicitly atomic. The timed bridge is not
+connected to the cursor yet. Per-access advancement therefore remains blocked until
+all reachable paths and failure/cancellation cases are resumable. See the
+[access-timing post-mortem](cpu-access-timing-postmortem.md) and
+[cycle-contract audit](65c816-cycle-contract-audit.md).
 
 The CPU-I/O math unit uses the processor-cycle domain: each completed SNES CPU-bus
 access advances one cycle and the bridge advances the remaining aggregate internal
@@ -230,7 +234,7 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [x] Master timestamp units
 - [x] Clock ratio representation
 - [x] Event tie ordering
-- [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle bounding pending
+- [ ] [IN PROGRESS] CPU event horizon — five-opcode peek/commit foundation exists; timed steps remain atomic and general mid-instruction bus-cycle bounding is pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization

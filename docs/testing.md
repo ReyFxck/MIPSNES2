@@ -73,6 +73,14 @@ lower-priority NMI retention, WAI no-wake/restart-address behavior, STP/reset ha
 no opcode fetch before entry and missing-write-bus diagnostics. They intentionally do
 not claim mid-instruction register rollback, write suppression or exact signal-cycle
 sampling.
+The separate `test-cpu-cycles` executable verifies the first caller-owned resumable
+operation contract. It covers side-effect-free repeated peek, exact-once commit,
+stale-descriptor rejection, opcode fetch, explicit legacy fallback, `NOP`, immediate
+`LDA`, absolute `STA`, `REP` and `SEP`; 8/16-bit M behavior; emulation invariants;
+program-bank PC wrap; 24-bit linear store crossing; flag commit position; logical
+addresses, access order/count and interrupt arrival between boundary peek/commit.
+It does not claim that the remaining 251 opcodes, interrupt entry, dummy cycles or
+the scheduler bridge are resumable.
 The scheduler regression executable covers absolute master-clock events, deterministic
 timestamp/priority/insertion ordering, cancellation, capacity, callback insertion,
 dispatch budgets, reentrant-run rejection, event horizons, exact rational conversion,

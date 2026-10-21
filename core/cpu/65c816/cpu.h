@@ -27,6 +27,49 @@ typedef enum {
     MIPSNES2_CPU_CLOCK_STOPPED
 } mipsnes2_cpu_result;
 
+/*
+ * Incremental instruction execution contract.
+ *
+ * A caller first peeks at the next operation, may stop without changing CPU
+ * or bus state, then commits that exact descriptor once.  The state object is
+ * caller-owned so a scheduler can retain it across an event-budget return.
+ * Do not mutate the CPU, interleave another CPU step or discard an active state
+ * after committing an operation; full cancellation/checkpoint recovery is not
+ * part of this foundation.
+ * Most opcodes still use LEGACY_ATOMIC while their bus sequence is migrated;
+ * that operation is deliberately visible rather than pretending the opcode
+ * has meaningful-access boundaries.
+ */
+typedef enum {
+    MIPSNES2_CPU_OPERATION_CONTROL = 0,
+    MIPSNES2_CPU_OPERATION_READ,
+    MIPSNES2_CPU_OPERATION_WRITE,
+    MIPSNES2_CPU_OPERATION_INTERNAL,
+    MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC
+} mipsnes2_cpu_operation_kind;
+
+typedef struct {
+    mipsnes2_cpu_operation_kind kind;
+    mipsnes2_address address;
+    uint8_t value;
+} mipsnes2_cpu_operation;
+
+typedef enum {
+    MIPSNES2_CPU_CYCLE_READY = 0,
+    MIPSNES2_CPU_CYCLE_COMPLETE,
+    MIPSNES2_CPU_CYCLE_INVALID_ARGUMENT,
+    MIPSNES2_CPU_CYCLE_INVALID_STATE,
+    MIPSNES2_CPU_CYCLE_STALE_OPERATION
+} mipsnes2_cpu_cycle_result;
+
+typedef struct {
+    /* Private cursor fields. Initialize through mipsnes2_cpu_cycle_state_init. */
+    uint16_t operand;
+    uint8_t opcode;
+    uint8_t phase;
+    bool active;
+} mipsnes2_cpu_cycle_state;
+
 typedef struct {
     uint16_t a;
     uint16_t x;
@@ -56,6 +99,18 @@ typedef struct {
 void mipsnes2_cpu_init(mipsnes2_cpu *cpu, mipsnes2_bus_interface bus);
 mipsnes2_cpu_result mipsnes2_cpu_reset(mipsnes2_cpu *cpu);
 mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu);
+void mipsnes2_cpu_cycle_state_init(mipsnes2_cpu_cycle_state *state);
+mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin(
+    mipsnes2_cpu_cycle_state *state);
+mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
+    const mipsnes2_cpu *cpu,
+    const mipsnes2_cpu_cycle_state *state,
+    mipsnes2_cpu_operation *operation);
+mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
+    mipsnes2_cpu *cpu,
+    mipsnes2_cpu_cycle_state *state,
+    const mipsnes2_cpu_operation *operation,
+    mipsnes2_cpu_result *instruction_result);
 void mipsnes2_cpu_set_irq(mipsnes2_cpu *cpu, bool asserted);
 void mipsnes2_cpu_pulse_abort(mipsnes2_cpu *cpu);
 void mipsnes2_cpu_pulse_nmi(mipsnes2_cpu *cpu);

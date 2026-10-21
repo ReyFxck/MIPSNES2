@@ -1158,50 +1158,11 @@ void mipsnes2_cpu_pulse_nmi(mipsnes2_cpu *cpu)
     }
 }
 
-mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
+static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
 {
     uint8_t operand;
     mipsnes2_address address;
     uint64_t base_cycles;
-
-    if (cpu == NULL || cpu->bus.read8 == NULL) {
-        return MIPSNES2_CPU_INVALID_BUS;
-    }
-    if (cpu->stopped) {
-        return cpu->stop_reason;
-    }
-    if (cpu->clock_stopped) {
-        return MIPSNES2_CPU_CLOCK_STOPPED;
-    }
-    if (cpu->abort_pending) {
-        cpu->abort_pending = false;
-        if (cpu->waiting) {
-            /* WDC 7.13: ABORT does not release WAI; a later interrupt
-             * must return to the WAI opcode rather than its successor. */
-            cpu->pbr = (uint8_t)(cpu->last_opcode_address >> 16);
-            cpu->pc = (uint16_t)cpu->last_opcode_address;
-        } else {
-            return enter_interrupt(cpu, INTERRUPT_ABORT);
-        }
-    }
-    if (cpu->nmi_pending) {
-        cpu->waiting = false;
-        cpu->nmi_pending = false;
-        return enter_interrupt(cpu, INTERRUPT_NMI);
-    }
-    if (cpu->irq_level && (cpu->p & MIPSNES2_CPU_FLAG_I) == 0U) {
-        cpu->waiting = false;
-        return enter_interrupt(cpu, INTERRUPT_IRQ);
-    }
-    if (cpu->waiting) {
-        if (!cpu->irq_level) {
-            return MIPSNES2_CPU_WAITING;
-        }
-        cpu->waiting = false;
-    }
-
-    cpu->last_opcode_address = mipsnes2_address_make(cpu->pbr, cpu->pc);
-    cpu->last_opcode = fetch8(cpu);
 
     switch (cpu->last_opcode) {
     case 0x00: /* BRK signature */
@@ -2915,4 +2876,400 @@ mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
     }
 
     return MIPSNES2_CPU_OK;
+}
+
+typedef enum {
+    CPU_CYCLE_PHASE_IDLE = 0,
+    CPU_CYCLE_PHASE_BOUNDARY,
+    CPU_CYCLE_PHASE_FETCH,
+    CPU_CYCLE_PHASE_NOP_INTERNAL,
+    CPU_CYCLE_PHASE_LDA8_VALUE,
+    CPU_CYCLE_PHASE_LDA16_LOW,
+    CPU_CYCLE_PHASE_LDA16_HIGH,
+    CPU_CYCLE_PHASE_STA_ADDRESS_LOW,
+    CPU_CYCLE_PHASE_STA_ADDRESS_HIGH,
+    CPU_CYCLE_PHASE_STA_WRITE8,
+    CPU_CYCLE_PHASE_STA_WRITE16_LOW,
+    CPU_CYCLE_PHASE_STA_WRITE16_HIGH,
+    CPU_CYCLE_PHASE_REP_VALUE,
+    CPU_CYCLE_PHASE_REP_INTERNAL,
+    CPU_CYCLE_PHASE_SEP_VALUE,
+    CPU_CYCLE_PHASE_SEP_INTERNAL,
+    CPU_CYCLE_PHASE_LEGACY_ATOMIC,
+    CPU_CYCLE_PHASE_COMPLETE
+} cpu_cycle_phase;
+
+static void set_operation(mipsnes2_cpu_operation *operation,
+                          mipsnes2_cpu_operation_kind kind,
+                          mipsnes2_address address, uint8_t value)
+{
+    operation->kind = kind;
+    operation->address = mipsnes2_address24(address);
+    operation->value = value;
+}
+
+static bool operation_matches(const mipsnes2_cpu_operation *left,
+                              const mipsnes2_cpu_operation *right)
+{
+    return left->kind == right->kind && left->address == right->address &&
+           left->value == right->value;
+}
+
+static bool boundary_needs_atomic_entry(const mipsnes2_cpu *cpu)
+{
+    return cpu->abort_pending || cpu->nmi_pending ||
+           (cpu->irq_level &&
+            (cpu->p & MIPSNES2_CPU_FLAG_I) == 0U);
+}
+
+static void complete_cycle_state(mipsnes2_cpu_cycle_state *state)
+{
+    state->phase = (uint8_t)CPU_CYCLE_PHASE_COMPLETE;
+    state->active = false;
+}
+
+static mipsnes2_cpu_cycle_result commit_boundary(
+    mipsnes2_cpu *cpu, mipsnes2_cpu_cycle_state *state,
+    mipsnes2_cpu_result *instruction_result)
+{
+    if (cpu->bus.read8 == NULL) {
+        *instruction_result = MIPSNES2_CPU_INVALID_BUS;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    }
+    if (cpu->stopped) {
+        *instruction_result = cpu->stop_reason;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    }
+    if (cpu->clock_stopped) {
+        *instruction_result = MIPSNES2_CPU_CLOCK_STOPPED;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    }
+    if (cpu->abort_pending) {
+        cpu->abort_pending = false;
+        if (cpu->waiting) {
+            /* WDC 7.13: ABORT does not release WAI; a later interrupt
+             * must return to the WAI opcode rather than its successor. */
+            cpu->pbr = (uint8_t)(cpu->last_opcode_address >> 16);
+            cpu->pc = (uint16_t)cpu->last_opcode_address;
+        } else {
+            *instruction_result = enter_interrupt(cpu, INTERRUPT_ABORT);
+            complete_cycle_state(state);
+            return MIPSNES2_CPU_CYCLE_COMPLETE;
+        }
+    }
+    if (cpu->nmi_pending) {
+        cpu->waiting = false;
+        cpu->nmi_pending = false;
+        *instruction_result = enter_interrupt(cpu, INTERRUPT_NMI);
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    }
+    if (cpu->irq_level && (cpu->p & MIPSNES2_CPU_FLAG_I) == 0U) {
+        cpu->waiting = false;
+        *instruction_result = enter_interrupt(cpu, INTERRUPT_IRQ);
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    }
+    if (cpu->waiting) {
+        if (!cpu->irq_level) {
+            *instruction_result = MIPSNES2_CPU_WAITING;
+            complete_cycle_state(state);
+            return MIPSNES2_CPU_CYCLE_COMPLETE;
+        }
+        cpu->waiting = false;
+    }
+
+    state->phase = (uint8_t)CPU_CYCLE_PHASE_FETCH;
+    return MIPSNES2_CPU_CYCLE_READY;
+}
+
+static void decode_incremental_opcode(mipsnes2_cpu *cpu,
+                                      mipsnes2_cpu_cycle_state *state)
+{
+    switch (state->opcode) {
+    case 0x8d: /* STA absolute */
+        state->phase = cpu->bus.write8 == NULL
+                           ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
+                           : (uint8_t)CPU_CYCLE_PHASE_STA_ADDRESS_LOW;
+        break;
+    case 0xa9: /* LDA immediate */
+        state->phase = accumulator_is_8_bit(cpu)
+                           ? (uint8_t)CPU_CYCLE_PHASE_LDA8_VALUE
+                           : (uint8_t)CPU_CYCLE_PHASE_LDA16_LOW;
+        break;
+    case 0xc2: /* REP immediate */
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_REP_VALUE;
+        break;
+    case 0xe2: /* SEP immediate */
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_SEP_VALUE;
+        break;
+    case 0xea: /* NOP */
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_NOP_INTERNAL;
+        break;
+    default:
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC;
+        break;
+    }
+}
+
+void mipsnes2_cpu_cycle_state_init(mipsnes2_cpu_cycle_state *state)
+{
+    if (state != NULL) {
+        (void)memset(state, 0, sizeof(*state));
+    }
+}
+
+mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin(
+    mipsnes2_cpu_cycle_state *state)
+{
+    if (state == NULL) {
+        return MIPSNES2_CPU_CYCLE_INVALID_ARGUMENT;
+    }
+    if (state->active) {
+        return MIPSNES2_CPU_CYCLE_INVALID_STATE;
+    }
+
+    state->operand = 0U;
+    state->opcode = 0U;
+    state->phase = (uint8_t)CPU_CYCLE_PHASE_BOUNDARY;
+    state->active = true;
+    return MIPSNES2_CPU_CYCLE_READY;
+}
+
+mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
+    const mipsnes2_cpu *cpu,
+    const mipsnes2_cpu_cycle_state *state,
+    mipsnes2_cpu_operation *operation)
+{
+    mipsnes2_address address;
+
+    if (cpu == NULL || state == NULL || operation == NULL) {
+        return MIPSNES2_CPU_CYCLE_INVALID_ARGUMENT;
+    }
+    if (!state->active) {
+        return state->phase == (uint8_t)CPU_CYCLE_PHASE_COMPLETE
+                   ? MIPSNES2_CPU_CYCLE_COMPLETE
+                   : MIPSNES2_CPU_CYCLE_INVALID_STATE;
+    }
+
+    switch ((cpu_cycle_phase)state->phase) {
+    case CPU_CYCLE_PHASE_BOUNDARY:
+        set_operation(operation,
+                      boundary_needs_atomic_entry(cpu)
+                          ? MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC
+                          : MIPSNES2_CPU_OPERATION_CONTROL,
+                      0U, 0U);
+        break;
+    case CPU_CYCLE_PHASE_FETCH:
+    case CPU_CYCLE_PHASE_LDA8_VALUE:
+    case CPU_CYCLE_PHASE_LDA16_LOW:
+    case CPU_CYCLE_PHASE_LDA16_HIGH:
+    case CPU_CYCLE_PHASE_STA_ADDRESS_LOW:
+    case CPU_CYCLE_PHASE_STA_ADDRESS_HIGH:
+    case CPU_CYCLE_PHASE_REP_VALUE:
+    case CPU_CYCLE_PHASE_SEP_VALUE:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      mipsnes2_address_make(cpu->pbr, cpu->pc), 0U);
+        break;
+    case CPU_CYCLE_PHASE_NOP_INTERNAL:
+    case CPU_CYCLE_PHASE_REP_INTERNAL:
+    case CPU_CYCLE_PHASE_SEP_INTERNAL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 0U);
+        break;
+    case CPU_CYCLE_PHASE_STA_WRITE8:
+    case CPU_CYCLE_PHASE_STA_WRITE16_LOW:
+        address = mipsnes2_address_make(cpu->dbr, state->operand);
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, address,
+                      (uint8_t)cpu->a);
+        break;
+    case CPU_CYCLE_PHASE_STA_WRITE16_HIGH:
+        address = mipsnes2_address_make(cpu->dbr, state->operand) +
+                  UINT32_C(1);
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, address,
+                      (uint8_t)(cpu->a >> 8));
+        break;
+    case CPU_CYCLE_PHASE_LEGACY_ATOMIC:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC,
+                      0U, 0U);
+        break;
+    case CPU_CYCLE_PHASE_COMPLETE:
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_IDLE:
+    default:
+        return MIPSNES2_CPU_CYCLE_INVALID_STATE;
+    }
+    return MIPSNES2_CPU_CYCLE_READY;
+}
+
+mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
+    mipsnes2_cpu *cpu,
+    mipsnes2_cpu_cycle_state *state,
+    const mipsnes2_cpu_operation *operation,
+    mipsnes2_cpu_result *instruction_result)
+{
+    mipsnes2_cpu_operation current;
+    mipsnes2_cpu_cycle_result peek_result;
+    uint8_t value;
+
+    if (cpu == NULL || state == NULL || operation == NULL ||
+        instruction_result == NULL) {
+        return MIPSNES2_CPU_CYCLE_INVALID_ARGUMENT;
+    }
+    *instruction_result = MIPSNES2_CPU_NOT_READY;
+    peek_result = mipsnes2_cpu_cycle_peek(cpu, state, &current);
+    if (peek_result != MIPSNES2_CPU_CYCLE_READY) {
+        return peek_result;
+    }
+    if (!operation_matches(operation, &current)) {
+        return MIPSNES2_CPU_CYCLE_STALE_OPERATION;
+    }
+
+    switch ((cpu_cycle_phase)state->phase) {
+    case CPU_CYCLE_PHASE_BOUNDARY:
+        return commit_boundary(cpu, state, instruction_result);
+    case CPU_CYCLE_PHASE_FETCH:
+        cpu->last_opcode_address = current.address;
+        value = read8(cpu, current.address);
+        cpu->last_opcode = value;
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->opcode = value;
+        decode_incremental_opcode(cpu, state);
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_NOP_INTERNAL:
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_LDA8_VALUE:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->a = (uint16_t)((cpu->a & UINT16_C(0xff00)) | value);
+        set_nz8(cpu, value);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_LDA16_LOW:
+        state->operand = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_LDA16_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_LDA16_HIGH:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->a = (uint16_t)(state->operand | (uint16_t)(value << 8));
+        set_nz16(cpu, cpu->a);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_STA_ADDRESS_LOW:
+        state->operand = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_STA_ADDRESS_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_STA_ADDRESS_HIGH:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->operand |= (uint16_t)(value << 8);
+        state->phase = accumulator_is_8_bit(cpu)
+                           ? (uint8_t)CPU_CYCLE_PHASE_STA_WRITE8
+                           : (uint8_t)CPU_CYCLE_PHASE_STA_WRITE16_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_STA_WRITE8:
+        write8(cpu, current.address, current.value);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_STA_WRITE16_LOW:
+        write8(cpu, current.address, current.value);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_STA_WRITE16_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_STA_WRITE16_HIGH:
+        write8(cpu, current.address, current.value);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_REP_VALUE:
+    case CPU_CYCLE_PHASE_SEP_VALUE:
+        state->operand = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = state->phase ==
+                                   (uint8_t)CPU_CYCLE_PHASE_REP_VALUE
+                           ? (uint8_t)CPU_CYCLE_PHASE_REP_INTERNAL
+                           : (uint8_t)CPU_CYCLE_PHASE_SEP_INTERNAL;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_REP_INTERNAL:
+        cpu->p &= (uint8_t)~(uint8_t)state->operand;
+        apply_mode_invariants(cpu);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_SEP_INTERNAL:
+        cpu->p |= (uint8_t)state->operand;
+        apply_mode_invariants(cpu);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_LEGACY_ATOMIC: {
+        uint64_t cycles_before = cpu->instruction_cycles;
+
+        *instruction_result = execute_fetched_opcode(cpu);
+        if (cpu->instruction_cycles > cycles_before) {
+            /* The incremental fetch already charged the opcode cycle. */
+            cpu->instruction_cycles -= UINT64_C(1);
+        } else if (*instruction_result != MIPSNES2_CPU_OK) {
+            /* Preserve the legacy fail-stop accounting contract until that
+             * opcode has a fully resumable sequence of its own. */
+            cpu->instruction_cycles -= UINT64_C(1);
+        }
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    }
+    case CPU_CYCLE_PHASE_IDLE:
+    case CPU_CYCLE_PHASE_COMPLETE:
+    default:
+        return MIPSNES2_CPU_CYCLE_INVALID_STATE;
+    }
+}
+
+mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu)
+{
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    mipsnes2_cpu_result instruction_result = MIPSNES2_CPU_NOT_READY;
+    mipsnes2_cpu_cycle_result cycle_result;
+
+    if (cpu == NULL) {
+        return MIPSNES2_CPU_INVALID_BUS;
+    }
+
+    mipsnes2_cpu_cycle_state_init(&state);
+    cycle_result = mipsnes2_cpu_cycle_begin(&state);
+    while (cycle_result == MIPSNES2_CPU_CYCLE_READY) {
+        cycle_result = mipsnes2_cpu_cycle_peek(cpu, &state, &operation);
+        if (cycle_result != MIPSNES2_CPU_CYCLE_READY) {
+            break;
+        }
+        cycle_result = mipsnes2_cpu_cycle_commit(
+            cpu, &state, &operation, &instruction_result);
+    }
+
+    if (cycle_result == MIPSNES2_CPU_CYCLE_COMPLETE) {
+        return instruction_result;
+    }
+    return MIPSNES2_CPU_NOT_READY;
 }

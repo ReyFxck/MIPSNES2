@@ -103,6 +103,12 @@ Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.
 
+A caller-owned peek/commit CPU-operation foundation now exposes exact-once opcode
+fetch plus resumable sequences for `NOP`, immediate `LDA`, absolute `STA`, `REP` and
+`SEP`. The other 251 opcodes remain behind an explicit legacy-atomic operation, and
+the scheduler still uses the reviewed instruction-atomic bridge. This is a migration
+foundation, not a claim of complete cycle-level execution.
+
 ## Build and test the foundation
 
 Host requirements: a C99 compiler (GCC or Clang), GNU Make, Python 3.10+.
