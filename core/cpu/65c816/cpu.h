@@ -45,6 +45,7 @@ typedef struct {
     bool waiting;
     bool clock_stopped;
     bool irq_level;
+    bool abort_pending;
     bool nmi_pending;
     bool stopped;
     mipsnes2_cpu_result stop_reason;
@@ -56,6 +57,7 @@ void mipsnes2_cpu_init(mipsnes2_cpu *cpu, mipsnes2_bus_interface bus);
 mipsnes2_cpu_result mipsnes2_cpu_reset(mipsnes2_cpu *cpu);
 mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu);
 void mipsnes2_cpu_set_irq(mipsnes2_cpu *cpu, bool asserted);
+void mipsnes2_cpu_pulse_abort(mipsnes2_cpu *cpu);
 void mipsnes2_cpu_pulse_nmi(mipsnes2_cpu *cpu);
 
 #endif

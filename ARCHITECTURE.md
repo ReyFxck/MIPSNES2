@@ -15,7 +15,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | Area | Responsibility | Bootstrap implementation |
 |---|---|---|
 | core/common | Logical address types, metadata, diagnostic sink contract | Address helpers and logging utility |
-| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI boundary |
+| core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI/ABORT boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
 | core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counter-register subset only; no renderer or PPU memory |
@@ -440,5 +440,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   master-clock or platform-audio time. Reads sample before advancing their bus cycle;
   writes advance an existing job before latching a new trigger. Busy retriggering is
   deterministic but remains an acknowledged approximation pending hardware evidence.
+- 2026-10-21: A caller-latched ABORT pulse now implements the sourced vectors,
+  stack/status effects, interrupt priority and WAI no-wake/restart-address behavior
+  at CPU boundaries. Physical mid-instruction rollback and cycle-sensitive exceptions
+  remain blocked on a resumable CPU cycle/micro-operation contract.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

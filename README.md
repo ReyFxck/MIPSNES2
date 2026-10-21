@@ -28,7 +28,8 @@ a stack-relative foundation, a logic/compare foundation, and complete LDA/STA ad
 families alongside the implemented index-register load/store paths, complete
 ADC/SBC addressing families including packed-BCD decimal operation, all shifts and
 rotates, memory INC/DEC, TSB/TRB and STZ, the complete stack push/pull family and
-all jump/subroutine call/return forms, software/hardware interrupt entry, RTI,
+all jump/subroutine call/return forms, software/hardware interrupt entry, a
+boundary-visible ABORT foundation, RTI,
 WDM, MVP/MVN and WAI/STP. Deterministic host regressions
 cover widths, flags, cycles, signed branch offsets, program-bank-local PC wrapping,
 Direct Page pointer wrapping, DBR selection and 24-bit bank crossing. Console entry
@@ -70,9 +71,10 @@ invalid-digit cases, plus an independent SingleStepTests vector audit. The compl
 shift/rotate families and the current memory read-modify-write group are also
 verified. Opcode dispatch and the generic scheduler/event foundation are complete.
 Meaningful CPU bus accesses now receive address-dependent Ricoh 5A22 timing through
-the partial SNES map. ABORT, signal-level RESET/bus behavior, exact dummy/internal
-bus sequencing, full CPU event-horizon integration and broader independent validation
-remain. The first caller-owned CPU-I/O component now covers the documented
+the partial SNES map. Mid-instruction ABORT rollback/sampling, signal-level RESET/bus
+behavior, exact dummy/internal bus sequencing, full CPU event-horizon integration and
+broader independent validation remain. The first caller-owned CPU-I/O component now
+covers the documented
 interrupt/timer subset plus `$4202-$4206` multiplication/division inputs and
 `$4214-$4217` results. It also exposes caller-owned logical controller snapshots,
 `$4218-$421F` automatic-read results and a deterministic VBlank polling window.

@@ -67,6 +67,12 @@ Final-dispatch regressions cover BRK/COP/RTI/WDM/MVP/MVN/WAI/STP, software and
 hardware interrupt vectors, native/emulation stack layouts, signature bytes,
 block-move repetition and index wrapping, IRQ/NMI wake/priority behavior, STP reset
 release, meaningful bus order and aggregate cycles.
+Boundary-visible ABORT regressions cover emulation/native vectors, stack byte order,
+PBR and status handling, seven/eight-cycle aggregates, ABORT-over-NMI/IRQ priority,
+lower-priority NMI retention, WAI no-wake/restart-address behavior, STP/reset handling,
+no opcode fetch before entry and missing-write-bus diagnostics. They intentionally do
+not claim mid-instruction register rollback, write suppression or exact signal-cycle
+sampling.
 The scheduler regression executable covers absolute master-clock events, deterministic
 timestamp/priority/insertion ordering, cancellation, capacity, callback insertion,
 dispatch budgets, reentrant-run rejection, event horizons, exact rational conversion,
@@ -223,6 +229,8 @@ Stack push/pull and subroutine-control evidence is recorded in
 [65c816-stack-control-audit.md](65c816-stack-control-audit.md).
 Complete opcode-dispatch and interrupt-boundary evidence is recorded in
 [65c816-complete-opcodes-audit.md](65c816-complete-opcodes-audit.md).
+Boundary-visible ABORT evidence is recorded in
+[65c816-abort-foundation-audit.md](65c816-abort-foundation-audit.md).
 Scheduler and 5A22 timing-foundation evidence is recorded in
 [scheduler-foundation-audit.md](scheduler-foundation-audit.md).
 Partial SNES bus and timed CPU-step evidence is recorded in

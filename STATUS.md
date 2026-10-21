@@ -35,6 +35,8 @@ The counter-register foundation is scoped in
 [docs/hv-counter-latch-audit.md](docs/hv-counter-latch-audit.md).
 The rejected in-callback access-clock experiment is documented in
 [docs/cpu-access-timing-postmortem.md](docs/cpu-access-timing-postmortem.md).
+Boundary-visible 65C816 ABORT evidence is recorded in
+[docs/65c816-abort-foundation-audit.md](docs/65c816-abort-foundation-audit.md).
 
 ## State and evidence rules
 
@@ -703,7 +705,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
 - [x] IRQ CPU input and entry — SNES IRQ generation/timing remains Phase 4
 - [x] NMI CPU input and entry — SNES NMI generation/timing remains Phase 4
-- [ ] ABORT input and entry
+- [ ] [IN PROGRESS] ABORT input and entry — boundary pulse, priority, vectors, stack/status and WAI no-wake restart behavior verified; mid-instruction rollback/sampling pending
 - [ ] [IN PROGRESS] RESET — vector and documented visible state subset only
 - [x] BRK
 - [x] COP
@@ -714,13 +716,14 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; exact dummy/internal sequencing, refresh and arbitration pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch and atomic scheduler/5A22 bridge exist; exact cycle boundaries and ABORT pending
+- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, boundary-visible ABORT and atomic scheduler/5A22 bridge exist; exact cycle boundaries and mid-instruction ABORT pending
 
 ### Verified 65C816 foundation subset
 
 - [x] Caller-owned register/mode/bus/diagnostic state
 - [x] Reset vector fetch from logical 00:FFFC-D
 - [x] Pre-reset and invalid-bus diagnostic stops
+- [x] Boundary-visible ABORT vectors, stack/status effects, priority and WAI restart-address behavior
 - [x] BRK (`00`)
 - [x] COP (`02`)
 - [x] RTI (`40`)
