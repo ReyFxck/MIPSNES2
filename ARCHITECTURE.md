@@ -244,19 +244,23 @@ logical 24-bit reads, writes, internal processor cycles and an explicit
 effect. Active state must be retained and resumed; interleaving another CPU step or
 discarding a partially committed cursor is not supported by this foundation.
 
-The first migrated sequences are opcode fetch plus `NOP` (`EA`), immediate `LDA`
-(`A9`), absolute `STA` (`8D`), `REP` (`C2`) and `SEP` (`E2`). They expose width-
-selected operand bytes, the final flag/internal action and low-before-high writes as
-applicable. `mipsnes2_cpu_step` drives this same contract to completion, preserving
-the established instruction API. The remaining 251 opcodes return an explicit
-legacy-atomic operation after their opcode fetch and use the existing evaluator for
-the remainder.
+The migrated instruction sequences are opcode fetch plus `NOP` (`EA`), immediate
+`LDA` (`A9`), absolute `STA` (`8D`), `REP` (`C2`), `SEP` (`E2`), `BRK` (`00`) and
+`COP` (`02`). They expose width-selected operand bytes, the final flag/internal
+action, low-before-high writes, signature reads, stack writes and vector reads as
+applicable. Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the
+accepted cause and entry state latched before any effect. `mipsnes2_cpu_step` drives
+this same contract to completion, preserving the established instruction API. The
+remaining 249 opcodes return an explicit legacy-atomic operation after their opcode
+fetch and use the existing evaluator for the remainder.
 
-This is deliberately not wired into the scheduler yet. Interrupt entry, remaining
-opcodes, dummy cycles and undocumented/signal-level bus activity are still atomic or
-absent. Consequently the central timed-step bridge remains instruction-atomic and
-must not dispatch events from bus callbacks. Scope and verification are recorded in
-[the cycle-contract audit](docs/65c816-cycle-contract-audit.md).
+This is deliberately not wired into the scheduler yet. Remaining opcodes, reset,
+dummy cycles, mid-instruction `ABORT` and undocumented/signal-level bus activity are
+still atomic or absent. Consequently the central timed-step bridge remains
+instruction-atomic and must not dispatch events from bus callbacks. The initial
+foundation is recorded in [the cycle-contract audit](docs/65c816-cycle-contract-audit.md);
+interrupt migration scope and verification are recorded in
+[the interrupt-cycle audit](docs/65c816-interrupt-cycle-audit.md).
 
 ## Scheduler and timing foundation
 
@@ -474,5 +478,11 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   sequences for opcode fetch and `NOP`, immediate `LDA`, absolute `STA`, `REP` and
   `SEP`. The other 251 opcodes and interrupt entry remain explicitly atomic, and the
   scheduler is not yet connected to the cursor.
+- 2026-10-21: The cursor now also exposes `BRK`, `COP` and boundary `ABORT`, `NMI`
+  and `IRQ` entry. Accepted interrupt state is latched before effects; stack writes
+  and vector reads are explicit. Hardware entries use two provisional internal
+  operations rather than inventing unsourced dummy bus traffic. The remaining 249
+  opcodes, reset, exact electrical phase placement, mid-instruction `ABORT` and
+  scheduler integration remain open.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

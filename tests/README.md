@@ -15,7 +15,8 @@ The CPU suite includes boundary-visible ABORT vectors, native/emulation stack la
 priority, WAI restart-address behavior and invalid-bus diagnostics. It does not claim
 physical mid-instruction ABORT sampling or rollback.
 
-`test-cpu-cycles` covers the caller-owned peek/commit cursor for opcode fetch and
-`EA/A9/8D/C2/E2`, including repeated peek without effects, stale-operation rejection,
-8/16-bit width, wrap and write order. All other opcode remainders and interrupt entry
+`test-cpu-cycles` covers the caller-owned peek/commit cursor for opcode fetch,
+`EA/A9/8D/C2/E2/00/02` and boundary `ABORT`/`NMI`/`IRQ` entry, including repeated
+peek without effects, stale-operation rejection, 8/16-bit width, wrap, interrupt
+priority and stack/vector access order. The other 249 opcode remainders and reset
 remain explicitly legacy-atomic; the scheduler does not consume this cursor yet.

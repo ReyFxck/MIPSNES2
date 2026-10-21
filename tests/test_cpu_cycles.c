@@ -116,8 +116,16 @@ static int commit_operation(mipsnes2_cpu *cpu,
                             mipsnes2_cpu_cycle_result expected,
                             mipsnes2_cpu_result expected_cpu)
 {
+    mipsnes2_cpu_operation repeated;
     mipsnes2_cpu_result cpu_result = MIPSNES2_CPU_OK;
 
+    if (expected != MIPSNES2_CPU_CYCLE_STALE_OPERATION) {
+        CHECK(mipsnes2_cpu_cycle_peek(cpu, state, &repeated) ==
+              MIPSNES2_CPU_CYCLE_READY);
+        CHECK(repeated.kind == operation->kind);
+        CHECK(repeated.address == operation->address);
+        CHECK(repeated.value == operation->value);
+    }
     CHECK(mipsnes2_cpu_cycle_commit(cpu, state, operation, &cpu_result) ==
           expected);
     CHECK(cpu_result == expected_cpu);
@@ -485,6 +493,344 @@ static int test_rep_sep_internal_commit(void)
     return 0;
 }
 
+static int test_software_interrupt_cycles(void)
+{
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    mipsnes2_cpu_operation repeated;
+    uint8_t pushed_status;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8000)) == 0);
+    cpu.s = UINT16_C(0x0100);
+    cpu.p |= MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_C;
+    pushed_status = cpu.p;
+    bank7e[0x8000] = UINT8_C(0x00); /* BRK */
+    bank7e[0x8001] = UINT8_C(0x5a);
+    bank00[0xfffe] = UINT8_C(0x34);
+    bank00[0xffff] = UINT8_C(0x12);
+    CHECK(begin_instruction(&cpu, &state) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e8000), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e8001), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x000100), UINT8_C(0x80),
+                           &operation) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x000100), UINT8_C(0x80),
+                           &repeated) == 0);
+    CHECK(trace.count == 2U);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x0001ff), UINT8_C(0x02),
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x0001fe), pushed_status,
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00fffe), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00ffff), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_OK) == 0);
+    CHECK(cpu.pc == UINT16_C(0x1234));
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.s == UINT16_C(0x01fd));
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
+    CHECK(trace.count == 7U);
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8100)) == 0);
+    cpu.emulation = false;
+    cpu.pbr = UINT8_C(0x7e);
+    cpu.s = UINT16_C(0x2000);
+    cpu.p = MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_C;
+    pushed_status = cpu.p;
+    bank7e[0x8100] = UINT8_C(0x02); /* COP */
+    bank7e[0x8101] = UINT8_C(0xa5);
+    bank00[0xffe4] = UINT8_C(0x78);
+    bank00[0xffe5] = UINT8_C(0x56);
+    CHECK(begin_instruction(&cpu, &state) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e8100), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e8101), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x002000), UINT8_C(0x7e),
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x001fff), UINT8_C(0x81),
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x001ffe), UINT8_C(0x02),
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x001ffd), pushed_status,
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00ffe4), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00ffe5), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_OK) == 0);
+    CHECK(cpu.pc == UINT16_C(0x5678));
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.s == UINT16_C(0x1ffc));
+    CHECK(cpu.p == (MIPSNES2_CPU_FLAG_I | MIPSNES2_CPU_FLAG_C));
+    CHECK(cpu.instruction_cycles == UINT64_C(8));
+    CHECK(trace.count == 8U);
+    return 0;
+}
+
+static int test_hardware_interrupt_cycles(void)
+{
+    static const mipsnes2_cpu_operation_kind irq_kinds[] = {
+        MIPSNES2_CPU_OPERATION_INTERNAL,
+        MIPSNES2_CPU_OPERATION_INTERNAL,
+        MIPSNES2_CPU_OPERATION_WRITE,
+        MIPSNES2_CPU_OPERATION_WRITE,
+        MIPSNES2_CPU_OPERATION_WRITE,
+        MIPSNES2_CPU_OPERATION_READ,
+        MIPSNES2_CPU_OPERATION_READ
+    };
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    size_t step;
+    uint8_t pushed_status;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8600)) == 0);
+    cpu.s = UINT16_C(0x0100);
+    cpu.p |= MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_C;
+    pushed_status = (uint8_t)(cpu.p & (uint8_t)~MIPSNES2_CPU_FLAG_X);
+    bank00[0xfffa] = UINT8_C(0x34);
+    bank00[0xfffb] = UINT8_C(0x12);
+    mipsnes2_cpu_pulse_nmi(&cpu);
+    mipsnes2_cpu_cycle_state_init(&state);
+    CHECK(mipsnes2_cpu_cycle_begin(&state) == MIPSNES2_CPU_CYCLE_READY);
+    CHECK(mipsnes2_cpu_cycle_peek(&cpu, &state, &operation) ==
+          MIPSNES2_CPU_CYCLE_READY);
+    CHECK(operation.kind == MIPSNES2_CPU_OPERATION_CONTROL);
+    CHECK(operation.value != 0U);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(!cpu.nmi_pending);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 1U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_STALE_OPERATION,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 2U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(trace.count == 0U);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x000100), UINT8_C(0x86),
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x0001ff), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x0001fe), pushed_status,
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00fffa), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00fffb), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_OK) == 0);
+    CHECK(cpu.pc == UINT16_C(0x1234));
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.s == UINT16_C(0x01fd));
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
+    CHECK(trace.count == 5U);
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9200)) == 0);
+    cpu.emulation = false;
+    cpu.pbr = UINT8_C(0x7e);
+    cpu.s = UINT16_C(0x2000);
+    cpu.p = MIPSNES2_CPU_FLAG_V | MIPSNES2_CPU_FLAG_D |
+            MIPSNES2_CPU_FLAG_C;
+    pushed_status = cpu.p;
+    bank00[0xffe8] = UINT8_C(0x78);
+    bank00[0xffe9] = UINT8_C(0x56);
+    mipsnes2_cpu_set_irq(&cpu, true);
+    mipsnes2_cpu_pulse_nmi(&cpu);
+    mipsnes2_cpu_pulse_abort(&cpu);
+    mipsnes2_cpu_cycle_state_init(&state);
+    CHECK(mipsnes2_cpu_cycle_begin(&state) == MIPSNES2_CPU_CYCLE_READY);
+    CHECK(mipsnes2_cpu_cycle_peek(&cpu, &state, &operation) ==
+          MIPSNES2_CPU_CYCLE_READY);
+    CHECK(operation.kind == MIPSNES2_CPU_OPERATION_CONTROL);
+    CHECK(operation.value != 0U);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(!cpu.abort_pending);
+    CHECK(cpu.nmi_pending);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 1U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 2U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x002000), UINT8_C(0x7e),
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x001fff), UINT8_C(0x92),
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x001ffe), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x001ffd), pushed_status,
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00ffe8), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00ffe9), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_OK) == 0);
+    CHECK(cpu.pc == UINT16_C(0x5678));
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.s == UINT16_C(0x1ffc));
+    CHECK(cpu.p == (MIPSNES2_CPU_FLAG_V | MIPSNES2_CPU_FLAG_I |
+                    MIPSNES2_CPU_FLAG_C));
+    CHECK(cpu.nmi_pending);
+    CHECK(cpu.instruction_cycles == UINT64_C(8));
+    CHECK(trace.count == 6U);
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9300)) == 0);
+    cpu.s = UINT16_C(0x0100);
+    cpu.p &= (uint8_t)~MIPSNES2_CPU_FLAG_I;
+    pushed_status = (uint8_t)(cpu.p & (uint8_t)~MIPSNES2_CPU_FLAG_X);
+    bank00[0xfffe] = UINT8_C(0xbc);
+    bank00[0xffff] = UINT8_C(0x9a);
+    mipsnes2_cpu_set_irq(&cpu, true);
+    mipsnes2_cpu_cycle_state_init(&state);
+    CHECK(mipsnes2_cpu_cycle_begin(&state) == MIPSNES2_CPU_CYCLE_READY);
+    CHECK(mipsnes2_cpu_cycle_peek(&cpu, &state, &operation) ==
+          MIPSNES2_CPU_CYCLE_READY);
+    CHECK(operation.kind == MIPSNES2_CPU_OPERATION_CONTROL);
+    CHECK(operation.value != 0U);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    for (step = 0U; step < sizeof(irq_kinds) / sizeof(irq_kinds[0]); ++step) {
+        CHECK(mipsnes2_cpu_cycle_peek(&cpu, &state, &operation) ==
+              MIPSNES2_CPU_CYCLE_READY);
+        CHECK(operation.kind == irq_kinds[step]);
+        CHECK(commit_operation(
+                  &cpu, &state, &operation,
+                  step + 1U == sizeof(irq_kinds) / sizeof(irq_kinds[0])
+                      ? MIPSNES2_CPU_CYCLE_COMPLETE
+                      : MIPSNES2_CPU_CYCLE_READY,
+                  step + 1U == sizeof(irq_kinds) / sizeof(irq_kinds[0])
+                      ? MIPSNES2_CPU_OK
+                      : MIPSNES2_CPU_NOT_READY) == 0);
+    }
+    CHECK(cpu.pc == UINT16_C(0x9abc));
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.s == UINT16_C(0x01fd));
+    CHECK(cpu.irq_level);
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
+    CHECK(trace.count == 5U);
+    CHECK(trace.accesses[0].write);
+    CHECK(trace.accesses[0].address == UINT32_C(0x000100));
+    CHECK(trace.accesses[0].value == UINT8_C(0x93));
+    CHECK(trace.accesses[1].write);
+    CHECK(trace.accesses[1].address == UINT32_C(0x0001ff));
+    CHECK(trace.accesses[1].value == 0U);
+    CHECK(trace.accesses[2].write);
+    CHECK(trace.accesses[2].address == UINT32_C(0x0001fe));
+    CHECK(trace.accesses[2].value == pushed_status);
+    CHECK(!trace.accesses[3].write);
+    CHECK(trace.accesses[3].address == UINT32_C(0x00fffe));
+    CHECK(!trace.accesses[4].write);
+    CHECK(trace.accesses[4].address == UINT32_C(0x00ffff));
+    return 0;
+}
+
 static int test_boundary_stale_on_interrupt(void)
 {
     trace_context trace;
@@ -507,17 +853,84 @@ static int test_boundary_stale_on_interrupt(void)
     CHECK(cpu_result == MIPSNES2_CPU_NOT_READY);
     CHECK(cpu.nmi_pending);
     CHECK(trace.count == 0U);
-    CHECK(expect_operation(&cpu, &state,
-                           MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC,
-                           0U, 0U, &operation) == 0);
+    CHECK(mipsnes2_cpu_cycle_peek(&cpu, &state, &operation) ==
+          MIPSNES2_CPU_CYCLE_READY);
+    CHECK(operation.kind == MIPSNES2_CPU_OPERATION_CONTROL);
+    CHECK(operation.value != 0U);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(!cpu.nmi_pending);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 1U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 2U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x000100), UINT8_C(0x86),
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x0001ff), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x0001fe),
+                           MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_I,
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00fffa), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00fffb), 0U, &operation) == 0);
     CHECK(commit_operation(&cpu, &state, &operation,
                            MIPSNES2_CPU_CYCLE_COMPLETE,
                            MIPSNES2_CPU_OK) == 0);
-    CHECK(!cpu.nmi_pending);
     CHECK(cpu.pc == UINT16_C(0x1234));
     CHECK(cpu.pbr == 0U);
     CHECK(cpu.instruction_cycles == UINT64_C(7));
     CHECK(trace.count == 5U);
+    return 0;
+}
+
+static int test_interrupt_missing_write_preflight(void)
+{
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8700)) == 0);
+    cpu.bus.write8 = NULL;
+    mipsnes2_cpu_pulse_abort(&cpu);
+    mipsnes2_cpu_cycle_state_init(&state);
+    CHECK(mipsnes2_cpu_cycle_begin(&state) == MIPSNES2_CPU_CYCLE_READY);
+    CHECK(mipsnes2_cpu_cycle_peek(&cpu, &state, &operation) ==
+          MIPSNES2_CPU_CYCLE_READY);
+    CHECK(operation.kind == MIPSNES2_CPU_OPERATION_CONTROL);
+    CHECK(operation.value != 0U);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_INVALID_BUS) == 0);
+    CHECK(cpu.stopped);
+    CHECK(cpu.stop_reason == MIPSNES2_CPU_INVALID_BUS);
+    CHECK(!cpu.abort_pending);
+    CHECK(cpu.pc == UINT16_C(0x8700));
+    CHECK(cpu.instruction_cycles == 0U);
+    CHECK(trace.count == 0U);
     return 0;
 }
 
@@ -528,7 +941,10 @@ int main(void)
     CHECK(test_lda_immediate_cycles() == 0);
     CHECK(test_sta_absolute_cycles() == 0);
     CHECK(test_rep_sep_internal_commit() == 0);
+    CHECK(test_software_interrupt_cycles() == 0);
+    CHECK(test_hardware_interrupt_cycles() == 0);
     CHECK(test_boundary_stale_on_interrupt() == 0);
-    (void)puts("PASS: resumable 65C816 operation contract foundation");
+    CHECK(test_interrupt_missing_write_preflight() == 0);
+    (void)puts("PASS: resumable 65C816 operation and interrupt contract");
     return 0;
 }

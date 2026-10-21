@@ -159,12 +159,14 @@ reported. Reset bus accesses are not yet driven through this bridge.
 Scheduler dispatch from inside the instruction-atomic CPU was attempted and rejected.
 If an event budget or callback failed after part of an instruction, that API could
 neither roll back nor resume safely. The CPU now has a caller-owned, exact-once
-peek/commit foundation for opcode fetch and five opcodes, but the other 251 opcodes,
-interrupt entry and dummy cycles remain explicitly atomic. The timed bridge is not
-connected to the cursor yet. Per-access advancement therefore remains blocked until
-all reachable paths and failure/cancellation cases are resumable. See the
-[access-timing post-mortem](cpu-access-timing-postmortem.md) and
-[cycle-contract audit](65c816-cycle-contract-audit.md).
+peek/commit foundation for opcode fetch, seven opcodes and boundary
+`ABORT`/`NMI`/`IRQ` entry, but the other 249 opcodes, reset and dummy cycles remain
+explicitly atomic or absent. The timed bridge is not connected to the cursor yet.
+Per-access advancement therefore remains blocked until all reachable paths and
+failure/cancellation cases are resumable. See the
+[access-timing post-mortem](cpu-access-timing-postmortem.md),
+[cycle-contract audit](65c816-cycle-contract-audit.md) and
+[interrupt-cycle audit](65c816-interrupt-cycle-audit.md).
 
 The CPU-I/O math unit uses the processor-cycle domain: each completed SNES CPU-bus
 access advances one cycle and the bridge advances the remaining aggregate internal

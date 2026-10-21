@@ -992,6 +992,7 @@ static uint64_t direct_base_cycles(const mipsnes2_cpu *cpu, bool indexed)
 }
 
 typedef enum {
+    INTERRUPT_NONE = 0,
     INTERRUPT_IRQ,
     INTERRUPT_NMI,
     INTERRUPT_ABORT,
@@ -1013,6 +1014,8 @@ static uint16_t interrupt_vector(const mipsnes2_cpu *cpu,
         case INTERRUPT_IRQ:
         case INTERRUPT_BRK:
             return UINT16_C(0xfffe);
+        case INTERRUPT_NONE:
+            break;
         }
     }
 
@@ -1027,6 +1030,8 @@ static uint16_t interrupt_vector(const mipsnes2_cpu *cpu,
         return UINT16_C(0xffea);
     case INTERRUPT_IRQ:
         return UINT16_C(0xffee);
+    case INTERRUPT_NONE:
+        break;
     }
     return UINT16_C(0xfffe);
 }
@@ -2895,6 +2900,15 @@ typedef enum {
     CPU_CYCLE_PHASE_REP_INTERNAL,
     CPU_CYCLE_PHASE_SEP_VALUE,
     CPU_CYCLE_PHASE_SEP_INTERNAL,
+    CPU_CYCLE_PHASE_SOFTWARE_INTERRUPT_SIGNATURE,
+    CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_1,
+    CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_2,
+    CPU_CYCLE_PHASE_INTERRUPT_PUSH_PBR,
+    CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCH,
+    CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCL,
+    CPU_CYCLE_PHASE_INTERRUPT_PUSH_STATUS,
+    CPU_CYCLE_PHASE_INTERRUPT_VECTOR_LOW,
+    CPU_CYCLE_PHASE_INTERRUPT_VECTOR_HIGH,
     CPU_CYCLE_PHASE_LEGACY_ATOMIC,
     CPU_CYCLE_PHASE_COMPLETE
 } cpu_cycle_phase;
@@ -2915,17 +2929,94 @@ static bool operation_matches(const mipsnes2_cpu_operation *left,
            left->value == right->value;
 }
 
-static bool boundary_needs_atomic_entry(const mipsnes2_cpu *cpu)
+enum {
+    CPU_BOUNDARY_ABORT = 1U << 0,
+    CPU_BOUNDARY_NMI = 1U << 1,
+    CPU_BOUNDARY_IRQ_LEVEL = 1U << 2,
+    CPU_BOUNDARY_IRQ_ACCEPTED = 1U << 3,
+    CPU_BOUNDARY_WAITING = 1U << 4,
+    CPU_BOUNDARY_NATIVE = 1U << 5,
+    CPU_BOUNDARY_NO_WRITE = 1U << 6,
+    CPU_BOUNDARY_NO_READ = 1U << 7
+};
+
+static uint8_t boundary_snapshot(const mipsnes2_cpu *cpu)
 {
-    return cpu->abort_pending || cpu->nmi_pending ||
-           (cpu->irq_level &&
-            (cpu->p & MIPSNES2_CPU_FLAG_I) == 0U);
+    uint8_t snapshot = 0U;
+
+    if (cpu->abort_pending) {
+        snapshot |= CPU_BOUNDARY_ABORT;
+    }
+    if (cpu->nmi_pending) {
+        snapshot |= CPU_BOUNDARY_NMI;
+    }
+    if (cpu->irq_level) {
+        snapshot |= CPU_BOUNDARY_IRQ_LEVEL;
+        if ((cpu->p & MIPSNES2_CPU_FLAG_I) == 0U) {
+            snapshot |= CPU_BOUNDARY_IRQ_ACCEPTED;
+        }
+    }
+    if (cpu->waiting) {
+        snapshot |= CPU_BOUNDARY_WAITING;
+    }
+    if (snapshot != 0U) {
+        if (!cpu->emulation) {
+            snapshot |= CPU_BOUNDARY_NATIVE;
+        }
+        if (cpu->bus.write8 == NULL) {
+            snapshot |= CPU_BOUNDARY_NO_WRITE;
+        }
+        if (cpu->bus.read8 == NULL) {
+            snapshot |= CPU_BOUNDARY_NO_READ;
+        }
+    }
+    return snapshot;
 }
 
 static void complete_cycle_state(mipsnes2_cpu_cycle_state *state)
 {
     state->phase = (uint8_t)CPU_CYCLE_PHASE_COMPLETE;
     state->active = false;
+}
+
+static void prepare_incremental_interrupt(
+    const mipsnes2_cpu *cpu, mipsnes2_cpu_cycle_state *state,
+    interrupt_kind kind, bool hardware_entry)
+{
+    uint8_t pushed_status = cpu->p;
+
+    state->interrupt_kind = (uint8_t)kind;
+    state->interrupt_pc = cpu->pc;
+    state->interrupt_vector = interrupt_vector(cpu, kind);
+    state->interrupt_pbr = cpu->pbr;
+    state->interrupt_emulation = cpu->emulation;
+    if (cpu->emulation && kind == INTERRUPT_BRK) {
+        pushed_status |= MIPSNES2_CPU_FLAG_X;
+    } else if (cpu->emulation) {
+        pushed_status &= (uint8_t)~MIPSNES2_CPU_FLAG_X;
+    }
+    state->pushed_status = pushed_status;
+    state->vector_low = 0U;
+    if (hardware_entry) {
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_1;
+    } else {
+        state->phase = cpu->emulation
+                           ? (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCH
+                           : (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_PUSH_PBR;
+    }
+}
+
+static mipsnes2_cpu_cycle_result begin_boundary_interrupt(
+    mipsnes2_cpu *cpu, mipsnes2_cpu_cycle_state *state,
+    interrupt_kind kind, mipsnes2_cpu_result *instruction_result)
+{
+    if (!require_write_bus(cpu)) {
+        *instruction_result = cpu->stop_reason;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    }
+    prepare_incremental_interrupt(cpu, state, kind, true);
+    return MIPSNES2_CPU_CYCLE_READY;
 }
 
 static mipsnes2_cpu_cycle_result commit_boundary(
@@ -2955,23 +3046,20 @@ static mipsnes2_cpu_cycle_result commit_boundary(
             cpu->pbr = (uint8_t)(cpu->last_opcode_address >> 16);
             cpu->pc = (uint16_t)cpu->last_opcode_address;
         } else {
-            *instruction_result = enter_interrupt(cpu, INTERRUPT_ABORT);
-            complete_cycle_state(state);
-            return MIPSNES2_CPU_CYCLE_COMPLETE;
+            return begin_boundary_interrupt(
+                cpu, state, INTERRUPT_ABORT, instruction_result);
         }
     }
     if (cpu->nmi_pending) {
         cpu->waiting = false;
         cpu->nmi_pending = false;
-        *instruction_result = enter_interrupt(cpu, INTERRUPT_NMI);
-        complete_cycle_state(state);
-        return MIPSNES2_CPU_CYCLE_COMPLETE;
+        return begin_boundary_interrupt(
+            cpu, state, INTERRUPT_NMI, instruction_result);
     }
     if (cpu->irq_level && (cpu->p & MIPSNES2_CPU_FLAG_I) == 0U) {
         cpu->waiting = false;
-        *instruction_result = enter_interrupt(cpu, INTERRUPT_IRQ);
-        complete_cycle_state(state);
-        return MIPSNES2_CPU_CYCLE_COMPLETE;
+        return begin_boundary_interrupt(
+            cpu, state, INTERRUPT_IRQ, instruction_result);
     }
     if (cpu->waiting) {
         if (!cpu->irq_level) {
@@ -2990,6 +3078,18 @@ static void decode_incremental_opcode(mipsnes2_cpu *cpu,
                                       mipsnes2_cpu_cycle_state *state)
 {
     switch (state->opcode) {
+    case 0x00: /* BRK signature */
+        state->interrupt_kind = (uint8_t)INTERRUPT_BRK;
+        state->phase = cpu->bus.write8 == NULL
+                           ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
+                           : (uint8_t)CPU_CYCLE_PHASE_SOFTWARE_INTERRUPT_SIGNATURE;
+        break;
+    case 0x02: /* COP signature */
+        state->interrupt_kind = (uint8_t)INTERRUPT_COP;
+        state->phase = cpu->bus.write8 == NULL
+                           ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
+                           : (uint8_t)CPU_CYCLE_PHASE_SOFTWARE_INTERRUPT_SIGNATURE;
+        break;
     case 0x8d: /* STA absolute */
         state->phase = cpu->bus.write8 == NULL
                            ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
@@ -3033,7 +3133,14 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin(
     }
 
     state->operand = 0U;
+    state->interrupt_pc = 0U;
+    state->interrupt_vector = 0U;
     state->opcode = 0U;
+    state->interrupt_kind = (uint8_t)INTERRUPT_NONE;
+    state->interrupt_pbr = 0U;
+    state->pushed_status = 0U;
+    state->vector_low = 0U;
+    state->interrupt_emulation = false;
     state->phase = (uint8_t)CPU_CYCLE_PHASE_BOUNDARY;
     state->active = true;
     return MIPSNES2_CPU_CYCLE_READY;
@@ -3057,11 +3164,8 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
 
     switch ((cpu_cycle_phase)state->phase) {
     case CPU_CYCLE_PHASE_BOUNDARY:
-        set_operation(operation,
-                      boundary_needs_atomic_entry(cpu)
-                          ? MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC
-                          : MIPSNES2_CPU_OPERATION_CONTROL,
-                      0U, 0U);
+        set_operation(operation, MIPSNES2_CPU_OPERATION_CONTROL,
+                      0U, boundary_snapshot(cpu));
         break;
     case CPU_CYCLE_PHASE_FETCH:
     case CPU_CYCLE_PHASE_LDA8_VALUE:
@@ -3071,6 +3175,7 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_STA_ADDRESS_HIGH:
     case CPU_CYCLE_PHASE_REP_VALUE:
     case CPU_CYCLE_PHASE_SEP_VALUE:
+    case CPU_CYCLE_PHASE_SOFTWARE_INTERRUPT_SIGNATURE:
         set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
                       mipsnes2_address_make(cpu->pbr, cpu->pc), 0U);
         break;
@@ -3078,6 +3183,36 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_REP_INTERNAL:
     case CPU_CYCLE_PHASE_SEP_INTERNAL:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 0U);
+        break;
+    case CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_1:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+        break;
+    case CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_2:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+        break;
+    case CPU_CYCLE_PHASE_INTERRUPT_PUSH_PBR:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      state->interrupt_pbr);
+        break;
+    case CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)(state->interrupt_pc >> 8));
+        break;
+    case CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)state->interrupt_pc);
+        break;
+    case CPU_CYCLE_PHASE_INTERRUPT_PUSH_STATUS:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      state->pushed_status);
+        break;
+    case CPU_CYCLE_PHASE_INTERRUPT_VECTOR_LOW:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      state->interrupt_vector, 0U);
+        break;
+    case CPU_CYCLE_PHASE_INTERRUPT_VECTOR_HIGH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      (uint16_t)(state->interrupt_vector + UINT16_C(1)), 0U);
         break;
     case CPU_CYCLE_PHASE_STA_WRITE8:
     case CPU_CYCLE_PHASE_STA_WRITE16_LOW:
@@ -3220,6 +3355,62 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
     case CPU_CYCLE_PHASE_SEP_INTERNAL:
         cpu->p |= (uint8_t)state->operand;
         apply_mode_invariants(cpu);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_SOFTWARE_INTERRUPT_SIGNATURE:
+        (void)read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        prepare_incremental_interrupt(
+            cpu, state, (interrupt_kind)state->interrupt_kind, false);
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_1:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_2;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_2:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = state->interrupt_emulation
+                           ? (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCH
+                           : (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_PUSH_PBR;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_INTERRUPT_PUSH_PBR:
+        write8(cpu, current.address, current.value);
+        stack_decrement(cpu);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCH:
+        write8(cpu, current.address, current.value);
+        stack_decrement(cpu);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCL;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_INTERRUPT_PUSH_PCL:
+        write8(cpu, current.address, current.value);
+        stack_decrement(cpu);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_PUSH_STATUS;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_INTERRUPT_PUSH_STATUS:
+        write8(cpu, current.address, current.value);
+        stack_decrement(cpu);
+        cpu->p |= MIPSNES2_CPU_FLAG_I;
+        cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_D;
+        cpu->pbr = 0U;
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_VECTOR_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_INTERRUPT_VECTOR_LOW:
+        state->vector_low = read8(cpu, current.address);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_INTERRUPT_VECTOR_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_INTERRUPT_VECTOR_HIGH:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(state->vector_low | (uint16_t)(value << 8));
         cpu->instruction_cycles += UINT64_C(1);
         *instruction_result = MIPSNES2_CPU_OK;
         complete_cycle_state(state);
