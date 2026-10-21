@@ -2,11 +2,6 @@
 
 Date: 2026-10-20
 
-Historical implementation evidence below describes the initial counter milestone.
-The subsequent [access-clock milestone](cpu-access-timing-audit.md) supersedes its
-start-of-instruction snapshot limit: captures now occur after each emitted access's
-clock advance. Missing internal/dummy placement and physical latch latency remain.
-
 ## Implemented scope
 
 Caller-owned `core/ppu/counters.c` implements only `$2137`, `$213C`, `$213D` and

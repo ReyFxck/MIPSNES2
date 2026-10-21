@@ -12,49 +12,28 @@ static bool is_system_bank(uint8_t bank)
            (bank >= UINT8_C(0x80) && bank <= UINT8_C(0xbf));
 }
 
-static bool begin_transaction(mipsnes2_snes_bus *bus, uint64_t clocks,
-                               bool access)
+static bool add_master_clocks(mipsnes2_snes_bus *bus, uint64_t clocks)
 {
-    if (bus->timing_fault != MIPSNES2_SNES_BUS_OK || bus->timing_overflow) {
-        return false;
-    }
-    if (bus->transaction_active) {
-        bus->timing_fault = MIPSNES2_SNES_BUS_REENTRANT_ACCESS;
-        return false;
-    }
-    if (bus->master_clocks > UINT64_MAX - clocks ||
-        (access && bus->access_count == UINT64_MAX)) {
+    if (bus->master_clocks > UINT64_MAX - clocks) {
         bus->timing_overflow = true;
-        bus->timing_fault = MIPSNES2_SNES_BUS_TIMING_OVERFLOW;
-        return false;
-    }
-    bus->transaction_active = true;
-    (void)mipsnes2_snes_bus_sync_hv_latch(bus);
-    if (bus->clock != NULL &&
-        (bus->clock->advance == NULL ||
-         !bus->clock->advance(bus->clock->context, clocks))) {
-        if (bus->timing_fault == MIPSNES2_SNES_BUS_OK) {
-            bus->timing_fault = MIPSNES2_SNES_BUS_CLOCK_ERROR;
-        }
-    }
-    if (bus->timing_fault != MIPSNES2_SNES_BUS_OK) {
-        bus->transaction_active = false;
         return false;
     }
     bus->master_clocks += clocks;
-    if (access) {
-        bus->access_count++;
-    }
     return true;
 }
 
-static bool begin_access(mipsnes2_snes_bus *bus,
+static void account_access(mipsnes2_snes_bus *bus,
                            mipsnes2_address address)
 {
     uint8_t clocks = mipsnes2_5a22_access_master_clocks(
         address, bus->fastrom_enabled);
 
-    return begin_transaction(bus, clocks, true);
+    if (bus->access_count == UINT64_MAX) {
+        bus->timing_overflow = true;
+    } else {
+        bus->access_count++;
+    }
+    (void)add_master_clocks(bus, clocks);
 }
 
 static uint8_t routed_read(mipsnes2_bus_interface route,
@@ -276,8 +255,7 @@ bool mipsnes2_snes_bus_sync_hv_latch(mipsnes2_snes_bus *bus)
 {
     uint16_t horizontal;
 
-    if (bus == NULL || bus->timing_fault != MIPSNES2_SNES_BUS_OK ||
-        bus->timing_overflow || bus->ppu_counters == NULL ||
+    if (bus == NULL || bus->ppu_counters == NULL ||
         !bus->ppu_counters->initialized || bus->cpu_io_state == NULL ||
         !mipsnes2_hv_ppu_horizontal(bus->hv_timing, &horizontal) ||
         !mipsnes2_cpu_io_take_hv_latch_edge(bus->cpu_io_state)) {
@@ -298,9 +276,8 @@ uint8_t mipsnes2_snes_bus_read(mipsnes2_snes_bus *bus,
         return 0U;
     }
     address = mipsnes2_address24(address);
-    if (!begin_access(bus, address)) {
-        return bus->open_value;
-    }
+    (void)mipsnes2_snes_bus_sync_hv_latch(bus);
+    account_access(bus, address);
     if (wram_index(address, &index)) {
         value = bus->wram[index];
     } else {
@@ -310,13 +287,8 @@ uint8_t mipsnes2_snes_bus_read(mipsnes2_snes_bus *bus,
                     ? read_system_area(bus, address, offset)
                     : cartridge_read(bus, address);
     }
-    if (bus->timing_fault != MIPSNES2_SNES_BUS_OK) {
-        bus->transaction_active = false;
-        return bus->open_value;
-    }
     mipsnes2_cpu_io_advance_math_cycles(bus->cpu_io_state, UINT64_C(1));
     bus->open_value = value;
-    bus->transaction_active = false;
     return value;
 }
 
@@ -331,9 +303,8 @@ void mipsnes2_snes_bus_write(mipsnes2_snes_bus *bus,
         return;
     }
     address = mipsnes2_address24(address);
-    if (!begin_access(bus, address)) {
-        return;
-    }
+    (void)mipsnes2_snes_bus_sync_hv_latch(bus);
+    account_access(bus, address);
     mipsnes2_cpu_io_advance_math_cycles(bus->cpu_io_state, UINT64_C(1));
     if (wram_index(address, &index)) {
         bus->wram[index] = value;
@@ -345,10 +316,7 @@ void mipsnes2_snes_bus_write(mipsnes2_snes_bus *bus,
             cartridge_write(bus, address, value);
         }
     }
-    if (bus->timing_fault == MIPSNES2_SNES_BUS_OK) {
-        bus->open_value = value;
-    }
-    bus->transaction_active = false;
+    bus->open_value = value;
 }
 
 mipsnes2_snes_bus_result mipsnes2_snes_bus_account_internal_cycles(
@@ -360,23 +328,17 @@ mipsnes2_snes_bus_result mipsnes2_snes_bus_account_internal_cycles(
     if (bus == NULL || bus->wram == NULL) {
         return MIPSNES2_SNES_BUS_INVALID_ARGUMENT;
     }
-    if (bus->timing_fault != MIPSNES2_SNES_BUS_OK) {
-        return bus->timing_fault;
-    }
     if (processor_cycles > UINT64_MAX /
                                MIPSNES2_5A22_INTERNAL_MASTER_CLOCKS) {
         bus->timing_overflow = true;
-        bus->timing_fault = MIPSNES2_SNES_BUS_TIMING_OVERFLOW;
         return MIPSNES2_SNES_BUS_TIMING_OVERFLOW;
     }
     clocks = processor_cycles * MIPSNES2_5A22_INTERNAL_MASTER_CLOCKS;
-    if (!begin_transaction(bus, clocks, false)) {
-        return bus->timing_fault != MIPSNES2_SNES_BUS_OK
-                   ? bus->timing_fault : MIPSNES2_SNES_BUS_TIMING_OVERFLOW;
+    if (!add_master_clocks(bus, clocks)) {
+        return MIPSNES2_SNES_BUS_TIMING_OVERFLOW;
     }
     mipsnes2_cpu_io_advance_math_cycles(bus->cpu_io_state,
                                         processor_cycles);
-    bus->transaction_active = false;
     return MIPSNES2_SNES_BUS_OK;
 }
 

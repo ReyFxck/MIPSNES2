@@ -25,9 +25,7 @@ not a rendering implementation or full PPU model.
 
 Initial values are deterministic storage, not a hardware RESET assertion. Capture
 is currently immediate at the supplied timestamp and may repeat while the latch flag
-is already set. The timed CPU bridge now samples at the end of each emitted
-meaningful access. Missing internal/dummy cycles still shift that timestamp; see
-[the access-clock audit](cpu-access-timing-audit.md).
+is already set. The bus's atomic CPU bridge samples the pre-instruction timestamp.
 Exact WRIO capture delay, simultaneous flag read/capture and held-low behavior remain
 unverified; do not infer cycle-perfect gun or raster behavior. External edge setters
 must be followed by bus synchronization before advancing time. See

@@ -18,7 +18,7 @@ Implemented and host-verified behavior:
 - exact rational clock conversion with a carried integer remainder;
 - logical-address classification for 5A22 6/8/12-master-clock accesses;
 - partial SNES-bus accounting for every meaningful CPU callback;
-- a scoped CPU-step bridge advancing clocks before each meaningful access effect;
+- an atomic CPU-step bridge that advances the scheduler by the resulting clocks;
 - a caller-owned non-interlaced NTSC/PAL H/V master-clock component;
 - deterministic HBlank/VBlank, field, NTSC short-line and delayed NMI transitions;
 - stable-register H/V/HV timer-match generation into the CPU-I/O TIMEUP latch;
@@ -72,9 +72,8 @@ fixed phase is not claimed as final hardware behavior. See
 [master-timing fanout audit](master-timing-fanout-audit.md), plus the
 [automatic joypad audit](auto-joypad-audit.md).
 
-The optional PPU counter adapter reads this H/V snapshot after the timed bridge
-advances each emitted meaningful access. Missing internal/dummy cycles are not yet
-inserted at their real positions. Its external edge handoff must be
+The optional PPU counter adapter reads this H/V snapshot at the bus boundary, not at
+individual cycles within an atomic instruction. Its external edge handoff must be
 synchronized before advancing the shared domain. Exact capture latency and repeated/
 held-low behavior remain research work; [counter audit](hv-counter-latch-audit.md)
 records the chosen deterministic foundation policies.
@@ -95,11 +94,11 @@ invalid H/V state and scheduler failures are distinct visible results. Each H/V
 advance is committed transactionally, so an H/V overflow/error cannot leave the H/V
 clock partially advanced ahead of the scheduler.
 
-`mipsnes2_cpu_timed_step_hv` applies each emitted meaningful access's clock class,
-then the aggregate internal remainder, to this common domain. It requires the SNES
-bus to own CPU-I/O state. H/V transitions and callbacks now precede the current
-read/write effect, but interrupt entry is still selected only at a CPU boundary.
-The caller must still transfer CPU-I/O IRQ/NMI state into the interpreter inputs.
+`mipsnes2_cpu_timed_step_hv` applies one atomic CPU instruction or interrupt-entry
+delta to this common domain and requires the SNES bus to own CPU-I/O state. It does
+not interrupt an instruction at an internal event timestamp. H/V transitions that
+occur during that instruction can affect the following CPU boundary only, and the
+caller must still transfer CPU-I/O IRQ/NMI state into the interpreter inputs.
 
 `mipsnes2_interrupt_lines` supplies that optional transfer without conflating IRQ
 sources. Its source bitmask reserves separate internal-timer, cartridge and expansion
@@ -132,10 +131,9 @@ long-run policies remain explicit future work.
 
 `mipsnes2_scheduler_event_horizon` returns the earlier of the requested time and next
 event. It establishes the API boundary needed to bound CPU work. The current CPU
-cannot yet pause/resume at every bus-cycle boundary. An event inside a timed step is
-dispatched before the next meaningful access effect or within the final internal
-remainder. Its peripheral-input changes can affect that access, while IRQ/NMI entry
-waits for the next CPU boundary. Complete CPU event-horizon integration remains in progress.
+cannot yet stop at every bus-cycle boundary. An event inside one atomic timed step is
+dispatched with its exact timestamp after the instruction completes and affects the
+next CPU boundary. Complete CPU event-horizon integration remains in progress.
 
 ## Rational clocks
 
@@ -154,23 +152,15 @@ use 6 only when the caller supplies an enabled FastROM state. Internal cycles us
 `mipsnes2_snes_bus` now applies that classifier to every meaningful read/write and
 owns `$420D` bit 0. `mipsnes2_cpu_timed_step` snapshots the CPU/bus counters, executes
 one CPU boundary, and subtracts observed accesses from the WDC aggregate cycle count.
-Each emitted access advances the scheduler/H/V domain before its effect; the
-remainder is then charged as 6-clock internal cycles at the end.
+The remainder is charged as 6-clock internal cycles before advancing the scheduler.
 Visible mismatches, counter regressions, overflow and scheduler-budget errors are
 reported. Reset bus accesses are not yet driven through this bridge.
 
-At an equal timestamp the provisional order is H/V transition, scheduled callback,
-CPU access effect. This end-access policy is not a verified 5A22 electrical phase or
-a resolution of TIMEUP/latch timing exceptions. One budget covers current-time
-events, all accesses and the internal remainder. The borrowed clock sink is always
-detached. Callback reentry into the active CPU/bus is rejected; callbacks may update
-peripheral inputs but must not mutate clock objects. In-flight failure is fail-stop,
-not rollback: earlier events/effects remain, later bus effects are suppressed, and
-the CPU result is unsafe to resume. Restore/reinitialize the complete machine.
-`master_clocks` reports committed charges, `elapsed_master_clocks` reports actual
-scheduler advance, and `target_time` is the last requested endpoint. These can differ
-on failure. A pre-CPU budget/domain validation failure with no sticky bus fault can
-be corrected and retried. See [access-clock audit](cpu-access-timing-audit.md).
+Scheduler dispatch from inside the instruction-atomic CPU was attempted and rejected.
+If an event budget or callback failed after part of an instruction, the existing API
+could neither roll back nor resume safely. Per-access advancement therefore requires
+a resumable cycle/micro-operation contract first. See the
+[access-timing post-mortem](cpu-access-timing-postmortem.md).
 
 The CPU-I/O math unit uses the processor-cycle domain: each completed SNES CPU-bus
 access advances one cycle and the bridge advances the remaining aggregate internal
@@ -240,7 +230,7 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [x] Master timestamp units
 - [x] Clock ratio representation
 - [x] Event tie ordering
-- [ ] [IN PROGRESS] CPU event horizon — meaningful accesses dispatch events before effects; complete cycle sequencing and pause/resume pending
+- [ ] [IN PROGRESS] CPU event horizon — atomic timed steps exist; mid-instruction bus-cycle bounding pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization

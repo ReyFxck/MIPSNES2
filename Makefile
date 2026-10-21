@@ -21,7 +21,6 @@ TEST_INTERRUPT_LINES = $(BUILD_DIR)/test-interrupt-lines
 TEST_MASTER_TIMING = $(BUILD_DIR)/test-master-timing
 TEST_SCHEDULER = $(BUILD_DIR)/test-scheduler
 TEST_SNES_BUS = $(BUILD_DIR)/test-snes-bus
-TEST_CPU_ACCESS_TIMING = $(BUILD_DIR)/test-cpu-access-timing
 TEST_CARTRIDGE = $(BUILD_DIR)/test-cartridge
 TEST_CARTRIDGE_IMAGE = $(BUILD_DIR)/test-cartridge-image
 TEST_CARTRIDGE_PREPARE = $(BUILD_DIR)/test-cartridge-prepare
@@ -122,9 +121,6 @@ $(TEST_SCHEDULER): tests/test_scheduler.c core/scheduler/scheduler.h core/schedu
 $(TEST_SNES_BUS): tests/test_snes_bus.c core/bus/snes_bus.h core/scheduler/cpu_timing.h core/scheduler/scheduler.h core/cpu/65c816/cpu.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
-$(TEST_CPU_ACCESS_TIMING): tests/test_cpu_access_timing.c core/scheduler/cpu_timing.h $(LIB)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
-
 $(TEST_CARTRIDGE): tests/test_cartridge.c core/cartridge/cartridge.h core/bus/snes_bus.h core/scheduler/cpu_timing.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -137,7 +133,7 @@ $(TEST_CARTRIDGE_PREPARE): tests/test_cartridge_prepare.c core/cartridge/prepare
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CPU_ACCESS_TIMING) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
@@ -148,7 +144,6 @@ test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_IO) $(TEST_PPU_COUNTE
 	$(TEST_MASTER_TIMING)
 	$(TEST_SCHEDULER)
 	$(TEST_SNES_BUS)
-	$(TEST_CPU_ACCESS_TIMING)
 	$(TEST_CARTRIDGE)
 	$(TEST_CARTRIDGE_IMAGE)
 	$(TEST_CARTRIDGE_PREPARE)
