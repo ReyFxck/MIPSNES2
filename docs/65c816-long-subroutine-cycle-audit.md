@@ -88,8 +88,10 @@ and the unchanged shared core compiles in the pinned PS2 and PSP CI toolchains.
   `psp-gcc 15.2.0`.
 - Clang was unavailable in the local environment; no local Clang result is claimed.
 
-The exact implementation revision and tree are recorded in the follow-up evidence
-commit after the implementation commit exists.
+Published implementation commit `02b9e1ca86241c656fc8ed58d2f5c482ea15aaba` used exact
+source tree `b2c13694fdd599b18b1bdb45a3d98e8e6daa2f12` for every verification
+above. The console builds prove compilation with the pinned SDKs; they do not claim
+runtime behavior or performance on either console.
 
 No real SNES, PS2, PSP, PCSX2 or PPSSPP runtime test and no performance measurement
 is claimed by this milestone.
