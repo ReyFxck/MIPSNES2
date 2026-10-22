@@ -82,6 +82,10 @@ the pinned PSP toolchain.
   `psp-gcc 15.2.0`.
 - Clang was unavailable in the local environment; no local Clang result is claimed.
 
+Published implementation commit `b574c38b30979b2b30ad6fbcabfeedc46df54d01` used
+exact source tree `e596e1b0565412c6723e0da162b54feef57fda15` for every
+verification above.
+
 The console builds prove compilation with the pinned SDKs; they do not claim
 runtime behavior or performance on either console. No real SNES, PS2, PSP, PCSX2
 or PPSSPP runtime test and no performance measurement is claimed by this milestone.
