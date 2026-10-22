@@ -244,11 +244,12 @@ logical 24-bit reads, writes, internal processor cycles and an explicit
 effect. Active state must be retained and resumed; interleaving another CPU step or
 discarding a partially committed cursor is not supported by this foundation.
 
-The migrated instruction sequences are opcode fetch plus `NOP` (`EA`), immediate
-`LDA` (`A9`), absolute `STA` (`8D`), `REP` (`C2`), `SEP` (`E2`), `BRK` (`00`) and
-`COP` (`02`), absolute `JSR` (`20`) and `RTS` (`60`). They expose width-selected
-operand bytes, the final flag/internal action, low-before-high writes, signature
-reads, subroutine stack accesses and interrupt stack/vector accesses as applicable.
+The migrated instruction sequences are opcode fetch plus `NOP` (`EA`), every
+`LDA/STA/LDX/LDY/STX/STY` addressing form, `REP` (`C2`), `SEP` (`E2`), `BRK`
+(`00`) and `COP` (`02`), absolute `JSR` (`20`) and `RTS` (`60`). They expose
+width-selected operand bytes, the final flag/internal action, low-before-high
+writes, signature reads, subroutine stack accesses and interrupt stack/vector
+accesses as applicable.
 Long `JSL` (`22`) and `RTL` (`6B`) are also migrated, including their linear
 multi-byte stack exception in emulation mode and PBR save/restore order.
 Indexed-indirect `JSR` (`FC`) is migrated with its WDC-ordered early PCH/PCL writes,
@@ -278,10 +279,14 @@ All thirty-six accumulator/memory ASL/LSR/ROL/ROR, memory INC/DEC, TSB/TRB and S
 opcodes use shared RMW phases. Direct Page penalties, fixed indexed cycles,
 width-selected reads/writes and linear versus Direct high-byte rules remain explicit;
 distinct internal tokens separate Direct penalty, indexing and modification commits.
+All forty-five `LDA/STA/LDX/LDY/STX/STY` opcodes use one shared load/store state
+machine. It separates program operands, Direct Page and stack address formation,
+regular and long pointer reads, conditional indexed cycles and M/X-selected data
+transfers without introducing backend or title-specific behavior.
 Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the accepted cause
 and entry state latched before any effect. `mipsnes2_cpu_step` drives this same
 contract to completion, preserving the established instruction API. The remaining
-150 opcodes return an explicit legacy-atomic operation after their opcode fetch and
+107 opcodes return an explicit legacy-atomic operation after their opcode fetch and
 use the existing evaluator for the remainder.
 
 This is deliberately not wired into the scheduler yet. Remaining opcodes, reset,
@@ -544,5 +549,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-22: All thirty-six accumulator/memory shift/rotate, memory INC/DEC,
   TSB/TRB and STZ opcodes now use shared address/read/modify/write phases, leaving
   150 opcode remainders without backend- or game-specific behavior.
+- 2026-10-22: All forty-five `LDA/STA/LDX/LDY/STX/STY` opcodes now use a shared
+  resumable operand/address/pointer/data state machine, leaving 107 opcode
+  remainders without backend- or game-specific behavior.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

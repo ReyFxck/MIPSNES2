@@ -762,6 +762,508 @@ static int test_memory_rmw_stale_internal(void)
     return 0;
 }
 
+typedef enum {
+    LOAD_STORE_TEST_IMMEDIATE,
+    LOAD_STORE_TEST_DIRECT,
+    LOAD_STORE_TEST_DIRECT_X,
+    LOAD_STORE_TEST_DIRECT_Y,
+    LOAD_STORE_TEST_DIRECT_INDIRECT,
+    LOAD_STORE_TEST_DIRECT_INDEXED_INDIRECT_X,
+    LOAD_STORE_TEST_DIRECT_INDIRECT_Y,
+    LOAD_STORE_TEST_DIRECT_INDIRECT_LONG,
+    LOAD_STORE_TEST_DIRECT_INDIRECT_LONG_Y,
+    LOAD_STORE_TEST_STACK_RELATIVE,
+    LOAD_STORE_TEST_STACK_RELATIVE_INDIRECT_Y,
+    LOAD_STORE_TEST_ABSOLUTE,
+    LOAD_STORE_TEST_ABSOLUTE_X,
+    LOAD_STORE_TEST_ABSOLUTE_Y,
+    LOAD_STORE_TEST_ABSOLUTE_LONG,
+    LOAD_STORE_TEST_ABSOLUTE_LONG_X
+} load_store_test_mode;
+
+typedef enum {
+    LOAD_STORE_TEST_A,
+    LOAD_STORE_TEST_X,
+    LOAD_STORE_TEST_Y
+} load_store_test_register;
+
+static uint16_t load_store_test_register_value(
+    const mipsnes2_cpu *cpu, load_store_test_register target)
+{
+    switch (target) {
+    case LOAD_STORE_TEST_X:
+        return cpu->x;
+    case LOAD_STORE_TEST_Y:
+        return cpu->y;
+    case LOAD_STORE_TEST_A:
+    default:
+        return cpu->a;
+    }
+}
+
+static int test_load_store_family_cycles(void)
+{
+    static const struct {
+        uint8_t opcode;
+        load_store_test_mode mode;
+        load_store_test_register target;
+        bool store;
+    } cases[] = {
+        {UINT8_C(0x81), LOAD_STORE_TEST_DIRECT_INDEXED_INDIRECT_X,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x83), LOAD_STORE_TEST_STACK_RELATIVE,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x84), LOAD_STORE_TEST_DIRECT, LOAD_STORE_TEST_Y, true},
+        {UINT8_C(0x85), LOAD_STORE_TEST_DIRECT, LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x86), LOAD_STORE_TEST_DIRECT, LOAD_STORE_TEST_X, true},
+        {UINT8_C(0x87), LOAD_STORE_TEST_DIRECT_INDIRECT_LONG,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x8c), LOAD_STORE_TEST_ABSOLUTE, LOAD_STORE_TEST_Y, true},
+        {UINT8_C(0x8d), LOAD_STORE_TEST_ABSOLUTE, LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x8e), LOAD_STORE_TEST_ABSOLUTE, LOAD_STORE_TEST_X, true},
+        {UINT8_C(0x8f), LOAD_STORE_TEST_ABSOLUTE_LONG,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x91), LOAD_STORE_TEST_DIRECT_INDIRECT_Y,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x92), LOAD_STORE_TEST_DIRECT_INDIRECT,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x93), LOAD_STORE_TEST_STACK_RELATIVE_INDIRECT_Y,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x94), LOAD_STORE_TEST_DIRECT_X, LOAD_STORE_TEST_Y, true},
+        {UINT8_C(0x95), LOAD_STORE_TEST_DIRECT_X, LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x96), LOAD_STORE_TEST_DIRECT_Y, LOAD_STORE_TEST_X, true},
+        {UINT8_C(0x97), LOAD_STORE_TEST_DIRECT_INDIRECT_LONG_Y,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x99), LOAD_STORE_TEST_ABSOLUTE_Y,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x9d), LOAD_STORE_TEST_ABSOLUTE_X,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0x9f), LOAD_STORE_TEST_ABSOLUTE_LONG_X,
+         LOAD_STORE_TEST_A, true},
+        {UINT8_C(0xa0), LOAD_STORE_TEST_IMMEDIATE, LOAD_STORE_TEST_Y, false},
+        {UINT8_C(0xa1), LOAD_STORE_TEST_DIRECT_INDEXED_INDIRECT_X,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xa2), LOAD_STORE_TEST_IMMEDIATE, LOAD_STORE_TEST_X, false},
+        {UINT8_C(0xa3), LOAD_STORE_TEST_STACK_RELATIVE,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xa4), LOAD_STORE_TEST_DIRECT, LOAD_STORE_TEST_Y, false},
+        {UINT8_C(0xa5), LOAD_STORE_TEST_DIRECT, LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xa6), LOAD_STORE_TEST_DIRECT, LOAD_STORE_TEST_X, false},
+        {UINT8_C(0xa7), LOAD_STORE_TEST_DIRECT_INDIRECT_LONG,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xa9), LOAD_STORE_TEST_IMMEDIATE, LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xac), LOAD_STORE_TEST_ABSOLUTE, LOAD_STORE_TEST_Y, false},
+        {UINT8_C(0xad), LOAD_STORE_TEST_ABSOLUTE, LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xae), LOAD_STORE_TEST_ABSOLUTE, LOAD_STORE_TEST_X, false},
+        {UINT8_C(0xaf), LOAD_STORE_TEST_ABSOLUTE_LONG,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xb1), LOAD_STORE_TEST_DIRECT_INDIRECT_Y,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xb2), LOAD_STORE_TEST_DIRECT_INDIRECT,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xb3), LOAD_STORE_TEST_STACK_RELATIVE_INDIRECT_Y,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xb4), LOAD_STORE_TEST_DIRECT_X, LOAD_STORE_TEST_Y, false},
+        {UINT8_C(0xb5), LOAD_STORE_TEST_DIRECT_X, LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xb6), LOAD_STORE_TEST_DIRECT_Y, LOAD_STORE_TEST_X, false},
+        {UINT8_C(0xb7), LOAD_STORE_TEST_DIRECT_INDIRECT_LONG_Y,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xb9), LOAD_STORE_TEST_ABSOLUTE_Y,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xbc), LOAD_STORE_TEST_ABSOLUTE_X,
+         LOAD_STORE_TEST_Y, false},
+        {UINT8_C(0xbd), LOAD_STORE_TEST_ABSOLUTE_X,
+         LOAD_STORE_TEST_A, false},
+        {UINT8_C(0xbe), LOAD_STORE_TEST_ABSOLUTE_Y,
+         LOAD_STORE_TEST_X, false},
+        {UINT8_C(0xbf), LOAD_STORE_TEST_ABSOLUTE_LONG_X,
+         LOAD_STORE_TEST_A, false}
+    };
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    size_t case_index;
+
+    for (case_index = 0U;
+         case_index < sizeof(cases) / sizeof(cases[0]); ++case_index) {
+        unsigned wide;
+
+        for (wide = 0U; wide < 2U; ++wide) {
+            const uint16_t start_pc = UINT16_C(0x8600);
+            const uint8_t operand = UINT8_C(0x10);
+            expected_operation expected[16];
+            size_t count = 0U;
+            size_t bus_count = 0U;
+            mipsnes2_address pointer = 0U;
+            mipsnes2_address target = 0U;
+            uint16_t source;
+            uint8_t initial_status;
+            bool index_cycle = cases[case_index].store || wide != 0U;
+
+            CHECK(initialize_cpu(&cpu, &trace, start_pc) == 0);
+            cpu.emulation = false;
+            initial_status = (uint8_t)(MIPSNES2_CPU_FLAG_C |
+                                       MIPSNES2_CPU_FLAG_I |
+                                       MIPSNES2_CPU_FLAG_D |
+                                       MIPSNES2_CPU_FLAG_V |
+                                       (wide != 0U
+                                            ? 0U
+                                            : MIPSNES2_CPU_FLAG_M |
+                                                  MIPSNES2_CPU_FLAG_X));
+            cpu.p = initial_status;
+            cpu.dbr = UINT8_C(0x7f);
+            cpu.d = UINT16_C(0x1201);
+            cpu.s = UINT16_C(0x1f00);
+            cpu.a = UINT16_C(0x5a42);
+            cpu.x = UINT16_C(0x0020);
+            cpu.y = UINT16_C(0x0030);
+            bank7e[start_pc] = cases[case_index].opcode;
+            bank7e[(uint16_t)(start_pc + UINT16_C(1))] = operand;
+            bank7e[(uint16_t)(start_pc + UINT16_C(2))] = UINT8_C(0x20);
+            bank7e[(uint16_t)(start_pc + UINT16_C(3))] = UINT8_C(0x7e);
+
+            append_expected_operation(expected, &count,
+                                      MIPSNES2_CPU_OPERATION_READ,
+                                      UINT32_C(0x7e8600), 0U);
+            if (cases[case_index].mode == LOAD_STORE_TEST_IMMEDIATE) {
+                bank7e[(uint16_t)(start_pc + UINT16_C(1))] = UINT8_C(0x80);
+                bank7e[(uint16_t)(start_pc + UINT16_C(2))] = UINT8_C(0x81);
+                append_expected_operation(expected, &count,
+                                          MIPSNES2_CPU_OPERATION_READ,
+                                          UINT32_C(0x7e8601), 0U);
+                if (wide != 0U) {
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              UINT32_C(0x7e8602), 0U);
+                }
+            } else {
+                append_expected_operation(expected, &count,
+                                          MIPSNES2_CPU_OPERATION_READ,
+                                          UINT32_C(0x7e8601), 0U);
+                switch (cases[case_index].mode) {
+                case LOAD_STORE_TEST_DIRECT:
+                    target = UINT32_C(0x001211);
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(1));
+                    break;
+                case LOAD_STORE_TEST_DIRECT_X:
+                    target = UINT32_C(0x001231);
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(1));
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(3));
+                    break;
+                case LOAD_STORE_TEST_DIRECT_Y:
+                    target = UINT32_C(0x001241);
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(1));
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(3));
+                    break;
+                case LOAD_STORE_TEST_DIRECT_INDIRECT:
+                case LOAD_STORE_TEST_DIRECT_INDIRECT_Y:
+                    pointer = UINT32_C(0x001211);
+                    target = cases[case_index].mode ==
+                                     LOAD_STORE_TEST_DIRECT_INDIRECT_Y
+                                 ? UINT32_C(0x7f3030)
+                                 : UINT32_C(0x7f3000);
+                    bank00[(uint16_t)pointer] = UINT8_C(0x00);
+                    bank00[(uint16_t)(pointer + UINT32_C(1))] =
+                        UINT8_C(0x30);
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(1));
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              pointer, 0U);
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              pointer + UINT32_C(1), 0U);
+                    if (cases[case_index].mode ==
+                            LOAD_STORE_TEST_DIRECT_INDIRECT_Y &&
+                        index_cycle) {
+                        append_expected_operation(
+                            expected, &count,
+                            MIPSNES2_CPU_OPERATION_INTERNAL, 0U,
+                            UINT8_C(3));
+                    }
+                    break;
+                case LOAD_STORE_TEST_DIRECT_INDEXED_INDIRECT_X:
+                    pointer = UINT32_C(0x001231);
+                    target = UINT32_C(0x7f3000);
+                    bank00[(uint16_t)pointer] = UINT8_C(0x00);
+                    bank00[(uint16_t)(pointer + UINT32_C(1))] =
+                        UINT8_C(0x30);
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(1));
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(2));
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              pointer, 0U);
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              pointer + UINT32_C(1), 0U);
+                    break;
+                case LOAD_STORE_TEST_DIRECT_INDIRECT_LONG:
+                case LOAD_STORE_TEST_DIRECT_INDIRECT_LONG_Y:
+                    pointer = UINT32_C(0x001211);
+                    target = cases[case_index].mode ==
+                                     LOAD_STORE_TEST_DIRECT_INDIRECT_LONG_Y
+                                 ? UINT32_C(0x7e4030)
+                                 : UINT32_C(0x7e4000);
+                    bank00[(uint16_t)pointer] = UINT8_C(0x00);
+                    bank00[(uint16_t)(pointer + UINT32_C(1))] =
+                        UINT8_C(0x40);
+                    bank00[(uint16_t)(pointer + UINT32_C(2))] =
+                        UINT8_C(0x7e);
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(1));
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              pointer, 0U);
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              pointer + UINT32_C(1), 0U);
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              pointer + UINT32_C(2), 0U);
+                    break;
+                case LOAD_STORE_TEST_STACK_RELATIVE:
+                    target = UINT32_C(0x001f10);
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(2));
+                    break;
+                case LOAD_STORE_TEST_STACK_RELATIVE_INDIRECT_Y:
+                    pointer = UINT32_C(0x001f10);
+                    target = UINT32_C(0x7f5030);
+                    bank00[(uint16_t)pointer] = UINT8_C(0x00);
+                    bank00[(uint16_t)(pointer + UINT32_C(1))] =
+                        UINT8_C(0x50);
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(2));
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              pointer, 0U);
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              pointer + UINT32_C(1), 0U);
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                        0U, UINT8_C(3));
+                    break;
+                case LOAD_STORE_TEST_ABSOLUTE:
+                case LOAD_STORE_TEST_ABSOLUTE_X:
+                case LOAD_STORE_TEST_ABSOLUTE_Y:
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              UINT32_C(0x7e8602), 0U);
+                    target = UINT32_C(0x7f2010);
+                    if (cases[case_index].mode ==
+                        LOAD_STORE_TEST_ABSOLUTE_X) {
+                        target += UINT32_C(0x20);
+                    } else if (cases[case_index].mode ==
+                               LOAD_STORE_TEST_ABSOLUTE_Y) {
+                        target += UINT32_C(0x30);
+                    }
+                    if (cases[case_index].mode !=
+                            LOAD_STORE_TEST_ABSOLUTE &&
+                        index_cycle) {
+                        append_expected_operation(
+                            expected, &count,
+                            MIPSNES2_CPU_OPERATION_INTERNAL, 0U,
+                            UINT8_C(3));
+                    }
+                    break;
+                case LOAD_STORE_TEST_ABSOLUTE_LONG:
+                case LOAD_STORE_TEST_ABSOLUTE_LONG_X:
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              UINT32_C(0x7e8602), 0U);
+                    append_expected_operation(expected, &count,
+                                              MIPSNES2_CPU_OPERATION_READ,
+                                              UINT32_C(0x7e8603), 0U);
+                    target = UINT32_C(0x7e2010);
+                    if (cases[case_index].mode ==
+                        LOAD_STORE_TEST_ABSOLUTE_LONG_X) {
+                        target += UINT32_C(0x20);
+                    }
+                    break;
+                case LOAD_STORE_TEST_IMMEDIATE:
+                default:
+                    break;
+                }
+
+                source = load_store_test_register_value(
+                    &cpu, cases[case_index].target);
+                if (!cases[case_index].store) {
+                    uint8_t *data_bank = address_bank(target);
+
+                    CHECK(data_bank != NULL);
+                    data_bank[(uint16_t)target] = UINT8_C(0x80);
+                    data_bank[(uint16_t)(target + UINT32_C(1))] =
+                        UINT8_C(0x81);
+                }
+                append_expected_operation(
+                    expected, &count,
+                    cases[case_index].store
+                        ? MIPSNES2_CPU_OPERATION_WRITE
+                        : MIPSNES2_CPU_OPERATION_READ,
+                    target,
+                    cases[case_index].store ? (uint8_t)source : 0U);
+                if (wide != 0U) {
+                    append_expected_operation(
+                        expected, &count,
+                        cases[case_index].store
+                            ? MIPSNES2_CPU_OPERATION_WRITE
+                            : MIPSNES2_CPU_OPERATION_READ,
+                        target + UINT32_C(1),
+                        cases[case_index].store
+                            ? (uint8_t)(source >> 8)
+                            : 0U);
+                }
+            }
+
+            {
+                size_t operation_index;
+
+                for (operation_index = 0U; operation_index < count;
+                     ++operation_index) {
+                    if (expected[operation_index].kind !=
+                        MIPSNES2_CPU_OPERATION_INTERNAL) {
+                        bus_count++;
+                    }
+                }
+            }
+            CHECK(run_expected_instruction(&cpu, expected, count) == 0);
+            CHECK(cpu.instruction_cycles == (uint64_t)count);
+            CHECK(trace.count == bus_count);
+            if (cases[case_index].store) {
+                uint8_t *data_bank = address_bank(target);
+
+                source = load_store_test_register_value(
+                    &cpu, cases[case_index].target);
+                CHECK(data_bank != NULL);
+                CHECK(data_bank[(uint16_t)target] == (uint8_t)source);
+                if (wide != 0U) {
+                    CHECK(data_bank[(uint16_t)(target + UINT32_C(1))] ==
+                          (uint8_t)(source >> 8));
+                }
+                CHECK(cpu.p == initial_status);
+            } else {
+                uint16_t expected_value = wide != 0U
+                                              ? UINT16_C(0x8180)
+                                              : UINT16_C(0x0080);
+                uint16_t register_value = load_store_test_register_value(
+                    &cpu, cases[case_index].target);
+
+                if (cases[case_index].target == LOAD_STORE_TEST_A &&
+                    wide == 0U) {
+                    expected_value |= UINT16_C(0x5a00);
+                }
+                CHECK(register_value == expected_value);
+                CHECK(cpu.p == (uint8_t)(initial_status |
+                                         MIPSNES2_CPU_FLAG_N));
+            }
+        }
+    }
+    return 0;
+}
+
+static int test_load_store_missing_write_preflight(void)
+{
+    static const uint8_t opcodes[] = {
+        UINT8_C(0x81), UINT8_C(0x83), UINT8_C(0x84), UINT8_C(0x85),
+        UINT8_C(0x86), UINT8_C(0x87), UINT8_C(0x8c), UINT8_C(0x8d),
+        UINT8_C(0x8e), UINT8_C(0x8f), UINT8_C(0x91), UINT8_C(0x92),
+        UINT8_C(0x93), UINT8_C(0x94), UINT8_C(0x95), UINT8_C(0x96),
+        UINT8_C(0x97), UINT8_C(0x99), UINT8_C(0x9d), UINT8_C(0x9f)
+    };
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    size_t index;
+
+    for (index = 0U; index < sizeof(opcodes) / sizeof(opcodes[0]); ++index) {
+        mipsnes2_cpu_cycle_state state;
+        mipsnes2_cpu_operation operation;
+
+        CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8680)) == 0);
+        bank7e[0x8680] = opcodes[index];
+        bank7e[0x8681] = UINT8_C(0x10);
+        cpu.bus.write8 = NULL;
+        CHECK(begin_instruction(&cpu, &state) == 0);
+        CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                               UINT32_C(0x7e8680), 0U, &operation) == 0);
+        CHECK(commit_operation(&cpu, &state, &operation,
+                               MIPSNES2_CPU_CYCLE_READY,
+                               MIPSNES2_CPU_NOT_READY) == 0);
+        CHECK(expect_operation(&cpu, &state,
+                               MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC,
+                               0U, 0U, &operation) == 0);
+        CHECK(commit_operation(&cpu, &state, &operation,
+                               MIPSNES2_CPU_CYCLE_COMPLETE,
+                               MIPSNES2_CPU_INVALID_BUS) == 0);
+        CHECK(cpu.stopped);
+        CHECK(cpu.pc == UINT16_C(0x8681));
+        CHECK(cpu.instruction_cycles == 0U);
+        CHECK(trace.count == 1U);
+    }
+    return 0;
+}
+
+static int test_load_store_stale_internal(void)
+{
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    mipsnes2_cpu_operation stale;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x86c0)) == 0);
+    cpu.emulation = false;
+    cpu.d = UINT16_C(0x1201);
+    cpu.x = UINT16_C(0x0020);
+    bank7e[0x86c0] = UINT8_C(0xb5); /* LDA direct,X */
+    bank7e[0x86c1] = UINT8_C(0x10);
+    bank00[0x1231] = UINT8_C(0x80);
+    CHECK(begin_instruction(&cpu, &state) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e86c0), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e86c1), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 1U, &stale) == 0);
+    CHECK(commit_operation(&cpu, &state, &stale,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 3U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &stale,
+                           MIPSNES2_CPU_CYCLE_STALE_OPERATION,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(cpu.instruction_cycles == UINT64_C(3));
+    CHECK(trace.count == 2U);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    return 0;
+}
+
 static int test_lda_immediate_cycles(void)
 {
     trace_context trace;
@@ -3111,6 +3613,9 @@ int main(void)
     CHECK(test_memory_rmw_cycles() == 0);
     CHECK(test_memory_rmw_missing_write_preflight() == 0);
     CHECK(test_memory_rmw_stale_internal() == 0);
+    CHECK(test_load_store_family_cycles() == 0);
+    CHECK(test_load_store_missing_write_preflight() == 0);
+    CHECK(test_load_store_stale_internal() == 0);
     CHECK(test_lda_immediate_cycles() == 0);
     CHECK(test_sta_absolute_cycles() == 0);
     CHECK(test_rep_sep_internal_commit() == 0);

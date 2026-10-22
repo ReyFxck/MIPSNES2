@@ -104,15 +104,16 @@ Do not start with a dynarec,
 renderer or enhancement chips.
 
 A caller-owned peek/commit CPU-operation foundation now exposes exact-once opcode
-fetch plus resumable sequences for `NOP`, immediate `LDA`, absolute `STA`, `REP`,
-`SEP`, the complete conditional/relative branch family, all five `JMP/JML` forms,
+fetch plus resumable sequences for `NOP`, every `LDA/STA/LDX/LDY/STX/STY`
+addressing form, `REP`, `SEP`, the complete conditional/relative branch family,
+all five `JMP/JML` forms,
 absolute `JSR`, indexed-indirect `JSR`, `RTS`, `JSL`, `RTL`, `BRK` and `COP`.
 The complete stack push/pull/effective-address family also uses the cursor. The
 complete implied status, register-transfer and register increment/decrement family
 also uses shared internal phases. All accumulator shifts/rotates and the complete
 memory ASL/LSR/ROL/ROR, INC/DEC, TSB/TRB and STZ family use shared address,
 read/modify/write and store phases. Boundary `ABORT`, `NMI` and `IRQ` entry use
-the same cursor. The other 150 opcodes remain behind an
+the same cursor. The other 107 opcodes remain behind an
 explicit legacy-atomic operation, and the scheduler still uses the reviewed
 instruction-atomic bridge. This is a migration foundation, not a claim of complete
 cycle-level execution.

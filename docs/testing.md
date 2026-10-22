@@ -75,13 +75,15 @@ not claim mid-instruction register rollback, write suppression or exact signal-c
 sampling.
 The separate `test-cpu-cycles` executable verifies the caller-owned resumable
 operation contract. It covers side-effect-free repeated peek, exact-once commit,
-stale-descriptor rejection, opcode fetch, explicit legacy fallback, `NOP`, immediate
-`LDA`, absolute `STA`, `REP`, `SEP`, the complete conditional/relative branch
+stale-descriptor rejection, opcode fetch, explicit legacy fallback, `NOP`, the
+complete `LDA/STA/LDX/LDY/STX/STY` family, `REP`, `SEP`, the conditional/relative branch
 family, all five `JMP/JML` forms, absolute and indexed-indirect `JSR`, `RTS`, `JSL`,
 `RTL`, `BRK`, `COP`, all sixteen stack push/pull/effective-address opcodes and all
 twenty-seven implied status/transfer/register increment-decrement opcodes,
 all four accumulator shifts/rotates and all thirty-two memory ASL/LSR/ROL/ROR,
 INC/DEC, TSB/TRB and STZ opcodes at both M widths,
+all forty-five `LDA/STA/LDX/LDY/STX/STY` opcodes at both selected widths through
+their immediate, Direct, stack-relative, indirect, absolute and long paths,
 including taken/not-taken and emulation page-cross branch
 paths, direct and indirect jump bank rules, long-subroutine PBR, bank-local pointer
 wrapping, stack transfer widths, Direct Page pointer wrapping, ordinary `01xx`
@@ -89,7 +91,7 @@ stack wrapping and linear multi-byte exceptions;
 8/16-bit M behavior; emulation invariants; program-bank PC wrap; 24-bit linear store
 crossing; flag commit position; subroutine and interrupt stack order; boundary
 `ABORT`/`NMI`/`IRQ` priority; logical addresses; access order/count; and interrupt
-arrival between boundary peek/commit. It does not claim that the remaining 150
+arrival between boundary peek/commit. It does not claim that the remaining 107
 opcodes, reset, dummy cycles,
 mid-instruction `ABORT` or the scheduler bridge are resumable.
 The scheduler regression executable covers absolute master-clock events, deterministic
@@ -250,6 +252,8 @@ Resumable stack push/pull/effective-address evidence is recorded in
 [65c816-stack-cycle-audit.md](65c816-stack-cycle-audit.md).
 Resumable implied status/transfer/register evidence is recorded in
 [65c816-implied-cycle-audit.md](65c816-implied-cycle-audit.md).
+Resumable load/store-family evidence is recorded in
+[65c816-load-store-cycle-audit.md](65c816-load-store-cycle-audit.md).
 Complete opcode-dispatch and interrupt-boundary evidence is recorded in
 [65c816-complete-opcodes-audit.md](65c816-complete-opcodes-audit.md).
 Boundary-visible ABORT evidence is recorded in
