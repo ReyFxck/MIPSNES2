@@ -78,13 +78,15 @@ operation contract. It covers side-effect-free repeated peek, exact-once commit,
 stale-descriptor rejection, opcode fetch, explicit legacy fallback, `NOP`, immediate
 `LDA`, absolute `STA`, `REP`, `SEP`, the complete conditional/relative branch
 family, all five `JMP/JML` forms, absolute and indexed-indirect `JSR`, `RTS`, `JSL`,
-`RTL`, `BRK` and `COP`, including taken/not-taken and emulation page-cross branch
+`RTL`, `BRK`, `COP` and all sixteen stack push/pull/effective-address opcodes,
+including taken/not-taken and emulation page-cross branch
 paths, direct and indirect jump bank rules, long-subroutine PBR, bank-local pointer
-wrapping and linear stack behavior;
+wrapping, stack transfer widths, Direct Page pointer wrapping, ordinary `01xx`
+stack wrapping and linear multi-byte exceptions;
 8/16-bit M behavior; emulation invariants; program-bank PC wrap; 24-bit linear store
 crossing; flag commit position; subroutine and interrupt stack order; boundary
 `ABORT`/`NMI`/`IRQ` priority; logical addresses; access order/count; and interrupt
-arrival between boundary peek/commit. It does not claim that the remaining 229
+arrival between boundary peek/commit. It does not claim that the remaining 213
 opcodes, reset, dummy cycles,
 mid-instruction `ABORT` or the scheduler bridge are resumable.
 The scheduler regression executable covers absolute master-clock events, deterministic
@@ -241,6 +243,8 @@ Memory RMW and shift/rotate evidence is recorded in
 [65c816-memory-rmw-shifts-audit.md](65c816-memory-rmw-shifts-audit.md).
 Stack push/pull and subroutine-control evidence is recorded in
 [65c816-stack-control-audit.md](65c816-stack-control-audit.md).
+Resumable stack push/pull/effective-address evidence is recorded in
+[65c816-stack-cycle-audit.md](65c816-stack-cycle-audit.md).
 Complete opcode-dispatch and interrupt-boundary evidence is recorded in
 [65c816-complete-opcodes-audit.md](65c816-complete-opcodes-audit.md).
 Boundary-visible ABORT evidence is recorded in

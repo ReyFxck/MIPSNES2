@@ -731,6 +731,99 @@ static bool branch_condition_met(const mipsnes2_cpu *cpu, uint8_t opcode)
     }
 }
 
+static bool stack_transfer_is_wide(const mipsnes2_cpu *cpu, uint8_t opcode)
+{
+    switch (opcode) {
+    case 0x0b: /* PHD */
+    case 0x2b: /* PLD */
+        return true;
+    case 0x48: /* PHA */
+    case 0x68: /* PLA */
+        return !accumulator_is_8_bit(cpu);
+    case 0x5a: /* PHY */
+    case 0x7a: /* PLY */
+    case 0xda: /* PHX */
+    case 0xfa: /* PLX */
+        return !index_is_8_bit(cpu);
+    default:
+        return false;
+    }
+}
+
+static bool stack_transfer_is_linear(uint8_t opcode)
+{
+    return opcode == UINT8_C(0x0b) || opcode == UINT8_C(0x2b);
+}
+
+static uint16_t stack_push_value(const mipsnes2_cpu *cpu, uint8_t opcode)
+{
+    switch (opcode) {
+    case 0x08: /* PHP */
+        return cpu->p;
+    case 0x0b: /* PHD */
+        return cpu->d;
+    case 0x48: /* PHA */
+        return cpu->a;
+    case 0x4b: /* PHK */
+        return cpu->pbr;
+    case 0x5a: /* PHY */
+        return cpu->y;
+    case 0x8b: /* PHB */
+        return cpu->dbr;
+    case 0xda: /* PHX */
+        return cpu->x;
+    default:
+        return 0U;
+    }
+}
+
+static void finish_stack_pull(mipsnes2_cpu *cpu, uint8_t opcode,
+                              uint16_t value)
+{
+    switch (opcode) {
+    case 0x28: /* PLP */
+        cpu->p = (uint8_t)value;
+        apply_mode_invariants(cpu);
+        break;
+    case 0x2b: /* PLD */
+        cpu->d = value;
+        set_nz16(cpu, value);
+        break;
+    case 0x68: /* PLA */
+        if (accumulator_is_8_bit(cpu)) {
+            cpu->a = (uint16_t)((cpu->a & UINT16_C(0xff00)) |
+                                (uint8_t)value);
+            set_nz8(cpu, (uint8_t)value);
+        } else {
+            cpu->a = value;
+            set_nz16(cpu, value);
+        }
+        break;
+    case 0x7a: /* PLY */
+        cpu->y = value;
+        if (index_is_8_bit(cpu)) {
+            set_nz8(cpu, (uint8_t)value);
+        } else {
+            set_nz16(cpu, value);
+        }
+        break;
+    case 0xab: /* PLB */
+        cpu->dbr = (uint8_t)value;
+        set_nz8(cpu, (uint8_t)value);
+        break;
+    case 0xfa: /* PLX */
+        cpu->x = value;
+        if (index_is_8_bit(cpu)) {
+            set_nz8(cpu, (uint8_t)value);
+        } else {
+            set_nz16(cpu, value);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
 static void load_accumulator_immediate(mipsnes2_cpu *cpu)
 {
     if (accumulator_is_8_bit(cpu)) {
@@ -2943,6 +3036,22 @@ typedef enum {
     CPU_CYCLE_PHASE_BRANCH_LONG_LOW,
     CPU_CYCLE_PHASE_BRANCH_LONG_HIGH,
     CPU_CYCLE_PHASE_BRANCH_LONG_INTERNAL,
+    CPU_CYCLE_PHASE_STACK_PUSH_INTERNAL,
+    CPU_CYCLE_PHASE_STACK_PUSH_HIGH,
+    CPU_CYCLE_PHASE_STACK_PUSH_LOW,
+    CPU_CYCLE_PHASE_STACK_PULL_INTERNAL_1,
+    CPU_CYCLE_PHASE_STACK_PULL_INTERNAL_2,
+    CPU_CYCLE_PHASE_STACK_PULL_LOW,
+    CPU_CYCLE_PHASE_STACK_PULL_HIGH,
+    CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_LOW,
+    CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_HIGH,
+    CPU_CYCLE_PHASE_EFFECTIVE_INTERNAL,
+    CPU_CYCLE_PHASE_PEI_OFFSET,
+    CPU_CYCLE_PHASE_PEI_DIRECT_INTERNAL,
+    CPU_CYCLE_PHASE_PEI_POINTER_LOW,
+    CPU_CYCLE_PHASE_PEI_POINTER_HIGH,
+    CPU_CYCLE_PHASE_EFFECTIVE_PUSH_HIGH,
+    CPU_CYCLE_PHASE_EFFECTIVE_PUSH_LOW,
     CPU_CYCLE_PHASE_JUMP_ADDRESS_LOW,
     CPU_CYCLE_PHASE_JUMP_ADDRESS_HIGH,
     CPU_CYCLE_PHASE_JUMP_ADDRESS_BANK,
@@ -3183,6 +3292,36 @@ static void decode_incremental_opcode(mipsnes2_cpu *cpu,
     case 0x82: /* BRL */
         state->phase = (uint8_t)CPU_CYCLE_PHASE_BRANCH_LONG_LOW;
         break;
+    case 0x08: /* PHP */
+    case 0x0b: /* PHD */
+    case 0x48: /* PHA */
+    case 0x4b: /* PHK */
+    case 0x5a: /* PHY */
+    case 0x8b: /* PHB */
+    case 0xda: /* PHX */
+        state->phase = cpu->bus.write8 == NULL
+                           ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
+                           : (uint8_t)CPU_CYCLE_PHASE_STACK_PUSH_INTERNAL;
+        break;
+    case 0x28: /* PLP */
+    case 0x2b: /* PLD */
+    case 0x68: /* PLA */
+    case 0x7a: /* PLY */
+    case 0xab: /* PLB */
+    case 0xfa: /* PLX */
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_STACK_PULL_INTERNAL_1;
+        break;
+    case 0x62: /* PER */
+    case 0xf4: /* PEA */
+        state->phase = cpu->bus.write8 == NULL
+                           ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
+                           : (uint8_t)CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_LOW;
+        break;
+    case 0xd4: /* PEI */
+        state->phase = cpu->bus.write8 == NULL
+                           ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
+                           : (uint8_t)CPU_CYCLE_PHASE_PEI_OFFSET;
+        break;
     case 0x20: /* JSR absolute */
         state->phase = cpu->bus.write8 == NULL
                            ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
@@ -3303,6 +3442,9 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_BRANCH_OFFSET:
     case CPU_CYCLE_PHASE_BRANCH_LONG_LOW:
     case CPU_CYCLE_PHASE_BRANCH_LONG_HIGH:
+    case CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_LOW:
+    case CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_HIGH:
+    case CPU_CYCLE_PHASE_PEI_OFFSET:
     case CPU_CYCLE_PHASE_JUMP_ADDRESS_LOW:
     case CPU_CYCLE_PHASE_JUMP_ADDRESS_HIGH:
     case CPU_CYCLE_PHASE_JUMP_ADDRESS_BANK:
@@ -3328,6 +3470,46 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
         break;
     case CPU_CYCLE_PHASE_BRANCH_PAGE_CROSS:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+        break;
+    case CPU_CYCLE_PHASE_STACK_PUSH_INTERNAL:
+    case CPU_CYCLE_PHASE_STACK_PULL_INTERNAL_1:
+    case CPU_CYCLE_PHASE_EFFECTIVE_INTERNAL:
+    case CPU_CYCLE_PHASE_PEI_DIRECT_INTERNAL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+        break;
+    case CPU_CYCLE_PHASE_STACK_PULL_INTERNAL_2:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+        break;
+    case CPU_CYCLE_PHASE_STACK_PUSH_HIGH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)(stack_push_value(cpu, state->opcode) >> 8));
+        break;
+    case CPU_CYCLE_PHASE_STACK_PUSH_LOW:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)stack_push_value(cpu, state->opcode));
+        break;
+    case CPU_CYCLE_PHASE_STACK_PULL_LOW:
+    case CPU_CYCLE_PHASE_STACK_PULL_HIGH:
+        address = stack_transfer_is_linear(state->opcode)
+                      ? (uint16_t)(cpu->s + UINT16_C(1))
+                      : stack_next_address(cpu);
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ, address, 0U);
+        break;
+    case CPU_CYCLE_PHASE_PEI_POINTER_LOW:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      state->pointer, 0U);
+        break;
+    case CPU_CYCLE_PHASE_PEI_POINTER_HIGH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      direct_data_next_address(cpu, state->pointer), 0U);
+        break;
+    case CPU_CYCLE_PHASE_EFFECTIVE_PUSH_HIGH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)(state->operand >> 8));
+        break;
+    case CPU_CYCLE_PHASE_EFFECTIVE_PUSH_LOW:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)state->operand);
         break;
     case CPU_CYCLE_PHASE_JUMP_INTERNAL:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
@@ -3646,6 +3828,139 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         return MIPSNES2_CPU_CYCLE_READY;
     case CPU_CYCLE_PHASE_BRANCH_LONG_INTERNAL:
         cpu->pc = state->pointer;
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_STACK_PUSH_INTERNAL:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = stack_transfer_is_wide(cpu, state->opcode)
+                           ? (uint8_t)CPU_CYCLE_PHASE_STACK_PUSH_HIGH
+                           : (uint8_t)CPU_CYCLE_PHASE_STACK_PUSH_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_STACK_PUSH_HIGH:
+        write8(cpu, current.address, current.value);
+        if (stack_transfer_is_linear(state->opcode)) {
+            cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+        } else {
+            stack_decrement(cpu);
+        }
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_STACK_PUSH_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_STACK_PUSH_LOW:
+        write8(cpu, current.address, current.value);
+        if (stack_transfer_is_linear(state->opcode)) {
+            cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+            apply_mode_invariants(cpu);
+        } else {
+            stack_decrement(cpu);
+        }
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_STACK_PULL_INTERNAL_1:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_STACK_PULL_INTERNAL_2;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_STACK_PULL_INTERNAL_2:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_STACK_PULL_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_STACK_PULL_LOW:
+        if (stack_transfer_is_linear(state->opcode)) {
+            cpu->s = (uint16_t)(cpu->s + UINT16_C(1));
+        } else {
+            stack_increment(cpu);
+        }
+        state->operand = read8(cpu, current.address);
+        cpu->instruction_cycles += UINT64_C(1);
+        if (stack_transfer_is_wide(cpu, state->opcode)) {
+            state->phase = (uint8_t)CPU_CYCLE_PHASE_STACK_PULL_HIGH;
+            return MIPSNES2_CPU_CYCLE_READY;
+        }
+        finish_stack_pull(cpu, state->opcode, state->operand);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_STACK_PULL_HIGH:
+        if (stack_transfer_is_linear(state->opcode)) {
+            cpu->s = (uint16_t)(cpu->s + UINT16_C(1));
+        } else {
+            stack_increment(cpu);
+        }
+        value = read8(cpu, current.address);
+        state->operand |= (uint16_t)(value << 8);
+        if (stack_transfer_is_linear(state->opcode)) {
+            apply_mode_invariants(cpu);
+        }
+        finish_stack_pull(cpu, state->opcode, state->operand);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_LOW:
+        state->operand = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_HIGH:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        state->operand |= (uint16_t)(value << 8);
+        if (state->opcode == UINT8_C(0x62)) {
+            state->operand = (uint16_t)((int32_t)cpu->pc +
+                                        signed_offset16(state->operand));
+            state->phase = (uint8_t)CPU_CYCLE_PHASE_EFFECTIVE_INTERNAL;
+        } else {
+            state->phase = (uint8_t)CPU_CYCLE_PHASE_EFFECTIVE_PUSH_HIGH;
+        }
+        cpu->instruction_cycles += UINT64_C(1);
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_EFFECTIVE_INTERNAL:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_EFFECTIVE_PUSH_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_PEI_OFFSET:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        state->pointer = (uint16_t)(cpu->d + value);
+        if (cpu->emulation && (cpu->d & UINT16_C(0x00ff)) == 0U) {
+            state->pointer = (uint16_t)((cpu->d & UINT16_C(0xff00)) |
+                                        value);
+        }
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (cpu->d & UINT16_C(0x00ff)) != 0U
+                           ? (uint8_t)CPU_CYCLE_PHASE_PEI_DIRECT_INTERNAL
+                           : (uint8_t)CPU_CYCLE_PHASE_PEI_POINTER_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_PEI_DIRECT_INTERNAL:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_PEI_POINTER_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_PEI_POINTER_LOW:
+        state->operand = read8(cpu, current.address);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_PEI_POINTER_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_PEI_POINTER_HIGH:
+        value = read8(cpu, current.address);
+        state->operand |= (uint16_t)(value << 8);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_EFFECTIVE_PUSH_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_EFFECTIVE_PUSH_HIGH:
+        write8(cpu, current.address, current.value);
+        cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_EFFECTIVE_PUSH_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_EFFECTIVE_PUSH_LOW:
+        write8(cpu, current.address, current.value);
+        cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+        apply_mode_invariants(cpu);
         cpu->instruction_cycles += UINT64_C(1);
         *instruction_result = MIPSNES2_CPU_OK;
         complete_cycle_state(state);

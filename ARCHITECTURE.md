@@ -263,10 +263,16 @@ All ten conditional, relative-always and relative-long branches
 operand reads and address-free taken/page-cross/long internal cycles; targets wrap
 inside PBR, and the extra page-cross cycle remains exclusive to taken 8-bit branches
 in emulation mode.
+All sixteen stack push/pull/effective-address opcodes
+(`08/0B/28/2B/48/4B/5A/62/68/7A/8B/AB/D4/DA/F4/FA`) use shared stack phases. The
+cursor exposes internal operations, width-selected bytes, high-before-low pushes,
+low-before-high pulls, Direct Page pointer reads and the documented linear
+emulation-mode multi-byte stack exceptions. Ordinary byte transfers retain `01xx`
+wrapping, while native transfers retain full 16-bit S wrapping.
 Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the accepted cause
 and entry state latched before any effect. `mipsnes2_cpu_step` drives this same
 contract to completion, preserving the established instruction API. The remaining
-229 opcodes return an explicit legacy-atomic operation after their opcode fetch and
+213 opcodes return an explicit legacy-atomic operation after their opcode fetch and
 use the existing evaluator for the remainder.
 
 This is deliberately not wired into the scheduler yet. Remaining opcodes, reset,
@@ -517,5 +523,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-22: The complete ten-opcode branch family now exposes operand and internal
   boundaries through shared core phases, including conditional, emulation page-cross,
   BRA and BRL paths; 229 opcode remainders remain without backend-specific behavior.
+- 2026-10-22: All sixteen stack push/pull/effective-address opcodes now expose
+  width-selected transfers, internal operations, Direct Page pointer reads and
+  ordinary-versus-linear stack rules through shared core phases; 213 opcode
+  remainders remain without backend-specific or game-specific behavior.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

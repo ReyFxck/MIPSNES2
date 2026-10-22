@@ -51,6 +51,8 @@ The complete jump-family migration is recorded in
 [docs/65c816-jump-cycle-audit.md](docs/65c816-jump-cycle-audit.md).
 The complete resumable branch-family migration is recorded in
 [docs/65c816-resumable-branch-cycle-audit.md](docs/65c816-resumable-branch-cycle-audit.md).
+The resumable stack-family migration is recorded in
+[docs/65c816-stack-cycle-audit.md](docs/65c816-stack-cycle-audit.md).
 
 ## State and evidence rules
 
@@ -729,18 +731,18 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STP
 - [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
-- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; twenty-seven opcodes and boundary IRQ/NMI/ABORT entry have resumable operation sequences, while remaining exact dummy/internal sequencing, refresh and arbitration are pending
+- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; forty-three opcodes and boundary IRQ/NMI/ABORT entry have resumable operation sequences, while remaining exact dummy/internal sequencing, refresh and arbitration are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, twenty-seven resumable opcode sequences, resumable boundary IRQ/NMI/ABORT entry and the atomic scheduler/5A22 bridge exist; remaining cycle boundaries and mid-instruction ABORT pending
+- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, forty-three resumable opcode sequences, resumable boundary IRQ/NMI/ABORT entry and the atomic scheduler/5A22 bridge exist; remaining cycle boundaries and mid-instruction ABORT pending
 
 ### Verified 65C816 foundation subset
 
 - [x] Caller-owned register/mode/bus/diagnostic state
-- [x] Caller-owned peek/commit operation cursor for `EA`, `A9`, `8D`, `C2`, `E2`, `10`, `30`, `50`, `70`, `80`, `82`, `90`, `B0`, `D0`, `F0`, `4C`, `5C`, `6C`, `7C`, `DC`, `20`, `22`, `60`, `6B`, `FC`, `00` and `02`
+- [x] Caller-owned peek/commit operation cursor for 43 opcodes: `00`, `02`, `08`, `0B`, `10`, `20`, `22`, `28`, `2B`, `30`, `48`, `4B`, `4C`, `50`, `5A`, `5C`, `60`, `62`, `68`, `6B`, `6C`, `70`, `7A`, `7C`, `80`, `82`, `8B`, `8D`, `90`, `A9`, `AB`, `B0`, `C2`, `D0`, `D4`, `DA`, `DC`, `E2`, `EA`, `F0`, `F4`, `FA` and `FC`
 - [x] Boundary `ABORT`, `NMI` and `IRQ` entry migrated to the same resumable cursor
 - [x] Exact-once/stale-descriptor host tests for the resumable operation subset
-- [ ] Remaining 229 opcode remainders and reset migrated from legacy-atomic execution
+- [ ] Remaining 213 opcode remainders and reset migrated from legacy-atomic execution
 - [x] Reset vector fetch from logical 00:FFFC-D
 - [x] Pre-reset and invalid-bus diagnostic stops
 - [x] Boundary-visible ABORT vectors, stack/status effects, priority and WAI restart-address behavior
@@ -1218,7 +1220,7 @@ platform persistence remains incomplete.
 - [x] Event-budget exhaustion preserves aligned domain state
 - [x] Atomic CPU-step delta advances scheduler and H/V together
 - [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
-- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation verified for twenty-seven opcodes and boundary IRQ/NMI/ABORT entry; remaining 229 opcodes, reset, dummy cycles, mid-instruction ABORT and scheduler integration pending
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation verified for forty-three opcodes and boundary IRQ/NMI/ABORT entry; remaining 213 opcodes, reset, dummy cycles, mid-instruction ABORT and scheduler integration pending
 
 ### Interrupt-line aggregation subset
 
