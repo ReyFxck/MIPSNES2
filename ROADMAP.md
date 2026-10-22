@@ -126,10 +126,10 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Master timestamp units
 - [x] Clock ratio representation
 - [x] Event tie ordering
-- [ ] [IN PROGRESS] CPU event horizon — caller-owned operation cursor covers nine opcodes plus boundary IRQ/NMI/ABORT entry, while the timed bridge remains atomic and general mid-instruction pausing is pending
+- [ ] [IN PROGRESS] CPU event horizon — caller-owned operation cursor covers eleven opcodes plus boundary IRQ/NMI/ABORT entry, while the timed bridge remains atomic and general mid-instruction pausing is pending
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
 - [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
-- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation for `EA/A9/8D/C2/E2/20/60/00/02` plus boundary IRQ/NMI/ABORT entry; remaining 247 opcodes, reset, dummy cycles, mid-instruction ABORT and scheduler wiring pending
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation for `EA/A9/8D/C2/E2/20/22/60/6B/00/02` plus boundary IRQ/NMI/ABORT entry; remaining 245 opcodes, reset, dummy cycles, mid-instruction ABORT and scheduler wiring pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization

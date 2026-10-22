@@ -2916,11 +2916,23 @@ typedef enum {
     CPU_CYCLE_PHASE_JSR_INTERNAL,
     CPU_CYCLE_PHASE_JSR_PUSH_PCH,
     CPU_CYCLE_PHASE_JSR_PUSH_PCL,
+    CPU_CYCLE_PHASE_JSL_ADDRESS_LOW,
+    CPU_CYCLE_PHASE_JSL_ADDRESS_HIGH,
+    CPU_CYCLE_PHASE_JSL_PUSH_PBR,
+    CPU_CYCLE_PHASE_JSL_INTERNAL,
+    CPU_CYCLE_PHASE_JSL_ADDRESS_BANK,
+    CPU_CYCLE_PHASE_JSL_PUSH_PCH,
+    CPU_CYCLE_PHASE_JSL_PUSH_PCL,
     CPU_CYCLE_PHASE_RTS_INTERNAL_1,
     CPU_CYCLE_PHASE_RTS_INTERNAL_2,
     CPU_CYCLE_PHASE_RTS_PULL_PCL,
     CPU_CYCLE_PHASE_RTS_PULL_PCH,
     CPU_CYCLE_PHASE_RTS_INTERNAL_3,
+    CPU_CYCLE_PHASE_RTL_INTERNAL_1,
+    CPU_CYCLE_PHASE_RTL_INTERNAL_2,
+    CPU_CYCLE_PHASE_RTL_PULL_PCL,
+    CPU_CYCLE_PHASE_RTL_PULL_PCH,
+    CPU_CYCLE_PHASE_RTL_PULL_PBR,
     CPU_CYCLE_PHASE_SOFTWARE_INTERRUPT_SIGNATURE,
     CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_1,
     CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_2,
@@ -3116,8 +3128,16 @@ static void decode_incremental_opcode(mipsnes2_cpu *cpu,
                            ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
                            : (uint8_t)CPU_CYCLE_PHASE_JSR_ADDRESS_LOW;
         break;
+    case 0x22: /* JSL absolute long */
+        state->phase = cpu->bus.write8 == NULL
+                           ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
+                           : (uint8_t)CPU_CYCLE_PHASE_JSL_ADDRESS_LOW;
+        break;
     case 0x60: /* RTS */
         state->phase = (uint8_t)CPU_CYCLE_PHASE_RTS_INTERNAL_1;
+        break;
+    case 0x6b: /* RTL */
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RTL_INTERNAL_1;
         break;
     case 0x8d: /* STA absolute */
         state->phase = cpu->bus.write8 == NULL
@@ -3166,6 +3186,8 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin(
     state->interrupt_pc = 0U;
     state->interrupt_vector = 0U;
     state->opcode = 0U;
+    state->target_bank = 0U;
+    state->return_bank = 0U;
     state->interrupt_kind = (uint8_t)INTERRUPT_NONE;
     state->interrupt_pbr = 0U;
     state->pushed_status = 0U;
@@ -3207,6 +3229,9 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_SEP_VALUE:
     case CPU_CYCLE_PHASE_JSR_ADDRESS_LOW:
     case CPU_CYCLE_PHASE_JSR_ADDRESS_HIGH:
+    case CPU_CYCLE_PHASE_JSL_ADDRESS_LOW:
+    case CPU_CYCLE_PHASE_JSL_ADDRESS_HIGH:
+    case CPU_CYCLE_PHASE_JSL_ADDRESS_BANK:
     case CPU_CYCLE_PHASE_SOFTWARE_INTERRUPT_SIGNATURE:
         set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
                       mipsnes2_address_make(cpu->pbr, cpu->pc), 0U);
@@ -3219,6 +3244,9 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_JSR_INTERNAL:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
         break;
+    case CPU_CYCLE_PHASE_JSL_INTERNAL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+        break;
     case CPU_CYCLE_PHASE_RTS_INTERNAL_1:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
         break;
@@ -3228,6 +3256,12 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_RTS_INTERNAL_3:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 3U);
         break;
+    case CPU_CYCLE_PHASE_RTL_INTERNAL_1:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+        break;
+    case CPU_CYCLE_PHASE_RTL_INTERNAL_2:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+        break;
     case CPU_CYCLE_PHASE_JSR_PUSH_PCH:
         set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
                       (uint8_t)(state->return_address >> 8));
@@ -3236,10 +3270,28 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
         set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
                       (uint8_t)state->return_address);
         break;
+    case CPU_CYCLE_PHASE_JSL_PUSH_PBR:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      state->return_bank);
+        break;
+    case CPU_CYCLE_PHASE_JSL_PUSH_PCH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)(state->return_address >> 8));
+        break;
+    case CPU_CYCLE_PHASE_JSL_PUSH_PCL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)state->return_address);
+        break;
     case CPU_CYCLE_PHASE_RTS_PULL_PCL:
     case CPU_CYCLE_PHASE_RTS_PULL_PCH:
         set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
                       stack_next_address(cpu), 0U);
+        break;
+    case CPU_CYCLE_PHASE_RTL_PULL_PCL:
+    case CPU_CYCLE_PHASE_RTL_PULL_PCH:
+    case CPU_CYCLE_PHASE_RTL_PULL_PBR:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      (uint16_t)(cpu->s + UINT16_C(1)), 0U);
         break;
     case CPU_CYCLE_PHASE_INTERRUPT_INTERNAL_1:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
@@ -3448,6 +3500,55 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         *instruction_result = MIPSNES2_CPU_OK;
         complete_cycle_state(state);
         return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_JSL_ADDRESS_LOW:
+        state->operand = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSL_ADDRESS_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSL_ADDRESS_HIGH:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        state->operand |= (uint16_t)(value << 8);
+        state->return_address = cpu->pc;
+        state->return_bank = cpu->pbr;
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSL_PUSH_PBR;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSL_PUSH_PBR:
+        write8(cpu, current.address, current.value);
+        /* JSL's three-byte transfer is linear even while E=1. */
+        cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSL_INTERNAL;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSL_INTERNAL:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSL_ADDRESS_BANK;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSL_ADDRESS_BANK:
+        state->target_bank = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSL_PUSH_PCH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSL_PUSH_PCH:
+        write8(cpu, current.address, current.value);
+        cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSL_PUSH_PCL;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSL_PUSH_PCL:
+        write8(cpu, current.address, current.value);
+        cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+        /* Restore the emulation-mode SH invariant after the full transfer. */
+        apply_mode_invariants(cpu);
+        cpu->pc = state->operand;
+        cpu->pbr = state->target_bank;
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
     case CPU_CYCLE_PHASE_RTS_INTERNAL_1:
         cpu->instruction_cycles += UINT64_C(1);
         state->phase = (uint8_t)CPU_CYCLE_PHASE_RTS_INTERNAL_2;
@@ -3470,6 +3571,38 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         state->phase = (uint8_t)CPU_CYCLE_PHASE_RTS_INTERNAL_3;
         return MIPSNES2_CPU_CYCLE_READY;
     case CPU_CYCLE_PHASE_RTS_INTERNAL_3:
+        cpu->pc = (uint16_t)(state->operand + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_RTL_INTERNAL_1:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RTL_INTERNAL_2;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RTL_INTERNAL_2:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RTL_PULL_PCL;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RTL_PULL_PCL:
+        /* RTL's three-byte transfer is linear even while E=1. */
+        cpu->s = (uint16_t)(cpu->s + UINT16_C(1));
+        state->operand = read8(cpu, current.address);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RTL_PULL_PCH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RTL_PULL_PCH:
+        cpu->s = (uint16_t)(cpu->s + UINT16_C(1));
+        value = read8(cpu, current.address);
+        state->operand |= (uint16_t)(value << 8);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RTL_PULL_PBR;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RTL_PULL_PBR:
+        cpu->s = (uint16_t)(cpu->s + UINT16_C(1));
+        cpu->pbr = read8(cpu, current.address);
+        /* Restore the emulation-mode SH invariant after the full transfer. */
+        apply_mode_invariants(cpu);
         cpu->pc = (uint16_t)(state->operand + UINT16_C(1));
         cpu->instruction_cycles += UINT64_C(1);
         *instruction_result = MIPSNES2_CPU_OK;

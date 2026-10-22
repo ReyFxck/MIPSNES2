@@ -70,6 +70,8 @@ typedef struct {
     uint16_t interrupt_vector;
     uint8_t opcode;
     uint8_t phase;
+    uint8_t target_bank;
+    uint8_t return_bank;
     uint8_t interrupt_kind;
     uint8_t interrupt_pbr;
     uint8_t pushed_status;
