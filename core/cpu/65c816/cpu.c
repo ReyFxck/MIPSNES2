@@ -2916,6 +2916,13 @@ typedef enum {
     CPU_CYCLE_PHASE_JSR_INTERNAL,
     CPU_CYCLE_PHASE_JSR_PUSH_PCH,
     CPU_CYCLE_PHASE_JSR_PUSH_PCL,
+    CPU_CYCLE_PHASE_JSR_INDEXED_ADDRESS_LOW,
+    CPU_CYCLE_PHASE_JSR_INDEXED_PUSH_PCH,
+    CPU_CYCLE_PHASE_JSR_INDEXED_PUSH_PCL,
+    CPU_CYCLE_PHASE_JSR_INDEXED_ADDRESS_HIGH,
+    CPU_CYCLE_PHASE_JSR_INDEXED_INTERNAL,
+    CPU_CYCLE_PHASE_JSR_INDEXED_POINTER_LOW,
+    CPU_CYCLE_PHASE_JSR_INDEXED_POINTER_HIGH,
     CPU_CYCLE_PHASE_JSL_ADDRESS_LOW,
     CPU_CYCLE_PHASE_JSL_ADDRESS_HIGH,
     CPU_CYCLE_PHASE_JSL_PUSH_PBR,
@@ -3158,6 +3165,11 @@ static void decode_incremental_opcode(mipsnes2_cpu *cpu,
     case 0xea: /* NOP */
         state->phase = (uint8_t)CPU_CYCLE_PHASE_NOP_INTERNAL;
         break;
+    case 0xfc: /* JSR absolute indexed indirect */
+        state->phase = cpu->bus.write8 == NULL
+                           ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
+                           : (uint8_t)CPU_CYCLE_PHASE_JSR_INDEXED_ADDRESS_LOW;
+        break;
     default:
         state->phase = (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC;
         break;
@@ -3182,6 +3194,7 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin(
     }
 
     state->operand = 0U;
+    state->pointer = 0U;
     state->return_address = 0U;
     state->interrupt_pc = 0U;
     state->interrupt_vector = 0U;
@@ -3229,6 +3242,8 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_SEP_VALUE:
     case CPU_CYCLE_PHASE_JSR_ADDRESS_LOW:
     case CPU_CYCLE_PHASE_JSR_ADDRESS_HIGH:
+    case CPU_CYCLE_PHASE_JSR_INDEXED_ADDRESS_LOW:
+    case CPU_CYCLE_PHASE_JSR_INDEXED_ADDRESS_HIGH:
     case CPU_CYCLE_PHASE_JSL_ADDRESS_LOW:
     case CPU_CYCLE_PHASE_JSL_ADDRESS_HIGH:
     case CPU_CYCLE_PHASE_JSL_ADDRESS_BANK:
@@ -3242,6 +3257,9 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 0U);
         break;
     case CPU_CYCLE_PHASE_JSR_INTERNAL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+        break;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_INTERNAL:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
         break;
     case CPU_CYCLE_PHASE_JSL_INTERNAL:
@@ -3269,6 +3287,25 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_JSR_PUSH_PCL:
         set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
                       (uint8_t)state->return_address);
+        break;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_PUSH_PCH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)(state->return_address >> 8));
+        break;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_PUSH_PCL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
+                      (uint8_t)state->return_address);
+        break;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_POINTER_LOW:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      mipsnes2_address_make(cpu->pbr, state->pointer), 0U);
+        break;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_POINTER_HIGH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      mipsnes2_address_make(
+                          cpu->pbr,
+                          (uint16_t)(state->pointer + UINT16_C(1))),
+                      0U);
         break;
     case CPU_CYCLE_PHASE_JSL_PUSH_PBR:
         set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
@@ -3496,6 +3533,51 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         write8(cpu, current.address, current.value);
         stack_decrement(cpu);
         cpu->pc = state->operand;
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_ADDRESS_LOW:
+        state->operand = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        state->return_address = cpu->pc;
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSR_INDEXED_PUSH_PCH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_PUSH_PCH:
+        write8(cpu, current.address, current.value);
+        /* WDC 7.1: JSR (a,X) transfers both bytes linearly in E mode. */
+        cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSR_INDEXED_PUSH_PCL;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_PUSH_PCL:
+        write8(cpu, current.address, current.value);
+        cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
+        apply_mode_invariants(cpu);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSR_INDEXED_ADDRESS_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_ADDRESS_HIGH:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        state->operand |= (uint16_t)(value << 8);
+        state->pointer = (uint16_t)(state->operand + cpu->x);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSR_INDEXED_INTERNAL;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_INTERNAL:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSR_INDEXED_POINTER_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_POINTER_LOW:
+        state->operand = read8(cpu, current.address);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_JSR_INDEXED_POINTER_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_JSR_INDEXED_POINTER_HIGH:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(state->operand | (uint16_t)(value << 8));
         cpu->instruction_cycles += UINT64_C(1);
         *instruction_result = MIPSNES2_CPU_OK;
         complete_cycle_state(state);

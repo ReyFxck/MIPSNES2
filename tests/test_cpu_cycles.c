@@ -1123,6 +1123,147 @@ static int test_jsr_missing_write_fallback(void)
     return 0;
 }
 
+static int test_jsr_indexed_indirect_cycles(void)
+{
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    mipsnes2_cpu_operation stale;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9700)) == 0);
+    cpu.s = UINT16_C(0x0100);
+    cpu.x = UINT16_C(0x0001);
+    bank7e[0x9700] = UINT8_C(0xfc);
+    bank7e[0x9701] = UINT8_C(0xfe);
+    bank7e[0x9702] = UINT8_C(0xff);
+    bank7e[0xffff] = UINT8_C(0x34);
+    bank7e[0x0000] = UINT8_C(0x12);
+    CHECK(begin_instruction(&cpu, &state) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e9700), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e9701), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x000100), UINT8_C(0x97),
+                           &operation) == 0);
+    stale = operation;
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(cpu.s == UINT16_C(0x00ff));
+    CHECK(commit_operation(&cpu, &state, &stale,
+                           MIPSNES2_CPU_CYCLE_STALE_OPERATION,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_WRITE,
+                           UINT32_C(0x0000ff), UINT8_C(0x02),
+                           &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(cpu.s == UINT16_C(0x01fe));
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e9702), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 1U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7effff), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e0000), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_OK) == 0);
+    CHECK(cpu.pc == UINT16_C(0x1234));
+    CHECK(cpu.pbr == UINT8_C(0x7e));
+    CHECK(cpu.s == UINT16_C(0x01fe));
+    CHECK(cpu.instruction_cycles == UINT64_C(8));
+    CHECK(trace.count == 7U);
+    CHECK(trace.accesses[2].write);
+    CHECK(trace.accesses[2].address == UINT32_C(0x000100));
+    CHECK(trace.accesses[2].value == UINT8_C(0x97));
+    CHECK(trace.accesses[3].write);
+    CHECK(trace.accesses[3].address == UINT32_C(0x0000ff));
+    CHECK(trace.accesses[3].value == UINT8_C(0x02));
+    CHECK(trace.accesses[4].address == UINT32_C(0x7e9702));
+    CHECK(trace.accesses[5].address == UINT32_C(0x7effff));
+    CHECK(trace.accesses[6].address == UINT32_C(0x7e0000));
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xffff)) == 0);
+    cpu.emulation = false;
+    cpu.s = 0U;
+    cpu.x = 0U;
+    bank7e[0xffff] = UINT8_C(0xfc);
+    bank7e[0x0000] = UINT8_C(0x00);
+    bank7e[0x0001] = UINT8_C(0x20);
+    bank7e[0x2000] = UINT8_C(0x78);
+    bank7e[0x2001] = UINT8_C(0x56);
+    CHECK(mipsnes2_cpu_step(&cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu.pc == UINT16_C(0x5678));
+    CHECK(cpu.pbr == UINT8_C(0x7e));
+    CHECK(cpu.s == UINT16_C(0xfffe));
+    CHECK(cpu.instruction_cycles == UINT64_C(8));
+    CHECK(trace.count == 7U);
+    CHECK(trace.accesses[1].address == UINT32_C(0x7e0000));
+    CHECK(trace.accesses[2].write);
+    CHECK(trace.accesses[2].address == UINT32_C(0x000000));
+    CHECK(trace.accesses[2].value == 0U);
+    CHECK(trace.accesses[3].write);
+    CHECK(trace.accesses[3].address == UINT32_C(0x00ffff));
+    CHECK(trace.accesses[3].value == UINT8_C(0x01));
+    CHECK(trace.accesses[4].address == UINT32_C(0x7e0001));
+    CHECK(trace.accesses[5].address == UINT32_C(0x7e2000));
+    CHECK(trace.accesses[6].address == UINT32_C(0x7e2001));
+    return 0;
+}
+
+static int test_jsr_indexed_missing_write_fallback(void)
+{
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9800)) == 0);
+    cpu.s = UINT16_C(0x0100);
+    cpu.bus.write8 = NULL;
+    bank7e[0x9800] = UINT8_C(0xfc);
+    bank7e[0x9801] = UINT8_C(0x34);
+    CHECK(begin_instruction(&cpu, &state) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e9800), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state,
+                           MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC,
+                           0U, 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_INVALID_BUS) == 0);
+    CHECK(cpu.stopped);
+    CHECK(cpu.stop_reason == MIPSNES2_CPU_INVALID_BUS);
+    CHECK(cpu.pc == UINT16_C(0x9801));
+    CHECK(cpu.s == UINT16_C(0x0100));
+    CHECK(cpu.instruction_cycles == 0U);
+    CHECK(trace.count == 1U);
+    return 0;
+}
+
 static int test_jsl_absolute_long_cycles(void)
 {
     trace_context trace;
@@ -1339,6 +1480,8 @@ int main(void)
     CHECK(test_jsr_absolute_cycles() == 0);
     CHECK(test_rts_cycles() == 0);
     CHECK(test_jsr_missing_write_fallback() == 0);
+    CHECK(test_jsr_indexed_indirect_cycles() == 0);
+    CHECK(test_jsr_indexed_missing_write_fallback() == 0);
     CHECK(test_jsl_absolute_long_cycles() == 0);
     CHECK(test_rtl_cycles() == 0);
     CHECK(test_jsl_missing_write_fallback() == 0);
