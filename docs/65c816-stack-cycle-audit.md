@@ -64,5 +64,29 @@ the pinned PSP toolchain. Console compilation is not a runtime or performance cl
 
 ## Verification
 
-Publication identifiers and final command results are recorded after the exact
-tested tree is committed and published.
+Published implementation commit `748cd78e76a3622b60001d5b173f44e65dac1854`
+used exact source tree `afe51229e8f8c34e1b875612ea65c8d29472ec85` for
+every verification below.
+
+- `make BUILD_DIR=build/stack-cycle-dev -j2 test` — passed all 14 C test
+  executables, the host smoke test and repository checks.
+- `make BUILD_DIR=build/stack-cycle-release CC=gcc
+  CFLAGS='-O2 -g -DNDEBUG' -j2 test` — passed.
+- `ASAN_OPTIONS=detect_leaks=0 make BUILD_DIR=build/stack-cycle-sanitize CC=gcc
+  CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer'
+  LDFLAGS='-fsanitize=address,undefined' -j1 test` — passed with no ASan or UBSan
+  diagnostic; leak detection alone was disabled for the managed environment.
+- `gcc -std=c99 -Wall -Wextra -Wpedantic -Werror -fanalyzer -I. -c
+  core/cpu/65c816/cpu.c -o /tmp/mipsnes2-stack-cycle-cpu.o` — passed.
+- `python3 tools/check_repository.py` and `git diff --check` — passed.
+- Pinned PS2 toolchain `v2.0.0`, previously digest-verified by
+  `tools/setup_toolchain.py`: `make -C platform/ps2` passed with
+  `mips64r5900el-ps2-elf-gcc 15.2.0`.
+- Pinned PSP toolchain `v20261001`, previously digest-verified by
+  `tools/setup_toolchain.py`: `make -C platform/psp` passed with
+  `psp-gcc 15.2.0` and produced `EBOOT.PBP`.
+- Clang was unavailable in the local environment; no local Clang result is claimed.
+
+The console builds prove compilation with the pinned SDKs; they do not claim runtime
+behavior or performance on either console. No real SNES, PS2, PSP, PCSX2 or PPSSPP
+runtime test and no performance measurement is claimed by this milestone.
