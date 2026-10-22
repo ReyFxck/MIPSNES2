@@ -107,8 +107,10 @@ A caller-owned peek/commit CPU-operation foundation now exposes exact-once opcod
 fetch plus resumable sequences for `NOP`, immediate `LDA`, absolute `STA`, `REP`,
 `SEP`, the complete conditional/relative branch family, all five `JMP/JML` forms,
 absolute `JSR`, indexed-indirect `JSR`, `RTS`, `JSL`, `RTL`, `BRK` and `COP`.
-The complete stack push/pull/effective-address family also uses the cursor. Boundary
-`ABORT`, `NMI` and `IRQ` entry use the same cursor. The other 213 opcodes remain behind an
+The complete stack push/pull/effective-address family also uses the cursor. The
+complete implied status, register-transfer and register increment/decrement family
+also uses shared internal phases. Boundary `ABORT`, `NMI` and `IRQ` entry use
+the same cursor. The other 186 opcodes remain behind an
 explicit legacy-atomic operation, and the scheduler still uses the reviewed
 instruction-atomic bridge. This is a migration foundation, not a claim of complete
 cycle-level execution.

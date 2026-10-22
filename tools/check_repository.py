@@ -14,6 +14,7 @@ DOCS += ["65c816-interrupt-cycle-audit", "65c816-subroutine-cycle-audit",
          "65c816-indexed-subroutine-cycle-audit", "65c816-jump-cycle-audit",
          "65c816-resumable-branch-cycle-audit",
          "65c816-stack-cycle-audit",
+         "65c816-implied-cycle-audit",
          "xerj-workflow"]
 REQUIRED_DIRS = "core/cpu/65c816 core/bus core/ppu core/apu/spc700 core/apu/dsp core/dma core/scheduler core/cartridge core/enhancement core/debug core/common platform/ps2 platform/psp platform/host tests tools".split()
 errors = []

@@ -269,7 +269,8 @@ static uint16_t index_register_value(const mipsnes2_cpu *cpu,
     return index_is_8_bit(cpu) ? (uint8_t)value : value;
 }
 
-static void transfer_to_accumulator(mipsnes2_cpu *cpu, uint16_t value)
+static void transfer_to_accumulator_effect(mipsnes2_cpu *cpu,
+                                           uint16_t value)
 {
     if (accumulator_is_8_bit(cpu)) {
         uint8_t low = (uint8_t)value;
@@ -280,18 +281,29 @@ static void transfer_to_accumulator(mipsnes2_cpu *cpu, uint16_t value)
         cpu->a = value;
         set_nz16(cpu, value);
     }
+}
+
+static void transfer_to_accumulator(mipsnes2_cpu *cpu, uint16_t value)
+{
+    transfer_to_accumulator_effect(cpu, value);
     cpu->instruction_cycles += UINT64_C(2);
+}
+
+static void transfer16_to_accumulator_effect(mipsnes2_cpu *cpu,
+                                             uint16_t value)
+{
+    cpu->a = value;
+    set_nz16(cpu, value);
 }
 
 static void transfer16_to_accumulator(mipsnes2_cpu *cpu, uint16_t value)
 {
-    cpu->a = value;
-    set_nz16(cpu, value);
+    transfer16_to_accumulator_effect(cpu, value);
     cpu->instruction_cycles += UINT64_C(2);
 }
 
-static void transfer_to_index(mipsnes2_cpu *cpu, uint16_t *target,
-                              uint16_t value)
+static void transfer_to_index_effect(mipsnes2_cpu *cpu, uint16_t *target,
+                                     uint16_t value)
 {
     if (index_is_8_bit(cpu)) {
         uint8_t low = (uint8_t)value;
@@ -302,26 +314,42 @@ static void transfer_to_index(mipsnes2_cpu *cpu, uint16_t *target,
         *target = value;
         set_nz16(cpu, value);
     }
+}
+
+static void transfer_to_index(mipsnes2_cpu *cpu, uint16_t *target,
+                              uint16_t value)
+{
+    transfer_to_index_effect(cpu, target, value);
     cpu->instruction_cycles += UINT64_C(2);
 }
 
-static void transfer_to_stack(mipsnes2_cpu *cpu, uint16_t value)
+static void transfer_to_stack_effect(mipsnes2_cpu *cpu, uint16_t value)
 {
     cpu->s = cpu->emulation
                  ? (uint16_t)(UINT16_C(0x0100) |
                               (value & UINT16_C(0x00ff)))
                  : value;
+}
+
+static void transfer_to_stack(mipsnes2_cpu *cpu, uint16_t value)
+{
+    transfer_to_stack_effect(cpu, value);
     cpu->instruction_cycles += UINT64_C(2);
+}
+
+static void exchange_accumulator_bytes_effect(mipsnes2_cpu *cpu)
+{
+    cpu->a = (uint16_t)((cpu->a >> 8) | (cpu->a << 8));
+    set_nz8(cpu, (uint8_t)cpu->a);
 }
 
 static void exchange_accumulator_bytes(mipsnes2_cpu *cpu)
 {
-    cpu->a = (uint16_t)((cpu->a >> 8) | (cpu->a << 8));
-    set_nz8(cpu, (uint8_t)cpu->a);
+    exchange_accumulator_bytes_effect(cpu);
     cpu->instruction_cycles += UINT64_C(3);
 }
 
-static void change_accumulator(mipsnes2_cpu *cpu, bool increment)
+static void change_accumulator_effect(mipsnes2_cpu *cpu, bool increment)
 {
     if (accumulator_is_8_bit(cpu)) {
         uint8_t value = (uint8_t)cpu->a;
@@ -335,11 +363,16 @@ static void change_accumulator(mipsnes2_cpu *cpu, bool increment)
                            : (uint16_t)(cpu->a - UINT16_C(1));
         set_nz16(cpu, cpu->a);
     }
+}
+
+static void change_accumulator(mipsnes2_cpu *cpu, bool increment)
+{
+    change_accumulator_effect(cpu, increment);
     cpu->instruction_cycles += UINT64_C(2);
 }
 
-static void change_index(mipsnes2_cpu *cpu, uint16_t *target,
-                         bool increment)
+static void change_index_effect(mipsnes2_cpu *cpu, uint16_t *target,
+                                bool increment)
 {
     if (index_is_8_bit(cpu)) {
         uint8_t value = (uint8_t)*target;
@@ -353,7 +386,117 @@ static void change_index(mipsnes2_cpu *cpu, uint16_t *target,
                             : (uint16_t)(*target - UINT16_C(1));
         set_nz16(cpu, *target);
     }
+}
+
+static void change_index(mipsnes2_cpu *cpu, uint16_t *target,
+                         bool increment)
+{
+    change_index_effect(cpu, target, increment);
     cpu->instruction_cycles += UINT64_C(2);
+}
+
+static void finish_implied_operation(mipsnes2_cpu *cpu, uint8_t opcode)
+{
+    switch (opcode) {
+    case 0x18: /* CLC */
+        cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_C;
+        break;
+    case 0x1a: /* INC accumulator */
+        change_accumulator_effect(cpu, true);
+        break;
+    case 0x1b: /* TCS */
+        transfer_to_stack_effect(cpu, cpu->a);
+        break;
+    case 0x38: /* SEC */
+        cpu->p |= MIPSNES2_CPU_FLAG_C;
+        break;
+    case 0x3a: /* DEC accumulator */
+        change_accumulator_effect(cpu, false);
+        break;
+    case 0x3b: /* TSC */
+        transfer16_to_accumulator_effect(cpu, cpu->s);
+        break;
+    case 0x58: /* CLI */
+        cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_I;
+        break;
+    case 0x5b: /* TCD */
+        cpu->d = cpu->a;
+        set_nz16(cpu, cpu->d);
+        break;
+    case 0x78: /* SEI */
+        cpu->p |= MIPSNES2_CPU_FLAG_I;
+        break;
+    case 0x7b: /* TDC */
+        transfer16_to_accumulator_effect(cpu, cpu->d);
+        break;
+    case 0x88: /* DEY */
+        change_index_effect(cpu, &cpu->y, false);
+        break;
+    case 0x8a: /* TXA */
+        transfer_to_accumulator_effect(cpu,
+                                       index_register_value(cpu, cpu->x));
+        break;
+    case 0x98: /* TYA */
+        transfer_to_accumulator_effect(cpu,
+                                       index_register_value(cpu, cpu->y));
+        break;
+    case 0x9a: /* TXS */
+        transfer_to_stack_effect(cpu, index_register_value(cpu, cpu->x));
+        break;
+    case 0x9b: /* TXY */
+        transfer_to_index_effect(cpu, &cpu->y,
+                                 index_register_value(cpu, cpu->x));
+        break;
+    case 0xa8: /* TAY */
+        transfer_to_index_effect(cpu, &cpu->y, cpu->a);
+        break;
+    case 0xaa: /* TAX */
+        transfer_to_index_effect(cpu, &cpu->x, cpu->a);
+        break;
+    case 0xb8: /* CLV */
+        cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_V;
+        break;
+    case 0xba: /* TSX */
+        transfer_to_index_effect(cpu, &cpu->x, cpu->s);
+        break;
+    case 0xbb: /* TYX */
+        transfer_to_index_effect(cpu, &cpu->x,
+                                 index_register_value(cpu, cpu->y));
+        break;
+    case 0xc8: /* INY */
+        change_index_effect(cpu, &cpu->y, true);
+        break;
+    case 0xca: /* DEX */
+        change_index_effect(cpu, &cpu->x, false);
+        break;
+    case 0xd8: /* CLD */
+        cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_D;
+        break;
+    case 0xe8: /* INX */
+        change_index_effect(cpu, &cpu->x, true);
+        break;
+    case 0xeb: /* XBA */
+        exchange_accumulator_bytes_effect(cpu);
+        break;
+    case 0xf8: /* SED */
+        cpu->p |= MIPSNES2_CPU_FLAG_D;
+        break;
+    case 0xfb: { /* XCE */
+        bool old_carry = (cpu->p & MIPSNES2_CPU_FLAG_C) != 0U;
+        bool old_emulation = cpu->emulation;
+
+        cpu->emulation = old_carry;
+        if (old_emulation) {
+            cpu->p |= MIPSNES2_CPU_FLAG_C;
+        } else {
+            cpu->p &= (uint8_t)~MIPSNES2_CPU_FLAG_C;
+        }
+        apply_mode_invariants(cpu);
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 typedef enum {
@@ -3036,6 +3179,8 @@ typedef enum {
     CPU_CYCLE_PHASE_BRANCH_LONG_LOW,
     CPU_CYCLE_PHASE_BRANCH_LONG_HIGH,
     CPU_CYCLE_PHASE_BRANCH_LONG_INTERNAL,
+    CPU_CYCLE_PHASE_IMPLIED_INTERNAL_1,
+    CPU_CYCLE_PHASE_IMPLIED_INTERNAL_2,
     CPU_CYCLE_PHASE_STACK_PUSH_INTERNAL,
     CPU_CYCLE_PHASE_STACK_PUSH_HIGH,
     CPU_CYCLE_PHASE_STACK_PUSH_LOW,
@@ -3292,6 +3437,35 @@ static void decode_incremental_opcode(mipsnes2_cpu *cpu,
     case 0x82: /* BRL */
         state->phase = (uint8_t)CPU_CYCLE_PHASE_BRANCH_LONG_LOW;
         break;
+    case 0x18: /* CLC */
+    case 0x1a: /* INC accumulator */
+    case 0x1b: /* TCS */
+    case 0x38: /* SEC */
+    case 0x3a: /* DEC accumulator */
+    case 0x3b: /* TSC */
+    case 0x58: /* CLI */
+    case 0x5b: /* TCD */
+    case 0x78: /* SEI */
+    case 0x7b: /* TDC */
+    case 0x88: /* DEY */
+    case 0x8a: /* TXA */
+    case 0x98: /* TYA */
+    case 0x9a: /* TXS */
+    case 0x9b: /* TXY */
+    case 0xa8: /* TAY */
+    case 0xaa: /* TAX */
+    case 0xb8: /* CLV */
+    case 0xba: /* TSX */
+    case 0xbb: /* TYX */
+    case 0xc8: /* INY */
+    case 0xca: /* DEX */
+    case 0xd8: /* CLD */
+    case 0xe8: /* INX */
+    case 0xeb: /* XBA */
+    case 0xf8: /* SED */
+    case 0xfb: /* XCE */
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_IMPLIED_INTERNAL_1;
+        break;
     case 0x08: /* PHP */
     case 0x0b: /* PHD */
     case 0x48: /* PHA */
@@ -3469,6 +3643,12 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
         break;
     case CPU_CYCLE_PHASE_BRANCH_PAGE_CROSS:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+        break;
+    case CPU_CYCLE_PHASE_IMPLIED_INTERNAL_1:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+        break;
+    case CPU_CYCLE_PHASE_IMPLIED_INTERNAL_2:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
         break;
     case CPU_CYCLE_PHASE_STACK_PUSH_INTERNAL:
@@ -3828,6 +4008,22 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         return MIPSNES2_CPU_CYCLE_READY;
     case CPU_CYCLE_PHASE_BRANCH_LONG_INTERNAL:
         cpu->pc = state->pointer;
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_IMPLIED_INTERNAL_1:
+        cpu->instruction_cycles += UINT64_C(1);
+        if (state->opcode == UINT8_C(0xeb)) {
+            state->phase = (uint8_t)CPU_CYCLE_PHASE_IMPLIED_INTERNAL_2;
+            return MIPSNES2_CPU_CYCLE_READY;
+        }
+        finish_implied_operation(cpu, state->opcode);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_IMPLIED_INTERNAL_2:
+        finish_implied_operation(cpu, state->opcode);
         cpu->instruction_cycles += UINT64_C(1);
         *instruction_result = MIPSNES2_CPU_OK;
         complete_cycle_state(state);

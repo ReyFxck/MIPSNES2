@@ -269,10 +269,15 @@ cursor exposes internal operations, width-selected bytes, high-before-low pushes
 low-before-high pulls, Direct Page pointer reads and the documented linear
 emulation-mode multi-byte stack exceptions. Ordinary byte transfers retain `01xx`
 wrapping, while native transfers retain full 16-bit S wrapping.
+Twenty-seven implied status, transfer and register increment/decrement opcodes
+(`18/1A/1B/38/3A/3B/58/5B/78/7B/88/8A/98/9A/9B/A8/AA/B8/BA/BB/C8/CA/D8/E8/EB/F8/FB`)
+use shared internal phases. Their architectural effect occurs only when the final
+internal descriptor commits. `XBA` uses two distinct internal tokens for its
+three-cycle sequence; the remaining members use one internal token.
 Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the accepted cause
 and entry state latched before any effect. `mipsnes2_cpu_step` drives this same
 contract to completion, preserving the established instruction API. The remaining
-213 opcodes return an explicit legacy-atomic operation after their opcode fetch and
+186 opcodes return an explicit legacy-atomic operation after their opcode fetch and
 use the existing evaluator for the remainder.
 
 This is deliberately not wired into the scheduler yet. Remaining opcodes, reset,
@@ -527,5 +532,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   width-selected transfers, internal operations, Direct Page pointer reads and
   ordinary-versus-linear stack rules through shared core phases; 213 opcode
   remainders remain without backend-specific or game-specific behavior.
+- 2026-10-22: Twenty-seven implied status, register-transfer and register
+  increment/decrement opcodes now commit through shared internal phases; `XBA`
+  exposes both internal cycles, leaving 186 opcode remainders without backend- or
+  game-specific behavior.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
