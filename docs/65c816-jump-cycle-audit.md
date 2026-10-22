@@ -61,6 +61,10 @@ the pinned PSP toolchain.
 
 ## Verification
 
+Published implementation commit `1a2826bef92995260252ed9b5d0ceef561a581b1`
+used exact source tree `6ffec19dfb51cbda443808d8f94adc15fc5ab5b6` for
+every verification below.
+
 - `make BUILD_DIR=build/jump-cycle-dev -j2 test` — passed all 14 C test executables,
   the host smoke test and repository checks.
 - `make BUILD_DIR=build/jump-cycle-release CC=gcc CFLAGS='-O2 -g -DNDEBUG' -j2
