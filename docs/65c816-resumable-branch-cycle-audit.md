@@ -57,6 +57,10 @@ the pinned PSP toolchain.
 
 ## Verification
 
+Published implementation commit `4933f3571e14a86622bac0ce7d18386df0849939`
+used exact source tree `f98978bf8d4e9b76da15721f670ed2406b987921` for
+every verification below.
+
 - `make BUILD_DIR=build/branch-cycle-dev -j2 test` — passed all 14 C test
   executables, the host smoke test and repository checks.
 - `make BUILD_DIR=build/branch-cycle-release CC=gcc
@@ -78,5 +82,4 @@ the pinned PSP toolchain.
 
 The console builds prove compilation with the pinned SDKs; they do not claim runtime
 behavior or performance on either console. No real SNES, PS2, PSP, PCSX2 or PPSSPP
-runtime test and no performance measurement is claimed by this milestone. The exact
-published implementation commit and tested tree are recorded after publication.
+runtime test and no performance measurement is claimed by this milestone.
