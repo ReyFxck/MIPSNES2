@@ -75,5 +75,37 @@ pinned PSP toolchain. Console compilation is not a runtime or performance claim.
 
 ## Verification
 
-Verification results are recorded with the final published source tree after all
-required checks complete.
+Published implementation commit `ffcf60fa0d9ae327bf193b9f227804bfd100540f`
+used exact source tree `daa4a7164576059738ef9739da46861de2892e14` for every
+verification below.
+
+- `make BUILD_DIR=build/load-store-debug clean && make
+  BUILD_DIR=build/load-store-debug -j2 test` — passed all 14 C test executables,
+  the host smoke test and repository checks.
+- `make BUILD_DIR=build/load-store-release CC=gcc CFLAGS='-O2 -g -DNDEBUG'
+  clean && make BUILD_DIR=build/load-store-release CC=gcc
+  CFLAGS='-O2 -g -DNDEBUG' -j2 test` — passed.
+- `make BUILD_DIR=build/load-store-sanitize CC=gcc
+  CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer'
+  LDFLAGS='-fsanitize=address,undefined' clean && ASAN_OPTIONS=detect_leaks=0
+  make BUILD_DIR=build/load-store-sanitize CC=gcc
+  CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer'
+  LDFLAGS='-fsanitize=address,undefined' -j1 test` — passed with no ASan or UBSan
+  diagnostic; leak detection alone was disabled for the managed environment.
+- `gcc -std=c99 -Wall -Wextra -Wpedantic -Werror -fanalyzer -I. -c
+  core/cpu/65c816/cpu.c -o /tmp/mipsnes2-load-store-cpu.o` — passed.
+- `python3 tools/check_repository.py` and `git diff --check` — passed.
+- XERJ `v1.0.0-rc.97` dry-run and first-party index covered 156 files, all 54
+  detected code files and 1,240 live records with zero junk files. Search found the
+  load/store matrix and stale-internal regression; definition lookup resolved
+  `load_store_apply_load`. Feedback remained disabled.
+- Pinned PS2 toolchain `v2.0.0`, digest-verified by
+  `tools/setup_toolchain.py`: `make -C platform/ps2 clean all` passed with
+  `mips64r5900el-ps2-elf-gcc 15.2.0` and produced `mipsnes2-ps2.elf`.
+- Pinned PSP toolchain `v20261001`, digest-verified by
+  `tools/setup_toolchain.py`: `make -C platform/psp clean all` passed with
+  `psp-gcc 15.2.0` and produced `EBOOT.PBP`.
+
+The console builds prove compilation with the pinned SDKs; they do not claim runtime
+behavior or performance on a real PS2 or PSP. No real SNES, PS2, PSP, PCSX2 or
+PPSSPP runtime test and no performance measurement is claimed by this milestone.
