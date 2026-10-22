@@ -159,8 +159,8 @@ reported. Reset bus accesses are not yet driven through this bridge.
 Scheduler dispatch from inside the instruction-atomic CPU was attempted and rejected.
 If an event budget or callback failed after part of an instruction, that API could
 neither roll back nor resume safely. The CPU now has a caller-owned, exact-once
-peek/commit foundation for opcode fetch, seventy opcodes and boundary
-`ABORT`/`NMI`/`IRQ` entry, but the other 186 opcodes, reset and dummy cycles remain
+peek/commit foundation for opcode fetch, 106 opcodes and boundary
+`ABORT`/`NMI`/`IRQ` entry, but the other 150 opcodes, reset and dummy cycles remain
 explicitly atomic or absent. The timed bridge is not connected to the cursor yet.
 Per-access advancement therefore remains blocked until all reachable paths and
 failure/cancellation cases are resumable. See the

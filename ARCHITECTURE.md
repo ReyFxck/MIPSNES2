@@ -274,10 +274,14 @@ Twenty-seven implied status, transfer and register increment/decrement opcodes
 use shared internal phases. Their architectural effect occurs only when the final
 internal descriptor commits. `XBA` uses two distinct internal tokens for its
 three-cycle sequence; the remaining members use one internal token.
+All thirty-six accumulator/memory ASL/LSR/ROL/ROR, memory INC/DEC, TSB/TRB and STZ
+opcodes use shared RMW phases. Direct Page penalties, fixed indexed cycles,
+width-selected reads/writes and linear versus Direct high-byte rules remain explicit;
+distinct internal tokens separate Direct penalty, indexing and modification commits.
 Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the accepted cause
 and entry state latched before any effect. `mipsnes2_cpu_step` drives this same
 contract to completion, preserving the established instruction API. The remaining
-186 opcodes return an explicit legacy-atomic operation after their opcode fetch and
+150 opcodes return an explicit legacy-atomic operation after their opcode fetch and
 use the existing evaluator for the remainder.
 
 This is deliberately not wired into the scheduler yet. Remaining opcodes, reset,
@@ -536,5 +540,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   increment/decrement opcodes now commit through shared internal phases; `XBA`
   exposes both internal cycles, leaving 186 opcode remainders without backend- or
   game-specific behavior.
+- 2026-10-22: All thirty-six accumulator/memory shift/rotate, memory INC/DEC,
+  TSB/TRB and STZ opcodes now use shared address/read/modify/write phases, leaving
+  150 opcode remainders without backend- or game-specific behavior.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

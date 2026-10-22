@@ -109,8 +109,10 @@ fetch plus resumable sequences for `NOP`, immediate `LDA`, absolute `STA`, `REP`
 absolute `JSR`, indexed-indirect `JSR`, `RTS`, `JSL`, `RTL`, `BRK` and `COP`.
 The complete stack push/pull/effective-address family also uses the cursor. The
 complete implied status, register-transfer and register increment/decrement family
-also uses shared internal phases. Boundary `ABORT`, `NMI` and `IRQ` entry use
-the same cursor. The other 186 opcodes remain behind an
+also uses shared internal phases. All accumulator shifts/rotates and the complete
+memory ASL/LSR/ROL/ROR, INC/DEC, TSB/TRB and STZ family use shared address,
+read/modify/write and store phases. Boundary `ABORT`, `NMI` and `IRQ` entry use
+the same cursor. The other 150 opcodes remain behind an
 explicit legacy-atomic operation, and the scheduler still uses the reviewed
 instruction-atomic bridge. This is a migration foundation, not a claim of complete
 cycle-level execution.

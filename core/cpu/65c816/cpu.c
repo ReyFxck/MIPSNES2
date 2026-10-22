@@ -1120,6 +1120,140 @@ static void modify_memory(mipsnes2_cpu *cpu, mipsnes2_address address,
                                                     : UINT64_C(0));
 }
 
+static bool rmw_opcode_is_direct(uint8_t opcode)
+{
+    switch (opcode) {
+    case 0x04:
+    case 0x06:
+    case 0x14:
+    case 0x16:
+    case 0x26:
+    case 0x36:
+    case 0x46:
+    case 0x56:
+    case 0x64:
+    case 0x66:
+    case 0x74:
+    case 0x76:
+    case 0xc6:
+    case 0xd6:
+    case 0xe6:
+    case 0xf6:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool rmw_opcode_is_indexed(uint8_t opcode)
+{
+    switch (opcode) {
+    case 0x16:
+    case 0x1e:
+    case 0x36:
+    case 0x3e:
+    case 0x56:
+    case 0x5e:
+    case 0x74:
+    case 0x76:
+    case 0x7e:
+    case 0x9e:
+    case 0xd6:
+    case 0xde:
+    case 0xf6:
+    case 0xfe:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool rmw_opcode_is_store_zero(uint8_t opcode)
+{
+    return opcode == UINT8_C(0x64) || opcode == UINT8_C(0x74) ||
+           opcode == UINT8_C(0x9c) || opcode == UINT8_C(0x9e);
+}
+
+static shift_operation rmw_accumulator_shift(uint8_t opcode)
+{
+    switch (opcode) {
+    case 0x2a:
+        return ROTATE_LEFT;
+    case 0x4a:
+        return SHIFT_RIGHT;
+    case 0x6a:
+        return ROTATE_RIGHT;
+    case 0x0a:
+    default:
+        return SHIFT_LEFT;
+    }
+}
+
+static memory_modify_operation rmw_memory_operation(uint8_t opcode)
+{
+    switch (opcode) {
+    case 0x26:
+    case 0x2e:
+    case 0x36:
+    case 0x3e:
+        return MEMORY_ROL;
+    case 0x46:
+    case 0x4e:
+    case 0x56:
+    case 0x5e:
+        return MEMORY_LSR;
+    case 0x66:
+    case 0x6e:
+    case 0x76:
+    case 0x7e:
+        return MEMORY_ROR;
+    case 0xc6:
+    case 0xce:
+    case 0xd6:
+    case 0xde:
+        return MEMORY_DEC;
+    case 0xe6:
+    case 0xee:
+    case 0xf6:
+    case 0xfe:
+        return MEMORY_INC;
+    case 0x04:
+    case 0x0c:
+        return MEMORY_TSB;
+    case 0x14:
+    case 0x1c:
+        return MEMORY_TRB;
+    case 0x06:
+    case 0x0e:
+    case 0x16:
+    case 0x1e:
+    default:
+        return MEMORY_ASL;
+    }
+}
+
+static mipsnes2_address rmw_direct_address(const mipsnes2_cpu *cpu,
+                                           uint8_t offset,
+                                           bool indexed)
+{
+    uint16_t index = indexed ? cpu->x : 0U;
+    uint16_t address = (uint16_t)(cpu->d + offset + index);
+
+    if (cpu->emulation && (cpu->d & UINT16_C(0x00ff)) == 0U) {
+        address = (uint16_t)((cpu->d & UINT16_C(0xff00)) |
+                             (((uint16_t)offset + index) & UINT16_C(0x00ff)));
+    }
+    return address;
+}
+
+static mipsnes2_address rmw_next_data_address(
+    const mipsnes2_cpu *cpu, const mipsnes2_cpu_cycle_state *state)
+{
+    return rmw_opcode_is_direct(state->opcode)
+               ? direct_data_next_address(cpu, state->data_address)
+               : mipsnes2_address24(state->data_address + UINT32_C(1));
+}
+
 static uint16_t read_accumulator_stack_operand(const mipsnes2_cpu *cpu,
                                                uint16_t address)
 {
@@ -3181,6 +3315,16 @@ typedef enum {
     CPU_CYCLE_PHASE_BRANCH_LONG_INTERNAL,
     CPU_CYCLE_PHASE_IMPLIED_INTERNAL_1,
     CPU_CYCLE_PHASE_IMPLIED_INTERNAL_2,
+    CPU_CYCLE_PHASE_RMW_ACCUMULATOR_INTERNAL,
+    CPU_CYCLE_PHASE_RMW_ADDRESS_LOW,
+    CPU_CYCLE_PHASE_RMW_ADDRESS_HIGH,
+    CPU_CYCLE_PHASE_RMW_DIRECT_PENALTY,
+    CPU_CYCLE_PHASE_RMW_INDEX_INTERNAL,
+    CPU_CYCLE_PHASE_RMW_READ_LOW,
+    CPU_CYCLE_PHASE_RMW_READ_HIGH,
+    CPU_CYCLE_PHASE_RMW_MODIFY_INTERNAL,
+    CPU_CYCLE_PHASE_RMW_WRITE_LOW,
+    CPU_CYCLE_PHASE_RMW_WRITE_HIGH,
     CPU_CYCLE_PHASE_STACK_PUSH_INTERNAL,
     CPU_CYCLE_PHASE_STACK_PUSH_HIGH,
     CPU_CYCLE_PHASE_STACK_PUSH_LOW,
@@ -3245,6 +3389,13 @@ typedef enum {
     CPU_CYCLE_PHASE_LEGACY_ATOMIC,
     CPU_CYCLE_PHASE_COMPLETE
 } cpu_cycle_phase;
+
+static cpu_cycle_phase rmw_first_data_phase(uint8_t opcode)
+{
+    return rmw_opcode_is_store_zero(opcode)
+               ? CPU_CYCLE_PHASE_RMW_WRITE_LOW
+               : CPU_CYCLE_PHASE_RMW_READ_LOW;
+}
 
 static void set_operation(mipsnes2_cpu_operation *operation,
                           mipsnes2_cpu_operation_kind kind,
@@ -3437,6 +3588,48 @@ static void decode_incremental_opcode(mipsnes2_cpu *cpu,
     case 0x82: /* BRL */
         state->phase = (uint8_t)CPU_CYCLE_PHASE_BRANCH_LONG_LOW;
         break;
+    case 0x0a: /* ASL accumulator */
+    case 0x2a: /* ROL accumulator */
+    case 0x4a: /* LSR accumulator */
+    case 0x6a: /* ROR accumulator */
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RMW_ACCUMULATOR_INTERNAL;
+        break;
+    case 0x04: /* TSB direct */
+    case 0x06: /* ASL direct */
+    case 0x0c: /* TSB absolute */
+    case 0x0e: /* ASL absolute */
+    case 0x14: /* TRB direct */
+    case 0x16: /* ASL direct,X */
+    case 0x1c: /* TRB absolute */
+    case 0x1e: /* ASL absolute,X */
+    case 0x26: /* ROL direct */
+    case 0x2e: /* ROL absolute */
+    case 0x36: /* ROL direct,X */
+    case 0x3e: /* ROL absolute,X */
+    case 0x46: /* LSR direct */
+    case 0x4e: /* LSR absolute */
+    case 0x56: /* LSR direct,X */
+    case 0x5e: /* LSR absolute,X */
+    case 0x64: /* STZ direct */
+    case 0x66: /* ROR direct */
+    case 0x6e: /* ROR absolute */
+    case 0x74: /* STZ direct,X */
+    case 0x76: /* ROR direct,X */
+    case 0x7e: /* ROR absolute,X */
+    case 0x9c: /* STZ absolute */
+    case 0x9e: /* STZ absolute,X */
+    case 0xc6: /* DEC direct */
+    case 0xce: /* DEC absolute */
+    case 0xd6: /* DEC direct,X */
+    case 0xde: /* DEC absolute,X */
+    case 0xe6: /* INC direct */
+    case 0xee: /* INC absolute */
+    case 0xf6: /* INC direct,X */
+    case 0xfe: /* INC absolute,X */
+        state->phase = cpu->bus.write8 == NULL
+                           ? (uint8_t)CPU_CYCLE_PHASE_LEGACY_ATOMIC
+                           : (uint8_t)CPU_CYCLE_PHASE_RMW_ADDRESS_LOW;
+        break;
     case 0x18: /* CLC */
     case 0x1a: /* INC accumulator */
     case 0x1b: /* TCS */
@@ -3567,7 +3760,9 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin(
     }
 
     state->operand = 0U;
+    state->data = 0U;
     state->pointer = 0U;
+    state->data_address = 0U;
     state->return_address = 0U;
     state->interrupt_pc = 0U;
     state->interrupt_vector = 0U;
@@ -3616,6 +3811,8 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_BRANCH_OFFSET:
     case CPU_CYCLE_PHASE_BRANCH_LONG_LOW:
     case CPU_CYCLE_PHASE_BRANCH_LONG_HIGH:
+    case CPU_CYCLE_PHASE_RMW_ADDRESS_LOW:
+    case CPU_CYCLE_PHASE_RMW_ADDRESS_HIGH:
     case CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_LOW:
     case CPU_CYCLE_PHASE_EFFECTIVE_ADDRESS_HIGH:
     case CPU_CYCLE_PHASE_PEI_OFFSET:
@@ -3650,6 +3847,24 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
         break;
     case CPU_CYCLE_PHASE_IMPLIED_INTERNAL_2:
         set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+        break;
+    case CPU_CYCLE_PHASE_RMW_ACCUMULATOR_INTERNAL:
+    case CPU_CYCLE_PHASE_RMW_DIRECT_PENALTY:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+        break;
+    case CPU_CYCLE_PHASE_RMW_INDEX_INTERNAL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+        break;
+    case CPU_CYCLE_PHASE_RMW_MODIFY_INTERNAL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 3U);
+        break;
+    case CPU_CYCLE_PHASE_RMW_READ_LOW:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      state->data_address, 0U);
+        break;
+    case CPU_CYCLE_PHASE_RMW_READ_HIGH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      rmw_next_data_address(cpu, state), 0U);
         break;
     case CPU_CYCLE_PHASE_STACK_PUSH_INTERNAL:
     case CPU_CYCLE_PHASE_STACK_PULL_INTERNAL_1:
@@ -3827,6 +4042,20 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
                   UINT32_C(1);
         set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, address,
                       (uint8_t)(cpu->a >> 8));
+        break;
+    case CPU_CYCLE_PHASE_RMW_WRITE_LOW:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE,
+                      state->data_address,
+                      rmw_opcode_is_store_zero(state->opcode)
+                          ? 0U
+                          : (uint8_t)state->data);
+        break;
+    case CPU_CYCLE_PHASE_RMW_WRITE_HIGH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE,
+                      rmw_next_data_address(cpu, state),
+                      rmw_opcode_is_store_zero(state->opcode)
+                          ? 0U
+                          : (uint8_t)(state->data >> 8));
         break;
     case CPU_CYCLE_PHASE_LEGACY_ATOMIC:
         set_operation(operation, MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC,
@@ -4024,6 +4253,98 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         return MIPSNES2_CPU_CYCLE_COMPLETE;
     case CPU_CYCLE_PHASE_IMPLIED_INTERNAL_2:
         finish_implied_operation(cpu, state->opcode);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_RMW_ACCUMULATOR_INTERNAL: {
+        bool wide = !accumulator_is_8_bit(cpu);
+        uint16_t result = shift_value(
+            cpu, cpu->a, wide, rmw_accumulator_shift(state->opcode));
+
+        cpu->a = wide ? result
+                      : (uint16_t)((cpu->a & UINT16_C(0xff00)) | result);
+        cpu->instruction_cycles += UINT64_C(1);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    }
+    case CPU_CYCLE_PHASE_RMW_ADDRESS_LOW:
+        state->operand = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        cpu->instruction_cycles += UINT64_C(1);
+        if (!rmw_opcode_is_direct(state->opcode)) {
+            state->phase = (uint8_t)CPU_CYCLE_PHASE_RMW_ADDRESS_HIGH;
+            return MIPSNES2_CPU_CYCLE_READY;
+        }
+        state->data_address = rmw_direct_address(
+            cpu, (uint8_t)state->operand,
+            rmw_opcode_is_indexed(state->opcode));
+        if ((cpu->d & UINT16_C(0x00ff)) != 0U) {
+            state->phase = (uint8_t)CPU_CYCLE_PHASE_RMW_DIRECT_PENALTY;
+        } else if (rmw_opcode_is_indexed(state->opcode)) {
+            state->phase = (uint8_t)CPU_CYCLE_PHASE_RMW_INDEX_INTERNAL;
+        } else {
+            state->phase = (uint8_t)rmw_first_data_phase(state->opcode);
+        }
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RMW_ADDRESS_HIGH:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(cpu->pc + UINT16_C(1));
+        state->operand |= (uint16_t)(value << 8);
+        state->data_address = mipsnes2_address_make(cpu->dbr,
+                                                    state->operand);
+        if (rmw_opcode_is_indexed(state->opcode)) {
+            state->data_address = mipsnes2_address24(
+                state->data_address + cpu->x);
+        }
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = rmw_opcode_is_indexed(state->opcode)
+                           ? (uint8_t)CPU_CYCLE_PHASE_RMW_INDEX_INTERNAL
+                           : (uint8_t)rmw_first_data_phase(state->opcode);
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RMW_DIRECT_PENALTY:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = rmw_opcode_is_indexed(state->opcode)
+                           ? (uint8_t)CPU_CYCLE_PHASE_RMW_INDEX_INTERNAL
+                           : (uint8_t)rmw_first_data_phase(state->opcode);
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RMW_INDEX_INTERNAL:
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)rmw_first_data_phase(state->opcode);
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RMW_READ_LOW:
+        state->data = read8(cpu, current.address);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = accumulator_is_8_bit(cpu)
+                           ? (uint8_t)CPU_CYCLE_PHASE_RMW_MODIFY_INTERNAL
+                           : (uint8_t)CPU_CYCLE_PHASE_RMW_READ_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RMW_READ_HIGH:
+        value = read8(cpu, current.address);
+        state->data |= (uint16_t)(value << 8);
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RMW_MODIFY_INTERNAL;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RMW_MODIFY_INTERNAL:
+        state->data = modify_memory_value(
+            cpu, state->data, !accumulator_is_8_bit(cpu),
+            rmw_memory_operation(state->opcode));
+        cpu->instruction_cycles += UINT64_C(1);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RMW_WRITE_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RMW_WRITE_LOW:
+        write8(cpu, current.address, current.value);
+        cpu->instruction_cycles += UINT64_C(1);
+        if (!accumulator_is_8_bit(cpu)) {
+            state->phase = (uint8_t)CPU_CYCLE_PHASE_RMW_WRITE_HIGH;
+            return MIPSNES2_CPU_CYCLE_READY;
+        }
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
+    case CPU_CYCLE_PHASE_RMW_WRITE_HIGH:
+        write8(cpu, current.address, current.value);
         cpu->instruction_cycles += UINT64_C(1);
         *instruction_result = MIPSNES2_CPU_OK;
         complete_cycle_state(state);

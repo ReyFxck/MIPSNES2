@@ -153,6 +153,18 @@ typedef struct {
     uint8_t value;
 } expected_operation;
 
+static void append_expected_operation(expected_operation *operations,
+                                      size_t *count,
+                                      mipsnes2_cpu_operation_kind kind,
+                                      mipsnes2_address address,
+                                      uint8_t value)
+{
+    operations[*count].kind = kind;
+    operations[*count].address = address;
+    operations[*count].value = value;
+    (*count)++;
+}
+
 static int run_expected_instruction(mipsnes2_cpu *cpu,
                                     const expected_operation *expected,
                                     size_t count)
@@ -267,8 +279,9 @@ static int test_legacy_atomic_fallback(void)
     mipsnes2_cpu_operation operation;
 
     CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8010)) == 0);
-    bank7e[0x8010] = UINT8_C(0x0a); /* ASL accumulator */
-    cpu.a = UINT16_C(0xab40);
+    bank7e[0x8010] = UINT8_C(0x09); /* ORA immediate */
+    bank7e[0x8011] = UINT8_C(0x80);
+    cpu.a = UINT16_C(0xab01);
     CHECK(begin_instruction(&cpu, &state) == 0);
     CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
                            UINT32_C(0x7e8010), 0U, &operation) == 0);
@@ -283,10 +296,10 @@ static int test_legacy_atomic_fallback(void)
     CHECK(commit_operation(&cpu, &state, &operation,
                            MIPSNES2_CPU_CYCLE_COMPLETE,
                            MIPSNES2_CPU_OK) == 0);
-    CHECK(cpu.a == UINT16_C(0xab80));
+    CHECK(cpu.a == UINT16_C(0xab81));
     CHECK((cpu.p & MIPSNES2_CPU_FLAG_N) != 0U);
     CHECK(cpu.instruction_cycles == UINT64_C(2));
-    CHECK(trace.count == 1U);
+    CHECK(trace.count == 2U);
 
     CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8020)) == 0);
     bank7e[0x8020] = UINT8_C(0x8d); /* STA absolute */
@@ -300,6 +313,452 @@ static int test_legacy_atomic_fallback(void)
     CHECK(trace.count == 1U);
     CHECK(!trace.accesses[0].write &&
           trace.accesses[0].address == UINT32_C(0x7e8020));
+    return 0;
+}
+
+typedef enum {
+    RMW_CYCLE_DIRECT,
+    RMW_CYCLE_DIRECT_X,
+    RMW_CYCLE_ABSOLUTE,
+    RMW_CYCLE_ABSOLUTE_X
+} rmw_cycle_addressing;
+
+typedef enum {
+    RMW_CYCLE_ASL,
+    RMW_CYCLE_ROL,
+    RMW_CYCLE_LSR,
+    RMW_CYCLE_ROR,
+    RMW_CYCLE_DEC,
+    RMW_CYCLE_INC,
+    RMW_CYCLE_TSB,
+    RMW_CYCLE_TRB,
+    RMW_CYCLE_STZ
+} rmw_cycle_effect;
+
+static int test_accumulator_shift_cycles(void)
+{
+    static const struct {
+        uint8_t opcode;
+        rmw_cycle_effect effect;
+    } cases[] = {
+        {UINT8_C(0x0a), RMW_CYCLE_ASL},
+        {UINT8_C(0x2a), RMW_CYCLE_ROL},
+        {UINT8_C(0x4a), RMW_CYCLE_LSR},
+        {UINT8_C(0x6a), RMW_CYCLE_ROR}
+    };
+    const uint8_t preserved = MIPSNES2_CPU_FLAG_I |
+                              MIPSNES2_CPU_FLAG_D |
+                              MIPSNES2_CPU_FLAG_X |
+                              MIPSNES2_CPU_FLAG_V;
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    size_t index;
+
+    for (index = 0U; index < sizeof(cases) / sizeof(cases[0]); ++index) {
+        unsigned wide;
+
+        for (wide = 0U; wide < 2U; ++wide) {
+            expected_operation expected[2];
+            uint16_t input;
+            uint16_t result;
+            uint8_t result_flags;
+            bool carry_in = cases[index].effect == RMW_CYCLE_ROL ||
+                            cases[index].effect == RMW_CYCLE_ROR;
+
+            switch (cases[index].effect) {
+            case RMW_CYCLE_ASL:
+                input = wide != 0U ? UINT16_C(0x8001)
+                                   : UINT16_C(0x0081);
+                result = UINT16_C(0x0002);
+                result_flags = MIPSNES2_CPU_FLAG_C;
+                break;
+            case RMW_CYCLE_ROL:
+                input = wide != 0U ? UINT16_C(0x8000)
+                                   : UINT16_C(0x0080);
+                result = UINT16_C(0x0001);
+                result_flags = MIPSNES2_CPU_FLAG_C;
+                break;
+            case RMW_CYCLE_LSR:
+                input = UINT16_C(0x0001);
+                result = 0U;
+                result_flags = MIPSNES2_CPU_FLAG_C |
+                               MIPSNES2_CPU_FLAG_Z;
+                break;
+            case RMW_CYCLE_ROR:
+                input = UINT16_C(0x0001);
+                result = wide != 0U ? UINT16_C(0x8000)
+                                    : UINT16_C(0x0080);
+                result_flags = MIPSNES2_CPU_FLAG_C |
+                               MIPSNES2_CPU_FLAG_N;
+                break;
+            default:
+                return 1;
+            }
+
+            CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9800)) == 0);
+            cpu.emulation = false;
+            cpu.a = wide != 0U
+                        ? input
+                        : (uint16_t)(UINT16_C(0xab00) | input);
+            cpu.p = (uint8_t)(preserved |
+                              (wide != 0U ? 0U : MIPSNES2_CPU_FLAG_M) |
+                              MIPSNES2_CPU_FLAG_N | MIPSNES2_CPU_FLAG_Z |
+                              (carry_in ? MIPSNES2_CPU_FLAG_C : 0U));
+            bank7e[0x9800] = cases[index].opcode;
+            expected[0] = (expected_operation){
+                MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9800), 0U};
+            expected[1] = (expected_operation){
+                MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U};
+
+            CHECK(run_expected_instruction(&cpu, expected, 2U) == 0);
+            CHECK(cpu.a == (wide != 0U
+                                ? result
+                                : (uint16_t)(UINT16_C(0xab00) | result)));
+            CHECK(cpu.p ==
+                  (uint8_t)(preserved |
+                            (wide != 0U ? 0U : MIPSNES2_CPU_FLAG_M) |
+                            result_flags));
+            CHECK(cpu.pc == UINT16_C(0x9801));
+            CHECK(cpu.instruction_cycles == UINT64_C(2));
+            CHECK(trace.count == 1U);
+        }
+    }
+    return 0;
+}
+
+static int test_memory_rmw_cycles(void)
+{
+    static const struct {
+        uint8_t opcode;
+        rmw_cycle_addressing addressing;
+        rmw_cycle_effect effect;
+    } cases[] = {
+        {UINT8_C(0x04), RMW_CYCLE_DIRECT, RMW_CYCLE_TSB},
+        {UINT8_C(0x06), RMW_CYCLE_DIRECT, RMW_CYCLE_ASL},
+        {UINT8_C(0x0c), RMW_CYCLE_ABSOLUTE, RMW_CYCLE_TSB},
+        {UINT8_C(0x0e), RMW_CYCLE_ABSOLUTE, RMW_CYCLE_ASL},
+        {UINT8_C(0x14), RMW_CYCLE_DIRECT, RMW_CYCLE_TRB},
+        {UINT8_C(0x16), RMW_CYCLE_DIRECT_X, RMW_CYCLE_ASL},
+        {UINT8_C(0x1c), RMW_CYCLE_ABSOLUTE, RMW_CYCLE_TRB},
+        {UINT8_C(0x1e), RMW_CYCLE_ABSOLUTE_X, RMW_CYCLE_ASL},
+        {UINT8_C(0x26), RMW_CYCLE_DIRECT, RMW_CYCLE_ROL},
+        {UINT8_C(0x2e), RMW_CYCLE_ABSOLUTE, RMW_CYCLE_ROL},
+        {UINT8_C(0x36), RMW_CYCLE_DIRECT_X, RMW_CYCLE_ROL},
+        {UINT8_C(0x3e), RMW_CYCLE_ABSOLUTE_X, RMW_CYCLE_ROL},
+        {UINT8_C(0x46), RMW_CYCLE_DIRECT, RMW_CYCLE_LSR},
+        {UINT8_C(0x4e), RMW_CYCLE_ABSOLUTE, RMW_CYCLE_LSR},
+        {UINT8_C(0x56), RMW_CYCLE_DIRECT_X, RMW_CYCLE_LSR},
+        {UINT8_C(0x5e), RMW_CYCLE_ABSOLUTE_X, RMW_CYCLE_LSR},
+        {UINT8_C(0x64), RMW_CYCLE_DIRECT, RMW_CYCLE_STZ},
+        {UINT8_C(0x66), RMW_CYCLE_DIRECT, RMW_CYCLE_ROR},
+        {UINT8_C(0x6e), RMW_CYCLE_ABSOLUTE, RMW_CYCLE_ROR},
+        {UINT8_C(0x74), RMW_CYCLE_DIRECT_X, RMW_CYCLE_STZ},
+        {UINT8_C(0x76), RMW_CYCLE_DIRECT_X, RMW_CYCLE_ROR},
+        {UINT8_C(0x7e), RMW_CYCLE_ABSOLUTE_X, RMW_CYCLE_ROR},
+        {UINT8_C(0x9c), RMW_CYCLE_ABSOLUTE, RMW_CYCLE_STZ},
+        {UINT8_C(0x9e), RMW_CYCLE_ABSOLUTE_X, RMW_CYCLE_STZ},
+        {UINT8_C(0xc6), RMW_CYCLE_DIRECT, RMW_CYCLE_DEC},
+        {UINT8_C(0xce), RMW_CYCLE_ABSOLUTE, RMW_CYCLE_DEC},
+        {UINT8_C(0xd6), RMW_CYCLE_DIRECT_X, RMW_CYCLE_DEC},
+        {UINT8_C(0xde), RMW_CYCLE_ABSOLUTE_X, RMW_CYCLE_DEC},
+        {UINT8_C(0xe6), RMW_CYCLE_DIRECT, RMW_CYCLE_INC},
+        {UINT8_C(0xee), RMW_CYCLE_ABSOLUTE, RMW_CYCLE_INC},
+        {UINT8_C(0xf6), RMW_CYCLE_DIRECT_X, RMW_CYCLE_INC},
+        {UINT8_C(0xfe), RMW_CYCLE_ABSOLUTE_X, RMW_CYCLE_INC}
+    };
+    const uint8_t preserved = MIPSNES2_CPU_FLAG_I |
+                              MIPSNES2_CPU_FLAG_D |
+                              MIPSNES2_CPU_FLAG_X |
+                              MIPSNES2_CPU_FLAG_V;
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    size_t index;
+
+    for (index = 0U; index < sizeof(cases) / sizeof(cases[0]); ++index) {
+        unsigned wide;
+
+        for (wide = 0U; wide < 2U; ++wide) {
+            expected_operation expected[10];
+            size_t count = 0U;
+            bool direct = cases[index].addressing == RMW_CYCLE_DIRECT ||
+                          cases[index].addressing == RMW_CYCLE_DIRECT_X;
+            bool indexed = cases[index].addressing == RMW_CYCLE_DIRECT_X ||
+                           cases[index].addressing == RMW_CYCLE_ABSOLUTE_X;
+            bool store_zero = cases[index].effect == RMW_CYCLE_STZ;
+            mipsnes2_address target = direct
+                                          ? (indexed ? UINT32_C(0x001231)
+                                                     : UINT32_C(0x001211))
+                                          : (indexed ? UINT32_C(0x7e2020)
+                                                     : UINT32_C(0x7e2000));
+            mipsnes2_address high_address = target + UINT32_C(1);
+            uint8_t *low;
+            uint8_t *high;
+            uint16_t input;
+            uint16_t result;
+            uint16_t accumulator = wide != 0U ? UINT16_C(0x1234)
+                                               : UINT16_C(0xab34);
+            uint8_t initial_status;
+            uint8_t expected_status;
+            uint8_t width_flag = wide != 0U ? 0U : MIPSNES2_CPU_FLAG_M;
+
+            switch (cases[index].effect) {
+            case RMW_CYCLE_ASL:
+                input = wide != 0U ? UINT16_C(0x8001)
+                                   : UINT16_C(0x0081);
+                result = UINT16_C(0x0002);
+                initial_status = (uint8_t)(preserved | width_flag |
+                                           MIPSNES2_CPU_FLAG_N |
+                                           MIPSNES2_CPU_FLAG_Z);
+                expected_status = (uint8_t)(preserved | width_flag |
+                                            MIPSNES2_CPU_FLAG_C);
+                break;
+            case RMW_CYCLE_ROL:
+                input = wide != 0U ? UINT16_C(0x8000)
+                                   : UINT16_C(0x0080);
+                result = UINT16_C(0x0001);
+                initial_status = (uint8_t)(preserved | width_flag |
+                                           MIPSNES2_CPU_FLAG_N |
+                                           MIPSNES2_CPU_FLAG_Z |
+                                           MIPSNES2_CPU_FLAG_C);
+                expected_status = (uint8_t)(preserved | width_flag |
+                                            MIPSNES2_CPU_FLAG_C);
+                break;
+            case RMW_CYCLE_LSR:
+                input = UINT16_C(0x0001);
+                result = 0U;
+                initial_status = (uint8_t)(preserved | width_flag |
+                                           MIPSNES2_CPU_FLAG_N);
+                expected_status = (uint8_t)(preserved | width_flag |
+                                            MIPSNES2_CPU_FLAG_C |
+                                            MIPSNES2_CPU_FLAG_Z);
+                break;
+            case RMW_CYCLE_ROR:
+                input = UINT16_C(0x0001);
+                result = wide != 0U ? UINT16_C(0x8000)
+                                    : UINT16_C(0x0080);
+                initial_status = (uint8_t)(preserved | width_flag |
+                                           MIPSNES2_CPU_FLAG_Z |
+                                           MIPSNES2_CPU_FLAG_C);
+                expected_status = (uint8_t)(preserved | width_flag |
+                                            MIPSNES2_CPU_FLAG_N |
+                                            MIPSNES2_CPU_FLAG_C);
+                break;
+            case RMW_CYCLE_DEC:
+                input = 0U;
+                result = wide != 0U ? UINT16_MAX : UINT8_MAX;
+                initial_status = (uint8_t)(preserved | width_flag |
+                                           MIPSNES2_CPU_FLAG_N |
+                                           MIPSNES2_CPU_FLAG_Z |
+                                           MIPSNES2_CPU_FLAG_C);
+                expected_status = (uint8_t)(preserved | width_flag |
+                                            MIPSNES2_CPU_FLAG_N |
+                                            MIPSNES2_CPU_FLAG_C);
+                break;
+            case RMW_CYCLE_INC:
+                input = wide != 0U ? UINT16_MAX : UINT8_MAX;
+                result = 0U;
+                initial_status = (uint8_t)(preserved | width_flag |
+                                           MIPSNES2_CPU_FLAG_N |
+                                           MIPSNES2_CPU_FLAG_C);
+                expected_status = (uint8_t)(preserved | width_flag |
+                                            MIPSNES2_CPU_FLAG_Z |
+                                            MIPSNES2_CPU_FLAG_C);
+                break;
+            case RMW_CYCLE_TSB:
+                accumulator = wide != 0U ? UINT16_C(0x00ff)
+                                         : UINT16_C(0xab0f);
+                input = wide != 0U ? UINT16_C(0xff00)
+                                   : UINT16_C(0x00f0);
+                result = wide != 0U ? UINT16_MAX : UINT8_MAX;
+                initial_status = (uint8_t)(preserved | width_flag |
+                                           MIPSNES2_CPU_FLAG_N |
+                                           MIPSNES2_CPU_FLAG_C);
+                expected_status = (uint8_t)(initial_status |
+                                            MIPSNES2_CPU_FLAG_Z);
+                break;
+            case RMW_CYCLE_TRB:
+                accumulator = wide != 0U ? UINT16_C(0x00ff)
+                                         : UINT16_C(0xab0f);
+                input = wide != 0U ? UINT16_MAX : UINT8_MAX;
+                result = wide != 0U ? UINT16_C(0xff00)
+                                    : UINT16_C(0x00f0);
+                initial_status = (uint8_t)(preserved | width_flag |
+                                           MIPSNES2_CPU_FLAG_N |
+                                           MIPSNES2_CPU_FLAG_Z |
+                                           MIPSNES2_CPU_FLAG_C);
+                expected_status = (uint8_t)(initial_status &
+                                            (uint8_t)~MIPSNES2_CPU_FLAG_Z);
+                break;
+            case RMW_CYCLE_STZ:
+                input = UINT16_C(0xbbaa);
+                result = 0U;
+                initial_status = (uint8_t)(preserved | width_flag |
+                                           MIPSNES2_CPU_FLAG_N |
+                                           MIPSNES2_CPU_FLAG_Z |
+                                           MIPSNES2_CPU_FLAG_C);
+                expected_status = initial_status;
+                break;
+            default:
+                return 1;
+            }
+            CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9800)) == 0);
+            cpu.emulation = false;
+            cpu.d = UINT16_C(0x1201);
+            cpu.dbr = UINT8_C(0x7e);
+            cpu.x = UINT16_C(0x0020);
+            cpu.a = accumulator;
+            cpu.p = initial_status;
+            bank7e[0x9800] = cases[index].opcode;
+            bank7e[0x9801] = direct ? UINT8_C(0x10) : UINT8_C(0x00);
+            bank7e[0x9802] = UINT8_C(0x20);
+            low = &address_bank(target)[(uint16_t)target];
+            high = &address_bank(high_address)[(uint16_t)high_address];
+            *low = (uint8_t)input;
+            *high = wide != 0U ? (uint8_t)(input >> 8) : UINT8_C(0x5a);
+
+            append_expected_operation(
+                expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                UINT32_C(0x7e9800), 0U);
+            append_expected_operation(
+                expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                UINT32_C(0x7e9801), 0U);
+            if (!direct) {
+                append_expected_operation(
+                    expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                    UINT32_C(0x7e9802), 0U);
+            } else {
+                append_expected_operation(
+                    expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                    0U, 1U);
+            }
+            if (indexed) {
+                append_expected_operation(
+                    expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                    0U, 2U);
+            }
+            if (!store_zero) {
+                append_expected_operation(
+                    expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                    target, 0U);
+                if (wide != 0U) {
+                    append_expected_operation(
+                        expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                        high_address, 0U);
+                }
+                append_expected_operation(
+                    expected, &count, MIPSNES2_CPU_OPERATION_INTERNAL,
+                    0U, 3U);
+            }
+            append_expected_operation(
+                expected, &count, MIPSNES2_CPU_OPERATION_WRITE,
+                target, (uint8_t)result);
+            if (wide != 0U) {
+                append_expected_operation(
+                    expected, &count, MIPSNES2_CPU_OPERATION_WRITE,
+                    high_address, (uint8_t)(result >> 8));
+            }
+
+            CHECK(run_expected_instruction(&cpu, expected, count) == 0);
+            CHECK(*low == (uint8_t)result);
+            CHECK(*high == (wide != 0U ? (uint8_t)(result >> 8)
+                                       : UINT8_C(0x5a)));
+            CHECK(cpu.a == accumulator);
+            CHECK(cpu.p == expected_status);
+            CHECK(cpu.pc == (direct ? UINT16_C(0x9802)
+                                    : UINT16_C(0x9803)));
+            CHECK(cpu.instruction_cycles == count);
+            CHECK(cpu.last_opcode == cases[index].opcode);
+            CHECK(!cpu.stopped);
+        }
+    }
+    return 0;
+}
+
+static int test_memory_rmw_missing_write_preflight(void)
+{
+    static const uint8_t opcodes[] = {
+        UINT8_C(0x04), UINT8_C(0x06), UINT8_C(0x0c), UINT8_C(0x0e),
+        UINT8_C(0x14), UINT8_C(0x16), UINT8_C(0x1c), UINT8_C(0x1e),
+        UINT8_C(0x26), UINT8_C(0x2e), UINT8_C(0x36), UINT8_C(0x3e),
+        UINT8_C(0x46), UINT8_C(0x4e), UINT8_C(0x56), UINT8_C(0x5e),
+        UINT8_C(0x64), UINT8_C(0x66), UINT8_C(0x6e), UINT8_C(0x74),
+        UINT8_C(0x76), UINT8_C(0x7e), UINT8_C(0x9c), UINT8_C(0x9e),
+        UINT8_C(0xc6), UINT8_C(0xce), UINT8_C(0xd6), UINT8_C(0xde),
+        UINT8_C(0xe6), UINT8_C(0xee), UINT8_C(0xf6), UINT8_C(0xfe)
+    };
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    size_t index;
+
+    for (index = 0U; index < sizeof(opcodes) / sizeof(opcodes[0]); ++index) {
+        mipsnes2_cpu_cycle_state state;
+        mipsnes2_cpu_operation operation;
+
+        CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9810)) == 0);
+        bank7e[0x9810] = opcodes[index];
+        cpu.bus.write8 = NULL;
+        CHECK(begin_instruction(&cpu, &state) == 0);
+        CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                               UINT32_C(0x7e9810), 0U, &operation) == 0);
+        CHECK(commit_operation(&cpu, &state, &operation,
+                               MIPSNES2_CPU_CYCLE_READY,
+                               MIPSNES2_CPU_NOT_READY) == 0);
+        CHECK(expect_operation(&cpu, &state,
+                               MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC,
+                               0U, 0U, &operation) == 0);
+        CHECK(commit_operation(&cpu, &state, &operation,
+                               MIPSNES2_CPU_CYCLE_COMPLETE,
+                               MIPSNES2_CPU_INVALID_BUS) == 0);
+        CHECK(cpu.stopped);
+        CHECK(cpu.stop_reason == MIPSNES2_CPU_INVALID_BUS);
+        CHECK(cpu.pc == UINT16_C(0x9811));
+        CHECK(cpu.instruction_cycles == 0U);
+        CHECK(trace.count == 1U);
+    }
+    return 0;
+}
+
+static int test_memory_rmw_stale_internal(void)
+{
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    mipsnes2_cpu_operation stale;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9820)) == 0);
+    cpu.emulation = false;
+    cpu.d = UINT16_C(0x1201);
+    cpu.x = UINT16_C(0x0020);
+    bank7e[0x9820] = UINT8_C(0x16); /* ASL direct,X */
+    bank7e[0x9821] = UINT8_C(0x10);
+    bank00[0x1231] = UINT8_C(0x40);
+    CHECK(begin_instruction(&cpu, &state) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e9820), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e9821), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 1U, &stale) == 0);
+    CHECK(commit_operation(&cpu, &state, &stale,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_INTERNAL,
+                           0U, 2U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &stale,
+                           MIPSNES2_CPU_CYCLE_STALE_OPERATION,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(cpu.instruction_cycles == UINT64_C(3));
+    CHECK(bank00[0x1231] == UINT8_C(0x40));
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
     return 0;
 }
 
@@ -2648,6 +3107,10 @@ int main(void)
 {
     CHECK(test_contract_validation_and_nop() == 0);
     CHECK(test_legacy_atomic_fallback() == 0);
+    CHECK(test_accumulator_shift_cycles() == 0);
+    CHECK(test_memory_rmw_cycles() == 0);
+    CHECK(test_memory_rmw_missing_write_preflight() == 0);
+    CHECK(test_memory_rmw_stale_internal() == 0);
     CHECK(test_lda_immediate_cycles() == 0);
     CHECK(test_sta_absolute_cycles() == 0);
     CHECK(test_rep_sep_internal_commit() == 0);

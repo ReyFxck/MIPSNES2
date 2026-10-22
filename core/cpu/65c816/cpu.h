@@ -64,7 +64,9 @@ typedef enum {
 
 typedef struct {
     /* Private cursor fields. Initialize through mipsnes2_cpu_cycle_state_init. */
+    mipsnes2_address data_address;
     uint16_t operand;
+    uint16_t data;
     uint16_t pointer;
     uint16_t return_address;
     uint16_t interrupt_pc;

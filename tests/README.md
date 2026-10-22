@@ -16,7 +16,9 @@ priority, WAI restart-address behavior and invalid-bus diagnostics. It does not 
 physical mid-instruction ABORT sampling or rollback.
 
 `test-cpu-cycles` covers the caller-owned peek/commit cursor for opcode fetch,
-`EA/A9/8D/C2/E2/00/02` and boundary `ABORT`/`NMI`/`IRQ` entry, including repeated
-peek without effects, stale-operation rejection, 8/16-bit width, wrap, interrupt
-priority and stack/vector access order. The other 249 opcode remainders and reset
-remain explicitly legacy-atomic; the scheduler does not consume this cursor yet.
+106 opcodes and boundary `ABORT`/`NMI`/`IRQ` entry, including repeated peek without
+effects, stale-operation rejection, 8/16-bit width, wrapping and exact meaningful
+access/internal operation order. Its RMW matrix covers all thirty-six accumulator/
+memory shifts, rotates, INC/DEC, TSB/TRB and STZ opcodes at both M widths. The other
+150 opcode remainders and reset remain explicitly legacy-atomic; the scheduler does
+not consume this cursor yet.
