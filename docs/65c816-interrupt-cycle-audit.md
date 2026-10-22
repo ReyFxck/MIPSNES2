@@ -78,6 +78,10 @@ pass, and the shared core compiles in the pinned PS2 and PSP CI toolchains.
 - `make -C platform/psp` — not run to compilation locally: `psp-config` is
   unavailable.
 
-Clang, PS2SDK and PSPSDK are unavailable locally. GitHub Host, PS2 and PSP workflow
-results for this exact change are pending. No real SNES, PS2, PSP, PCSX2 or PPSSPP
-test and no performance measurement was performed.
+Clang, PS2SDK and PSPSDK are unavailable locally. GitHub PR #50 later validated the
+interrupt work together with the next two-opcode cursor increment. Head
+`edc58a8d64059d93008edf30f898100ca207440e`, exact tree
+`771fa088e63149be1c1219f361d5620694bed6c4`, passed Host run `39712125402`, PS2 run
+`39712125363` and PSP run `39712125442`. These are cross-build results, not a
+real-console runtime test. No real SNES, PS2, PSP, PCSX2 or PPSSPP test and no
+performance measurement was performed.

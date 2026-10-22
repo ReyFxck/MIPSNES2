@@ -72,8 +72,17 @@ and the unchanged shared core compiles in the pinned PS2 and PSP CI toolchains.
 - `make -C platform/psp` — did not reach compilation locally because `psp-config`
   is unavailable.
 
-Pinned PS2 and PSP cross-builds remain pending GitHub workflow execution for the
-exact published head. The local SDK absence is not reported as a successful build.
+GitHub PR #50 implementation head
+`edc58a8d64059d93008edf30f898100ca207440e` used exact source tree
+`771fa088e63149be1c1219f361d5620694bed6c4` and passed all configured gates:
+
+- Host CI run `39712125402` — success, including GCC/Clang release and sanitizer
+  jobs;
+- PS2 CI run `39712125363` — success with the pinned PS2SDK cross-build;
+- PSP CI run `39712125442` — success with the pinned PSPSDK cross-build.
+
+These cross-builds do not claim real-console runtime validation. The local SDK
+absence is not reported as a successful local build.
 
 No real SNES, PS2, PSP, PCSX2 or PPSSPP runtime test and no performance measurement
 is claimed by this milestone.
