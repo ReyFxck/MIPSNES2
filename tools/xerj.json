@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0-rc.97",
+  "tag": "v1.0.0-rc.97",
+  "commit": "e6216b6597ca11b816caa4e3e0ca2ffdf73d9a2b",
+  "license": "Apache-2.0",
+  "source_url": "https://github.com/xerj-org/xerj",
+  "assets": {
+    "x86_64-unknown-linux-musl": {
+      "directory": "xerj-1.0.0-rc.97-x86_64-unknown-linux-musl",
+      "url": "https://github.com/xerj-org/xerj/releases/download/v1.0.0-rc.97/xerj-1.0.0-rc.97-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "f401da4dfc2e5c7dd27580d3896229baa088c598c77735266888669240149a00"
+    },
+    "aarch64-unknown-linux-musl": {
+      "directory": "xerj-1.0.0-rc.97-aarch64-unknown-linux-musl",
+      "url": "https://github.com/xerj-org/xerj/releases/download/v1.0.0-rc.97/xerj-1.0.0-rc.97-aarch64-unknown-linux-musl.tar.gz",
+      "sha256": "f537cea2654e32c78e6e804ac606f96b6aa6973c665a71e055956b3081237531"
+    }
+  }
+}

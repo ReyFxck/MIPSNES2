@@ -154,6 +154,7 @@ when correct, tested and measurably beneficial on their respective hardware.
 - [Contribution rules](CONTRIBUTING.md) and [agent instructions](AGENTS.md)
 - [Testing](docs/testing.md), [debugging](docs/debugging.md), [GitHub setup](docs/github-setup.md)
 - [Curated hardware, test and SDK references](docs/references.md)
+- [Optional XERJ first-party code/document search](docs/xerj-workflow.md)
 
 PRs run host and console build workflows. Successful jobs are configured to produce
 commit-identified development artifacts with SHA-256 files. Manual prereleases are

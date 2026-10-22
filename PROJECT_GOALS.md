@@ -27,7 +27,7 @@ PS2 wins architectural tradeoffs when a materially faster implementation preserv
 
 ## Independent implementation and licensing
 
-Preserve the existing [GPL-3.0 license](LICENSE) unless the owner explicitly decides otherwise. The original LICENSE is not to be reformatted or replaced. Source implementations must be original. Prefer hardware documentation, public research, independently authored tests and real-hardware observations; record source provenance. Other emulators may be studied conceptually where lawful, but do not copy CPU, bus, mapper, PPU, APU, DSP or chip implementations. This is not a Snes9x, SNES9xTYL, bsnes, higan or Snesticle derivative, port or wrapper.
+Preserve the existing [GPL-3.0 license](LICENSE) unless the owner explicitly decides otherwise. The original LICENSE is not to be reformatted or replaced. Source implementations must be original. Prefer hardware documentation, public research, independently authored tests and real-hardware observations; record source provenance. Source code from other emulators is prohibited as implementation material or a search corpus. A developer's separately published technical explanation may be consulted as secondary evidence only when it explains behavior and a correct implementation method; cite it precisely, independently author the MIPSNES2 implementation and validate it against stronger evidence. This is not a Snes9x, SNES9xTYL, bsnes, higan or Snesticle derivative, port or wrapper.
 
 Do not commit commercial ROMs, copyrighted firmware or credentials. Test ROM redistribution needs a documented license and origin; otherwise allow local user-supplied fixtures only.
 

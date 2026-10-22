@@ -28,6 +28,10 @@ Before modifying this repository read:
 - Only mark implemented AND verified tasks `[x]`. Leave uncertain tasks unchecked.
 - Preserve GPL-3.0 and valid existing work. Explain any removal.
 - Write original implementations; do not turn MIPSNES2 into another emulator's port.
+- Do not use or XERJ-index source code from other emulators. A developer's separately
+  published technical explanation may be consulted as secondary evidence only when
+  it documents behavior and implementation method; cite it, write original code and
+  validate against hardware documentation, independent tests or real hardware.
 - Fix hardware behavior, not individual games. Diagnostic hacks require TODO, status entry, hardware issue and removal plan.
 - Do not mix platform APIs/physical addresses into core. Isolate optimizations.
 - Do not casually remove MIPS assembly, MMI, VU microcode, VFPU, specialized DMA or cache-sensitive layout.

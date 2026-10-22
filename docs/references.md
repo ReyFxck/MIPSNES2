@@ -22,6 +22,13 @@ Do not commit commercial ROMs, console firmware, proprietary SDKs or manuals who
 redistribution is not clearly permitted. A test passing in PCSX2 or PPSSPP is not a
 substitute for real PS2 or PSP evidence.
 
+Source code from other emulators is not an accepted implementation source and must
+not be added to a XERJ corpus. A separately published prose explanation from an
+emulator project's developers may be recorded as secondary evidence when it clearly
+states the behavior and implementation method. Cite its author, URL and revision;
+write original code and resolve claims against manufacturer documentation,
+independent tests or real-hardware observations before marking behavior verified.
+
 ## 65C816 and SNES CPU
 
 - [WDC W65C816S datasheet (March 13, 2024)](https://www.westerndesigncenter.com/wdc/documentation/w65c816s.pdf) — primary register, instruction, addressing, flag, signal and processor-cycle reference. Sections 2.13, 7.4, 7.13 and 7.19 plus Tables 5-2, 5-3 and 5-7 entry 22a define the current ABORT foundation and its explicit mid-instruction limits. Record the revision date because WDC updates this PDF in place.

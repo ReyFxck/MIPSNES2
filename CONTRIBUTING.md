@@ -12,8 +12,12 @@ automatically merge. Explain the hardware problem, change, evidence, limitations
 and documentation updates. Unchecked verification boxes are honest and welcome.
 
 Implement original code under the existing GPL-3.0 policy. Cite hardware research,
-test provenance and SDK revision in docs; do not transplant emulator implementations.
-Do not attach or request commercial ROMs. Redistributable fixtures need licenses.
+test provenance and SDK revision in docs; do not transplant emulator implementations
+or place another emulator's source in a XERJ corpus. A separately published technical
+explanation by an emulator's developers may be used as cited secondary evidence when
+it explains behavior and a correct implementation method, but MIPSNES2 code must be
+independently authored and verified against stronger evidence. Do not attach or
+request commercial ROMs. Redistributable fixtures need licenses.
 
 ## Verification gates
 

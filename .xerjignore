@@ -1,0 +1,10 @@
+# MIPSNES2 XERJ indexes first-party source and curated documentation only.
+# Reference checkouts belong outside this tree and are never implicit corpora.
+/ref/
+/reference/
+/references/
+/vendor/
+/third_party/
+/thirdparty/
+/.toolchains/
+/build/
