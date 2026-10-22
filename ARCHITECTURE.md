@@ -293,7 +293,8 @@ interrupt migration scope and verification are recorded in
 [the interrupt-cycle audit](docs/65c816-interrupt-cycle-audit.md); the first
 subroutine pair is recorded in
 [the subroutine-cycle audit](docs/65c816-subroutine-cycle-audit.md), followed by the
-[long-subroutine-cycle audit](docs/65c816-long-subroutine-cycle-audit.md).
+[long-subroutine-cycle audit](docs/65c816-long-subroutine-cycle-audit.md) and the
+[read/modify/write-cycle audit](docs/65c816-rmw-cycle-audit.md).
 
 ## Scheduler and timing foundation
 

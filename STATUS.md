@@ -55,6 +55,8 @@ The resumable stack-family migration is recorded in
 [docs/65c816-stack-cycle-audit.md](docs/65c816-stack-cycle-audit.md).
 The resumable implied-family migration is recorded in
 [docs/65c816-implied-cycle-audit.md](docs/65c816-implied-cycle-audit.md).
+The resumable shift/rotate and memory RMW migration is recorded in
+[docs/65c816-rmw-cycle-audit.md](docs/65c816-rmw-cycle-audit.md).
 
 ## State and evidence rules
 

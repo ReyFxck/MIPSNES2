@@ -173,7 +173,8 @@ failure/cancellation cases are resumable. See the
 [jump-cycle audit](65c816-jump-cycle-audit.md), then the
 [resumable branch-cycle audit](65c816-resumable-branch-cycle-audit.md) and the
 [stack-cycle audit](65c816-stack-cycle-audit.md), followed by the
-[implied-cycle audit](65c816-implied-cycle-audit.md).
+[implied-cycle audit](65c816-implied-cycle-audit.md) and the
+[read/modify/write-cycle audit](65c816-rmw-cycle-audit.md).
 
 The CPU-I/O math unit uses the processor-cycle domain: each completed SNES CPU-bus
 access advances one cycle and the bridge advances the remaining aggregate internal
