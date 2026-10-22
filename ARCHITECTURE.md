@@ -246,13 +246,14 @@ discarding a partially committed cursor is not supported by this foundation.
 
 The migrated instruction sequences are opcode fetch plus `NOP` (`EA`), immediate
 `LDA` (`A9`), absolute `STA` (`8D`), `REP` (`C2`), `SEP` (`E2`), `BRK` (`00`) and
-`COP` (`02`). They expose width-selected operand bytes, the final flag/internal
-action, low-before-high writes, signature reads, stack writes and vector reads as
-applicable. Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the
-accepted cause and entry state latched before any effect. `mipsnes2_cpu_step` drives
-this same contract to completion, preserving the established instruction API. The
-remaining 249 opcodes return an explicit legacy-atomic operation after their opcode
-fetch and use the existing evaluator for the remainder.
+`COP` (`02`), absolute `JSR` (`20`) and `RTS` (`60`). They expose width-selected
+operand bytes, the final flag/internal action, low-before-high writes, signature
+reads, subroutine stack accesses and interrupt stack/vector accesses as applicable.
+Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the accepted cause
+and entry state latched before any effect. `mipsnes2_cpu_step` drives this same
+contract to completion, preserving the established instruction API. The remaining
+247 opcodes return an explicit legacy-atomic operation after their opcode fetch and
+use the existing evaluator for the remainder.
 
 This is deliberately not wired into the scheduler yet. Remaining opcodes, reset,
 dummy cycles, mid-instruction `ABORT` and undocumented/signal-level bus activity are
@@ -260,7 +261,9 @@ still atomic or absent. Consequently the central timed-step bridge remains
 instruction-atomic and must not dispatch events from bus callbacks. The initial
 foundation is recorded in [the cycle-contract audit](docs/65c816-cycle-contract-audit.md);
 interrupt migration scope and verification are recorded in
-[the interrupt-cycle audit](docs/65c816-interrupt-cycle-audit.md).
+[the interrupt-cycle audit](docs/65c816-interrupt-cycle-audit.md); the first
+subroutine pair is recorded in
+[the subroutine-cycle audit](docs/65c816-subroutine-cycle-audit.md).
 
 ## Scheduler and timing foundation
 
@@ -484,5 +487,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   operations rather than inventing unsourced dummy bus traffic. The remaining 249
   opcodes, reset, exact electrical phase placement, mid-instruction `ABORT` and
   scheduler integration remain open.
+- 2026-10-21: Absolute `JSR` and `RTS` now expose their sourced internal, operand
+  and stack-operation order through the same cursor. Distinct internal tokens prevent
+  stale consecutive commits; 247 opcode remainders and scheduler integration remain.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

@@ -105,10 +105,11 @@ renderer or enhancement chips.
 
 A caller-owned peek/commit CPU-operation foundation now exposes exact-once opcode
 fetch plus resumable sequences for `NOP`, immediate `LDA`, absolute `STA`, `REP`,
-`SEP`, `BRK` and `COP`. Boundary `ABORT`, `NMI` and `IRQ` entry use the same cursor.
-The other 249 opcodes remain behind an explicit legacy-atomic operation, and the
-scheduler still uses the reviewed instruction-atomic bridge. This is a migration
-foundation, not a claim of complete cycle-level execution.
+`SEP`, absolute `JSR`, `RTS`, `BRK` and `COP`. Boundary `ABORT`, `NMI` and `IRQ`
+entry use the same cursor. The other 247 opcodes remain behind an explicit
+legacy-atomic operation, and the scheduler still uses the reviewed
+instruction-atomic bridge. This is a migration foundation, not a claim of complete
+cycle-level execution.
 
 ## Build and test the foundation
 
