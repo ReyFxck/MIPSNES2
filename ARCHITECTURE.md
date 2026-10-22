@@ -258,10 +258,15 @@ All five `JMP/JML` forms (`4C/5C/6C/7C/DC`) are migrated through shared jump pha
 Direct operands remain in PBR, ordinary indirect tables wrap in bank zero,
 indexed-indirect tables wrap in PBR, and long forms commit PBR only with the final
 target byte.
+All ten conditional, relative-always and relative-long branches
+(`10/30/50/70/80/82/90/B0/D0/F0`) use shared branch phases. The cursor exposes the
+operand reads and address-free taken/page-cross/long internal cycles; targets wrap
+inside PBR, and the extra page-cross cycle remains exclusive to taken 8-bit branches
+in emulation mode.
 Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the accepted cause
 and entry state latched before any effect. `mipsnes2_cpu_step` drives this same
 contract to completion, preserving the established instruction API. The remaining
-239 opcodes return an explicit legacy-atomic operation after their opcode fetch and
+229 opcodes return an explicit legacy-atomic operation after their opcode fetch and
 use the existing evaluator for the remainder.
 
 This is deliberately not wired into the scheduler yet. Remaining opcodes, reset,
@@ -509,5 +514,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-22: The complete five-opcode `JMP/JML` family now exposes direct,
   long, bank-zero indirect and PBR-indexed-indirect reads through shared jump phases;
   239 opcode remainders remain with no backend or game-specific path.
+- 2026-10-22: The complete ten-opcode branch family now exposes operand and internal
+  boundaries through shared core phases, including conditional, emulation page-cross,
+  BRA and BRL paths; 229 opcode remainders remain without backend-specific behavior.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
