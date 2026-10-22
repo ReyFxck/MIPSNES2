@@ -254,10 +254,14 @@ multi-byte stack exception in emulation mode and PBR save/restore order.
 Indexed-indirect `JSR` (`FC`) is migrated with its WDC-ordered early PCH/PCL writes,
 late high-operand read, internal operation and bank-local pointer reads. Its
 two-byte stack transfer uses the same documented linear emulation-mode exception.
+All five `JMP/JML` forms (`4C/5C/6C/7C/DC`) are migrated through shared jump phases.
+Direct operands remain in PBR, ordinary indirect tables wrap in bank zero,
+indexed-indirect tables wrap in PBR, and long forms commit PBR only with the final
+target byte.
 Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the accepted cause
 and entry state latched before any effect. `mipsnes2_cpu_step` drives this same
 contract to completion, preserving the established instruction API. The remaining
-244 opcodes return an explicit legacy-atomic operation after their opcode fetch and
+239 opcodes return an explicit legacy-atomic operation after their opcode fetch and
 use the existing evaluator for the remainder.
 
 This is deliberately not wired into the scheduler yet. Remaining opcodes, reset,
@@ -502,5 +506,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-22: Indexed-indirect `JSR` (`FC`) now exposes the WDC Table 5-7 operand,
   linear stack, internal and PBR-local pointer order through the shared-core cursor;
   244 opcode remainders remain and no backend or game-specific path was added.
+- 2026-10-22: The complete five-opcode `JMP/JML` family now exposes direct,
+  long, bank-zero indirect and PBR-indexed-indirect reads through shared jump phases;
+  239 opcode remainders remain with no backend or game-specific path.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

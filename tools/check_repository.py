@@ -11,7 +11,8 @@ DOCS = "65c816 bus ppu spc700 dsp apu dma-hdma scheduler cartridge enhancement-c
 DOCS += ["hv-counter-latch-audit"]
 DOCS += ["65c816-interrupt-cycle-audit", "65c816-subroutine-cycle-audit",
          "65c816-long-subroutine-cycle-audit",
-         "65c816-indexed-subroutine-cycle-audit", "xerj-workflow"]
+         "65c816-indexed-subroutine-cycle-audit", "65c816-jump-cycle-audit",
+         "xerj-workflow"]
 REQUIRED_DIRS = "core/cpu/65c816 core/bus core/ppu core/apu/spc700 core/apu/dsp core/dma core/scheduler core/cartridge core/enhancement core/debug core/common platform/ps2 platform/psp platform/host tests tools".split()
 errors = []
 required = [name + ".md" for name in ROOT_DOCS]

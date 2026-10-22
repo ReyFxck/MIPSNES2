@@ -147,6 +147,36 @@ static int begin_instruction(mipsnes2_cpu *cpu,
     return 0;
 }
 
+typedef struct {
+    mipsnes2_cpu_operation_kind kind;
+    mipsnes2_address address;
+    uint8_t value;
+} expected_operation;
+
+static int run_expected_instruction(mipsnes2_cpu *cpu,
+                                    const expected_operation *expected,
+                                    size_t count)
+{
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    size_t index;
+
+    CHECK(begin_instruction(cpu, &state) == 0);
+    for (index = 0U; index < count; index++) {
+        bool last = index + 1U == count;
+
+        CHECK(expect_operation(cpu, &state, expected[index].kind,
+                               expected[index].address,
+                               expected[index].value, &operation) == 0);
+        CHECK(commit_operation(
+                  cpu, &state, &operation,
+                  last ? MIPSNES2_CPU_CYCLE_COMPLETE
+                       : MIPSNES2_CPU_CYCLE_READY,
+                  last ? MIPSNES2_CPU_OK : MIPSNES2_CPU_NOT_READY) == 0);
+    }
+    return 0;
+}
+
 static int test_contract_validation_and_nop(void)
 {
     trace_context trace;
@@ -1014,6 +1044,139 @@ static int test_jsr_absolute_cycles(void)
     return 0;
 }
 
+static int test_jump_direct_cycles(void)
+{
+    static const expected_operation long_jump[] = {
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7efffd), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7efffe), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7effff), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e0000), 0U }
+    };
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    mipsnes2_cpu_operation stale;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xfffe)) == 0);
+    bank7e[0xfffe] = UINT8_C(0x4c);
+    bank7e[0xffff] = UINT8_C(0x34);
+    bank7e[0x0000] = UINT8_C(0x12);
+    CHECK(begin_instruction(&cpu, &state) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7efffe), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7effff), 0U, &operation) == 0);
+    stale = operation;
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(commit_operation(&cpu, &state, &stale,
+                           MIPSNES2_CPU_CYCLE_STALE_OPERATION,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e0000), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_OK) == 0);
+    CHECK(cpu.pc == UINT16_C(0x1234));
+    CHECK(cpu.pbr == UINT8_C(0x7e));
+    CHECK(cpu.instruction_cycles == UINT64_C(3));
+    CHECK(trace.count == 3U);
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xfffd)) == 0);
+    bank7e[0xfffd] = UINT8_C(0x5c);
+    bank7e[0xfffe] = UINT8_C(0x78);
+    bank7e[0xffff] = UINT8_C(0x56);
+    bank7e[0x0000] = UINT8_C(0x7f);
+    CHECK(run_expected_instruction(
+              &cpu, long_jump,
+              sizeof(long_jump) / sizeof(long_jump[0])) == 0);
+    CHECK(cpu.pc == UINT16_C(0x5678));
+    CHECK(cpu.pbr == UINT8_C(0x7f));
+    CHECK(cpu.instruction_cycles == UINT64_C(4));
+    CHECK(trace.count == 4U);
+    return 0;
+}
+
+static int test_jump_indirect_cycles(void)
+{
+    static const expected_operation indirect_jump[] = {
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9900), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9901), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9902), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x00ffff), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x000000), 0U }
+    };
+    static const expected_operation indexed_jump[] = {
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9a00), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9a01), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9a02), 0U },
+        { MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7effff), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e0000), 0U }
+    };
+    static const expected_operation indirect_long_jump[] = {
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9b00), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9b01), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e9b02), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x00fffe), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x00ffff), 0U },
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x000000), 0U }
+    };
+    trace_context trace;
+    mipsnes2_cpu cpu;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9900)) == 0);
+    bank7e[0x9900] = UINT8_C(0x6c);
+    bank7e[0x9901] = UINT8_C(0xff);
+    bank7e[0x9902] = UINT8_C(0xff);
+    bank00[0xffff] = UINT8_C(0x34);
+    bank00[0x0000] = UINT8_C(0x12);
+    CHECK(run_expected_instruction(
+              &cpu, indirect_jump,
+              sizeof(indirect_jump) / sizeof(indirect_jump[0])) == 0);
+    CHECK(cpu.pc == UINT16_C(0x1234));
+    CHECK(cpu.pbr == UINT8_C(0x7e));
+    CHECK(cpu.instruction_cycles == UINT64_C(5));
+    CHECK(trace.count == 5U);
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9a00)) == 0);
+    cpu.x = UINT16_C(0x0001);
+    bank7e[0x9a00] = UINT8_C(0x7c);
+    bank7e[0x9a01] = UINT8_C(0xfe);
+    bank7e[0x9a02] = UINT8_C(0xff);
+    bank7e[0xffff] = UINT8_C(0x78);
+    bank7e[0x0000] = UINT8_C(0x56);
+    CHECK(run_expected_instruction(
+              &cpu, indexed_jump,
+              sizeof(indexed_jump) / sizeof(indexed_jump[0])) == 0);
+    CHECK(cpu.pc == UINT16_C(0x5678));
+    CHECK(cpu.pbr == UINT8_C(0x7e));
+    CHECK(cpu.instruction_cycles == UINT64_C(6));
+    CHECK(trace.count == 5U);
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x9b00)) == 0);
+    bank7e[0x9b00] = UINT8_C(0xdc);
+    bank7e[0x9b01] = UINT8_C(0xfe);
+    bank7e[0x9b02] = UINT8_C(0xff);
+    bank00[0xfffe] = UINT8_C(0xbc);
+    bank00[0xffff] = UINT8_C(0x9a);
+    bank00[0x0000] = UINT8_C(0x7f);
+    CHECK(run_expected_instruction(
+              &cpu, indirect_long_jump,
+              sizeof(indirect_long_jump) /
+                  sizeof(indirect_long_jump[0])) == 0);
+    CHECK(cpu.pc == UINT16_C(0x9abc));
+    CHECK(cpu.pbr == UINT8_C(0x7f));
+    CHECK(cpu.instruction_cycles == UINT64_C(6));
+    CHECK(trace.count == 6U);
+    return 0;
+}
+
 static int test_rts_cycles(void)
 {
     trace_context trace;
@@ -1477,6 +1640,8 @@ int main(void)
     CHECK(test_hardware_interrupt_cycles() == 0);
     CHECK(test_boundary_stale_on_interrupt() == 0);
     CHECK(test_interrupt_missing_write_preflight() == 0);
+    CHECK(test_jump_direct_cycles() == 0);
+    CHECK(test_jump_indirect_cycles() == 0);
     CHECK(test_jsr_absolute_cycles() == 0);
     CHECK(test_rts_cycles() == 0);
     CHECK(test_jsr_missing_write_fallback() == 0);
@@ -1485,6 +1650,6 @@ int main(void)
     CHECK(test_jsl_absolute_long_cycles() == 0);
     CHECK(test_rtl_cycles() == 0);
     CHECK(test_jsl_missing_write_fallback() == 0);
-    (void)puts("PASS: resumable 65C816 operation, subroutine and interrupt contract");
+    (void)puts("PASS: resumable 65C816 operation, control-flow and interrupt contract");
     return 0;
 }

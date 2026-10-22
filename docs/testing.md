@@ -76,13 +76,14 @@ sampling.
 The separate `test-cpu-cycles` executable verifies the caller-owned resumable
 operation contract. It covers side-effect-free repeated peek, exact-once commit,
 stale-descriptor rejection, opcode fetch, explicit legacy fallback, `NOP`, immediate
-`LDA`, absolute `STA`, `REP`, `SEP`, absolute and indexed-indirect `JSR`, `RTS`,
-`JSL`, `RTL`, `BRK` and `COP`, including long-subroutine PBR, bank-local indirect
-pointer wrapping and linear stack behavior;
+`LDA`, absolute `STA`, `REP`, `SEP`, all five `JMP/JML` forms, absolute and
+indexed-indirect `JSR`, `RTS`, `JSL`, `RTL`, `BRK` and `COP`, including direct and
+indirect jump bank rules, long-subroutine PBR, bank-local pointer wrapping and
+linear stack behavior;
 8/16-bit M behavior; emulation invariants; program-bank PC wrap; 24-bit linear store
 crossing; flag commit position; subroutine and interrupt stack order; boundary
 `ABORT`/`NMI`/`IRQ` priority; logical addresses; access order/count; and interrupt
-arrival between boundary peek/commit. It does not claim that the remaining 244
+arrival between boundary peek/commit. It does not claim that the remaining 239
 opcodes, reset, dummy cycles,
 mid-instruction `ABORT` or the scheduler bridge are resumable.
 The scheduler regression executable covers absolute master-clock events, deterministic
