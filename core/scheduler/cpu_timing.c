@@ -361,12 +361,21 @@ static mipsnes2_cpu_timing_result commit_pending_operation(
     uint64_t clocks_before = bus->master_clocks;
     uint64_t expected_cycles = state->reset_sequence ? 0U : UINT64_C(1);
     uint64_t expected_accesses = 0U;
+    bool fetch_candidate = !state->reset_sequence &&
+        !state->abort_opcode_fetched &&
+        state->pending_operation.kind == MIPSNES2_CPU_OPERATION_READ &&
+        cpu->instruction_cycles == state->processor_cycles_before &&
+        state->pending_operation.address ==
+            mipsnes2_address_make(cpu->pbr, cpu->pc);
     mipsnes2_cpu_timing_result result;
 
     result = validate_pending_operation(
         cpu, bus, state->bound_scheduler, state);
     if (result != MIPSNES2_CPU_TIMING_OK) {
         return result;
+    }
+    if (fetch_candidate) {
+        state->abort_cpu_checkpoint = *cpu;
     }
     *cycle_result = mipsnes2_cpu_cycle_commit(
         cpu, &state->cpu_cycle, &state->pending_operation,
@@ -378,6 +387,15 @@ static mipsnes2_cpu_timing_result commit_pending_operation(
                    : MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
     }
     state->operation_pending = false;
+    if (fetch_candidate &&
+        cpu->last_opcode_address == state->pending_operation.address &&
+        cpu->instruction_cycles == cycles_before + UINT64_C(1)) {
+        state->abort_opcode_fetched = true;
+        state->abort_checkpoint_valid = true;
+    }
+    if (state->pending_operation.kind == MIPSNES2_CPU_OPERATION_WRITE) {
+        state->abort_write_committed = true;
+    }
 
     if (state->pending_operation.kind == MIPSNES2_CPU_OPERATION_INTERNAL) {
         if (mipsnes2_snes_bus_account_internal_cycles(bus, UINT64_C(1)) !=
@@ -435,7 +453,29 @@ static void bind_resumable_state(
     state->operation_pending = false;
     state->reset_sequence = state->reset_requested;
     state->reset_requested = false;
+    state->abort_opcode_fetched = false;
+    state->abort_checkpoint_valid = false;
+    state->abort_latched = false;
+    state->abort_write_committed = false;
     state->active = true;
+}
+
+static void restore_aborted_registers(mipsnes2_cpu *cpu,
+                                      const mipsnes2_cpu *checkpoint)
+{
+    cpu->a = checkpoint->a;
+    cpu->x = checkpoint->x;
+    cpu->y = checkpoint->y;
+    cpu->s = checkpoint->s;
+    cpu->d = checkpoint->d;
+    cpu->pc = checkpoint->pc;
+    cpu->dbr = checkpoint->dbr;
+    cpu->pbr = checkpoint->pbr;
+    cpu->p = checkpoint->p;
+    cpu->emulation = checkpoint->emulation;
+    cpu->waiting = checkpoint->waiting;
+    cpu->clock_stopped = checkpoint->clock_stopped;
+    mipsnes2_cpu_pulse_abort(cpu);
 }
 
 static mipsnes2_cpu_timing_result resumable_timed_step(
@@ -543,6 +583,11 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
                 result = commit_control_operation(
                     cpu, bus, state, &operation, &cycle_result);
             } else {
+                if (state->abort_latched &&
+                    operation.kind == MIPSNES2_CPU_OPERATION_WRITE) {
+                    fill_resumable_report(state, cpu, bus, scheduler, report);
+                    return MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION;
+                }
                 result = prepare_pending_operation(
                     cpu, bus, scheduler, state, &operation);
                 if (result == MIPSNES2_CPU_TIMING_OK) {
@@ -556,6 +601,11 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
             return result;
         }
         if (cycle_result == MIPSNES2_CPU_CYCLE_COMPLETE) {
+            if (state->abort_latched &&
+                state->cpu_result == MIPSNES2_CPU_OK) {
+                restore_aborted_registers(
+                    cpu, &state->abort_cpu_checkpoint);
+            }
             sample_interrupt_lines(
                 state, cpu, bus, interrupt_lines, true);
             fill_resumable_report(state, cpu, bus, scheduler, report);
@@ -585,6 +635,33 @@ mipsnes2_cpu_timing_result mipsnes2_cpu_timing_state_begin_reset(
         return MIPSNES2_CPU_TIMING_STALE_STATE;
     }
     state->reset_requested = true;
+    return MIPSNES2_CPU_TIMING_OK;
+}
+
+mipsnes2_cpu_timing_result mipsnes2_cpu_timing_pulse_abort(
+    mipsnes2_cpu_timing_state *state)
+{
+    uint8_t opcode;
+
+    if (state == NULL) {
+        return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+    }
+    if (!state->active || state->reset_sequence ||
+        !state->abort_opcode_fetched || !state->abort_checkpoint_valid ||
+        state->abort_write_committed) {
+        return MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION;
+    }
+    opcode = state->bound_cpu->last_opcode;
+    if (opcode == UINT8_C(0x00) || opcode == UINT8_C(0x02) ||
+        opcode == UINT8_C(0x40) || opcode == UINT8_C(0xcb) ||
+        opcode == UINT8_C(0xdb)) {
+        return MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION;
+    }
+    if (state->operation_pending &&
+        state->pending_operation.kind == MIPSNES2_CPU_OPERATION_WRITE) {
+        return MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION;
+    }
+    state->abort_latched = true;
     return MIPSNES2_CPU_TIMING_OK;
 }
 

@@ -69,7 +69,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
 - [x] IRQ CPU input and entry
 - [x] NMI CPU input and entry
-- [ ] [IN PROGRESS] ABORT input and entry — boundary-visible contract verified; mid-instruction rollback/sampling pending
+- [ ] [IN PROGRESS] ABORT input and entry — boundary-visible and read-only timing slice verified; write qualification and electrical sampling pending
 - [ ] [IN PROGRESS] RESET
 - [x] BRK
 - [x] COP
@@ -80,7 +80,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Timing model — resumable 5A22 operation timing is integrated; exact dummy/electrical sequencing pending
 - [x] CPU automated tests for all 256 opcode values
 - [ ] [IN PROGRESS] CPU regression tests — broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — all 256 opcode values, boundary IRQ/NMI/ABORT entry, RESET vector reads and scheduler/5A22 cursor wiring are resumable; signal-level RESET, exact dummy cycles and mid-instruction ABORT remain pending
+- [ ] [IN PROGRESS] Complete interpreter integration — all 256 opcode values, boundary IRQ/NMI/ABORT entry, RESET vector reads and scheduler/5A22 cursor wiring are resumable; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
 
 ## Phase 3 — Bus and Cartridge
 
@@ -129,7 +129,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] CPU event horizon — caller-owned in-flight operation state advances through requested/event horizons and resumes event-budget failures without duplicate CPU/bus effects
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
 - [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
-- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation plus scheduler wiring for all 256 opcode values, boundary IRQ/NMI/ABORT entry and explicit RESET; signal-level RESET, dummy cycles and mid-instruction ABORT pending
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation plus scheduler wiring for all 256 opcode values, boundary IRQ/NMI/ABORT entry, read-only ABORT slice and explicit RESET; signal-level RESET, dummy cycles and write-side ABORT pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization

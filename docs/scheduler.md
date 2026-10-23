@@ -171,6 +171,11 @@ effects. A callback already dispatched before budget exhaustion cannot be rolled
 back. Callbacks must not mutate CPU/cursor/FastROM/bus counters during an in-flight
 operation; stale descriptors/counters are rejected before its commit. Active-cursor
 cancellation/checkpoint recovery is not implemented. This is not a DMA arbiter.
+The timing-state ABORT pulse is a narrow exception: after opcode fetch it latches
+without mutating the active CPU descriptor. Read-only paths restore pre-fetch
+registers before the next boundary ABORT entry; a later write fails closed
+before its effect. See the
+[mid-instruction ABORT audit](65c816-mid-instruction-abort-slice-audit.md).
 See the
 [access-timing post-mortem](cpu-access-timing-postmortem.md),
 [cycle-contract audit](65c816-cycle-contract-audit.md) and

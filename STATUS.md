@@ -65,6 +65,8 @@ The resumable RESET-vector extension is recorded in
 [docs/65c816-reset-cycle-audit.md](docs/65c816-reset-cycle-audit.md).
 The scheduler-connected operation-timing bridge is recorded in
 [docs/cpu-operation-timing-audit.md](docs/cpu-operation-timing-audit.md).
+The bounded mid-instruction ABORT read-only slice is recorded in
+[docs/65c816-mid-instruction-abort-slice-audit.md](docs/65c816-mid-instruction-abort-slice-audit.md).
 
 ## State and evidence rules
 
@@ -711,8 +713,18 @@ entry points retain their prior semantics. Deterministic tests cover per-clock
 chunking, exact-endpoint ordering, 6/8/12 costs, budget exhaustion before a WRAM-port
 write, exact-once resume, RESET, overflow/stale rejection and NMI-over-IRQ handoff.
 This is operation-boundary scheduling, not electrical or bus-cycle-exact emulation;
-dummy traffic, refresh, arbitration and mid-instruction ABORT remain incomplete.
+dummy traffic, refresh, arbitration and full mid-instruction ABORT remain incomplete.
 Evidence is in [docs/cpu-operation-timing-audit.md](docs/cpu-operation-timing-audit.md).
+
+The 2026-10-23 read-only mid-instruction ABORT slice adds a timing-state pulse
+after opcode fetch, a pre-fetch register checkpoint and deferred ABORT entry
+after the instruction's external reads/time. The cursor refuses an in-flight
+write pulse, and a later write fails closed before the effect; no MMIO rollback,
+write qualification or active-state recovery is claimed. Tests cover exact
+read accounting, opcode return PC, priority over NMI/IRQ and event-budget
+retry. GCC host debug/O3/sanitizer suites and pinned PS2/PSP cross-builds pass;
+console execution remains unavailable. Evidence and limits are in
+[docs/65c816-mid-instruction-abort-slice-audit.md](docs/65c816-mid-instruction-abort-slice-audit.md).
 
 ## Current blockers and diagnostic exceptions
 
@@ -751,7 +763,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
 - [x] IRQ CPU input and entry — SNES IRQ generation/timing remains Phase 4
 - [x] NMI CPU input and entry — SNES NMI generation/timing remains Phase 4
-- [ ] [IN PROGRESS] ABORT input and entry — boundary pulse, priority, vectors, stack/status and WAI no-wake restart behavior verified; mid-instruction rollback/sampling pending
+- [ ] [IN PROGRESS] ABORT input and entry — boundary pulse, priority, vectors, stack/status and WAI no-wake restart behavior verified; read-only operation-timing slice added, writes and electrical sampling pending
 - [ ] [IN PROGRESS] RESET — vector and documented visible state subset only
 - [x] BRK
 - [x] COP
@@ -762,7 +774,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET; signal-level RESET, exact dummy/internal sequencing, refresh and arbitration are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, boundary IRQ/NMI/ABORT entry, RESET vector reads and opt-in scheduler/5A22 cursor wiring exist; signal-level RESET, exact dummy cycles and mid-instruction ABORT remain pending
+- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, boundary IRQ/NMI/ABORT entry, RESET vector reads and opt-in scheduler/5A22 cursor wiring exist; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
 
 ### Verified 65C816 foundation subset
 
@@ -1250,7 +1262,7 @@ platform persistence remains incomplete.
 - [x] Atomic CPU-step delta advances scheduler and H/V together
 - [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
 - [x] Caller-owned CPU-operation state advances scheduler/H/V through requested horizons and event-budget retries with exact-once commit
-- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation and scheduler wiring are verified for all 256 opcode values, boundary IRQ/NMI/ABORT entry and explicit RESET; signal-level RESET, dummy cycles and mid-instruction ABORT remain pending
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation and scheduler wiring are verified for all 256 opcode values, boundary IRQ/NMI/ABORT entry, read-only mid-instruction ABORT slice and explicit RESET; signal-level RESET, dummy cycles and write-side ABORT remain pending
 
 ### Interrupt-line aggregation subset
 

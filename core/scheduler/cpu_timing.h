@@ -55,6 +55,7 @@ typedef struct {
     mipsnes2_cpu_cycle_state cpu_cycle;
     mipsnes2_cpu_operation pending_operation;
     mipsnes2_cpu pending_cpu_snapshot;
+    mipsnes2_cpu abort_cpu_checkpoint;
     mipsnes2_cpu *bound_cpu;
     mipsnes2_snes_bus *bound_bus;
     mipsnes2_scheduler *bound_scheduler;
@@ -79,10 +80,25 @@ typedef struct {
     bool operation_pending;
     bool reset_requested;
     bool reset_sequence;
+    bool abort_opcode_fetched;
+    bool abort_checkpoint_valid;
+    bool abort_latched;
+    bool abort_write_committed;
 } mipsnes2_cpu_timing_state;
 
 void mipsnes2_cpu_timing_state_init(mipsnes2_cpu_timing_state *state);
 mipsnes2_cpu_timing_result mipsnes2_cpu_timing_state_begin_reset(
+    mipsnes2_cpu_timing_state *state);
+
+/*
+ * Latch a mid-instruction ABORT without modifying the active CPU descriptor.
+ * Supported only after opcode fetch and before any write in the instruction.
+ * If an instruction subsequently reaches a write, resume fails closed before
+ * that write; external-write qualification and recovery remain future work.
+ * RESET, interrupt entry, WAI/STP and RTI are not covered by this contract.
+ * Callers may invoke this from a scheduler event callback.
+ */
+mipsnes2_cpu_timing_result mipsnes2_cpu_timing_pulse_abort(
     mipsnes2_cpu_timing_state *state);
 
 /*
