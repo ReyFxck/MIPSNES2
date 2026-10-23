@@ -18,7 +18,7 @@ Implemented and host-verified behavior:
 - exact rational clock conversion with a carried integer remainder;
 - logical-address classification for 5A22 6/8/12-master-clock accesses;
 - partial SNES-bus accounting for every meaningful CPU callback;
-- an atomic CPU-step bridge that advances the scheduler by the resulting clocks;
+- a resumable CPU-operation/5A22 bridge plus the atomic compatibility bridge;
 - a caller-owned non-interlaced NTSC/PAL H/V master-clock component;
 - deterministic HBlank/VBlank, field, NTSC short-line and delayed NMI transitions;
 - stable-register H/V/HV timer-match generation into the CPU-I/O TIMEUP latch;
@@ -26,13 +26,12 @@ Implemented and host-verified behavior:
 - coordinated H/V and scheduler advancement in one checked master-clock domain;
 - deterministic H/V-before-callback ordering at equal timestamps;
 - independent timer/cartridge/expansion IRQ-source aggregation;
-- CPU-I/O NMI-edge and IRQ-level delivery at atomic CPU boundaries;
-- deterministic replay and CPU IRQ/NMI boundary fixtures.
+- CPU-I/O NMI-edge and IRQ-level delivery at instruction boundaries;
+- deterministic replay, event-budget retry and CPU IRQ/NMI boundary fixtures.
 
-This is not a complete SNES scheduler. The interpreter does not expose every W65C816
-bus/internal cycle, and the partial SNES bus has no complete cartridge map or active
-peripherals. Therefore the bridge distinguishes observed address-speed accesses from
-the remaining aggregate CPU cycles but does not claim exact cycle placement.
+This is not a complete SNES scheduler. The cursor does not expose every W65C816
+dummy/electrical bus phase, and the partial SNES bus has no complete cartridge map
+or active peripherals. Its operation-level timing does not claim electrical accuracy.
 
 The caller-owned H/V foundation supplies VBlank, HBlank, the distinct delayed NMI-
 flag signal and stable-register H/V timer matches to the 5A22 CPU-I/O state. It models
@@ -40,7 +39,7 @@ non-interlaced NTSC/PAL frame geometry and the NTSC short scanline without PPU
 rendering. The shared coordinator now drives H/V and `mipsnes2_scheduler.now` from
 the same elapsed-clock delta. The optional interrupt-aware CPU bridge connects the
 CPU-I/O latches through an independent-source aggregator. Complete interrupt timing
-is not claimed because the CPU still exposes only atomic instruction boundaries.
+is not claimed because CPU input delivery and electrical sampling remain distinct.
 
 ## Non-interlaced H/V phase
 
@@ -73,7 +72,7 @@ fixed phase is not claimed as final hardware behavior. See
 [automatic joypad audit](auto-joypad-audit.md).
 
 The optional PPU counter adapter reads this H/V snapshot at the bus boundary, not at
-individual cycles within an atomic instruction. Its external edge handoff must be
+individual electrical cycles within an operation. Its external edge handoff must be
 synchronized before advancing the shared domain. Exact capture latency and repeated/
 held-low behavior remain research work; [counter audit](hv-counter-latch-audit.md)
 records the chosen deterministic foundation policies.
@@ -94,11 +93,10 @@ invalid H/V state and scheduler failures are distinct visible results. Each H/V
 advance is committed transactionally, so an H/V overflow/error cannot leave the H/V
 clock partially advanced ahead of the scheduler.
 
-`mipsnes2_cpu_timed_step_hv` applies one atomic CPU instruction or interrupt-entry
-delta to this common domain and requires the SNES bus to own CPU-I/O state. It does
-not interrupt an instruction at an internal event timestamp. H/V transitions that
-occur during that instruction can affect the following CPU boundary only, and the
-caller must still transfer CPU-I/O IRQ/NMI state into the interpreter inputs.
+`mipsnes2_cpu_timed_step_hv` remains an atomic compatibility API. The opt-in
+`mipsnes2_cpu_timed_resume_hv` instead advances one in-flight CPU operation through
+the common domain, stopping at requested horizons and retaining its original endpoint
+after an event-budget failure. Both require the SNES bus to own CPU-I/O state.
 
 `mipsnes2_interrupt_lines` supplies that optional transfer without conflating IRQ
 sources. Its source bitmask reserves separate internal-timer, cartridge and expansion
@@ -113,6 +111,13 @@ current step, while one generated during that atomic instruction is visible in C
 state on return and executes at the next boundary. NMI-versus-IRQ priority remains
 owned and tested by the CPU core. Exact PPU/DMA/timer ties inside an instruction are
 still unresolved.
+
+The resumable interrupt-aware variant samples CPU-I/O edges during an in-flight
+operation, without mutating CPU inputs until the instruction completes. Events due
+at the current boundary are dispatched before the cursor begins; a mid-operation NMI
+cannot retroactively replace an already selected instruction. The following boundary
+retains the CPU's NMI-over-IRQ priority. This is a logical handoff, not an assertion
+about exact electrical sampling.
 
 ## Event and rollover contract
 
@@ -129,11 +134,13 @@ Insertion-token exhaustion is likewise reported instead of reusing an identifier
 At NTSC/PAL master-clock rates, normal execution has ample range, but save-state and
 long-run policies remain explicit future work.
 
-`mipsnes2_scheduler_event_horizon` returns the earlier of the requested time and next
-event. It establishes the API boundary needed to bound CPU work. The current CPU
-cannot yet stop at every bus-cycle boundary. An event inside one atomic timed step is
-dispatched with its exact timestamp after the instruction completes and affects the
-next CPU boundary. Complete CPU event-horizon integration remains in progress.
+`mipsnes2_scheduler_event_horizon` returns the earlier of requested time and the next
+event. The caller-owned timed state can hold a READ, WRITE or INTERNAL operation in
+flight across that horizon: scheduler/H/V advance to each event timestamp, while its
+CPU/bus effect remains uncommitted until the original operation endpoint. An event
+exactly at the endpoint is dispatched first. This avoids recharging an 8-clock access
+as another 8 clocks after an event at clock 4. Requested horizon returns do not
+discard the operation; the next call resumes the remaining clocks.
 
 ## Rational clocks
 
@@ -149,21 +156,22 @@ Low-bank/mirrored WRAM and ordinary ROM/SRAM regions use 8 master clocks; ordina
 I/O uses 6; `$4000-$41FF` in system banks uses 12; FastROM-capable upper ROM windows
 use 6 only when the caller supplies an enabled FastROM state. Internal cycles use 6.
 
-`mipsnes2_snes_bus` now applies that classifier to every meaningful read/write and
-owns `$420D` bit 0. `mipsnes2_cpu_timed_step` snapshots the CPU/bus counters, executes
-one CPU boundary, and subtracts observed accesses from the WDC aggregate cycle count.
-The remainder is charged as 6-clock internal cycles before advancing the scheduler.
-Visible mismatches, counter regressions, overflow and scheduler-budget errors are
-reported. Reset bus accesses are not yet driven through this bridge.
+`mipsnes2_snes_bus` applies that classifier to meaningful reads/writes and owns
+`$420D` bit 0. The new bridge peeks without bus effects, latches the access cost and
+FastROM state at operation start, advances time, then commits one descriptor. INTERNAL
+always costs one processor cycle and six master clocks; its `value` is a stale-operation
+token, not a cycle count. RESET is explicitly selected and advances its two vector
+reads without incrementing `instruction_cycles`. The atomic compatibility functions
+still compute remaining internal cycles from whole-instruction counters.
 
 Scheduler dispatch from inside the instruction-atomic CPU was attempted and rejected.
-If an event budget or callback failed after part of an instruction, that API could
-neither roll back nor resume safely. The CPU now has a caller-owned, exact-once
-peek/commit sequence for all 256 opcode values and boundary `ABORT`/`NMI`/`IRQ`
-entry. Reset and dummy cycles remain explicitly atomic or absent, and the timed
-bridge is not connected to the cursor yet.
-Per-access advancement therefore remains blocked until all reachable paths and
-failure/cancellation cases are resumable. See the
+The replacement advances time outside the CPU, leaves an interrupted operation
+uncommitted, and resumes without duplicating already executed callbacks or CPU
+effects. A callback already dispatched before budget exhaustion cannot be rolled
+back. Callbacks must not mutate CPU/cursor/FastROM/bus counters during an in-flight
+operation; stale descriptors/counters are rejected before its commit. Active-cursor
+cancellation/checkpoint recovery is not implemented. This is not a DMA arbiter.
+See the
 [access-timing post-mortem](cpu-access-timing-postmortem.md),
 [cycle-contract audit](65c816-cycle-contract-audit.md) and
 [interrupt-cycle audit](65c816-interrupt-cycle-audit.md), plus the
@@ -176,7 +184,9 @@ failure/cancellation cases are resumable. See the
 [implied-cycle audit](65c816-implied-cycle-audit.md) and the
 [read/modify/write-cycle audit](65c816-rmw-cycle-audit.md), then the
 [load/store-cycle audit](65c816-load-store-cycle-audit.md) and the
-[complete opcode-cycle audit](65c816-final-resumable-cycle-audit.md).
+[complete opcode-cycle audit](65c816-final-resumable-cycle-audit.md), the
+[RESET-cycle audit](65c816-reset-cycle-audit.md) and the
+[operation-timing audit](cpu-operation-timing-audit.md).
 
 The CPU-I/O math unit uses the processor-cycle domain: each completed SNES CPU-bus
 access advances one cycle and the bridge advances the remaining aggregate internal
@@ -208,8 +218,9 @@ capacity, same-time callback insertion, dispatch budgets, time regression, token
 clock overflow, exact fractional carry, chunked/one-shot drift equivalence, timing-map
 boundaries, identical replay traces and scheduled IRQ/NMI delivery to a waiting CPU.
 `tests/test_snes_bus.c` additionally covers WRAM/MMIO mapping and access timing,
-FastROM transitions, slow and mixed-speed CPU instructions, an event inside an atomic
-instruction, NMI-entry elapsed clocks and timing-bridge error paths.
+FastROM transitions, slow/mixed-speed instructions, atomic compatibility, per-clock
+resume, event at/inside an operation endpoint, event-budget retry before a write,
+RESET vector timing, overflow/stale rejection and boundary IRQ/NMI priority.
 `tests/test_hv_timing.c` covers non-interlaced NTSC/PAL line and frame geometry,
 HBlank/VBlank boundaries, delayed NMI assertion, overscan, field/short-line behavior,
 overflow handling, every valid HTIME value, V/HV match positions, short/final-line
@@ -233,8 +244,8 @@ old-result boundaries, division by zero, bus/internal-cycle advancement and an
 executed STA/NOP/LDA multiply sequence. They cover the four automatic-joypad result
 words, read-only behavior, snapshot isolation and mirrored SNES-bus reads.
 
-Future tests must add simultaneous PPU/IRQ/NMI/DMA cases, CPU pause/resume at actual
-bus cycles, interlaced frame boundaries, exact mid-instruction timer-register writes,
+Future tests must add simultaneous PPU/IRQ/NMI/DMA cases, electrical bus-phase
+placement, interlaced frame boundaries, exact mid-instruction timer-register writes,
 the TIMEUP read-at-match exception and long integrated regional-clock runs. Same
 ROM/state/input must yield the same trace regardless of host speed.
 
@@ -246,7 +257,7 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [x] Master timestamp units
 - [x] Clock ratio representation
 - [x] Event tie ordering
-- [ ] [IN PROGRESS] CPU event horizon — five-opcode peek/commit foundation exists; timed steps remain atomic and general mid-instruction bus-cycle bounding is pending
+- [x] CPU event horizon — caller-owned in-flight operation state advances through events, pauses on requested horizons/errors and commits exactly once
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization

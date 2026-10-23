@@ -63,6 +63,8 @@ Completion of the 256-opcode resumable cursor is recorded in
 [docs/65c816-final-resumable-cycle-audit.md](docs/65c816-final-resumable-cycle-audit.md).
 The resumable RESET-vector extension is recorded in
 [docs/65c816-reset-cycle-audit.md](docs/65c816-reset-cycle-audit.md).
+The scheduler-connected operation-timing bridge is recorded in
+[docs/cpu-operation-timing-audit.md](docs/cpu-operation-timing-audit.md).
 
 ## State and evidence rules
 
@@ -696,6 +698,22 @@ the instruction-atomic interpreter has no pause/resume contract. No timing task 
 credited for that rejected design. The safe prerequisite and evidence are in
 [docs/cpu-access-timing-postmortem.md](docs/cpu-access-timing-postmortem.md).
 
+The 2026-10-23 operation-timing milestone adds an opt-in caller-owned bridge between
+the complete CPU cursor and the scheduler/H/V domain. A 6/8/12-clock read/write or
+6-clock internal operation can remain in flight across requested horizons and event-
+budget failures; its CPU/bus effect commits exactly once only after the endpoint is
+reached. Events at that endpoint are provisionally delivered before the commit.
+FastROM cost, counter capacity and the pending descriptor are validated before an
+effect. RESET uses an explicit mode because its two timed vector reads intentionally
+leave `instruction_cycles` at zero. IRQ/NMI edges may be retained while an operation
+is in flight, but CPU delivery remains at instruction boundaries. The legacy atomic
+entry points retain their prior semantics. Deterministic tests cover per-clock
+chunking, exact-endpoint ordering, 6/8/12 costs, budget exhaustion before a WRAM-port
+write, exact-once resume, RESET, overflow/stale rejection and NMI-over-IRQ handoff.
+This is operation-boundary scheduling, not electrical or bus-cycle-exact emulation;
+dummy traffic, refresh, arbitration and mid-instruction ABORT remain incomplete.
+Evidence is in [docs/cpu-operation-timing-audit.md](docs/cpu-operation-timing-audit.md).
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -741,10 +759,10 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STP
 - [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
-- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; all 256 opcode values, boundary IRQ/NMI/ABORT entry and RESET vector reads have resumable operation sequences, while signal-level RESET, exact dummy/internal sequencing, refresh and arbitration are pending
+- [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET; signal-level RESET, exact dummy/internal sequencing, refresh and arbitration are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, resumable boundary IRQ/NMI/ABORT entry, resumable RESET vector reads and the atomic scheduler/5A22 bridge exist; scheduler cursor wiring, signal-level RESET, exact dummy cycles and mid-instruction ABORT remain pending
+- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, boundary IRQ/NMI/ABORT entry, RESET vector reads and opt-in scheduler/5A22 cursor wiring exist; signal-level RESET, exact dummy cycles and mid-instruction ABORT remain pending
 
 ### Verified 65C816 foundation subset
 
@@ -1075,7 +1093,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
 - [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` exist; remaining SNES register effects absent
-- [ ] [IN PROGRESS] Access timing — meaningful accesses use 5A22 6/8/12 clocks and atomic CPU steps advance the scheduler; dummy/internal placement, refresh and arbitration absent
+- [ ] [IN PROGRESS] Access timing — meaningful cursor accesses use 5A22 6/8/12 clocks and internal operations use 6 clocks in the resumable bridge; dummy traffic, refresh and arbitration are absent
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO, base LoROM/HiROM and Mode 25/35 ExHiROM boundaries verified; padded/ExLoROM/enhancement maps absent
 - [ ] Page/block mapping benchmark
 
@@ -1087,7 +1105,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Range, overlap and capacity validation
 - [x] Deterministic unmapped fixture behavior
 - [x] Partial SNES-map WRAM, mirror, port, MMIO-route and FastROM fixtures
-- [x] Atomic CPU/scheduler timing integration fixtures
+- [x] Atomic compatibility and resumable CPU-operation/scheduler timing integration fixtures
 - [x] Cartridge no-response preserves deterministic bus latch
 
 ## Cartridge
@@ -1159,7 +1177,7 @@ platform persistence remains incomplete.
 - [x] Master timestamp units — unsigned 64-bit SNES master clocks
 - [x] Clock ratio representation — exact reduced rational with carried remainder
 - [x] Event tie ordering — timestamp, explicit priority, insertion token
-- [ ] [IN PROGRESS] CPU event horizon — the cursor covers instructions, boundary interrupts and RESET vector reads, but the timed bridge remains atomic and mid-operation event pausing is pending
+- [x] CPU event horizon — caller-owned in-flight operation state pauses at requested horizons or event-budget failures and resumes without restarting or duplicating the CPU/bus effect
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment, transactional H/V slices and provisional same-time ordering verified
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
@@ -1173,14 +1191,14 @@ platform persistence remains incomplete.
 
 - [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math, `$4201/$4213` programmable-I/O and controller subsets implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced phase, long-dot projection and counter-register subset verified; interlace and exact capture timing absent
-- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling incomplete
-- [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch, non-interlaced VBlank timing and atomic CPU delivery exist; exact within-instruction sampling incomplete
+- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and operation-boundary CPU delivery exist; exact write/match windows, interlace and electrical sampling incomplete
+- [ ] [IN PROGRESS] NMI edge and enable behavior — gated edge/latch, non-interlaced VBlank timing and operation-boundary delivery exist; exact electrical sampling incomplete
 - [ ] [IN PROGRESS] Interrupt acknowledgement — base RDNMI/TIMEUP reads exist; match-window/external IRQ cases absent
 - [ ] [IN PROGRESS] Interrupt ordering — CPU NMI-over-IRQ priority and source aggregation verified; simultaneous subsystem timing pending
 - [ ] [IN PROGRESS] CPU math register timing — 8/16-cycle completion and result semantics verified; busy collisions and exact internal-cycle placement pending
 - [ ] [IN PROGRESS] Automatic joypad polling timing — 4224-clock window and result commit verified with a fixed deterministic start; hardware phase variation, busy-time partial data and manual-port contention pending
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing and atomic CPU input delivery fixtures exist; exact cycle-boundary cases pending
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing, atomic compatibility and resumable operation-boundary input fixtures exist; exact electrical cases pending
 
 ### Verified CPU-I/O foundation subset
 
@@ -1231,7 +1249,8 @@ platform persistence remains incomplete.
 - [x] Event-budget exhaustion preserves aligned domain state
 - [x] Atomic CPU-step delta advances scheduler and H/V together
 - [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
-- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation verified for all 256 opcode values, boundary IRQ/NMI/ABORT entry and RESET vector reads; signal-level RESET, dummy cycles, mid-instruction ABORT and scheduler integration pending
+- [x] Caller-owned CPU-operation state advances scheduler/H/V through requested horizons and event-budget retries with exact-once commit
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation and scheduler wiring are verified for all 256 opcode values, boundary IRQ/NMI/ABORT entry and explicit RESET; signal-level RESET, dummy cycles and mid-instruction ABORT remain pending
 
 ### Interrupt-line aggregation subset
 
@@ -1239,6 +1258,7 @@ platform persistence remains incomplete.
 - [x] CPU-I/O timer source update preserves cartridge/expansion IRQ sources
 - [x] CPU-I/O NMI edge transfers once into the CPU input latch
 - [x] Pre/post atomic-step input sampling contract
+- [x] Resumable-operation IRQ/NMI retention with CPU delivery only at instruction boundaries
 - [x] Simultaneous NMI/IRQ follows existing CPU NMI priority
 - [ ] Exact within-instruction interrupt sampling
 

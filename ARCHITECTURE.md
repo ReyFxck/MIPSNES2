@@ -22,7 +22,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
-| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, atomic CPU-step bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
+| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Build probe only |
@@ -301,10 +301,15 @@ The high-vector commit installs PC and releases WAI/STP/diagnostic stop state.
 The path deliberately preserves the existing zero `instruction_cycles` result and
 does not invent unsourced internal/dummy reset cycles.
 
-This is deliberately not wired into the scheduler yet. Signal-level RESET, dummy
-cycles, mid-instruction `ABORT` and undocumented bus activity are still atomic or
-absent. Consequently the central timed-step bridge remains
-instruction-atomic and must not dispatch events from bus callbacks. The initial
+`mipsnes2_cpu_timing_state` wires this cursor into an opt-in scheduler bridge without
+putting scheduler state in the CPU. A timed READ, WRITE or INTERNAL descriptor is
+latched with its 6/8/12-clock cost, may remain in flight across requested horizons or
+event-budget failures, and commits exactly once after the shared time domain reaches
+its endpoint. Events at the endpoint run before the CPU/bus commit under the current
+inclusive scheduler contract. RESET is selected explicitly and retains its distinct
+zero-processor-cycle accounting. Signal-level RESET, dummy cycles, mid-instruction
+`ABORT` and undocumented bus activity remain absent. The original atomic timed-step
+entry points retain their established semantics. The initial
 foundation is recorded in [the cycle-contract audit](docs/65c816-cycle-contract-audit.md);
 interrupt migration scope and verification are recorded in
 [the interrupt-cycle audit](docs/65c816-interrupt-cycle-audit.md); the first
@@ -314,7 +319,9 @@ subroutine pair is recorded in
 [read/modify/write-cycle audit](docs/65c816-rmw-cycle-audit.md). Completion of the
 opcode cursor and RESET-vector extension are recorded in the
 [complete opcode-cycle audit](docs/65c816-final-resumable-cycle-audit.md) and
-[RESET-cycle audit](docs/65c816-reset-cycle-audit.md).
+[RESET-cycle audit](docs/65c816-reset-cycle-audit.md). Scheduler wiring and its
+transactional limits are recorded in the
+[operation-timing audit](docs/cpu-operation-timing-audit.md).
 
 ## Scheduler and timing foundation
 
@@ -327,12 +334,13 @@ Wall clocks never advance emulated state.
 
 The 5A22 timing classifier returns the documented 6, 8 or 12 master clocks for one
 logical-address access and accepts the FastROM-enable state explicitly. The SNES bus
-owns that state and accounts each meaningful CPU read/write. `mipsnes2_cpu_timed_step`
-drains events due at the current boundary, executes one atomic CPU instruction or
-interrupt entry, charges the remaining aggregate WDC cycles as 6-clock internal
-cycles and advances the scheduler by the resulting elapsed master clocks. The bridge
-rejects bus mismatches, counter regressions, access/cycle inconsistencies, overflows
-and scheduler errors instead of hiding them.
+owns that state and accounts each meaningful CPU read/write. The opt-in
+`mipsnes2_cpu_timed_resume*` APIs advance one cursor operation through scheduler
+and optional H/V time before committing its effect. Their caller-owned state binds
+to one CPU/bus/domain tuple while active, latches FastROM and access cost at the
+operation start and survives requested-horizon or event-budget returns without
+restarting elapsed clocks. The `mipsnes2_cpu_timed_step*` compatibility family retains
+its instruction-atomic, aggregate-cycle semantics.
 
 `mipsnes2_master_timing_run_until` is the first explicit common-domain coordinator.
 It requires the scheduler timestamp and H/V elapsed timestamp to agree, advances H/V
@@ -348,13 +356,13 @@ other IRQ sources before and after the atomic step. Inputs visible before the st
 enter the CPU immediately; transitions during the step become CPU inputs for the next
 boundary. The report distinguishes NMI-edge delivery from the resulting IRQ level.
 
-This bridge is intentionally partial. The interpreter does not expose all W65C816
-dummy reads/writes, internal-cycle positions or MLB state, so the remaining-cycle
-charge has correct aggregate class only when those missing cycles are internal.
-Events timestamped inside an instruction retain their scheduled timestamp but are
-dispatched after the atomic CPU step; they can affect the following CPU boundary,
-not pause the active instruction. WRAM refresh stalls, DMA/HDMA arbitration,
-complete mapping and simultaneous-subsystem priority remain future work.
+The resumable bridge retains CPU-I/O NMI/IRQ edges during an in-flight operation,
+but drives the CPU inputs only before starting the cursor and after completing it.
+Events at an operation endpoint are dispatched before the CPU/bus commit under the
+inclusive scheduler contract. The bridge is still partial: not all W65C816 dummy
+reads/writes, electrical sub-cycle positions or MLB state are represented. WRAM
+refresh stalls, DMA/HDMA arbitration, complete mapping and simultaneous-subsystem
+priority remain future work.
 The same unresolved per-cycle placement limits exact math-unit observation for
 instructions whose internal cycles occur before a result-register access; ordinary
 bus cycles and aggregate NOP/internal waits are deterministic and tested.
@@ -362,9 +370,9 @@ bus cycles and aggregate NOP/internal waits are deterministic and tested.
 An attempted synchronous clock sink inside bus callbacks was removed after review:
 the then-atomic interpreter could not abort or resume an instruction, so an event-
 budget failure could leave CPU, memory and scheduler state partially committed.
-Meaningful-access event dispatch must wait until the incremental CPU-operation
-contract covers every path the bridge can execute, including interrupt entry, and
-has explicit scheduler failure/cancellation handling.
+The replacement operation bridge arrived only after all opcode and interrupt-entry
+paths had incremental sequences; it retains a pending operation across budget errors.
+Full active-cursor cancellation still requires checkpoint recovery.
 The analysis is retained in the
 [access-timing post-mortem](docs/cpu-access-timing-postmortem.md).
 
@@ -378,9 +386,9 @@ It does not render, own PPU memory or model interlace/latched PPU dot counters. 
 shared coordinator now drives it and `mipsnes2_scheduler.now` from one elapsed-clock
 delta. H/V transitions precede general scheduler callbacks at the same timestamp as
 a deterministic provisional policy; exact hardware priority still requires research.
-Because the CPU step is atomic, a transition inside an instruction is observed only
-after that instruction and can affect the following CPU boundary. CPU-I/O IRQ/NMI
-latches are not yet automatically sampled into the CPU inputs.
+The resumable interrupt-aware bridge retains CPU-I/O transitions during an in-flight
+operation and delivers them at the following instruction boundary. Exact electrical
+sampling and final same-time subsystem priority remain unverified.
 
 ## Platform-Specific Optimization Architecture
 
@@ -574,5 +582,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   side-effect-free control peek and explicit low/high vector reads. The compatibility
   wrapper remains atomic; unsourced internal/electrical reset cycles and scheduler
   cursor wiring remain separate work.
+- 2026-10-23: The opt-in scheduler/5A22 bridge advances each CPU cursor operation
+  through requested/event horizons, retains in-flight time across budget failures
+  and commits the CPU/bus effect once at the endpoint. RESET has an explicit
+  zero-processor-cycle mode; legacy atomic entry points keep their semantics.
+  Electrical/dummy phases, refresh, arbitration and mid-instruction ABORT remain open.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

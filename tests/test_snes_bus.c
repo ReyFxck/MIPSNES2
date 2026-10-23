@@ -35,6 +35,23 @@ typedef struct {
     mipsnes2_master_clock timestamp;
 } nmi_context;
 
+typedef struct {
+    mipsnes2_cpu *cpu;
+    mipsnes2_snes_bus *bus;
+    unsigned calls;
+    mipsnes2_master_clock timestamp;
+    uint16_t pc;
+    uint64_t processor_cycles;
+    uint64_t bus_accesses;
+    uint64_t bus_clocks;
+} timed_observer;
+
+typedef struct {
+    mipsnes2_interrupt_lines *lines;
+    bool nmi;
+    unsigned calls;
+} interrupt_event_context;
+
 static uint8_t wram[MIPSNES2_SNES_WRAM_SIZE];
 static cartridge_fixture cartridge;
 
@@ -436,6 +453,38 @@ static void pulse_nmi(void *opaque,
     mipsnes2_cpu_pulse_nmi(context->cpu);
 }
 
+static void observe_timed_state(void *opaque,
+                                mipsnes2_master_clock timestamp,
+                                mipsnes2_scheduler_token token)
+{
+    timed_observer *observer = opaque;
+
+    (void)token;
+    observer->calls++;
+    observer->timestamp = timestamp;
+    observer->pc = observer->cpu->pc;
+    observer->processor_cycles = observer->cpu->instruction_cycles;
+    observer->bus_accesses = observer->bus->access_count;
+    observer->bus_clocks = observer->bus->master_clocks;
+}
+
+static void raise_interrupt_line(void *opaque,
+                                 mipsnes2_master_clock timestamp,
+                                 mipsnes2_scheduler_token token)
+{
+    interrupt_event_context *context = opaque;
+
+    (void)timestamp;
+    (void)token;
+    context->calls++;
+    if (context->nmi) {
+        mipsnes2_interrupt_lines_latch_nmi(context->lines);
+    } else {
+        (void)mipsnes2_interrupt_lines_set_irq(
+            context->lines, MIPSNES2_IRQ_SOURCE_CARTRIDGE, true);
+    }
+}
+
 static int initialize_cpu_bus_with_io(mipsnes2_snes_bus *bus,
                                       mipsnes2_cpu *cpu,
                                       mipsnes2_cpu_io *cpu_io)
@@ -535,6 +584,559 @@ static int test_timed_cpu_steps(void)
           MIPSNES2_CPU_TIMING_INVALID_ARGUMENT);
     CHECK(mipsnes2_cpu_timed_step(&cpu, &bus, &scheduler, 8U, NULL) ==
           MIPSNES2_CPU_TIMING_INVALID_ARGUMENT);
+    return 0;
+}
+
+static int test_resumable_timed_horizon_and_chunks(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_cpu cpu;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_cpu_timing_state state;
+    mipsnes2_cpu_timing_report report;
+    timed_observer observer;
+    uint64_t reset_accesses;
+    uint64_t reset_clocks;
+    mipsnes2_master_clock horizon;
+
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    reset_accesses = bus.access_count;
+    reset_clocks = bus.master_clocks;
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    (void)memset(&observer, 0, sizeof(observer));
+    observer.cpu = &cpu;
+    observer.bus = &bus;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(4), 0U, observe_timed_state,
+              &observer, NULL) == MIPSNES2_SCHEDULER_OK);
+
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_C(4), 8U,
+              &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(state.active && state.operation_pending);
+    CHECK(state.pending_operation.kind == MIPSNES2_CPU_OPERATION_READ);
+    CHECK(state.operation_start_time == 0U &&
+          state.operation_end_time == UINT64_C(8));
+    CHECK(observer.calls == 1U && observer.timestamp == UINT64_C(4));
+    CHECK(observer.pc == UINT16_C(0x8000));
+    CHECK(observer.processor_cycles == 0U);
+    CHECK(observer.bus_accesses == reset_accesses);
+    CHECK(observer.bus_clocks == reset_clocks);
+    CHECK(report.processor_cycles == 0U && report.bus_accesses == 0U);
+    CHECK(report.master_clocks == 0U && report.target_time == UINT64_C(4));
+
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 8U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(!state.active && !state.operation_pending);
+    CHECK(cpu.pc == UINT16_C(0x8001));
+    CHECK(report.cpu_result == MIPSNES2_CPU_OK);
+    CHECK(report.processor_cycles == UINT64_C(2));
+    CHECK(report.bus_accesses == UINT64_C(1));
+    CHECK(report.internal_cycles == UINT64_C(1));
+    CHECK(report.master_clocks == UINT64_C(14));
+    CHECK(report.events_dispatched == 1U);
+    CHECK(report.target_time == UINT64_C(14));
+    CHECK(scheduler.now == UINT64_C(14));
+
+    /* An event exactly at an operation endpoint is delivered before commit. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    reset_accesses = bus.access_count;
+    reset_clocks = bus.master_clocks;
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    (void)memset(&observer, 0, sizeof(observer));
+    observer.cpu = &cpu;
+    observer.bus = &bus;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(8), 0U, observe_timed_state,
+              &observer, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 8U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(observer.calls == 1U && observer.timestamp == UINT64_C(8));
+    CHECK(observer.pc == UINT16_C(0x8000));
+    CHECK(observer.processor_cycles == 0U);
+    CHECK(observer.bus_accesses == reset_accesses);
+    CHECK(observer.bus_clocks == reset_clocks);
+    CHECK(cpu.pc == UINT16_C(0x8001) && scheduler.now == UINT64_C(14));
+
+    /* Cutting at every master clock must not restart either operation. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    reset_accesses = bus.access_count;
+    reset_clocks = bus.master_clocks;
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    for (horizon = UINT64_C(1); horizon < UINT64_C(14); ++horizon) {
+        CHECK(mipsnes2_cpu_timed_resume(
+                  &cpu, &bus, &scheduler, &state, horizon, 0U,
+                  &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+        CHECK(scheduler.now == horizon);
+    }
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_C(14), 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(cpu.pc == UINT16_C(0x8001));
+    CHECK(cpu.instruction_cycles == UINT64_C(2));
+    CHECK(bus.access_count == reset_accesses + UINT64_C(1));
+    CHECK(bus.master_clocks == reset_clocks + UINT64_C(14));
+    CHECK(scheduler.now == UINT64_C(14));
+    return 0;
+}
+
+static int test_resumable_timed_budget_and_write(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_cpu cpu;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_cpu_timing_state state;
+    mipsnes2_cpu_timing_report report;
+    timed_observer observer;
+    uint64_t reset_accesses;
+    uint64_t reset_clocks;
+    uint16_t expected_pc;
+    uint64_t expected_cycles;
+    uint64_t expected_accesses;
+    uint64_t expected_clocks;
+    uint32_t expected_port;
+    uint8_t expected_value;
+
+    /* One-shot reference. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    reset_accesses = bus.access_count;
+    reset_clocks = bus.master_clocks;
+    cpu.a = UINT16_C(0x005a);
+    cartridge.bank00[0x8000] = UINT8_C(0x8d); /* STA $2180 */
+    cartridge.bank00[0x8001] = UINT8_C(0x80);
+    cartridge.bank00[0x8002] = UINT8_C(0x21);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    (void)memset(&observer, 0, sizeof(observer));
+    observer.cpu = &cpu;
+    observer.bus = &bus;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(27), 0U, observe_timed_state,
+              &observer, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(27), 0U, observe_timed_state,
+              &observer, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 2U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(observer.calls == 2U && report.events_dispatched == 2U);
+    CHECK(observer.pc == UINT16_C(0x8003));
+    CHECK(observer.processor_cycles == UINT64_C(3));
+    CHECK(observer.bus_accesses == reset_accesses + UINT64_C(3));
+    CHECK(observer.bus_clocks == reset_clocks + UINT64_C(24));
+    expected_pc = cpu.pc;
+    expected_cycles = cpu.instruction_cycles;
+    expected_accesses = bus.access_count - reset_accesses;
+    expected_clocks = bus.master_clocks - reset_clocks;
+    expected_port = bus.wram_port_address;
+    expected_value = wram[0];
+    CHECK(expected_pc == UINT16_C(0x8003));
+    CHECK(expected_cycles == UINT64_C(4));
+    CHECK(expected_accesses == UINT64_C(4));
+    CHECK(expected_clocks == UINT64_C(30));
+    CHECK(expected_port == UINT32_C(1) && expected_value == UINT8_C(0x5a));
+    CHECK(scheduler.now == UINT64_C(30));
+
+    /* Budget exhaustion keeps the final write pending and retryable. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    reset_accesses = bus.access_count;
+    reset_clocks = bus.master_clocks;
+    cpu.a = UINT16_C(0x005a);
+    cartridge.bank00[0x8000] = UINT8_C(0x8d);
+    cartridge.bank00[0x8001] = UINT8_C(0x80);
+    cartridge.bank00[0x8002] = UINT8_C(0x21);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    (void)memset(&observer, 0, sizeof(observer));
+    observer.cpu = &cpu;
+    observer.bus = &bus;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(27), 0U, observe_timed_state,
+              &observer, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(27), 0U, observe_timed_state,
+              &observer, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 1U,
+              &report) == MIPSNES2_CPU_TIMING_SCHEDULER_ERROR);
+    CHECK(report.scheduler_result ==
+          MIPSNES2_SCHEDULER_EVENT_BUDGET_EXHAUSTED);
+    CHECK(report.events_dispatched == 1U && observer.calls == 1U);
+    CHECK(state.active && state.operation_pending);
+    CHECK(state.pending_operation.kind == MIPSNES2_CPU_OPERATION_WRITE);
+    CHECK(scheduler.now == UINT64_C(27));
+    CHECK(cpu.pc == UINT16_C(0x8003));
+    CHECK(cpu.instruction_cycles == UINT64_C(3));
+    CHECK(bus.access_count == reset_accesses + UINT64_C(3));
+    CHECK(bus.master_clocks == reset_clocks + UINT64_C(24));
+    CHECK(wram[0] == 0U && bus.wram_port_address == 0U);
+
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 1U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(observer.calls == 2U && report.events_dispatched == 2U);
+    CHECK(!state.active && scheduler.event_count == 0U);
+    CHECK(cpu.pc == expected_pc);
+    CHECK(cpu.instruction_cycles == expected_cycles);
+    CHECK(bus.access_count - reset_accesses == expected_accesses);
+    CHECK(bus.master_clocks - reset_clocks == expected_clocks);
+    CHECK(bus.wram_port_address == expected_port);
+    CHECK(wram[0] == expected_value);
+    CHECK(scheduler.now == UINT64_C(30));
+    return 0;
+}
+
+static int test_resumable_timed_costs_reset_and_validation(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_snes_bus_config config;
+    mipsnes2_cpu cpu;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_cpu_timing_state state;
+    mipsnes2_cpu_timing_report report;
+    timed_observer observer;
+    route_capture cpu_route;
+    uint64_t accesses_before;
+    uint64_t clocks_before;
+
+    /* Medium fetch plus one internal cycle. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.master_clocks == UINT64_C(14));
+
+    /* FastROM fetch plus one internal cycle. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    mipsnes2_snes_bus_write(&bus, UINT32_C(0x00420d), UINT8_C(1));
+    cpu.pbr = UINT8_C(0xc0);
+    cpu.pc = UINT16_C(0x8000);
+    cartridge.bankc0[0x8000] = UINT8_C(0xea);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.master_clocks == UINT64_C(12));
+
+    /* $420D charges its own access before enabling later FastROM fetches. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cpu.pbr = UINT8_C(0xc0);
+    cpu.pc = UINT16_C(0x8000);
+    cpu.a = UINT16_C(1);
+    cartridge.bankc0[0x8000] = UINT8_C(0x8d); /* STA $420D */
+    cartridge.bankc0[0x8001] = UINT8_C(0x0d);
+    cartridge.bankc0[0x8002] = UINT8_C(0x42);
+    cartridge.bankc0[0x8003] = UINT8_C(0xea);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.master_clocks == UINT64_C(30));
+    CHECK(bus.fastrom_enabled && cpu.pc == UINT16_C(0x8003));
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.master_clocks == UINT64_C(12));
+    CHECK(scheduler.now == UINT64_C(42));
+
+    /* Slow $4000 fetch supplied by a routed CPU-I/O fixture. */
+    (void)memset(&cpu_route, 0, sizeof(cpu_route));
+    cpu_route.read_value = UINT8_C(0xea);
+    config = base_config();
+    config.cpu_io = capture_interface(&cpu_route);
+    (void)memset(&cartridge, 0, sizeof(cartridge));
+    cartridge.bank00[0xfffc] = 0U;
+    cartridge.bank00[0xfffd] = UINT8_C(0x40);
+    config.cartridge = cartridge_interface(&cartridge);
+    (void)memset(wram, 0, sizeof(wram));
+    CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_OK);
+    mipsnes2_cpu_init(&cpu, mipsnes2_snes_bus_make_interface(&bus));
+    CHECK(mipsnes2_cpu_reset(&cpu) == MIPSNES2_CPU_OK);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.master_clocks == UINT64_C(18));
+    CHECK(cpu_route.reads == 1U && cpu.pc == UINT16_C(0x4001));
+
+    /* RESET is explicit: control is free and both vector reads are timed. */
+    config = base_config();
+    (void)memset(wram, 0, sizeof(wram));
+    (void)memset(&cartridge, 0, sizeof(cartridge));
+    cartridge.bank00[0xfffc] = UINT8_C(0x34);
+    cartridge.bank00[0xfffd] = UINT8_C(0x12);
+    config.cartridge = cartridge_interface(&cartridge);
+    CHECK(mipsnes2_snes_bus_init(&bus, &config) == MIPSNES2_SNES_BUS_OK);
+    mipsnes2_cpu_init(&cpu, mipsnes2_snes_bus_make_interface(&bus));
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timing_state_begin_reset(&state) ==
+          MIPSNES2_CPU_TIMING_OK);
+    (void)memset(&observer, 0, sizeof(observer));
+    observer.cpu = &cpu;
+    observer.bus = &bus;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(4), 0U, observe_timed_state,
+              &observer, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_C(4), 1U,
+              &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(observer.calls == 1U && observer.pc == 0U);
+    CHECK(observer.bus_accesses == 0U && observer.bus_clocks == 0U);
+    CHECK(state.active && state.operation_pending && state.reset_sequence);
+    CHECK(mipsnes2_cpu_timing_state_begin_reset(&state) ==
+          MIPSNES2_CPU_TIMING_STALE_STATE);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(cpu.pc == UINT16_C(0x1234));
+    CHECK(cpu.instruction_cycles == 0U);
+    CHECK(report.processor_cycles == 0U && report.internal_cycles == 0U);
+    CHECK(report.bus_accesses == UINT64_C(2));
+    CHECK(report.master_clocks == UINT64_C(16));
+    CHECK(report.events_dispatched == 1U);
+    CHECK(scheduler.now == UINT64_C(16));
+
+    /* Overflow and stale descriptors fail before a bus effect. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    accesses_before = bus.access_count;
+    bus.master_clocks = UINT64_MAX - UINT64_C(7);
+    clocks_before = bus.master_clocks;
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW);
+    CHECK(cpu.pc == UINT16_C(0x8000) && cpu.instruction_cycles == 0U);
+    CHECK(bus.access_count == accesses_before &&
+          bus.master_clocks == clocks_before);
+
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    accesses_before = bus.access_count;
+    clocks_before = bus.master_clocks;
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_C(4), 0U,
+              &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    cpu.pc = UINT16_C(0x8001);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_STALE_STATE);
+    CHECK(bus.access_count == accesses_before &&
+          bus.master_clocks == clocks_before);
+    CHECK(scheduler.now == UINT64_C(4));
+
+    /* Descriptor equality alone does not authorize an altered CPU state. */
+    cpu.pc = UINT16_C(0x8000);
+    cpu.a = UINT16_C(0x1234);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_STALE_STATE);
+    CHECK(bus.access_count == accesses_before &&
+          bus.master_clocks == clocks_before);
+
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    accesses_before = bus.access_count;
+    clocks_before = bus.master_clocks;
+    bus.access_count = UINT64_MAX;
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW);
+    CHECK(cpu.pc == UINT16_C(0x8000));
+    CHECK(bus.access_count == UINT64_MAX &&
+          bus.master_clocks == clocks_before);
+
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    accesses_before = bus.access_count;
+    clocks_before = bus.master_clocks;
+    mipsnes2_scheduler_init(&scheduler);
+    scheduler.now = UINT64_MAX - UINT64_C(7);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW);
+    CHECK(bus.access_count == accesses_before &&
+          bus.master_clocks == clocks_before);
+    CHECK(scheduler.now == UINT64_MAX - UINT64_C(7));
+
+    CHECK(mipsnes2_cpu_timed_resume(
+              NULL, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_INVALID_ARGUMENT);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state,
+              UINT64_MAX - UINT64_C(8), 0U,
+              &report) == MIPSNES2_CPU_TIMING_TIME_REGRESSION);
+    return 0;
+}
+
+static int test_resumable_timed_interrupt_order(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_io cpu_io;
+    mipsnes2_interrupt_lines lines;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_hv_timing hv_timing;
+    mipsnes2_cpu_timing_state state;
+    mipsnes2_cpu_timing_report report;
+    interrupt_event_context irq_event;
+    interrupt_event_context nmi_event;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    mipsnes2_interrupt_lines_init(&lines);
+    CHECK(initialize_cpu_bus_with_io(&bus, &cpu, &cpu_io) == 0);
+    CHECK(mipsnes2_hv_timing_init(
+              &hv_timing, MIPSNES2_HV_STANDARD_NTSC, false,
+              &cpu_io) == MIPSNES2_HV_OK);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    cpu.p &= (uint8_t)~MIPSNES2_CPU_FLAG_I;
+    irq_event.lines = &lines;
+    irq_event.nmi = false;
+    irq_event.calls = 0U;
+    nmi_event.lines = &lines;
+    nmi_event.nmi = true;
+    nmi_event.calls = 0U;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(4), 0U, raise_interrupt_line,
+              &irq_event, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(4), 1U, raise_interrupt_line,
+              &nmi_event, NULL) == MIPSNES2_SCHEDULER_OK);
+
+    CHECK(mipsnes2_cpu_timed_resume_hv_interrupts(
+              &cpu, &bus, &scheduler, &hv_timing, &lines, &state,
+              UINT64_MAX, 2U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(cpu.pc == UINT16_C(0x8001));
+    CHECK(irq_event.calls == 1U && nmi_event.calls == 1U);
+    CHECK(report.nmi_delivered && report.irq_level_delivered);
+    CHECK(cpu.nmi_pending && cpu.irq_level);
+    CHECK(scheduler.now == UINT64_C(14));
+    CHECK(hv_timing.elapsed_master_clocks == scheduler.now);
+
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume_hv_interrupts(
+              &cpu, &bus, &scheduler, &hv_timing, &lines, &state,
+              UINT64_MAX, 0U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(cpu.pc == UINT16_C(0x9000));
+    CHECK(!cpu.nmi_pending && cpu.irq_level);
+    CHECK(report.processor_cycles == UINT64_C(7));
+    CHECK(report.bus_accesses == UINT64_C(5));
+    CHECK(report.internal_cycles == UINT64_C(2));
+    CHECK(report.master_clocks == UINT64_C(52));
+    CHECK(scheduler.now == UINT64_C(66));
+    CHECK(hv_timing.elapsed_master_clocks == scheduler.now);
+    return 0;
+}
+
+static int test_resumable_timed_hv_budget_and_boundary_inputs(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_io cpu_io;
+    mipsnes2_interrupt_lines lines;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_hv_timing hv_timing;
+    mipsnes2_cpu_timing_state state;
+    mipsnes2_cpu_timing_report report;
+    timed_observer observer;
+    interrupt_event_context irq_event;
+    interrupt_event_context nmi_event;
+    uint64_t accesses_before;
+    uint64_t clocks_before;
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    mipsnes2_interrupt_lines_init(&lines);
+    CHECK(initialize_cpu_bus_with_io(&bus, &cpu, &cpu_io) == 0);
+    CHECK(mipsnes2_hv_timing_init(
+              &hv_timing, MIPSNES2_HV_STANDARD_NTSC, false,
+              &cpu_io) == MIPSNES2_HV_OK);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    cartridge.bank00[0x8000] = UINT8_C(0xea);
+    accesses_before = bus.access_count;
+    clocks_before = bus.master_clocks;
+    (void)memset(&observer, 0, sizeof(observer));
+    observer.cpu = &cpu;
+    observer.bus = &bus;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(4), 0U, observe_timed_state,
+              &observer, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_cpu_timed_resume_hv(
+              &cpu, &bus, &scheduler, &hv_timing, &state,
+              UINT64_MAX, 0U, &report) ==
+          MIPSNES2_CPU_TIMING_SCHEDULER_ERROR);
+    CHECK(report.scheduler_result ==
+          MIPSNES2_SCHEDULER_EVENT_BUDGET_EXHAUSTED);
+    CHECK(state.active && state.operation_pending);
+    CHECK(scheduler.now == 0U && hv_timing.elapsed_master_clocks == 0U);
+    CHECK(observer.calls == 0U && cpu.pc == UINT16_C(0x8000));
+    CHECK(bus.access_count == accesses_before &&
+          bus.master_clocks == clocks_before);
+    CHECK(mipsnes2_cpu_timed_resume_hv(
+              &cpu, &bus, &scheduler, &hv_timing, &state,
+              UINT64_MAX, 1U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(observer.calls == 1U && observer.timestamp == UINT64_C(4));
+    CHECK(hv_timing.elapsed_master_clocks == scheduler.now &&
+          scheduler.now == UINT64_C(14));
+
+    /* Current-timestamp events precede CONTROL; NMI wins over IRQ. */
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    mipsnes2_interrupt_lines_init(&lines);
+    CHECK(initialize_cpu_bus_with_io(&bus, &cpu, &cpu_io) == 0);
+    CHECK(mipsnes2_hv_timing_init(
+              &hv_timing, MIPSNES2_HV_STANDARD_NTSC, false,
+              &cpu_io) == MIPSNES2_HV_OK);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    cpu.p &= (uint8_t)~MIPSNES2_CPU_FLAG_I;
+    irq_event.lines = &lines;
+    irq_event.nmi = false;
+    irq_event.calls = 0U;
+    nmi_event.lines = &lines;
+    nmi_event.nmi = true;
+    nmi_event.calls = 0U;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, 0U, 0U, raise_interrupt_line,
+              &irq_event, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, 0U, 1U, raise_interrupt_line,
+              &nmi_event, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_cpu_timed_resume_hv_interrupts(
+              &cpu, &bus, &scheduler, &hv_timing, &lines, &state,
+              UINT64_MAX, 0U, &report) ==
+          MIPSNES2_CPU_TIMING_SCHEDULER_ERROR);
+    CHECK(irq_event.calls == 0U && nmi_event.calls == 0U);
+    CHECK(!state.active && cpu.pc == UINT16_C(0x8000));
+    CHECK(mipsnes2_cpu_timed_resume_hv_interrupts(
+              &cpu, &bus, &scheduler, &hv_timing, &lines, &state,
+              UINT64_MAX, 2U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(irq_event.calls == 1U && nmi_event.calls == 1U);
+    CHECK(report.nmi_delivered && report.irq_level_delivered);
+    CHECK(cpu.pc == UINT16_C(0x9000));
+    CHECK(scheduler.now == UINT64_C(52));
     return 0;
 }
 
@@ -861,6 +1463,11 @@ int main(void)
     CHECK(test_cpu_io_state_routing() == 0);
     CHECK(test_cpu_io_math_bus_cycles() == 0);
     CHECK(test_timed_cpu_steps() == 0);
+    CHECK(test_resumable_timed_horizon_and_chunks() == 0);
+    CHECK(test_resumable_timed_budget_and_write() == 0);
+    CHECK(test_resumable_timed_costs_reset_and_validation() == 0);
+    CHECK(test_resumable_timed_interrupt_order() == 0);
+    CHECK(test_resumable_timed_hv_budget_and_boundary_inputs() == 0);
     CHECK(test_timed_cpu_math_progress() == 0);
     CHECK(test_timed_cpu_hv_steps() == 0);
     CHECK(test_timed_cpu_interrupt_handoff() == 0);

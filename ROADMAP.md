@@ -77,10 +77,10 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] STP
 - [x] Bank wrapping
 - [x] Direct Page edge cases
-- [ ] [IN PROGRESS] Timing model — meaningful-access 5A22 clocks integrated; exact cycle sequencing pending
+- [ ] [IN PROGRESS] Timing model — resumable 5A22 operation timing is integrated; exact dummy/electrical sequencing pending
 - [x] CPU automated tests for all 256 opcode values
 - [ ] [IN PROGRESS] CPU regression tests — broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — all 256 opcode values, boundary IRQ/NMI/ABORT entry and RESET vector reads are resumable; scheduler/5A22 cursor wiring, signal-level RESET, exact dummy cycles and mid-instruction ABORT remain pending
+- [ ] [IN PROGRESS] Complete interpreter integration — all 256 opcode values, boundary IRQ/NMI/ABORT entry, RESET vector reads and scheduler/5A22 cursor wiring are resumable; signal-level RESET, exact dummy cycles and mid-instruction ABORT remain pending
 
 ## Phase 3 — Bus and Cartridge
 
@@ -126,10 +126,10 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Master timestamp units
 - [x] Clock ratio representation
 - [x] Event tie ordering
-- [ ] [IN PROGRESS] CPU event horizon — caller-owned operation cursor covers all 256 opcode values, boundary IRQ/NMI/ABORT entry and RESET vector reads, while the timed bridge remains atomic and general mid-operation event dispatch is pending
+- [x] CPU event horizon — caller-owned in-flight operation state advances through requested/event horizons and resumes event-budget failures without duplicate CPU/bus effects
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
 - [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
-- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation for all 256 opcode values, boundary IRQ/NMI/ABORT entry and RESET vector reads; signal-level RESET, dummy cycles, mid-instruction ABORT and scheduler wiring pending
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation plus scheduler wiring for all 256 opcode values, boundary IRQ/NMI/ABORT entry and explicit RESET; signal-level RESET, dummy cycles and mid-instruction ABORT pending
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
@@ -139,8 +139,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Long-run clock drift tests — exact ratio, H/V chunking and short common-domain runs verified; regional soak tests pending
 - [ ] [IN PROGRESS] CPU I/O registers — interrupt/timer, math, programmable-I/O and controller subsets implemented
 - [ ] [IN PROGRESS] H/V counter model — non-interlaced phase and counter-register subset verified; interlace and exact capture timing pending
-- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and atomic CPU delivery exist; exact write/match windows, interlace and within-instruction sampling pending
-- [ ] [IN PROGRESS] NMI edge and enable behavior — non-interlaced VBlank/NMI timing and atomic CPU delivery exist; exact sampling pending
+- [ ] [IN PROGRESS] IRQ compare behavior — stable-register non-interlaced H/V matches and operation-boundary CPU delivery exist; exact write/match windows, interlace and electrical sampling pending
+- [ ] [IN PROGRESS] NMI edge and enable behavior — non-interlaced VBlank/NMI timing and operation-boundary delivery exist; exact electrical sampling pending
 - [ ] [IN PROGRESS] Interrupt acknowledgement — RDNMI/TIMEUP base side effects exist; match-window/external IRQ cases absent
 - [ ] [IN PROGRESS] Interrupt ordering — CPU NMI-over-IRQ priority and independent IRQ-source aggregation verified; subsystem ties pending
 - [ ] [IN PROGRESS] CPU math register timing — 8/16 processor-cycle completion and result semantics verified; busy collisions and exact internal-cycle placement pending
@@ -150,7 +150,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Non-interlaced H/V counter-register foundation — dot projection, read selectors and deterministic WRIO bus adapter verified
 - [ ] Exact counter capture latency and held-low/repeated-latch hardware validation
 - [ ] SPC700 timer coordination
-- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing and atomic CPU input delivery host tests exist; exact-cycle cases pending
+- [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing, atomic compatibility and resumable operation-boundary delivery tests exist; exact electrical cases pending
 - [x] 5A22 CPU-I/O register/latch foundation
 - [x] Non-interlaced NTSC/PAL H/V timing foundation
 - [x] Stable-register non-interlaced H/V timer-IRQ foundation
