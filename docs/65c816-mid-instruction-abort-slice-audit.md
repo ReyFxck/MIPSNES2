@@ -40,8 +40,12 @@ ABORT priority over retained NMI/IRQ with stacked opcode PC, fail-closed
 handling before a WRAM-port write, and two same-timestamp pulse callbacks
 across event-budget exhaustion without duplicate reads or events.
 
-On the local GCC host, `make BUILD_DIR=build/abort-slice -j2 test`, the O3
-release suite and ASan+UBSan suite passed. For the local sanitizer runtime
+On implementation revision `b406689e886067a43cd2c2387c4bbf5057972044`,
+the local GCC host passed `make BUILD_DIR=build/abort-slice -j2 test`,
+`make BUILD_DIR=build/abort-release CFLAGS='-O3 -DNDEBUG' -j2 test` and
+`ASAN_OPTIONS=detect_leaks=0 make BUILD_DIR=build/abort-sanitize
+CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer'
+LDFLAGS='-fsanitize=address,undefined' -j2 test`. For the local sanitizer runtime
 `ASAN_OPTIONS=detect_leaks=0` was required by the existing `/proc` limitation;
 this does not claim a LeakSanitizer pass. Pinned PS2SDK/toolchain v2.0.0 and
 PSPSDK/toolchain v20261001 cross-builds passed, producing
@@ -53,6 +57,16 @@ ABORT API, implementation and deterministic test. XERJ is retrieval tooling,
 not behavioral evidence.
 Neither executable was run on a console. No performance or game compatibility
 claim follows from these builds.
+
+GitHub Actions for implementation revision `b406689` was inspected, rather than
+inferred from workflow files:
+
+- [Host CI run 40008423252](https://github.com/ReyFxck/MIPSNES2/actions/runs/40008423252)
+  — SUCCESS, GCC and Clang jobs; two nonempty host artifacts;
+- [PS2 CI run 40008423202](https://github.com/ReyFxck/MIPSNES2/actions/runs/40008423202)
+  — SUCCESS, nonempty target artifact;
+- [PSP CI run 40008423180](https://github.com/ReyFxck/MIPSNES2/actions/runs/40008423180)
+  — SUCCESS, nonempty target artifact.
 
 ## Next primary milestone
 
