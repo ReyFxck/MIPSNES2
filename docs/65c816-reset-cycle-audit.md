@@ -52,7 +52,7 @@ implementation was consulted or copied.
 - [x] Repository policy checker and link/checkbox validation pass.
 - [x] XERJ project-only dry-run/index/search/definition lookup completes with
   feedback disabled.
-- [ ] GitHub Host, PS2 and PSP workflows pass for the published implementation.
+- [x] GitHub Host, PS2 and PSP workflows pass for the published implementation.
 
 Local evidence:
 
@@ -68,6 +68,14 @@ Local evidence:
 Local Clang is unavailable. The GitHub Host workflow remains the required Clang
 release and sanitizer gate. These console results are cross-builds, not emulator or
 real-hardware runtime validation.
+
+Remote implementation commit
+[`365dd640e98e4baa5efcd5318850c48eff90ee7a`](https://github.com/ReyFxck/MIPSNES2/commit/365dd640e98e4baa5efcd5318850c48eff90ee7a)
+passed all configured workflows:
+
+- [Host CI run 39969422406](https://github.com/ReyFxck/MIPSNES2/actions/runs/39969422406) — GCC and Clang release, sanitizer, repository-policy and deterministic test jobs passed; both artifacts were uploaded;
+- [PS2 CI run 39969422449](https://github.com/ReyFxck/MIPSNES2/actions/runs/39969422449) — pinned toolchain install, cross-build, artifact staging, checksum verification and upload passed;
+- [PSP CI run 39969422272](https://github.com/ReyFxck/MIPSNES2/actions/runs/39969422272) — pinned toolchain install, cross-build, artifact staging, checksum verification and upload passed.
 
 ## Completion criterion
 
