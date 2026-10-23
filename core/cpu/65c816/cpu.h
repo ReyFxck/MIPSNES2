@@ -81,6 +81,7 @@ typedef struct {
     uint8_t pushed_status;
     uint8_t vector_low;
     bool interrupt_emulation;
+    bool rmw_modify_committed;
     bool active;
 } mipsnes2_cpu_cycle_state;
 

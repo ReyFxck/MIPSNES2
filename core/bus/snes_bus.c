@@ -319,6 +319,21 @@ void mipsnes2_snes_bus_write(mipsnes2_snes_bus *bus,
     bus->open_value = value;
 }
 
+mipsnes2_snes_bus_result mipsnes2_snes_bus_account_inhibited_write(
+    mipsnes2_snes_bus *bus, mipsnes2_address address, uint8_t value)
+{
+    if (bus == NULL || bus->wram == NULL) {
+        return MIPSNES2_SNES_BUS_INVALID_ARGUMENT;
+    }
+    address = mipsnes2_address24(address);
+    (void)mipsnes2_snes_bus_sync_hv_latch(bus);
+    account_access(bus, address);
+    mipsnes2_cpu_io_advance_math_cycles(bus->cpu_io_state, UINT64_C(1));
+    bus->open_value = value;
+    return bus->timing_overflow ? MIPSNES2_SNES_BUS_TIMING_OVERFLOW
+                                : MIPSNES2_SNES_BUS_OK;
+}
+
 mipsnes2_snes_bus_result mipsnes2_snes_bus_account_internal_cycles(
     mipsnes2_snes_bus *bus,
     uint64_t processor_cycles)

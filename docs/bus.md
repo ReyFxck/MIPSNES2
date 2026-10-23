@@ -26,6 +26,13 @@ inside bank zero. DBR or the long pointer then selects the final data bank, and 
 post-index is applied to the full 24-bit data address. The bus only normalizes the
 address it receives.
 
+An optional `mipsnes2_snes_bus_account_inhibited_write` clocks one addressed
+CPU write and updates the current deterministic data-bus latch without calling
+the mapped target. It is used only when a caller explicitly models an external
+gate rejecting a write after an ABORT pulse; normal CPU writes still route to
+their targets. This is not proof of real Ricoh 5A22 ABORT/write-gate behavior.
+See the [ABORT write audit](65c816-abort-write-qualification-audit.md).
+
 ## Implemented partial SNES map
 
 | Logical range | Implemented ownership |

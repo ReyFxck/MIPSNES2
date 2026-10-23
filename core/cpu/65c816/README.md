@@ -11,7 +11,8 @@ ASL/LSR/ROL/ROR form, memory INC/DEC, TSB/TRB, STZ, every stack push/pull form a
 every jump/subroutine call/return form, BRK/COP/RTI/WDM, MVP/MVN, WAI/STP and the
 IRQ/NMI plus boundary-visible ABORT contract is covered. Read
 [docs/65c816.md](../../../docs/65c816.md) for the exact implemented opcode list,
-timing contract and known limits. The scheduler bridge has a bounded read-only
-mid-instruction ABORT slice; write-side/electrical ABORT,
+timing contract and known limits. The scheduler bridge has a bounded
+mid-instruction ABORT and explicit external write-qualification slice;
+electrical ABORT and RTI/interrupt exceptions,
 signal-level reset/bus behavior, exact 5A22 timing and full machine integration remain
 incomplete; do not infer a complete SNES CPU subsystem.

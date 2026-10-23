@@ -4300,6 +4300,7 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin(
     state->pushed_status = 0U;
     state->vector_low = 0U;
     state->interrupt_emulation = false;
+    state->rmw_modify_committed = false;
     state->phase = (uint8_t)CPU_CYCLE_PHASE_BOUNDARY;
     state->active = true;
     return MIPSNES2_CPU_CYCLE_READY;
@@ -5129,6 +5130,7 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         state->data = modify_memory_value(
             cpu, state->data, !accumulator_is_8_bit(cpu),
             rmw_memory_operation(state->opcode));
+        state->rmw_modify_committed = true;
         cpu->instruction_cycles += UINT64_C(1);
         state->phase = (uint8_t)CPU_CYCLE_PHASE_RMW_WRITE_LOW;
         return MIPSNES2_CPU_CYCLE_READY;

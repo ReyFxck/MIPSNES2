@@ -61,6 +61,10 @@ uint8_t mipsnes2_snes_bus_read(mipsnes2_snes_bus *bus,
 void mipsnes2_snes_bus_write(mipsnes2_snes_bus *bus,
                              mipsnes2_address address,
                              uint8_t value);
+/* Account a qualified bus write whose external target did not accept it.
+ * This is a caller-selected bus policy, not automatic 5A22 ABORT behavior. */
+mipsnes2_snes_bus_result mipsnes2_snes_bus_account_inhibited_write(
+    mipsnes2_snes_bus *bus, mipsnes2_address address, uint8_t value);
 mipsnes2_snes_bus_result mipsnes2_snes_bus_account_internal_cycles(
     mipsnes2_snes_bus *bus,
     uint64_t processor_cycles);

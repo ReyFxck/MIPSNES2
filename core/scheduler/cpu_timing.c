@@ -67,6 +67,13 @@ static bool operation_matches(const mipsnes2_cpu_operation *left,
            left->value == right->value;
 }
 
+static void inhibited_cpu_write(void *context, mipsnes2_address address,
+                                uint8_t value)
+{
+    (void)mipsnes2_snes_bus_account_inhibited_write(
+        (mipsnes2_snes_bus *)context, address, value);
+}
+
 static void fill_resumable_report(
     const mipsnes2_cpu_timing_state *state,
     const mipsnes2_cpu *cpu,
@@ -368,6 +375,11 @@ static mipsnes2_cpu_timing_result commit_pending_operation(
         state->pending_operation.address ==
             mipsnes2_address_make(cpu->pbr, cpu->pc);
     mipsnes2_cpu_timing_result result;
+    void (*original_write)(void *, mipsnes2_address, uint8_t) =
+        cpu->bus.write8;
+    bool inhibited = state->abort_latched &&
+        state->pending_operation.kind == MIPSNES2_CPU_OPERATION_WRITE &&
+        state->abort_write_disposition == MIPSNES2_CPU_ABORT_WRITE_INHIBIT;
 
     result = validate_pending_operation(
         cpu, bus, state->bound_scheduler, state);
@@ -377,9 +389,13 @@ static mipsnes2_cpu_timing_result commit_pending_operation(
     if (fetch_candidate) {
         state->abort_cpu_checkpoint = *cpu;
     }
+    if (inhibited) {
+        cpu->bus.write8 = inhibited_cpu_write;
+    }
     *cycle_result = mipsnes2_cpu_cycle_commit(
         cpu, &state->cpu_cycle, &state->pending_operation,
         &state->cpu_result);
+    cpu->bus.write8 = original_write;
     if (*cycle_result != MIPSNES2_CPU_CYCLE_READY &&
         *cycle_result != MIPSNES2_CPU_CYCLE_COMPLETE) {
         return *cycle_result == MIPSNES2_CPU_CYCLE_STALE_OPERATION
@@ -395,6 +411,7 @@ static mipsnes2_cpu_timing_result commit_pending_operation(
     }
     if (state->pending_operation.kind == MIPSNES2_CPU_OPERATION_WRITE) {
         state->abort_write_committed = true;
+        state->abort_write_disposition = MIPSNES2_CPU_ABORT_WRITE_BLOCK;
     }
 
     if (state->pending_operation.kind == MIPSNES2_CPU_OPERATION_INTERNAL) {
@@ -457,11 +474,15 @@ static void bind_resumable_state(
     state->abort_checkpoint_valid = false;
     state->abort_latched = false;
     state->abort_write_committed = false;
+    state->abort_preserve_rmw_status = false;
+    state->abort_status_at_pulse = 0U;
+    state->abort_write_disposition = MIPSNES2_CPU_ABORT_WRITE_BLOCK;
     state->active = true;
 }
 
 static void restore_aborted_registers(mipsnes2_cpu *cpu,
-                                      const mipsnes2_cpu *checkpoint)
+                                      const mipsnes2_cpu *checkpoint,
+                                      const mipsnes2_cpu_timing_state *state)
 {
     cpu->a = checkpoint->a;
     cpu->x = checkpoint->x;
@@ -471,7 +492,8 @@ static void restore_aborted_registers(mipsnes2_cpu *cpu,
     cpu->pc = checkpoint->pc;
     cpu->dbr = checkpoint->dbr;
     cpu->pbr = checkpoint->pbr;
-    cpu->p = checkpoint->p;
+    cpu->p = state->abort_preserve_rmw_status
+                 ? state->abort_status_at_pulse : checkpoint->p;
     cpu->emulation = checkpoint->emulation;
     cpu->waiting = checkpoint->waiting;
     cpu->clock_stopped = checkpoint->clock_stopped;
@@ -562,6 +584,13 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
                 fill_resumable_report(state, cpu, bus, scheduler, report);
                 return MIPSNES2_CPU_TIMING_HORIZON_REACHED;
             }
+            if (state->abort_latched &&
+                state->pending_operation.kind == MIPSNES2_CPU_OPERATION_WRITE &&
+                state->abort_write_disposition ==
+                    MIPSNES2_CPU_ABORT_WRITE_BLOCK) {
+                fill_resumable_report(state, cpu, bus, scheduler, report);
+                return MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED;
+            }
             result = commit_pending_operation(
                 cpu, bus, state, &cycle_result);
         } else {
@@ -584,9 +613,11 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
                     cpu, bus, state, &operation, &cycle_result);
             } else {
                 if (state->abort_latched &&
-                    operation.kind == MIPSNES2_CPU_OPERATION_WRITE) {
+                    operation.kind == MIPSNES2_CPU_OPERATION_WRITE &&
+                    state->abort_write_disposition ==
+                        MIPSNES2_CPU_ABORT_WRITE_BLOCK) {
                     fill_resumable_report(state, cpu, bus, scheduler, report);
-                    return MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION;
+                    return MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED;
                 }
                 result = prepare_pending_operation(
                     cpu, bus, scheduler, state, &operation);
@@ -604,7 +635,7 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
             if (state->abort_latched &&
                 state->cpu_result == MIPSNES2_CPU_OK) {
                 restore_aborted_registers(
-                    cpu, &state->abort_cpu_checkpoint);
+                    cpu, &state->abort_cpu_checkpoint, state);
             }
             sample_interrupt_lines(
                 state, cpu, bus, interrupt_lines, true);
@@ -657,11 +688,42 @@ mipsnes2_cpu_timing_result mipsnes2_cpu_timing_pulse_abort(
         opcode == UINT8_C(0xdb)) {
         return MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION;
     }
-    if (state->operation_pending &&
-        state->pending_operation.kind == MIPSNES2_CPU_OPERATION_WRITE) {
-        return MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION;
+    if (state->abort_latched) {
+        return MIPSNES2_CPU_TIMING_OK;
     }
     state->abort_latched = true;
+    state->abort_preserve_rmw_status =
+        state->cpu_cycle.rmw_modify_committed;
+    state->abort_status_at_pulse = state->bound_cpu->p;
+    return MIPSNES2_CPU_TIMING_OK;
+}
+
+mipsnes2_cpu_timing_result mipsnes2_cpu_timing_resolve_abort_write(
+    mipsnes2_cpu_timing_state *state,
+    mipsnes2_cpu_abort_write_disposition disposition)
+{
+    mipsnes2_cpu_operation operation;
+
+    if (state == NULL ||
+        (disposition != MIPSNES2_CPU_ABORT_WRITE_EXTERNAL &&
+         disposition != MIPSNES2_CPU_ABORT_WRITE_INHIBIT)) {
+        return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+    }
+    if (!state->active || !state->abort_latched ||
+        state->abort_write_disposition != MIPSNES2_CPU_ABORT_WRITE_BLOCK) {
+        return MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION;
+    }
+    if (state->operation_pending) {
+        operation = state->pending_operation;
+    } else if (mipsnes2_cpu_cycle_peek(
+                   state->bound_cpu, &state->cpu_cycle, &operation) !=
+               MIPSNES2_CPU_CYCLE_READY) {
+        return MIPSNES2_CPU_TIMING_STALE_STATE;
+    }
+    if (operation.kind != MIPSNES2_CPU_OPERATION_WRITE) {
+        return MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION;
+    }
+    state->abort_write_disposition = disposition;
     return MIPSNES2_CPU_TIMING_OK;
 }
 

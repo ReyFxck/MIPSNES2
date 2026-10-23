@@ -172,10 +172,14 @@ back. Callbacks must not mutate CPU/cursor/FastROM/bus counters during an in-fli
 operation; stale descriptors/counters are rejected before its commit. Active-cursor
 cancellation/checkpoint recovery is not implemented. This is not a DMA arbiter.
 The timing-state ABORT pulse is a narrow exception: after opcode fetch it latches
-without mutating the active CPU descriptor. Read-only paths restore pre-fetch
-registers before the next boundary ABORT entry; a later write fails closed
-before its effect. See the
+without mutating the active CPU descriptor. A pending write blocks at its original
+timed endpoint; a future write blocks before admission until the caller qualifies
+that byte as externally accepted or inhibited;
+the latter clocks the bus without changing its target. This is a caller-supplied
+external policy, not claimed 5A22 write-gate behavior. See the
 [mid-instruction ABORT audit](65c816-mid-instruction-abort-slice-audit.md).
+The [write-qualification audit](65c816-abort-write-qualification-audit.md)
+records recovery, tests and outstanding RMW electrical/RTI exceptions.
 See the
 [access-timing post-mortem](cpu-access-timing-postmortem.md),
 [cycle-contract audit](65c816-cycle-contract-audit.md) and

@@ -24,9 +24,16 @@ typedef enum {
     MIPSNES2_CPU_TIMING_SCHEDULER_ERROR,
     MIPSNES2_CPU_TIMING_HORIZON_REACHED,
     MIPSNES2_CPU_TIMING_STALE_STATE,
+    MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED,
     MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION,
     MIPSNES2_CPU_TIMING_TIME_REGRESSION
 } mipsnes2_cpu_timing_result;
+
+typedef enum {
+    MIPSNES2_CPU_ABORT_WRITE_BLOCK = 0,
+    MIPSNES2_CPU_ABORT_WRITE_EXTERNAL,
+    MIPSNES2_CPU_ABORT_WRITE_INHIBIT
+} mipsnes2_cpu_abort_write_disposition;
 
 typedef struct {
     mipsnes2_cpu_result cpu_result;
@@ -73,6 +80,8 @@ typedef struct {
     size_t events_dispatched;
     mipsnes2_cpu_result cpu_result;
     uint8_t operation_master_clocks;
+    uint8_t abort_status_at_pulse;
+    mipsnes2_cpu_abort_write_disposition abort_write_disposition;
     bool pending_fastrom_enabled;
     bool nmi_delivered;
     bool irq_level_delivered;
@@ -84,6 +93,7 @@ typedef struct {
     bool abort_checkpoint_valid;
     bool abort_latched;
     bool abort_write_committed;
+    bool abort_preserve_rmw_status;
 } mipsnes2_cpu_timing_state;
 
 void mipsnes2_cpu_timing_state_init(mipsnes2_cpu_timing_state *state);
@@ -92,14 +102,24 @@ mipsnes2_cpu_timing_result mipsnes2_cpu_timing_state_begin_reset(
 
 /*
  * Latch a mid-instruction ABORT without modifying the active CPU descriptor.
- * Supported only after opcode fetch and before any write in the instruction.
- * If an instruction subsequently reaches a write, resume fails closed before
- * that write; external-write qualification and recovery remain future work.
+ * Supported only after opcode fetch and before any committed write.
+ * A pending write blocks at its endpoint, and a future write blocks before
+ * admission, until the caller resolves the byte with
+ * mipsnes2_cpu_timing_resolve_abort_write(). The disposition is one-shot.
  * RESET, interrupt entry, WAI/STP and RTI are not covered by this contract.
+ * A late RMW pulse retains the status already modified by its modify phase.
+ * Repeated pulses within one accepted instruction do not alter the first
+ * pulse's checkpoint or status choice.
  * Callers may invoke this from a scheduler event callback.
  */
 mipsnes2_cpu_timing_result mipsnes2_cpu_timing_pulse_abort(
     mipsnes2_cpu_timing_state *state);
+/* EXTERNAL models a target that accepts the write; INHIBIT models a caller-
+ * qualified external gate that rejects its effect but still consumes the bus
+ * cycle and drives the open-bus latch. Neither is selected automatically. */
+mipsnes2_cpu_timing_result mipsnes2_cpu_timing_resolve_abort_write(
+    mipsnes2_cpu_timing_state *state,
+    mipsnes2_cpu_abort_write_disposition disposition);
 
 /*
  * Advance one instruction (or an explicitly requested RESET sequence) no

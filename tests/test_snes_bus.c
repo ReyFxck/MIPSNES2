@@ -1148,10 +1148,23 @@ static int test_resumable_mid_instruction_abort(void)
           MIPSNES2_CPU_TIMING_OK);
     CHECK(mipsnes2_cpu_timed_resume(
               &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
-              &report) == MIPSNES2_CPU_TIMING_UNSUPPORTED_OPERATION);
+              &report) == MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED);
     CHECK(state.active && !state.operation_pending);
     CHECK(wram[0] == 0U && bus.wram_port_address == 0U);
     CHECK(scheduler.now == UINT64_C(24));
+    CHECK(mipsnes2_cpu_timing_resolve_abort_write(
+              &state, MIPSNES2_CPU_ABORT_WRITE_INHIBIT) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(!state.active && cpu.abort_pending);
+    CHECK(cpu.pc == UINT16_C(0x8000));
+    CHECK(wram[0] == 0U && bus.wram_port_address == 0U);
+    CHECK(bus.open_value == UINT8_C(0x5a));
+    CHECK(report.bus_accesses == UINT64_C(4));
+    CHECK(report.master_clocks == UINT64_C(30));
+    CHECK(scheduler.now == UINT64_C(30));
 
     /* The event callback only changes caller-owned timing state. A budget
      * retry must not replay its pulse or the uncommitted operand read. */
@@ -1185,6 +1198,240 @@ static int test_resumable_mid_instruction_abort(void)
     CHECK(cpu.a == UINT16_C(0x0033) && cpu.pc == UINT16_C(0x8000));
     CHECK(cpu.abort_pending && bus.access_count ==
           accesses_before + UINT64_C(2));
+    return 0;
+}
+
+static int test_resumable_abort_qualified_writes(void)
+{
+    mipsnes2_snes_bus bus;
+    mipsnes2_cpu cpu;
+    mipsnes2_scheduler scheduler;
+    mipsnes2_cpu_timing_state state;
+    mipsnes2_cpu_timing_report report;
+    abort_event_context abort_event;
+    uint64_t access_before;
+    uint16_t stack_before;
+    uint8_t status_before;
+
+    /* A pulse while a WRITE is already timed retains its original endpoint;
+     * the caller resolves the exact pending descriptor after the block. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0x8d); /* STA $2180 */
+    cartridge.bank00[0x8001] = UINT8_C(0x80);
+    cartridge.bank00[0x8002] = UINT8_C(0x21);
+    cpu.a = UINT16_C(0x004c);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    abort_event.state = &state;
+    abort_event.calls = 0U;
+    abort_event.result = MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(27), 0U, pulse_timed_abort,
+              &abort_event, NULL) == MIPSNES2_SCHEDULER_OK);
+    access_before = bus.access_count;
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 1U,
+              &report) == MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED);
+    CHECK(abort_event.calls == 1U && abort_event.result ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(state.operation_pending && state.operation_end_time == UINT64_C(30));
+    CHECK(scheduler.now == UINT64_C(30) && wram[0] == 0U);
+    CHECK(bus.access_count == access_before + UINT64_C(3));
+    CHECK(mipsnes2_cpu_timing_resolve_abort_write(
+              &state, MIPSNES2_CPU_ABORT_WRITE_BLOCK) ==
+          MIPSNES2_CPU_TIMING_INVALID_ARGUMENT);
+    CHECK(mipsnes2_cpu_timing_resolve_abort_write(
+              &state, MIPSNES2_CPU_ABORT_WRITE_EXTERNAL) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(!state.active && cpu.abort_pending && cpu.pc == UINT16_C(0x8000));
+    CHECK(scheduler.now == UINT64_C(30));
+    CHECK(wram[0] == UINT8_C(0x4c) && bus.wram_port_address == UINT32_C(1));
+    CHECK(bus.access_count == access_before + UINT64_C(4));
+
+    /* Same-endpoint callbacks and budget retry cannot duplicate a rejected
+     * write; the write still consumes its original 6-clock interval. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0x8d);
+    cartridge.bank00[0x8001] = UINT8_C(0x80);
+    cartridge.bank00[0x8002] = UINT8_C(0x21);
+    cpu.a = UINT16_C(0x004c);
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    abort_event.state = &state;
+    abort_event.calls = 0U;
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(30), 0U, pulse_timed_abort,
+              &abort_event, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(mipsnes2_scheduler_schedule(
+              &scheduler, UINT64_C(30), 1U, pulse_timed_abort,
+              &abort_event, NULL) == MIPSNES2_SCHEDULER_OK);
+    access_before = bus.access_count;
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 1U,
+              &report) == MIPSNES2_CPU_TIMING_SCHEDULER_ERROR);
+    CHECK(abort_event.calls == 1U && abort_event.result ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(state.operation_pending && scheduler.now == UINT64_C(30));
+    CHECK(bus.access_count == access_before + UINT64_C(3));
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 1U,
+              &report) == MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED);
+    CHECK(abort_event.calls == 2U && report.events_dispatched == 2U);
+    CHECK(wram[0] == 0U && bus.wram_port_address == 0U);
+    CHECK(mipsnes2_cpu_timing_resolve_abort_write(
+              &state, MIPSNES2_CPU_ABORT_WRITE_INHIBIT) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(scheduler.now == UINT64_C(30) && cpu.abort_pending);
+    CHECK(wram[0] == 0U && bus.wram_port_address == 0U);
+    CHECK(bus.access_count == access_before + UINT64_C(4));
+
+    /* Pre-modify RMW ABORT can externally inhibit the future write;
+     * status and memory return to the pre-fetch values. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0xe6); /* INC $00 */
+    cartridge.bank00[0x8001] = 0U;
+    wram[0] = UINT8_C(0x7f);
+    cpu.p &= (uint8_t)~MIPSNES2_CPU_FLAG_N;
+    status_before = cpu.p;
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_C(20), 0U,
+              &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(mipsnes2_cpu_timing_pulse_abort(&state) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED);
+    CHECK(!state.operation_pending && state.cpu_cycle.rmw_modify_committed);
+    CHECK(wram[0] == UINT8_C(0x7f));
+    CHECK(mipsnes2_cpu_timing_pulse_abort(&state) ==
+          MIPSNES2_CPU_TIMING_OK); /* same accepted pulse remains idempotent */
+    CHECK(mipsnes2_cpu_timing_resolve_abort_write(
+              &state, MIPSNES2_CPU_ABORT_WRITE_INHIBIT) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(cpu.abort_pending && cpu.pc == UINT16_C(0x8000));
+    CHECK(cpu.p == status_before && wram[0] == UINT8_C(0x7f));
+    CHECK(report.bus_accesses == UINT64_C(4) &&
+          report.internal_cycles == UINT64_C(1));
+
+    /* A late RMW pulse retains the status already changed by the modify
+     * phase, while a caller-inhibited write leaves memory untouched. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0xe6);
+    cartridge.bank00[0x8001] = 0U;
+    wram[0] = UINT8_C(0x7f);
+    cpu.p &= (uint8_t)~MIPSNES2_CPU_FLAG_N;
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_C(30), 0U,
+              &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(state.cpu_cycle.rmw_modify_committed);
+    CHECK((cpu.p & MIPSNES2_CPU_FLAG_N) != 0U);
+    status_before = cpu.p;
+    CHECK(mipsnes2_cpu_timing_pulse_abort(&state) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED);
+    CHECK(mipsnes2_cpu_timing_resolve_abort_write(
+              &state, MIPSNES2_CPU_ABORT_WRITE_INHIBIT) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(cpu.abort_pending && cpu.pc == UINT16_C(0x8000));
+    CHECK(cpu.p == status_before && wram[0] == UINT8_C(0x7f));
+
+    /* Stack writes are also qualified rather than silently committed. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0x48); /* PHA */
+    cpu.a = UINT16_C(0x007a);
+    stack_before = cpu.s;
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_C(10), 0U,
+              &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(mipsnes2_cpu_timing_pulse_abort(&state) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED);
+    CHECK(wram[stack_before] == 0U);
+    CHECK(mipsnes2_cpu_timing_resolve_abort_write(
+              &state, MIPSNES2_CPU_ABORT_WRITE_INHIBIT) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(cpu.s == stack_before && cpu.pc == UINT16_C(0x8000));
+    CHECK(cpu.abort_pending && wram[stack_before] == 0U);
+
+    /* Native 16-bit RMW needs an independent decision for each byte. The
+     * ABORT entry then pushes the original bank and opcode address. */
+    CHECK(initialize_cpu_bus(&bus, &cpu) == 0);
+    cartridge.bank00[0x8000] = UINT8_C(0xee); /* INC $1000 */
+    cartridge.bank00[0x8001] = UINT8_C(0x00);
+    cartridge.bank00[0x8002] = UINT8_C(0x10);
+    cartridge.bank00[0xffe8] = UINT8_C(0x00);
+    cartridge.bank00[0xffe9] = UINT8_C(0x95);
+    wram[UINT16_C(0x1000)] = UINT8_C(0xff);
+    wram[UINT16_C(0x1001)] = UINT8_C(0x00);
+    cpu.emulation = false;
+    cpu.p &= (uint8_t)~MIPSNES2_CPU_FLAG_M;
+    cpu.s = UINT16_C(0x1ff0);
+    status_before = cpu.p;
+    mipsnes2_scheduler_init(&scheduler);
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_C(27), 0U,
+              &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(mipsnes2_cpu_timing_pulse_abort(&state) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED);
+    CHECK(scheduler.now == UINT64_C(46));
+    CHECK(mipsnes2_cpu_timing_resolve_abort_write(
+              &state, MIPSNES2_CPU_ABORT_WRITE_INHIBIT) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_ABORT_WRITE_BLOCKED);
+    CHECK(scheduler.now == UINT64_C(54));
+    CHECK(wram[UINT16_C(0x1000)] == UINT8_C(0xff));
+    CHECK(mipsnes2_cpu_timing_resolve_abort_write(
+              &state, MIPSNES2_CPU_ABORT_WRITE_INHIBIT) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(cpu.abort_pending && cpu.pc == UINT16_C(0x8000));
+    CHECK(cpu.p == status_before && cpu.s == UINT16_C(0x1ff0));
+    CHECK(wram[UINT16_C(0x1000)] == UINT8_C(0xff) &&
+          wram[UINT16_C(0x1001)] == 0U);
+    CHECK(report.processor_cycles == UINT64_C(8) &&
+          report.bus_accesses == UINT64_C(7) &&
+          report.master_clocks == UINT64_C(62));
+    mipsnes2_cpu_timing_state_init(&state);
+    CHECK(mipsnes2_cpu_timed_resume(
+              &cpu, &bus, &scheduler, &state, UINT64_MAX, 0U,
+              &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(cpu.pc == UINT16_C(0x9500) && cpu.s == UINT16_C(0x1fec));
+    CHECK(wram[UINT16_C(0x1ff0)] == 0U &&
+          wram[UINT16_C(0x1fef)] == UINT8_C(0x80) &&
+          wram[UINT16_C(0x1fee)] == 0U);
     return 0;
 }
 
@@ -1605,6 +1852,7 @@ int main(void)
     CHECK(test_resumable_timed_costs_reset_and_validation() == 0);
     CHECK(test_resumable_timed_interrupt_order() == 0);
     CHECK(test_resumable_mid_instruction_abort() == 0);
+    CHECK(test_resumable_abort_qualified_writes() == 0);
     CHECK(test_resumable_timed_hv_budget_and_boundary_inputs() == 0);
     CHECK(test_timed_cpu_math_progress() == 0);
     CHECK(test_timed_cpu_hv_steps() == 0);

@@ -67,6 +67,8 @@ The scheduler-connected operation-timing bridge is recorded in
 [docs/cpu-operation-timing-audit.md](docs/cpu-operation-timing-audit.md).
 The bounded mid-instruction ABORT read-only slice is recorded in
 [docs/65c816-mid-instruction-abort-slice-audit.md](docs/65c816-mid-instruction-abort-slice-audit.md).
+The opt-in ABORT write-qualification and recovery mechanism is recorded in
+[docs/65c816-abort-write-qualification-audit.md](docs/65c816-abort-write-qualification-audit.md).
 
 ## State and evidence rules
 
@@ -726,6 +728,17 @@ retry. GCC host debug/O3/sanitizer suites and pinned PS2/PSP cross-builds pass;
 console execution remains unavailable. Evidence and limits are in
 [docs/65c816-mid-instruction-abort-slice-audit.md](docs/65c816-mid-instruction-abort-slice-audit.md).
 
+The 2026-10-23 follow-up adds explicit per-write `EXTERNAL`/`INHIBIT`
+qualification after a blocked ABORT write. The ordinary bus path is restored
+after each cursor operation; an inhibited write consumes its timed bus cycle
+without changing WRAM/MMIO/cartridge targets. Earlier accepted external writes
+remain visible and are never rolled back. Early RMW and stack paths are covered;
+late post-modify RMW pulses retain status at the pulse under WDC section 7.4's
+exception. Electrical gate policy, RMW electrical phase, RTI/interrupt
+exceptions and real-console measurements
+remain open. Evidence is in
+[docs/65c816-abort-write-qualification-audit.md](docs/65c816-abort-write-qualification-audit.md).
+
 ## Current blockers and diagnostic exceptions
 
 No game-specific diagnostics exist. The reference bus has a deterministic unmapped
@@ -763,7 +776,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Decimal arithmetic — all ADC/SBC forms verified at both M widths, including valid and invalid packed-BCD digits
 - [x] IRQ CPU input and entry — SNES IRQ generation/timing remains Phase 4
 - [x] NMI CPU input and entry — SNES NMI generation/timing remains Phase 4
-- [ ] [IN PROGRESS] ABORT input and entry — boundary pulse, priority, vectors, stack/status and WAI no-wake restart behavior verified; read-only operation-timing slice added, writes and electrical sampling pending
+- [ ] [IN PROGRESS] ABORT input and entry — boundary pulse, priority, vectors, stack/status and WAI no-wake restart behavior verified; read-only plus explicitly qualified write paths added, electrical sampling and RTI/interrupt exceptions pending
 - [ ] [IN PROGRESS] RESET — vector and documented visible state subset only
 - [x] BRK
 - [x] COP
@@ -1262,7 +1275,7 @@ platform persistence remains incomplete.
 - [x] Atomic CPU-step delta advances scheduler and H/V together
 - [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
 - [x] Caller-owned CPU-operation state advances scheduler/H/V through requested horizons and event-budget retries with exact-once commit
-- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation and scheduler wiring are verified for all 256 opcode values, boundary IRQ/NMI/ABORT entry, read-only mid-instruction ABORT slice and explicit RESET; signal-level RESET, dummy cycles and write-side ABORT remain pending
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation and scheduler wiring are verified for all 256 opcode values, boundary IRQ/NMI/ABORT entry, explicit write-qualified ABORT subset and RESET; signal-level RESET, dummy cycles and full electrical ABORT remain pending
 
 ### Interrupt-line aggregation subset
 

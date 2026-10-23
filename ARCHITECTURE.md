@@ -307,10 +307,12 @@ latched with its 6/8/12-clock cost, may remain in flight across requested horizo
 event-budget failures, and commits exactly once after the shared time domain reaches
 its endpoint. Events at the endpoint run before the CPU/bus commit under the current
 inclusive scheduler contract. RESET is selected explicitly and retains its distinct
-zero-processor-cycle accounting. A bounded read-only mid-instruction `ABORT` pulse
-restores pre-fetch CPU registers before the following boundary entry; pending/future
-writes are refused or fail closed before their effect. Full write qualification,
-signal-level RESET, dummy cycles and undocumented bus activity remain absent.
+zero-processor-cycle accounting. A bounded mid-instruction `ABORT` pulse restores
+pre-fetch CPU registers before the following boundary entry. Writes block until
+the caller qualifies each external effect or explicitly inhibits the target while
+still accounting the bus cycle. This is not automatic SNES external-gate behavior;
+signal-level RESET, RMW electrical and RTI/interrupt exceptions, dummy cycles and undocumented bus
+activity remain absent.
 The original atomic timed-step
 entry points retain their established semantics. The initial
 foundation is recorded in [the cycle-contract audit](docs/65c816-cycle-contract-audit.md);
@@ -327,6 +329,8 @@ transactional limits are recorded in the
 [operation-timing audit](docs/cpu-operation-timing-audit.md).
 The ABORT slice and its hard limits are recorded in the
 [mid-instruction ABORT audit](docs/65c816-mid-instruction-abort-slice-audit.md).
+The recoverable per-write decision and its electrical limits are recorded in
+[the ABORT write-qualification audit](docs/65c816-abort-write-qualification-audit.md).
 
 ## Scheduler and timing foundation
 
