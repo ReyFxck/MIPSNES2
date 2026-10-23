@@ -88,9 +88,20 @@ Local validation on this revision:
   records, 54/54 code files indexed, zero junked; a search found the new API in
   core and its deterministic test. No external emulator-source corpus was indexed.
 
-Cross-compilation is not a real-console execution or performance measurement.
-GitHub Actions results for the published commit must be inspected separately;
-local results do not imply CI success.
+GitHub Actions for implementation commit
+[`26db500`](https://github.com/ReyFxck/MIPSNES2/commit/26db500375012bb46994f15035302010e4bb7704)
+were inspected separately:
+
+- [Host CI run 40006566910](https://github.com/ReyFxck/MIPSNES2/actions/runs/40006566910)
+  — SUCCESS, GCC and Clang release and sanitizer steps; two nonempty development
+  artifacts uploaded;
+- [PS2 CI run 40006566929](https://github.com/ReyFxck/MIPSNES2/actions/runs/40006566929)
+  — SUCCESS, pinned-toolchain cross-build, checksum staging and nonempty artifact;
+- [PSP CI run 40006566865](https://github.com/ReyFxck/MIPSNES2/actions/runs/40006566865)
+  — SUCCESS, pinned-toolchain cross-build, checksum staging and nonempty artifact.
+
+Cross-compilation and CI artifacts are not real-console execution or performance
+measurements. No compatibility result is claimed.
 
 ## Explicit limits and next milestone
 
