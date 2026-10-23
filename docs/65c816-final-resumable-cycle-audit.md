@@ -52,14 +52,14 @@ and WAI/STP behavior. No emulator implementation was consulted or copied.
 - [x] Existing both-width load/store/addressing matrices exercise the same shared
   operand phases now used by the 101 read/ALU opcodes.
 - [x] Host GCC release tests pass.
-- [ ] Host Clang release tests pass in CI; Clang is unavailable locally.
+- [x] Host Clang release tests pass in CI; Clang is unavailable locally.
 - [x] GCC AddressSanitizer/UndefinedBehaviorSanitizer tests pass.
-- [ ] Clang AddressSanitizer/UndefinedBehaviorSanitizer tests pass in CI.
+- [x] Clang AddressSanitizer/UndefinedBehaviorSanitizer tests pass in CI.
 - [x] Pinned PS2 cross-build passes before PSP validation.
 - [x] Pinned PSP cross-build passes after PS2 validation.
 - [x] Repository policy checker and link/checkbox validation pass.
 - [x] XERJ project-only index/search/update completes with feedback disabled.
-- [ ] GitHub Host, PS2 and PSP workflows pass for the implementation commit.
+- [x] GitHub Host, PS2 and PSP workflows pass for the implementation commit.
 
 Local evidence:
 
@@ -70,6 +70,14 @@ Local evidence:
 | PS2 v2.0.0 / GCC 15.2.0 | Passed; ELF SHA-256 `e53be3a0bcc724d2364495ce56211a25309f1cbc9427e0758f3336c8077df448` |
 | PSP v20261001 / GCC 15.2.0 | Passed; PBP SHA-256 `e5bc0f7f5874bf888edb7f2bc9eea900aac0b939891913d77dca6f48a51cffb1` |
 | XERJ v1.0.0-rc.97 | Dry-run and write indexed 157 first-party files / 1,252 records; search and definition lookup passed |
+
+Remote implementation commit
+[`f03a5ed8879f5f181a0b9b3115700fc67f9da909`](https://github.com/ReyFxck/MIPSNES2/commit/f03a5ed8879f5f181a0b9b3115700fc67f9da909)
+passed all configured workflows:
+
+- [Host CI run 39879111734](https://github.com/ReyFxck/MIPSNES2/actions/runs/39879111734) — GCC and Clang release, sanitizer and deterministic test jobs passed;
+- [PS2 CI run 39879111727](https://github.com/ReyFxck/MIPSNES2/actions/runs/39879111727) — pinned toolchain cross-build and artifact staging passed;
+- [PSP CI run 39879111729](https://github.com/ReyFxck/MIPSNES2/actions/runs/39879111729) — pinned toolchain cross-build and artifact staging passed.
 
 ## Completion criterion
 
