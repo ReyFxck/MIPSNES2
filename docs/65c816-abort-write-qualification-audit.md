@@ -81,9 +81,22 @@ Local GCC host validation on this checkout:
   1,329 live records, 54/54 code files indexed, zero code junk; search
   returned the new write-resolution API in the core and header.
 
+The implementation tree `51802cf8471e0ec1b5b17b06ca83de3c5158777d`
+was published to `main` as commit `383ceb241b751cafa737ebf3f50fcab4d21f286b`.
+Its actual GitHub Actions runs completed successfully:
+
+- [Host CI run 40010651572](https://github.com/ReyFxck/MIPSNES2/actions/runs/40010651572)
+  — success; nonempty `mipsnes2-host-gcc-383ceb241b751cafa737ebf3f50fcab4d21f286b`
+  artifact (18,301 bytes);
+- [PS2 CI run 40010651577](https://github.com/ReyFxck/MIPSNES2/actions/runs/40010651577)
+  — success; nonempty `mipsnes2-ps2-383ceb241b751cafa737ebf3f50fcab4d21f286b`
+  artifact (615,719 bytes);
+- [PSP CI run 40010651609](https://github.com/ReyFxck/MIPSNES2/actions/runs/40010651609)
+  — success; nonempty `mipsnes2-psp-383ceb241b751cafa737ebf3f50fcab4d21f286b`
+  artifact (126,281 bytes).
+
 No real PS2/PSP hardware, PCSX2/PPSSPP runtime, profiling or SNES ABORT
-electrical measurement was performed. GitHub Actions evidence will be recorded
-after the implementation commit has actually run; local compilation is not CI.
+electrical measurement was performed. Cross-build and CI are not console execution.
 
 ## Next primary milestone
 
