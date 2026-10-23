@@ -4,14 +4,18 @@ The EE initially performs SNES CPU, bus, scheduler, PPU, DMA/HDMA, SPC700, DSP a
 cartridge work. This is not a generic MIPS port. PS2 receives architectural priority
 when measured gains preserve correctness and isolation.
 
-## Current scaffold and build
+## Current diagnostic and build
 
-`platform/ps2/main.c` is a small stdout build probe using the shared logger. The
-scaffold cross-build also compiles and links the reference CPU and bus so target
-compiler regressions are visible, but it does not instantiate them. It does not
-initialize GS, input, IOP services or audio. Console runtime remains unverified even
-when cross-compilation succeeds. The exact foundation verification record is in
-[bootstrap-audit.md](bootstrap-audit.md).
+`platform/ps2/main.c` displays five deterministic shared-core checks using the
+PS2SDK debug screen and logs the same results to stdout. Its original embedded
+fixtures exercise CPU instructions, scheduler horizons and explicit ABORT write
+qualification; `tests/test_ps2_diagnostic.c` runs the identical suite on the host.
+This diagnostic is not a game, a ROM runner, or the final GS/video backend. It
+does not initialize pads, cartridge files, IOP peripherals or audio. PS2 runtime
+remains unverified until its screen result is captured in an emulator and then on
+physical hardware. The original scaffold record is in
+[bootstrap-audit.md](bootstrap-audit.md); see the
+[ARMSX2 diagnostic guide](ps2-armsx2-diagnostic.md) for the mobile test.
 
 Linux x86-64 toolchain pin: ps2dev **v2.0.0**, archive SHA-256 and URL in
 [tools/toolchains.json](../tools/toolchains.json). Despite `latest` in the asset

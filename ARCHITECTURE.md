@@ -25,7 +25,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
-| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Build probe only |
+| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | On-screen five-case core diagnostic; runtime unverified, machine backend absent |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 

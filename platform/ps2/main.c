@@ -1,17 +1,34 @@
-/* MIPSNES2 build probe, not an emulator. See LICENSE for GPL-3.0. */
+/* MIPSNES2 PS2 diagnostic launcher. See LICENSE for GPL-3.0 terms. */
 #include <stdio.h>
-#include "core/common/log.h"
-#include "core/common/project.h"
-static void ps2_probe_log(void *context, mipsnes2_log_level level, const char *message)
+#include <unistd.h>
+
+#include <debug.h>
+#include <sifrpc.h>
+
+#include "platform/ps2/diagnostic_suite.h"
+
+static void print_result(void *context, const char *name, bool passed)
 {
     (void)context;
-    (void)level;
-    (void)printf("%s\n", message);
+    scr_printf("%s  %s\n", passed ? "PASS" : "FAIL", name);
+    (void)printf("MIPSNES2 PS2 DIAG: %s %s\n",
+                 passed ? "PASS" : "FAIL", name);
 }
+
 int main(void)
 {
-    const mipsnes2_logger logger = {ps2_probe_log, NULL};
-    mipsnes2_log(&logger, MIPSNES2_LOG_INFO, MIPSNES2_BANNER);
-    /* This probe deliberately returns. No GS, input or audio backend exists. */
-    return 0;
+    mipsnes2_ps2_diagnostic_report report;
+
+    sceSifInitRpc(0);
+    init_scr();
+    scr_printf("MIPSNES2 PS2 DIAGNOSTIC v1\n\n");
+    mipsnes2_ps2_diagnostic_run(&report, print_result, NULL);
+    scr_printf("\nRESULT: %u PASS / %u FAIL\n", report.passed, report.failed);
+    scr_printf("Use Android Back to exit.\n");
+    (void)printf("MIPSNES2 PS2 DIAG: RESULT %u PASS / %u FAIL\n",
+                 report.passed, report.failed);
+    (void)fflush(stdout);
+    for (;;) {
+        (void)sleep(1);
+    }
 }

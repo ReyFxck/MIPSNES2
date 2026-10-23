@@ -70,6 +70,14 @@ The bounded mid-instruction ABORT read-only slice is recorded in
 The opt-in ABORT write-qualification and recovery mechanism is recorded in
 [docs/65c816-abort-write-qualification-audit.md](docs/65c816-abort-write-qualification-audit.md).
 
+The PS2 entry now shows a five-case, on-screen core diagnostic for an Android
+ARMSX2 boot attempt: original embedded CPU instruction, timed horizon and ABORT
+write fixtures run through the shared core, with stdout duplicates. Its host
+baseline passes and the pinned PS2SDK cross-build links `-ldebug`. No actual
+ARMSX2 or real-PS2 execution is claimed. The user-run steps, upstream test-ROM
+provenance and limitations are in
+[docs/ps2-armsx2-diagnostic.md](docs/ps2-armsx2-diagnostic.md).
+
 ## State and evidence rules
 
 - [ ] Not implemented or not verified
@@ -1400,6 +1408,8 @@ platform persistence remains incomplete.
 
 ## PS2 backend
 
+- [x] On-screen five-case core diagnostic compiles with the pinned PS2SDK and passes its host baseline
+- [ ] Run diagnostic ELF in ARMSX2 and record version, settings and screen result
 - [ ] SDK entry lifecycle runtime validation
 - [ ] GS framebuffer presentation
 - [ ] Scaling and aspect policy

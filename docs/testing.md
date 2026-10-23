@@ -4,7 +4,10 @@
 
 Run `make test`. The contract test checks logical-address masks, all bank/offset
 combinations and logging sink semantics. A second executable compiles with logging
-disabled and verifies callbacks are absent. `test-cpu-bus` checks the reference bus,
+disabled and verifies callbacks are absent. `test-ps2-diagnostic` runs the five
+embedded PS2 diagnostic cases through the same platform-neutral suite linked into
+the target ELF; the native screen path still requires an ARMSX2 or hardware run.
+`test-cpu-bus` checks the reference bus,
 reset/vector foundation, all 256 opcode values, widths/modes/flags, logical
 addresses, linear data bank crossing, indexed penalties and base cycles. Direct Page regressions additionally cover bank-zero selection,
 aligned emulation-mode page wrapping, unaligned-D carry, 8/16-bit transfers and the

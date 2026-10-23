@@ -33,7 +33,8 @@ boundary-visible ABORT foundation, RTI,
 WDM, MVP/MVN and WAI/STP. Deterministic host regressions
 cover widths, flags, cycles, signed branch offsets, program-bank-local PC wrapping,
 Direct Page pointer wrapping, DBR selection and 24-bit bank crossing. Console entry
-points remain build probes, not usable emulators. The scheduler uses integer SNES
+points remain incomplete: PS2 now displays a five-case core diagnostic and PSP
+remains a build probe; neither is a usable SNES emulator. The scheduler uses integer SNES
 master-clock timestamps, deterministic event ordering and an exact rational clock
 converter. The SNES bus maps caller-owned 128 KiB WRAM and its low-bank mirrors,
 routes defined PPU/APU/CPU-I/O/DMA/cartridge windows, owns the WRAM ports and `$420D`

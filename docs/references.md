@@ -81,7 +81,7 @@ These are tests and vectors, not emulator implementations. Before committing any
 asset, re-check its license at the exact pinned revision and add a provenance record.
 
 - [SingleStepTests/65816](https://github.com/SingleStepTests/65816) — language-neutral JSON instruction transitions with bus activity. The decimal milestone audited revision `307c63f5673c8c6b861c52f71ddb89212a227480`; a corpus vector is evidence to investigate, not automatic proof over real hardware.
-- [gilyon/snes-tests](https://github.com/gilyon/snes-tests) — source and ROM tests for 65816 and SPC700 behavior; currently MIT-licensed upstream. Prefer building from a pinned source revision.
+- [gilyon/snes-tests](https://github.com/gilyon/snes-tests/tree/5ecdf555da920f0bd7b157542141965a8120186d) — MIT-licensed source and ROM tests for 65816 and SPC700 behavior, reviewed at revision `5ecdf555da920f0bd7b157542141965a8120186d` on 2026-10-23. The CPU suite excludes WAI/STP, interrupt, MMIO and cycle tests; the SPC suite excludes S-SMP MMIO, dummy reads, DSP and timing. No upstream ROM or source was added to MIPSNES2. Prefer building and running the ROMs once a complete SNES machine/ROM runner exists.
 - [undisbeliever/snes-test-roms](https://github.com/undisbeliever/snes-test-roms) — real-hardware-oriented SNES tests including PPU/DMA edge cases; currently zlib-licensed upstream. Preserve reference images/results and hardware revision metadata.
 - [SNESdev Wiki test-ROM index](https://snes.nesdev.org/wiki/Emulator_tests) — discovery index only. Each linked test still needs its own provenance, license and expected real-hardware result before use.
 

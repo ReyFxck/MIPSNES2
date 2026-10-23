@@ -24,6 +24,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Logging
 - [x] Core/platform boundary
 - [x] PS2 build scaffolding
+- [x] PS2 embedded core diagnostic host baseline and cross-build
+- [ ] PS2 diagnostic screen captured on ARMSX2 with version and settings
 - [x] PSP build scaffolding
 - [ ] GitHub infrastructure
 
