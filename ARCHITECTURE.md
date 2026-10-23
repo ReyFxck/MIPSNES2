@@ -239,10 +239,11 @@ dummy/modify write sequence or MLB signaling.
 `mipsnes2_cpu_cycle_state` is caller-owned resumable state. A caller begins one
 instruction, peeks at the next descriptor without changing CPU or bus state, then
 commits that exact descriptor once. Descriptors distinguish zero-time control,
-logical 24-bit reads, writes, internal processor cycles and an explicit
-`LEGACY_ATOMIC` remainder. A changed descriptor is rejected as stale before an
-effect. Active state must be retained and resumed; interleaving another CPU step or
-discarding a partially committed cursor is not supported by this foundation.
+logical 24-bit reads, writes and internal processor cycles. All 256 opcode values
+have complete-bus resumable sequences; `LEGACY_ATOMIC` remains only for
+missing-write fail-stop preflight. A changed descriptor is rejected as stale before
+an effect. Active state must be retained and resumed; interleaving another CPU step
+or discarding a partially committed cursor is not supported by this foundation.
 
 The migrated instruction sequences are opcode fetch plus `NOP` (`EA`), every
 `LDA/STA/LDX/LDY/STX/STY` addressing form, `REP` (`C2`), `SEP` (`E2`), `BRK`
@@ -283,15 +284,17 @@ All forty-five `LDA/STA/LDX/LDY/STX/STY` opcodes use one shared load/store state
 machine. It separates program operands, Direct Page and stack address formation,
 regular and long pointer reads, conditional indexed cycles and M/X-selected data
 transfers without introducing backend or title-specific behavior.
+The same operand state machine covers all 101 `ORA/AND/EOR/ADC/SBC/CMP/CPX/CPY/BIT`
+opcodes; only the final architectural effect differs. Dedicated phases cover `RTI`
+stack restoration, `WDM` signature consumption, `MVP/MVN` byte transfers and the
+final wait/stop transition of `WAI/STP`.
 Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the accepted cause
 and entry state latched before any effect. `mipsnes2_cpu_step` drives this same
-contract to completion, preserving the established instruction API. The remaining
-107 opcodes return an explicit legacy-atomic operation after their opcode fetch and
-use the existing evaluator for the remainder.
+contract to completion, preserving the established instruction API.
 
-This is deliberately not wired into the scheduler yet. Remaining opcodes, reset,
-dummy cycles, mid-instruction `ABORT` and undocumented/signal-level bus activity are
-still atomic or absent. Consequently the central timed-step bridge remains
+This is deliberately not wired into the scheduler yet. Reset, dummy cycles,
+mid-instruction `ABORT` and undocumented/signal-level bus activity are still atomic
+or absent. Consequently the central timed-step bridge remains
 instruction-atomic and must not dispatch events from bus callbacks. The initial
 foundation is recorded in [the cycle-contract audit](docs/65c816-cycle-contract-audit.md);
 interrupt migration scope and verification are recorded in
@@ -552,5 +555,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-22: All forty-five `LDA/STA/LDX/LDY/STX/STY` opcodes now use a shared
   resumable operand/address/pointer/data state machine, leaving 107 opcode
   remainders without backend- or game-specific behavior.
+- 2026-10-23: The final 101 read/ALU opcodes reuse that shared state machine and
+  `RTI/WDM/MVP/MVN/WAI/STP` use dedicated core phases. All 256 opcode values are
+  resumable on a complete bus; reset and scheduler cursor wiring remain separate.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

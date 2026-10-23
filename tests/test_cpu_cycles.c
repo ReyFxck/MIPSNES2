@@ -271,7 +271,7 @@ static int test_contract_validation_and_nop(void)
     return 0;
 }
 
-static int test_legacy_atomic_fallback(void)
+static int test_resumable_ora_and_missing_write_fallback(void)
 {
     trace_context trace;
     mipsnes2_cpu cpu;
@@ -289,9 +289,8 @@ static int test_legacy_atomic_fallback(void)
                            MIPSNES2_CPU_CYCLE_READY,
                            MIPSNES2_CPU_NOT_READY) == 0);
     CHECK(cpu.instruction_cycles == UINT64_C(1));
-    CHECK(expect_operation(&cpu, &state,
-                           MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC,
-                           0U, 0U, &operation) == 0);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x7e8011), 0U, &operation) == 0);
     CHECK(trace.count == 1U);
     CHECK(commit_operation(&cpu, &state, &operation,
                            MIPSNES2_CPU_CYCLE_COMPLETE,
@@ -313,6 +312,207 @@ static int test_legacy_atomic_fallback(void)
     CHECK(trace.count == 1U);
     CHECK(!trace.accesses[0].write &&
           trace.accesses[0].address == UINT32_C(0x7e8020));
+    return 0;
+}
+
+static int test_all_opcodes_have_resumable_sequences(void)
+{
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    uint16_t opcode;
+
+    for (opcode = 0U; opcode <= UINT8_MAX; ++opcode) {
+        mipsnes2_cpu_cycle_state state;
+        mipsnes2_cpu_operation operation;
+        mipsnes2_cpu_result cpu_result = MIPSNES2_CPU_NOT_READY;
+        mipsnes2_cpu_cycle_result cycle_result;
+        unsigned operation_count = 0U;
+
+        CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x4000)) == 0);
+        bank7e[0x4000] = (uint8_t)opcode;
+        bank7e[0x4001] = 0U;
+        bank7e[0x4002] = 0U;
+        bank7e[0x4003] = 0U;
+        CHECK(begin_instruction(&cpu, &state) == 0);
+
+        do {
+            CHECK(operation_count++ < 16U);
+            CHECK(mipsnes2_cpu_cycle_peek(&cpu, &state, &operation) ==
+                  MIPSNES2_CPU_CYCLE_READY);
+            CHECK(operation.kind != MIPSNES2_CPU_OPERATION_LEGACY_ATOMIC);
+            cycle_result = mipsnes2_cpu_cycle_commit(
+                &cpu, &state, &operation, &cpu_result);
+            CHECK(cycle_result == MIPSNES2_CPU_CYCLE_READY ||
+                  cycle_result == MIPSNES2_CPU_CYCLE_COMPLETE);
+        } while (cycle_result == MIPSNES2_CPU_CYCLE_READY);
+
+        CHECK(cpu_result == MIPSNES2_CPU_OK);
+    }
+    return 0;
+}
+
+static int test_final_opcode_sequences(void)
+{
+    trace_context trace;
+    mipsnes2_cpu cpu;
+    expected_operation expected[8];
+    size_t count;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xa000)) == 0);
+    bank7e[0xa000] = UINT8_C(0x42); /* WDM */
+    bank7e[0xa001] = UINT8_C(0xa5);
+    count = 0U;
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea000), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea001), 0U);
+    CHECK(run_expected_instruction(&cpu, expected, count) == 0);
+    CHECK(cpu.pc == UINT16_C(0xa002));
+    CHECK(cpu.instruction_cycles == UINT64_C(2));
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xa010)) == 0);
+    bank7e[0xa010] = UINT8_C(0xcb); /* WAI */
+    count = 0U;
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea010), 0U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+    CHECK(run_expected_instruction(&cpu, expected, count) == 0);
+    CHECK(cpu.waiting);
+    CHECK(cpu.instruction_cycles == UINT64_C(3));
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xa020)) == 0);
+    bank7e[0xa020] = UINT8_C(0xdb); /* STP */
+    expected[0].address = UINT32_C(0x7ea020);
+    CHECK(run_expected_instruction(&cpu, expected, count) == 0);
+    CHECK(cpu.clock_stopped);
+    CHECK(cpu.instruction_cycles == UINT64_C(3));
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xa030)) == 0);
+    bank7e[0xa030] = UINT8_C(0x40); /* RTI, emulation mode */
+    cpu.s = UINT16_C(0x01fc);
+    bank00[0x01fd] = MIPSNES2_CPU_FLAG_C;
+    bank00[0x01fe] = UINT8_C(0x34);
+    bank00[0x01ff] = UINT8_C(0x12);
+    count = 0U;
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea030), 0U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x0001fd), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x0001fe), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x0001ff), 0U);
+    CHECK(run_expected_instruction(&cpu, expected, count) == 0);
+    CHECK(cpu.pc == UINT16_C(0x1234));
+    CHECK(cpu.pbr == UINT8_C(0x7e));
+    CHECK(cpu.s == UINT16_C(0x01ff));
+    CHECK(cpu.p == (MIPSNES2_CPU_FLAG_C | MIPSNES2_CPU_FLAG_M |
+                    MIPSNES2_CPU_FLAG_X));
+    CHECK(cpu.instruction_cycles == UINT64_C(6));
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xa040)) == 0);
+    bank7e[0xa040] = UINT8_C(0x40); /* RTI, native mode */
+    cpu.emulation = false;
+    cpu.s = UINT16_C(0x01fb);
+    bank00[0x01fc] = MIPSNES2_CPU_FLAG_D;
+    bank00[0x01fd] = UINT8_C(0x78);
+    bank00[0x01fe] = UINT8_C(0x56);
+    bank00[0x01ff] = UINT8_C(0x7f);
+    count = 0U;
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea040), 0U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x0001fc), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x0001fd), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x0001fe), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x0001ff), 0U);
+    CHECK(run_expected_instruction(&cpu, expected, count) == 0);
+    CHECK(cpu.pc == UINT16_C(0x5678));
+    CHECK(cpu.pbr == UINT8_C(0x7f));
+    CHECK(cpu.s == UINT16_C(0x01ff));
+    CHECK(cpu.p == MIPSNES2_CPU_FLAG_D);
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xa050)) == 0);
+    bank7e[0xa050] = UINT8_C(0x44); /* MVP */
+    bank7e[0xa051] = UINT8_C(0x7f);
+    bank7e[0xa052] = UINT8_C(0x7e);
+    bank7e[0x0023] = UINT8_C(0x5a);
+    cpu.a = 0U;
+    cpu.x = UINT16_C(0x0023);
+    cpu.y = UINT16_C(0x0067);
+    count = 0U;
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea050), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea051), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea052), 0U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7e0023), 0U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_WRITE,
+                              UINT32_C(0x7f0067), UINT8_C(0x5a));
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+    CHECK(run_expected_instruction(&cpu, expected, count) == 0);
+    CHECK(bank7f[0x0067] == UINT8_C(0x5a));
+    CHECK(cpu.a == UINT16_C(0xffff));
+    CHECK(cpu.x == UINT16_C(0x0022));
+    CHECK(cpu.y == UINT16_C(0x0066));
+    CHECK(cpu.dbr == UINT8_C(0x7f));
+    CHECK(cpu.pc == UINT16_C(0xa053));
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0xa060)) == 0);
+    bank7e[0xa060] = UINT8_C(0x54); /* MVN */
+    bank7e[0xa061] = UINT8_C(0x7f);
+    bank7e[0xa062] = UINT8_C(0x7e);
+    bank7e[0x0123] = UINT8_C(0xc3);
+    cpu.emulation = false;
+    cpu.p &= (uint8_t)~MIPSNES2_CPU_FLAG_X;
+    cpu.a = UINT16_C(0x0001);
+    cpu.x = UINT16_C(0x0123);
+    cpu.y = UINT16_C(0x4567);
+    count = 0U;
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea060), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea061), 0U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7ea062), 0U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U);
+    append_expected_operation(expected, &count, MIPSNES2_CPU_OPERATION_READ,
+                              UINT32_C(0x7e0123), 0U);
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_WRITE,
+                              UINT32_C(0x7f4567), UINT8_C(0xc3));
+    append_expected_operation(expected, &count,
+                              MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U);
+    CHECK(run_expected_instruction(&cpu, expected, count) == 0);
+    CHECK(bank7f[0x4567] == UINT8_C(0xc3));
+    CHECK(cpu.a == 0U);
+    CHECK(cpu.x == UINT16_C(0x0124));
+    CHECK(cpu.y == UINT16_C(0x4568));
+    CHECK(cpu.pc == UINT16_C(0xa060));
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
     return 0;
 }
 
@@ -3608,7 +3808,9 @@ static int test_jsl_missing_write_fallback(void)
 int main(void)
 {
     CHECK(test_contract_validation_and_nop() == 0);
-    CHECK(test_legacy_atomic_fallback() == 0);
+    CHECK(test_resumable_ora_and_missing_write_fallback() == 0);
+    CHECK(test_all_opcodes_have_resumable_sequences() == 0);
+    CHECK(test_final_opcode_sequences() == 0);
     CHECK(test_accumulator_shift_cycles() == 0);
     CHECK(test_memory_rmw_cycles() == 0);
     CHECK(test_memory_rmw_missing_write_preflight() == 0);

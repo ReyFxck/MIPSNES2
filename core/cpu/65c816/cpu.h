@@ -36,9 +36,9 @@ typedef enum {
  * Do not mutate the CPU, interleave another CPU step or discard an active state
  * after committing an operation; full cancellation/checkpoint recovery is not
  * part of this foundation.
- * Most opcodes still use LEGACY_ATOMIC while their bus sequence is migrated;
- * that operation is deliberately visible rather than pretending the opcode
- * has meaningful-access boundaries.
+ * All 256 opcode values have resumable sequences when the bus contract is
+ * complete. LEGACY_ATOMIC remains visible only for fail-stop preflight paths
+ * that preserve the historical INVALID_BUS accounting contract.
  */
 typedef enum {
     MIPSNES2_CPU_OPERATION_CONTROL = 0,

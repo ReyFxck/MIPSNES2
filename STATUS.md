@@ -59,6 +59,8 @@ The resumable shift/rotate and memory RMW migration is recorded in
 [docs/65c816-rmw-cycle-audit.md](docs/65c816-rmw-cycle-audit.md).
 The complete resumable load/store-family migration is recorded in
 [docs/65c816-load-store-cycle-audit.md](docs/65c816-load-store-cycle-audit.md).
+Completion of the 256-opcode resumable cursor is recorded in
+[docs/65c816-final-resumable-cycle-audit.md](docs/65c816-final-resumable-cycle-audit.md).
 
 ## State and evidence rules
 
@@ -737,18 +739,19 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STP
 - [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
-- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; 149 opcodes and boundary IRQ/NMI/ABORT entry have resumable operation sequences, while remaining exact dummy/internal sequencing, refresh and arbitration are pending
+- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; all 256 opcode values and boundary IRQ/NMI/ABORT entry have resumable operation sequences, while reset, exact dummy/internal sequencing, refresh and arbitration are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, 149 resumable opcode sequences, resumable boundary IRQ/NMI/ABORT entry and the atomic scheduler/5A22 bridge exist; remaining cycle boundaries and mid-instruction ABORT pending
+- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, resumable boundary IRQ/NMI/ABORT entry and the atomic scheduler/5A22 bridge exist; reset, scheduler cursor wiring, exact dummy cycles and mid-instruction ABORT remain pending
 
 ### Verified 65C816 foundation subset
 
 - [x] Caller-owned register/mode/bus/diagnostic state
-- [x] Caller-owned peek/commit operation cursor for 149 opcodes: `00`, `02`, `04`, `06`, `08`, `0A`, `0B`, `0C`, `0E`, `10`, `14`, `16`, `18`, `1A`, `1B`, `1C`, `1E`, `20`, `22`, `26`, `28`, `2A`, `2B`, `2E`, `30`, `36`, `38`, `3A`, `3B`, `3E`, `46`, `48`, `4A`, `4B`, `4C`, `4E`, `50`, `56`, `58`, `5A`, `5B`, `5C`, `5E`, `60`, `62`, `64`, `66`, `68`, `6A`, `6B`, `6C`, `6E`, `70`, `74`, `76`, `78`, `7A`, `7B`, `7C`, `7E`, `80`, `81`, `82`, `83`, `84`, `85`, `86`, `87`, `88`, `8A`, `8B`, `8C`, `8D`, `8E`, `8F`, `90`, `91`, `92`, `93`, `94`, `95`, `96`, `97`, `98`, `99`, `9A`, `9B`, `9C`, `9D`, `9E`, `9F`, `A0`, `A1`, `A2`, `A3`, `A4`, `A5`, `A6`, `A7`, `A8`, `A9`, `AA`, `AB`, `AC`, `AD`, `AE`, `AF`, `B0`, `B1`, `B2`, `B3`, `B4`, `B5`, `B6`, `B7`, `B8`, `B9`, `BA`, `BB`, `BC`, `BD`, `BE`, `BF`, `C2`, `C6`, `C8`, `CA`, `CE`, `D0`, `D4`, `D6`, `D8`, `DA`, `DC`, `DE`, `E2`, `E6`, `E8`, `EA`, `EB`, `EE`, `F0`, `F4`, `F6`, `F8`, `FA`, `FB`, `FC` and `FE`
+- [x] Caller-owned peek/commit operation cursor for all 256 opcode values on a complete bus
 - [x] Boundary `ABORT`, `NMI` and `IRQ` entry migrated to the same resumable cursor
 - [x] Exact-once/stale-descriptor host tests for the resumable operation subset
-- [ ] Remaining 107 opcode remainders and reset migrated from legacy-atomic execution
+- [x] Remaining 107 opcode remainders migrated from legacy-atomic execution
+- [ ] RESET migrated to the resumable cursor
 - [x] Reset vector fetch from logical 00:FFFC-D
 - [x] Pre-reset and invalid-bus diagnostic stops
 - [x] Boundary-visible ABORT vectors, stack/status effects, priority and WAI restart-address behavior
@@ -1226,7 +1229,7 @@ platform persistence remains incomplete.
 - [x] Event-budget exhaustion preserves aligned domain state
 - [x] Atomic CPU-step delta advances scheduler and H/V together
 - [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
-- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation verified for 149 opcodes and boundary IRQ/NMI/ABORT entry; remaining 107 opcodes, reset, dummy cycles, mid-instruction ABORT and scheduler integration pending
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation verified for all 256 opcode values and boundary IRQ/NMI/ABORT entry; reset, dummy cycles, mid-instruction ABORT and scheduler integration pending
 
 ### Interrupt-line aggregation subset
 
