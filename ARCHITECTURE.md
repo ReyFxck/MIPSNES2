@@ -31,7 +31,8 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 
 Directories without source contain an explicit scope README, not stub functions.
 There is no machine instance, ROM runner, renderer or APU. CPU reset implements only
-the documented programmer-visible foundation; complete RESET timing remains open.
+the documented programmer-visible foundation and resumable vector reads; complete
+signal-level RESET timing remains open.
 The partial SNES bus is not a complete machine map: it has no complete cartridge
 board coverage, implemented peripheral registers, enhancement windows or verified
 hardware open-bus domains. It does connect meaningful CPU callbacks to individual
@@ -171,8 +172,8 @@ atomic replacement and save scheduling remain outside the shared core.
 
 The CPU's `instruction_cycles` counts completed instruction or block-move-byte base
 cycles only; it is not master time. The timing bridge combines it with observed
-address-speed accesses, while reset timing, exact cycle placement, wait states and
-arbitration remain future scheduler/bus work. All 256 byte values dispatch. A defensive unimplemented-
+address-speed accesses, while signal-level reset timing, exact cycle placement, wait
+states and arbitration remain future scheduler/bus work. All 256 byte values dispatch. A defensive unimplemented-
 opcode result remains for decoder refactoring; no opcode silently acts as NOP.
 Program fetch wraps PC inside PBR. Implemented data addressing is linear across the
 24-bit space for absolute/long forms: word accesses and absolute indexing may carry
@@ -292,9 +293,17 @@ Boundary `ABORT`, `NMI` and `IRQ` entry also use the cursor, with the accepted c
 and entry state latched before any effect. `mipsnes2_cpu_step` drives this same
 contract to completion, preserving the established instruction API.
 
-This is deliberately not wired into the scheduler yet. Reset, dummy cycles,
-mid-instruction `ABORT` and undocumented/signal-level bus activity are still atomic
-or absent. Consequently the central timed-step bridge remains
+`mipsnes2_cpu_cycle_begin_reset` starts a separate RESET path in the same cursor.
+Its zero-time control descriptor validates the read bus and commits the documented
+mode/register invariants before two explicit reads at `00:FFFC` and `00:FFFD`.
+The high-vector commit installs PC and releases WAI/STP/diagnostic stop state.
+`mipsnes2_cpu_reset` is the compatibility wrapper that drives this path to completion.
+The path deliberately preserves the existing zero `instruction_cycles` result and
+does not invent unsourced internal/dummy reset cycles.
+
+This is deliberately not wired into the scheduler yet. Signal-level RESET, dummy
+cycles, mid-instruction `ABORT` and undocumented bus activity are still atomic or
+absent. Consequently the central timed-step bridge remains
 instruction-atomic and must not dispatch events from bus callbacks. The initial
 foundation is recorded in [the cycle-contract audit](docs/65c816-cycle-contract-audit.md);
 interrupt migration scope and verification are recorded in
@@ -302,7 +311,10 @@ interrupt migration scope and verification are recorded in
 subroutine pair is recorded in
 [the subroutine-cycle audit](docs/65c816-subroutine-cycle-audit.md), followed by the
 [long-subroutine-cycle audit](docs/65c816-long-subroutine-cycle-audit.md) and the
-[read/modify/write-cycle audit](docs/65c816-rmw-cycle-audit.md).
+[read/modify/write-cycle audit](docs/65c816-rmw-cycle-audit.md). Completion of the
+opcode cursor and RESET-vector extension are recorded in the
+[complete opcode-cycle audit](docs/65c816-final-resumable-cycle-audit.md) and
+[RESET-cycle audit](docs/65c816-reset-cycle-audit.md).
 
 ## Scheduler and timing foundation
 
@@ -558,5 +570,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-23: The final 101 read/ALU opcodes reuse that shared state machine and
   `RTI/WDM/MVP/MVN/WAI/STP` use dedicated core phases. All 256 opcode values are
   resumable on a complete bus; reset and scheduler cursor wiring remain separate.
+- 2026-10-23: RESET now starts through the same caller-owned cursor, with a
+  side-effect-free control peek and explicit low/high vector reads. The compatibility
+  wrapper remains atomic; unsourced internal/electrical reset cycles and scheduler
+  cursor wiring remain separate work.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

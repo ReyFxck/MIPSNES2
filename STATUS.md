@@ -61,6 +61,8 @@ The complete resumable load/store-family migration is recorded in
 [docs/65c816-load-store-cycle-audit.md](docs/65c816-load-store-cycle-audit.md).
 Completion of the 256-opcode resumable cursor is recorded in
 [docs/65c816-final-resumable-cycle-audit.md](docs/65c816-final-resumable-cycle-audit.md).
+The resumable RESET-vector extension is recorded in
+[docs/65c816-reset-cycle-audit.md](docs/65c816-reset-cycle-audit.md).
 
 ## State and evidence rules
 
@@ -739,10 +741,10 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STP
 - [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
-- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; all 256 opcode values and boundary IRQ/NMI/ABORT entry have resumable operation sequences, while reset, exact dummy/internal sequencing, refresh and arbitration are pending
+- [ ] [IN PROGRESS] Timing model — aggregate opcode timing plus meaningful-access 5A22 clocks integrated; all 256 opcode values, boundary IRQ/NMI/ABORT entry and RESET vector reads have resumable operation sequences, while signal-level RESET, exact dummy/internal sequencing, refresh and arbitration are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
-- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, resumable boundary IRQ/NMI/ABORT entry and the atomic scheduler/5A22 bridge exist; reset, scheduler cursor wiring, exact dummy cycles and mid-instruction ABORT remain pending
+- [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, resumable boundary IRQ/NMI/ABORT entry, resumable RESET vector reads and the atomic scheduler/5A22 bridge exist; scheduler cursor wiring, signal-level RESET, exact dummy cycles and mid-instruction ABORT remain pending
 
 ### Verified 65C816 foundation subset
 
@@ -751,7 +753,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Boundary `ABORT`, `NMI` and `IRQ` entry migrated to the same resumable cursor
 - [x] Exact-once/stale-descriptor host tests for the resumable operation subset
 - [x] Remaining 107 opcode remainders migrated from legacy-atomic execution
-- [ ] RESET migrated to the resumable cursor
+- [x] RESET vector/state transition migrated to the resumable cursor
 - [x] Reset vector fetch from logical 00:FFFC-D
 - [x] Pre-reset and invalid-bus diagnostic stops
 - [x] Boundary-visible ABORT vectors, stack/status effects, priority and WAI restart-address behavior
@@ -1157,7 +1159,7 @@ platform persistence remains incomplete.
 - [x] Master timestamp units — unsigned 64-bit SNES master clocks
 - [x] Clock ratio representation — exact reduced rational with carried remainder
 - [x] Event tie ordering — timestamp, explicit priority, insertion token
-- [ ] [IN PROGRESS] CPU event horizon — atomic timed CPU steps exist; mid-instruction bus-cycle pausing pending
+- [ ] [IN PROGRESS] CPU event horizon — the cursor covers instructions, boundary interrupts and RESET vector reads, but the timed bridge remains atomic and mid-operation event pausing is pending
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment, transactional H/V slices and provisional same-time ordering verified
 - [ ] PPU event integration
 - [ ] SPC700 synchronization
@@ -1229,7 +1231,7 @@ platform persistence remains incomplete.
 - [x] Event-budget exhaustion preserves aligned domain state
 - [x] Atomic CPU-step delta advances scheduler and H/V together
 - [x] Atomic CPU-I/O IRQ/NMI delivery into 65C816 inputs
-- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation verified for all 256 opcode values and boundary IRQ/NMI/ABORT entry; reset, dummy cycles, mid-instruction ABORT and scheduler integration pending
+- [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — caller-owned exact-once foundation verified for all 256 opcode values, boundary IRQ/NMI/ABORT entry and RESET vector reads; signal-level RESET, dummy cycles, mid-instruction ABORT and scheduler integration pending
 
 ### Interrupt-line aggregation subset
 

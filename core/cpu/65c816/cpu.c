@@ -1906,38 +1906,29 @@ void mipsnes2_cpu_init(mipsnes2_cpu *cpu, mipsnes2_bus_interface bus)
 
 mipsnes2_cpu_result mipsnes2_cpu_reset(mipsnes2_cpu *cpu)
 {
-    uint16_t low;
-    uint16_t high;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    mipsnes2_cpu_result reset_result = MIPSNES2_CPU_NOT_READY;
+    mipsnes2_cpu_cycle_result cycle_result;
 
-    if (cpu == NULL || cpu->bus.read8 == NULL) {
+    if (cpu == NULL) {
         return MIPSNES2_CPU_INVALID_BUS;
     }
 
-    cpu->emulation = true;
-    cpu->p = (uint8_t)((cpu->p & (MIPSNES2_CPU_FLAG_N |
-                                  MIPSNES2_CPU_FLAG_V |
-                                  MIPSNES2_CPU_FLAG_Z |
-                                  MIPSNES2_CPU_FLAG_C)) |
-                       MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X |
-                       MIPSNES2_CPU_FLAG_I);
-    cpu->d = 0U;
-    cpu->dbr = 0U;
-    cpu->pbr = 0U;
-    apply_mode_invariants(cpu);
+    mipsnes2_cpu_cycle_state_init(&state);
+    cycle_result = mipsnes2_cpu_cycle_begin_reset(&state);
+    while (cycle_result == MIPSNES2_CPU_CYCLE_READY) {
+        cycle_result = mipsnes2_cpu_cycle_peek(cpu, &state, &operation);
+        if (cycle_result != MIPSNES2_CPU_CYCLE_READY) {
+            break;
+        }
+        cycle_result = mipsnes2_cpu_cycle_commit(
+            cpu, &state, &operation, &reset_result);
+    }
 
-    low = read8(cpu, UINT32_C(0x00fffc));
-    high = read8(cpu, UINT32_C(0x00fffd));
-    cpu->pc = (uint16_t)(low | (uint16_t)(high << 8));
-    cpu->instruction_cycles = 0U;
-    cpu->waiting = false;
-    cpu->clock_stopped = false;
-    cpu->abort_pending = false;
-    cpu->nmi_pending = false;
-    cpu->stopped = false;
-    cpu->stop_reason = MIPSNES2_CPU_OK;
-    cpu->last_opcode = 0U;
-    cpu->last_opcode_address = mipsnes2_address_make(cpu->pbr, cpu->pc);
-    return MIPSNES2_CPU_OK;
+    return cycle_result == MIPSNES2_CPU_CYCLE_COMPLETE
+               ? reset_result
+               : MIPSNES2_CPU_NOT_READY;
 }
 
 void mipsnes2_cpu_set_irq(mipsnes2_cpu *cpu, bool asserted)
@@ -3684,6 +3675,9 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
 typedef enum {
     CPU_CYCLE_PHASE_IDLE = 0,
     CPU_CYCLE_PHASE_BOUNDARY,
+    CPU_CYCLE_PHASE_RESET_CONTROL,
+    CPU_CYCLE_PHASE_RESET_VECTOR_LOW,
+    CPU_CYCLE_PHASE_RESET_VECTOR_HIGH,
     CPU_CYCLE_PHASE_FETCH,
     CPU_CYCLE_PHASE_NOP_INTERNAL,
     CPU_CYCLE_PHASE_LOAD_STORE_OPERAND_LOW,
@@ -3885,6 +3879,7 @@ static bool operation_matches(const mipsnes2_cpu_operation *left,
 }
 
 enum {
+    CPU_RESET_NO_READ = 1U << 0,
     CPU_BOUNDARY_ABORT = 1U << 0,
     CPU_BOUNDARY_NMI = 1U << 1,
     CPU_BOUNDARY_IRQ_LEVEL = 1U << 2,
@@ -4310,6 +4305,17 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin(
     return MIPSNES2_CPU_CYCLE_READY;
 }
 
+mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin_reset(
+    mipsnes2_cpu_cycle_state *state)
+{
+    mipsnes2_cpu_cycle_result result = mipsnes2_cpu_cycle_begin(state);
+
+    if (result == MIPSNES2_CPU_CYCLE_READY) {
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RESET_CONTROL;
+    }
+    return result;
+}
+
 mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     const mipsnes2_cpu *cpu,
     const mipsnes2_cpu_cycle_state *state,
@@ -4330,6 +4336,18 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     case CPU_CYCLE_PHASE_BOUNDARY:
         set_operation(operation, MIPSNES2_CPU_OPERATION_CONTROL,
                       0U, boundary_snapshot(cpu));
+        break;
+    case CPU_CYCLE_PHASE_RESET_CONTROL:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_CONTROL, 0U,
+                      cpu->bus.read8 == NULL ? CPU_RESET_NO_READ : 0U);
+        break;
+    case CPU_CYCLE_PHASE_RESET_VECTOR_LOW:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      UINT32_C(0x00fffc), 0U);
+        break;
+    case CPU_CYCLE_PHASE_RESET_VECTOR_HIGH:
+        set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
+                      UINT32_C(0x00fffd), 0U);
         break;
     case CPU_CYCLE_PHASE_FETCH:
     case CPU_CYCLE_PHASE_LOAD_STORE_OPERAND_LOW:
@@ -4682,6 +4700,44 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
     switch ((cpu_cycle_phase)state->phase) {
     case CPU_CYCLE_PHASE_BOUNDARY:
         return commit_boundary(cpu, state, instruction_result);
+    case CPU_CYCLE_PHASE_RESET_CONTROL:
+        if ((current.value & CPU_RESET_NO_READ) != 0U) {
+            *instruction_result = MIPSNES2_CPU_INVALID_BUS;
+            complete_cycle_state(state);
+            return MIPSNES2_CPU_CYCLE_COMPLETE;
+        }
+        cpu->emulation = true;
+        cpu->p = (uint8_t)((cpu->p & (MIPSNES2_CPU_FLAG_N |
+                                      MIPSNES2_CPU_FLAG_V |
+                                      MIPSNES2_CPU_FLAG_Z |
+                                      MIPSNES2_CPU_FLAG_C)) |
+                           MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X |
+                           MIPSNES2_CPU_FLAG_I);
+        cpu->d = 0U;
+        cpu->dbr = 0U;
+        cpu->pbr = 0U;
+        apply_mode_invariants(cpu);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RESET_VECTOR_LOW;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RESET_VECTOR_LOW:
+        state->vector_low = read8(cpu, current.address);
+        state->phase = (uint8_t)CPU_CYCLE_PHASE_RESET_VECTOR_HIGH;
+        return MIPSNES2_CPU_CYCLE_READY;
+    case CPU_CYCLE_PHASE_RESET_VECTOR_HIGH:
+        value = read8(cpu, current.address);
+        cpu->pc = (uint16_t)(state->vector_low | (uint16_t)(value << 8));
+        cpu->instruction_cycles = 0U;
+        cpu->waiting = false;
+        cpu->clock_stopped = false;
+        cpu->abort_pending = false;
+        cpu->nmi_pending = false;
+        cpu->stopped = false;
+        cpu->stop_reason = MIPSNES2_CPU_OK;
+        cpu->last_opcode = 0U;
+        cpu->last_opcode_address = mipsnes2_address_make(cpu->pbr, cpu->pc);
+        *instruction_result = MIPSNES2_CPU_OK;
+        complete_cycle_state(state);
+        return MIPSNES2_CPU_CYCLE_COMPLETE;
     case CPU_CYCLE_PHASE_FETCH:
         cpu->last_opcode_address = current.address;
         value = read8(cpu, current.address);

@@ -36,9 +36,10 @@ typedef enum {
  * Do not mutate the CPU, interleave another CPU step or discard an active state
  * after committing an operation; full cancellation/checkpoint recovery is not
  * part of this foundation.
- * All 256 opcode values have resumable sequences when the bus contract is
- * complete. LEGACY_ATOMIC remains visible only for fail-stop preflight paths
- * that preserve the historical INVALID_BUS accounting contract.
+ * All 256 opcode values and RESET vector reads have resumable sequences when
+ * the bus contract is complete. LEGACY_ATOMIC remains visible only for
+ * instruction fail-stop preflight paths that preserve the historical
+ * INVALID_BUS accounting contract.
  */
 typedef enum {
     MIPSNES2_CPU_OPERATION_CONTROL = 0,
@@ -114,6 +115,8 @@ mipsnes2_cpu_result mipsnes2_cpu_reset(mipsnes2_cpu *cpu);
 mipsnes2_cpu_result mipsnes2_cpu_step(mipsnes2_cpu *cpu);
 void mipsnes2_cpu_cycle_state_init(mipsnes2_cpu_cycle_state *state);
 mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin(
+    mipsnes2_cpu_cycle_state *state);
+mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_begin_reset(
     mipsnes2_cpu_cycle_state *state);
 mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
     const mipsnes2_cpu *cpu,

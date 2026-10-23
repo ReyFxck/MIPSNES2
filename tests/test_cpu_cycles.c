@@ -147,6 +147,163 @@ static int begin_instruction(mipsnes2_cpu *cpu,
     return 0;
 }
 
+static int test_resumable_reset_sequence(void)
+{
+    trace_context trace;
+    mipsnes2_bus_interface interface;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+    mipsnes2_cpu_operation stale;
+    mipsnes2_cpu_result cpu_result = MIPSNES2_CPU_OK;
+
+    (void)memset(bank00, 0, sizeof(bank00));
+    (void)memset(&trace, 0, sizeof(trace));
+    bank00[0xfffc] = UINT8_C(0x34);
+    bank00[0xfffd] = UINT8_C(0x92);
+    interface.context = &trace;
+    interface.read8 = trace_read;
+    interface.write8 = trace_write;
+    mipsnes2_cpu_init(&cpu, interface);
+    cpu.a = UINT16_C(0xbeef);
+    cpu.x = UINT16_C(0xab34);
+    cpu.y = UINT16_C(0xcd56);
+    cpu.s = UINT16_C(0x9876);
+    cpu.d = UINT16_C(0x4321);
+    cpu.pc = UINT16_C(0x4567);
+    cpu.dbr = UINT8_C(0x12);
+    cpu.pbr = UINT8_C(0x7e);
+    cpu.p = MIPSNES2_CPU_FLAG_N | MIPSNES2_CPU_FLAG_V |
+            MIPSNES2_CPU_FLAG_D | MIPSNES2_CPU_FLAG_Z |
+            MIPSNES2_CPU_FLAG_C;
+    cpu.emulation = false;
+    cpu.instruction_cycles = UINT64_C(99);
+    cpu.waiting = true;
+    cpu.clock_stopped = true;
+    cpu.abort_pending = true;
+    cpu.nmi_pending = true;
+    cpu.stop_reason = MIPSNES2_CPU_CLOCK_STOPPED;
+    cpu.last_opcode = UINT8_C(0xea);
+    cpu.last_opcode_address = UINT32_C(0x7e4566);
+
+    mipsnes2_cpu_cycle_state_init(&state);
+    CHECK(mipsnes2_cpu_cycle_begin_reset(NULL) ==
+          MIPSNES2_CPU_CYCLE_INVALID_ARGUMENT);
+    CHECK(mipsnes2_cpu_cycle_begin_reset(&state) ==
+          MIPSNES2_CPU_CYCLE_READY);
+    CHECK(mipsnes2_cpu_cycle_begin_reset(&state) ==
+          MIPSNES2_CPU_CYCLE_INVALID_STATE);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_CONTROL,
+                           0U, 0U, &operation) == 0);
+    CHECK(trace.count == 0U);
+    stale = operation;
+    stale.value = UINT8_C(1);
+    CHECK(mipsnes2_cpu_cycle_commit(&cpu, &state, &stale, &cpu_result) ==
+          MIPSNES2_CPU_CYCLE_STALE_OPERATION);
+    CHECK(cpu_result == MIPSNES2_CPU_NOT_READY);
+    CHECK(trace.count == 0U);
+    CHECK(cpu.pc == UINT16_C(0x4567));
+    CHECK(!cpu.emulation);
+
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(cpu.a == UINT16_C(0xbeef));
+    CHECK(cpu.x == UINT16_C(0x0034));
+    CHECK(cpu.y == UINT16_C(0x0056));
+    CHECK(cpu.s == UINT16_C(0x0176));
+    CHECK(cpu.d == 0U);
+    CHECK(cpu.dbr == 0U);
+    CHECK(cpu.pbr == 0U);
+    CHECK(cpu.pc == UINT16_C(0x4567));
+    CHECK(cpu.emulation);
+    CHECK(cpu.p == (MIPSNES2_CPU_FLAG_N | MIPSNES2_CPU_FLAG_V |
+                    MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X |
+                    MIPSNES2_CPU_FLAG_I | MIPSNES2_CPU_FLAG_Z |
+                    MIPSNES2_CPU_FLAG_C));
+    CHECK(cpu.instruction_cycles == UINT64_C(99));
+    CHECK(cpu.waiting);
+    CHECK(cpu.clock_stopped);
+    CHECK(cpu.abort_pending);
+    CHECK(cpu.nmi_pending);
+    CHECK(cpu.stopped);
+    CHECK(trace.count == 0U);
+
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00fffc), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_READY,
+                           MIPSNES2_CPU_NOT_READY) == 0);
+    CHECK(trace.count == 1U);
+    CHECK(!trace.accesses[0].write);
+    CHECK(trace.accesses[0].address == UINT32_C(0x00fffc));
+    CHECK(trace.accesses[0].value == UINT8_C(0x34));
+    CHECK(cpu.pc == UINT16_C(0x4567));
+    CHECK(cpu.instruction_cycles == UINT64_C(99));
+
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_READ,
+                           UINT32_C(0x00fffd), 0U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_OK) == 0);
+    CHECK(trace.count == 2U);
+    CHECK(!trace.accesses[1].write);
+    CHECK(trace.accesses[1].address == UINT32_C(0x00fffd));
+    CHECK(trace.accesses[1].value == UINT8_C(0x92));
+    CHECK(cpu.pc == UINT16_C(0x9234));
+    CHECK(cpu.instruction_cycles == 0U);
+    CHECK(!cpu.waiting);
+    CHECK(!cpu.clock_stopped);
+    CHECK(!cpu.abort_pending);
+    CHECK(!cpu.nmi_pending);
+    CHECK(!cpu.stopped);
+    CHECK(cpu.stop_reason == MIPSNES2_CPU_OK);
+    CHECK(cpu.last_opcode == 0U);
+    CHECK(cpu.last_opcode_address == UINT32_C(0x009234));
+    CHECK(mipsnes2_cpu_cycle_peek(&cpu, &state, &operation) ==
+          MIPSNES2_CPU_CYCLE_COMPLETE);
+    return 0;
+}
+
+static int test_resumable_reset_invalid_bus(void)
+{
+    trace_context trace;
+    mipsnes2_bus_interface interface;
+    mipsnes2_cpu cpu;
+    mipsnes2_cpu_cycle_state state;
+    mipsnes2_cpu_operation operation;
+
+    (void)memset(&trace, 0, sizeof(trace));
+    interface.context = &trace;
+    interface.read8 = NULL;
+    interface.write8 = trace_write;
+    mipsnes2_cpu_init(&cpu, interface);
+    cpu.a = UINT16_C(0xbeef);
+    cpu.pc = UINT16_C(0x4567);
+    cpu.pbr = UINT8_C(0x7e);
+    cpu.p = MIPSNES2_CPU_FLAG_D;
+    cpu.instruction_cycles = UINT64_C(99);
+
+    mipsnes2_cpu_cycle_state_init(&state);
+    CHECK(mipsnes2_cpu_cycle_begin_reset(&state) ==
+          MIPSNES2_CPU_CYCLE_READY);
+    CHECK(expect_operation(&cpu, &state, MIPSNES2_CPU_OPERATION_CONTROL,
+                           0U, 1U, &operation) == 0);
+    CHECK(commit_operation(&cpu, &state, &operation,
+                           MIPSNES2_CPU_CYCLE_COMPLETE,
+                           MIPSNES2_CPU_INVALID_BUS) == 0);
+    CHECK(trace.count == 0U);
+    CHECK(cpu.a == UINT16_C(0xbeef));
+    CHECK(cpu.pc == UINT16_C(0x4567));
+    CHECK(cpu.pbr == UINT8_C(0x7e));
+    CHECK(cpu.p == MIPSNES2_CPU_FLAG_D);
+    CHECK(!cpu.emulation);
+    CHECK(cpu.instruction_cycles == UINT64_C(99));
+    CHECK(cpu.stopped);
+    CHECK(cpu.stop_reason == MIPSNES2_CPU_NOT_READY);
+    return 0;
+}
+
 typedef struct {
     mipsnes2_cpu_operation_kind kind;
     mipsnes2_address address;
@@ -3807,6 +3964,8 @@ static int test_jsl_missing_write_fallback(void)
 
 int main(void)
 {
+    CHECK(test_resumable_reset_sequence() == 0);
+    CHECK(test_resumable_reset_invalid_bus() == 0);
     CHECK(test_contract_validation_and_nop() == 0);
     CHECK(test_resumable_ora_and_missing_write_fallback() == 0);
     CHECK(test_all_opcodes_have_resumable_sequences() == 0);

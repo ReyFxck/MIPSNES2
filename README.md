@@ -109,10 +109,13 @@ resumable sequences when the bus contract is complete. The final block adds ever
 operand/address/pointer/data phases, plus dedicated `RTI`, `WDM`, `MVP`, `MVN`,
 `WAI` and `STP` sequences. Boundary `ABORT`, `NMI` and `IRQ` entry use the same
 cursor. `LEGACY_ATOMIC` is retained only for missing-write fail-stop preflight so
-the historical `INVALID_BUS` accounting stays unchanged. Reset and the scheduler
-bridge are still instruction-atomic, and exact dummy cycles, mid-instruction
-`ABORT`, refresh and arbitration remain open. This is a complete opcode-cursor
-migration, not a claim of complete hardware cycle fidelity.
+the historical `INVALID_BUS` accounting stays unchanged. RESET now exposes a
+zero-time control descriptor followed by deterministic `00:FFFC` and `00:FFFD`
+reads; the existing reset function drives that cursor to completion. The scheduler
+bridge is still instruction-atomic, and signal-level RESET cycles, exact dummy
+cycles, mid-instruction `ABORT`, refresh and arbitration remain open. This is a
+complete opcode-and-reset-vector cursor migration, not a claim of complete hardware
+cycle fidelity.
 
 ## Build and test the foundation
 
