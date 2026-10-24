@@ -28,7 +28,7 @@ measurements. In particular, bus time within CPU time must not be double-counted
 |---|---:|---:|---|
 | 65C816 | TBD | TBD | |
 | Bus | TBD | TBD | |
-| PPU | TBD | TBD | OBJ selection now scans up to 128 records at each visible-line HBlank (224 NTSC or 239 overscan events/frame); PS2 and PSP cost unmeasured. |
+| PPU | TBD | TBD | OBJ selection scans up to 128 records at each visible-line HBlank (224 NTSC or 239 overscan events/frame); optional OBJ composition decodes up to 34 full 4bpp tiles per line. PS2 and PSP cost unmeasured. |
 | DMA/HDMA | TBD | TBD | |
 | SPC700 | TBD | TBD | |
 | DSP | TBD | TBD | |

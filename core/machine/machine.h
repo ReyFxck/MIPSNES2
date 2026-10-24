@@ -58,6 +58,7 @@ typedef struct {
     mipsnes2_ppu_cgram_ports cgram_ports;
     mipsnes2_ppu_oam_ports oam_ports;
     mipsnes2_ppu_obj_scanline obj_line;
+    mipsnes2_ppu_obj_pixels obj_pixels;
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;

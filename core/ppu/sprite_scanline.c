@@ -86,3 +86,58 @@ bool mipsnes2_ppu_obj_select_scanline(const mipsnes2_ppu_oam_ports *ports,
     *output = selected;
     return true;
 }
+
+bool mipsnes2_ppu_obj_compose_scanline(
+    const mipsnes2_ppu_oam_ports *ports,
+    const uint8_t *vram, size_t vram_size, uint8_t line_y,
+    const mipsnes2_ppu_obj_scanline *selection,
+    mipsnes2_ppu_obj_pixels *output)
+{
+    mipsnes2_ppu_obj_pixels composed;
+    unsigned i;
+
+    if (ports == NULL || !ports->initialized || ports->oam == NULL ||
+        vram == NULL || vram_size < MIPSNES2_PPU_TILE4_VRAM_SIZE ||
+        selection == NULL || output == NULL ||
+        selection->sliver_count > MIPSNES2_PPU_OBJ_TIME_LIMIT) {
+        return false;
+    }
+    (void)memset(&composed, 0, sizeof(composed));
+    for (i = 0U; i < selection->sliver_count; ++i) {
+        const mipsnes2_ppu_obj_sliver *sliver = &selection->slivers[i];
+        mipsnes2_ppu_oam_sprite sprite;
+        uint8_t tile[64];
+        uint16_t word;
+        unsigned row;
+        unsigned x;
+
+        if (!mipsnes2_ppu_oam_decode_sprite(ports, sliver->sprite_index,
+                                            &sprite) ||
+            !mipsnes2_ppu_oam_sprite_tile_word(
+                ports->obj_select, &sprite, sliver->source_tile_x,
+                sliver->source_tile_y, &word) ||
+            !mipsnes2_ppu_decode_4bpp_tile(vram, vram_size, word, tile)) {
+            return false;
+        }
+        row = (unsigned)(uint8_t)(line_y - sprite.y) & 7U;
+        if (sprite.flip_y) {
+            row = 7U - row;
+        }
+        for (x = 0U; x < 8U; ++x) {
+            int screen_x = (int)sliver->screen_x + (int)x;
+            uint8_t color = tile[row * 8U + (sprite.flip_x ? 7U - x : x)];
+            mipsnes2_ppu_obj_pixel *pixel;
+
+            if (screen_x < 0 || screen_x >= 256 || color == 0U) {
+                continue;
+            }
+            pixel = &composed.pixels[screen_x];
+            pixel->color = (uint8_t)(128U + (unsigned)sprite.palette * 16U +
+                                     color);
+            pixel->priority = sprite.priority;
+            pixel->sprite_index = sliver->sprite_index;
+        }
+    }
+    *output = composed;
+    return true;
+}

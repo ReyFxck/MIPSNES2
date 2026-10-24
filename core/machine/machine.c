@@ -30,6 +30,8 @@ static void machine_obj_line(void *context, mipsnes2_master_clock timestamp,
     uint8_t first_sprite;
 
     (void)token;
+    (void)memset(&machine->obj_line, 0, sizeof(machine->obj_line));
+    (void)memset(&machine->obj_pixels, 0, sizeof(machine->obj_pixels));
     if (!machine->ppu_forced_blank && line + 1U < vblank &&
         mipsnes2_ppu_oam_first_sprite(&machine->oam_ports, &first_sprite) &&
         mipsnes2_ppu_obj_select_scanline(
@@ -40,6 +42,11 @@ static void machine_obj_line(void *context, mipsnes2_master_clock timestamp,
         }
         if (machine->obj_line.time_over) {
             machine->obj_overflow |= UINT8_C(0x80);
+        }
+        if (machine->vram != NULL) {
+            (void)mipsnes2_ppu_obj_compose_scanline(
+                &machine->oam_ports, machine->vram, machine->vram_size,
+                (uint8_t)line, &machine->obj_line, &machine->obj_pixels);
         }
     }
     delay = line + 2U < vblank
@@ -181,6 +188,7 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     machine->ppu1_open_bus = 0U;
     machine->obj_overflow = 0U;
     (void)memset(&machine->obj_line, 0, sizeof(machine->obj_line));
+    (void)memset(&machine->obj_pixels, 0, sizeof(machine->obj_pixels));
     if (machine->vram != NULL &&
         !mipsnes2_ppu_vram_ports_init(&machine->vram_ports,
                                      machine->vram, machine->vram_size)) {

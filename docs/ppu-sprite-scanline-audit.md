@@ -39,5 +39,10 @@ OAM word address when `$2103` bit 7 is set, as described by the independent
 [sprite hardware notes](https://wiki.superfamicom.org/sprites). Host tests
 check read increments, high-table wrap, VBlank pointer reload and a rotated
 range overflow at the machine event. Active-display address invalidation,
-tile fetch phase, interlace, real-console behavior and pixels remain open.
-No renderer or frame output exists.
+exact tile-fetch phase, interlace and real-console behavior remain open.
+The pure compositor reads selected slivers from caller-owned VRAM with the
+existing 4bpp decoder. A nonzero pixel replaces a lower-ranked sprite pixel;
+color zero is transparent. It retains OBJ palette index, priority and sprite
+index in a bounded 256-entry line. Synthetic tests check overlap, transparent
+fall-through, clipping, flips and a timed machine handoff. The model does not
+mix BGs, windows or color math and has no screen/frame output.

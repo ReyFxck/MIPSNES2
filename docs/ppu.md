@@ -107,7 +107,11 @@ return PPU1 version 1 and the PPU1 open-bus bit 5. Priority rotation uses
 the current internal OAM word address at that event. This is a documented
 phase approximation: exact overflow assertion timing,
 forced-blank transitions, active-display OAM writes, tile fetch and pixels
-remain open. See the [scanline audit](ppu-sprite-scanline-audit.md).
+remain open at exact hardware timing. With caller-owned VRAM, the machine
+composes selected 4bpp slivers into a 256-entry OBJ line, carrying palette
+index, priority and source sprite; transparent color zero leaves lower sprites
+visible. BG mixing and output are absent. See the
+[scanline audit](ppu-sprite-scanline-audit.md).
 
 ## 4bpp tile decode
 

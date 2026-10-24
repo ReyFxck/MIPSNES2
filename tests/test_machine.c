@@ -360,6 +360,24 @@ int main(void)
     CHECK(machine.obj_line.range_over &&
           machine.obj_line.range[0] == 127U &&
           machine.obj_line.range[31] == 30U);
+    config.vram = vram;
+    config.vram_size = sizeof(vram);
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    (void)memset(oam, 0, sizeof(oam));
+    (void)memset(vram, 0, sizeof(vram));
+    for (unsigned i = 1U; i < 128U; ++i) {
+        oam[4U * i + 1U] = UINT8_C(0x80);
+    }
+    vram[0] = UINT8_C(0x80);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100),
+                             UINT8_C(0x0f));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.obj_pixels.pixels[0].color == 129U &&
+          machine.obj_pixels.pixels[0].sprite_index == 0U &&
+          machine.obj_pixels.pixels[1].color == 0U);
     (void)puts("machine integration: OK");
     return 0;
 }

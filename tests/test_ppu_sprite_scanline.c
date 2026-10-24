@@ -10,6 +10,8 @@
     return 1; } } while (0)
 
 static uint8_t oam[MIPSNES2_PPU_OAM_SIZE];
+static uint8_t vram[MIPSNES2_PPU_TILE4_VRAM_SIZE];
+static mipsnes2_ppu_obj_pixels pixels;
 
 static void set_sprite(unsigned index, unsigned x, uint8_t y,
                        bool large, uint8_t attributes)
@@ -32,6 +34,49 @@ static void hide_all(void)
     for (index = 0U; index < 128U; ++index) {
         set_sprite(index, 257U, 10U, false, 0U);
     }
+}
+
+static int test_composite(void)
+{
+    mipsnes2_ppu_oam_ports ports;
+    mipsnes2_ppu_obj_scanline line;
+
+    hide_all();
+    (void)memset(vram, 0, sizeof(vram));
+    CHECK(mipsnes2_ppu_oam_ports_init(&ports, oam, sizeof(oam)));
+    set_sprite(0U, 0U, 10U, false, UINT8_C(0x22));
+    set_sprite(1U, 0U, 10U, false, UINT8_C(0x34));
+    oam[6] = 1U; /* Sprite 1 selects the second tile. */
+    vram[0] = UINT8_C(0x80);  /* Tile 0: color 1 at x=0. */
+    vram[33] = UINT8_C(0xc0); /* Tile 1: color 2 at x=0,1. */
+    CHECK(mipsnes2_ppu_obj_select_scanline(&ports, 10U, 0U, &line));
+    CHECK(mipsnes2_ppu_obj_compose_scanline(
+        &ports, vram, sizeof(vram), 10U, &line, &pixels));
+    CHECK(pixels.pixels[0].color == 145U &&
+          pixels.pixels[0].priority == 2U &&
+          pixels.pixels[0].sprite_index == 0U);
+    CHECK(pixels.pixels[1].color == 162U &&
+          pixels.pixels[1].priority == 3U &&
+          pixels.pixels[1].sprite_index == 1U);
+    CHECK(pixels.pixels[2].color == 0U);
+    hide_all();
+    (void)memset(vram, 0, sizeof(vram));
+    set_sprite(0U, 511U, 10U, false, UINT8_C(0xc0));
+    vram[14] = UINT8_C(0x02); /* Flipped row 7, source x=6. */
+    CHECK(mipsnes2_ppu_obj_select_scanline(&ports, 10U, 0U, &line));
+    CHECK(mipsnes2_ppu_obj_compose_scanline(
+        &ports, vram, sizeof(vram), 10U, &line, &pixels));
+    CHECK(pixels.pixels[0].color == 129U &&
+          pixels.pixels[1].color == 0U);
+    (void)memset(&pixels, 0x5a, sizeof(pixels));
+    CHECK(!mipsnes2_ppu_obj_compose_scanline(
+        &ports, vram, sizeof(vram) - 1U, 10U, &line, &pixels));
+    CHECK(pixels.pixels[0].color == UINT8_C(0x5a));
+    line.sliver_count = 35U;
+    CHECK(!mipsnes2_ppu_obj_compose_scanline(
+        &ports, vram, sizeof(vram), 10U, &line, &pixels));
+    CHECK(pixels.pixels[0].color == UINT8_C(0x5a));
+    return 0;
 }
 
 int main(void)
@@ -128,6 +173,7 @@ int main(void)
     CHECK(!mipsnes2_ppu_obj_select_scanline(&ports, 10U, 0U, NULL));
     CHECK(!mipsnes2_ppu_obj_select_scanline(NULL, 10U, 0U, &line));
     CHECK(line.range[0] == 0x5aU && line.sliver_count == 0x5aU);
+    CHECK(test_composite() == 0);
     (void)puts("PPU OBJ scanline selection: OK");
     return 0;
 }

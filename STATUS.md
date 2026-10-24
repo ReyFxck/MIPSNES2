@@ -224,10 +224,24 @@ internal OAM word address when `$2103` bit 7 is set. Host vectors cover
 pointer advancement by reads, high-table wrap, VBlank reload and a rotated
 33-sprite machine scanline; C99 `cc` `make test` passes (2026-10-24).
 The exact active-display address-invalidation interaction and hardware
-runtime remain unverified. CI for this rotation revision is pending.
+runtime remain unverified. Revision `f8155de` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101264633),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101264526) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101264612).
 
-Next primary block: integrate OBJ sliver tile fetch from VRAM into a
-bounded shared scanline buffer with independently derived 4bpp pixel tests.
+The shared OBJ compositor now reads selected 4bpp slivers from caller-owned
+VRAM into a bounded 256-pixel line. It emits OBJ palette indices and priority,
+uses color zero as transparent and applies sprite flip, clipping and
+first-sprite precedence. Machine HBlank events populate this line when VRAM
+is present. Synthetic host vectors cover overlap with a transparent top
+pixel, palette/priority metadata, negative-X clipping, both flips, invalid
+inputs and the machine handoff. C99 `cc` `make test` passes (2026-10-24).
+PS2/PSP/host CI for this compositor revision is pending. There is no BG/OBJ
+priority mixing, screen output, mid-line VRAM fetch timing or console-runtime
+validation. See the [OBJ scanline audit](docs/ppu-sprite-scanline-audit.md).
+
+Next primary block: implement the first BG tilemap/2bpp scanline path with
+deterministic coordinate, palette and transparency fixtures.
 
 ## State and evidence rules
 
@@ -1466,7 +1480,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation and scheduled scanline range/time selection; exact status phase and rendering absent
+- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; BG mixing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — shared 4bpp tile indices and OBJ address handoff tested; other PPU formats and pixels pending
 - [ ] BG Mode 0
 - [ ] BG Mode 1
@@ -1492,7 +1506,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Relevant open-bus behavior — counter and CGRAM high-read PPU2 subset
 - [ ] Scanline integration
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths host-verified; access-window/mixed-port behavior pending
-- [ ] [IN PROGRESS] Sprite limits and overflow flags — 32 OBJ/34 sliver selection and scheduled sticky `$213E` host tested; exact hardware phase absent
+- [ ] [IN PROGRESS] Sprite limits and overflow flags — 32 OBJ/34 sliver selection, scheduled sticky `$213E` and OBJ pixel line host tested; exact hardware phase absent
 - [ ] Mid-frame register effects
 - [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM, OAM, timed OBJ status and 4bpp tile fixtures
 - [ ] Reference renderer integration
