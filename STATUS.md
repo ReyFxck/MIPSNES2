@@ -287,14 +287,27 @@ black at the scheduled line event. Pure fixtures cover color packing, high
 bit masking, last palette entry, backdrop, brightness 0/8/15, forced blank,
 invalid inputs and unchanged output on failure. Machine fixtures cover
 BG/OBJ palette selection and brightness writes. Host C99 `cc` `make test`
-passes (2026-10-24); PS2/PSP/host CI for this color revision is pending.
+passes (2026-10-24). Revision `ac3124c` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103159833),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103159758)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103159561).
 This digital brightness model is not an analog DAC measurement. Windows,
 sub-screen, color math, mid-line writes, exact fetch timing, target runtime
 and video output remain open. See the [Mode 0 mixer audit](docs/ppu-mode0-mix-audit.md).
 
-Next primary block: add main-screen window masks for Mode 0 BG/OBJ priority
-selection, starting with sourced `$2123-$212B/$212E` semantics and bounded
-deterministic fixtures.
+Main-screen layer windows now retain `$2123-$212B/$212E` in the shared
+machine. A pure 256-pixel mask applies inclusive edges, inversion and
+OR/AND/XOR/XNOR to BG1-4/OBJ before Mode 0 priority selection. Synthetic
+vectors cover all four operations, edge boundaries, inversion, disabled
+windows, reversed edges, BG4/OBJ separation, masked fall-through and the
+machine bus/event handoff. Host C99 `cc` `make test` passes (2026-10-24);
+PS2/PSP/host CI for this window revision is pending. Sub-screen and color
+windows, mid-line updates and target runtime remain open. See the
+[window audit](docs/ppu-window-mask-audit.md).
+
+Next primary block: produce a separate Mode 0 sub-screen index/color line
+from `$212D/$212F` using the same shared priority and window rules, with
+deterministic tests before color math.
 
 ## State and evidence rules
 
@@ -1535,7 +1548,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; BG mixing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel fixtures tested; other PPU formats pending
-- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer and CGRAM BGR555 lookup tested; windows/output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer, main-screen layer windows and CGRAM BGR555 lookup tested; sub-screen, color windows and output absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

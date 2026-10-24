@@ -28,6 +28,12 @@ bool mipsnes2_ppu_mode0_mix(
     const mipsnes2_ppu_obj_pixels *obj, uint8_t main_enable,
     mipsnes2_ppu_mode0_line *output);
 
+/* hidden[x] uses bits 0..4 for BG1-4/OBJ, or NULL for no masking. */
+bool mipsnes2_ppu_mode0_mix_masked(
+    const mipsnes2_ppu_bg2_scanline *bg[4],
+    const mipsnes2_ppu_obj_pixels *obj, uint8_t main_enable,
+    const uint8_t hidden[256], mipsnes2_ppu_mode0_line *output);
+
 /* Resolve a complete index line against 512 caller-owned CGRAM bytes.
  * Brightness 0..15 scales each 5-bit channel by brightness/15, rounding
  * down. Forced blank produces black. This is a digital approximation of

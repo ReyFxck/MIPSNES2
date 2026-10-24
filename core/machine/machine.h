@@ -9,6 +9,7 @@
 #include "core/ppu/oam_ports.h"
 #include "core/ppu/sprite_scanline.h"
 #include "core/ppu/vram_ports.h"
+#include "core/ppu/window_mask.h"
 #include "core/scheduler/cpu_timing.h"
 
 typedef enum {
@@ -66,6 +67,8 @@ typedef struct {
     mipsnes2_ppu_bg2_scanline bg_other_lines[3];
     mipsnes2_ppu_mode0_line mode0_line;
     mipsnes2_ppu_mode0_color_line mode0_color_line;
+    mipsnes2_ppu_window_mask windows;
+    uint8_t window_hidden[256];
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;

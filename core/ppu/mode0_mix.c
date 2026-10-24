@@ -13,6 +13,14 @@ bool mipsnes2_ppu_mode0_mix(
     const mipsnes2_ppu_obj_pixels *obj, uint8_t main_enable,
     mipsnes2_ppu_mode0_line *output)
 {
+    return mipsnes2_ppu_mode0_mix_masked(bg, obj, main_enable, NULL, output);
+}
+
+bool mipsnes2_ppu_mode0_mix_masked(
+    const mipsnes2_ppu_bg2_scanline *bg[4],
+    const mipsnes2_ppu_obj_pixels *obj, uint8_t main_enable,
+    const uint8_t hidden[256], mipsnes2_ppu_mode0_line *output)
+{
     unsigned x;
     unsigned layer;
 
@@ -34,7 +42,8 @@ bool mipsnes2_ppu_mode0_mix(
             const mipsnes2_ppu_bg2_pixel *pixel;
             uint8_t candidate;
 
-            if ((main_enable & (1U << layer)) == 0U) {
+            if ((main_enable & (1U << layer)) == 0U ||
+                (hidden != NULL && (hidden[x] & (1U << layer)) != 0U)) {
                 continue;
             }
             pixel = &bg[layer]->pixels[x];
@@ -46,6 +55,7 @@ bool mipsnes2_ppu_mode0_mix(
             }
         }
         if ((main_enable & UINT8_C(0x10)) != 0U &&
+            (hidden == NULL || (hidden[x] & UINT8_C(0x10)) == 0U) &&
             obj->pixels[x].color != 0U) {
             uint8_t candidate = obj_rank[obj->pixels[x].priority & 3U];
 

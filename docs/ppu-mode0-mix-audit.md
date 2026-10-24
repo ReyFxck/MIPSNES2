@@ -33,10 +33,14 @@ bits and computes the color line at the provisional HBlank event when both
 VRAM and CGRAM are present. Forced blank clears the stored line at that
 event. Tests cover red/green/white, high-bit masking, CGRAM index 255,
 backdrop, brightness 0/8/15, forced blank, invalid input and machine BG/OBJ
-palette routing. C99 `cc` `make test` passes (2026-10-24); PS2/PSP/host CI for
-this color revision is pending. No emulator source code was consulted.
+palette routing. C99 `cc` `make test` passes (2026-10-24). Revision `ac3124c`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103159833),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103159758) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103159561).
+No emulator source code was consulted.
 
-This line is not a screen image. Windows, sub screen, color math, hires,
+This line is not a screen image. Main-screen layer windows now run before
+selection; see the [window audit](ppu-window-mask-audit.md). Sub screen, color math, hires,
 interlace, mid-line changes and target hardware runtime remain unimplemented
 or unverified. The line-event phase and reference performance require target
 measurement.

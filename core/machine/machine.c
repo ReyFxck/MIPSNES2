@@ -79,9 +79,11 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
         for (bg = 1U; bg < 4U; ++bg) {
             bg_lines[bg] = &machine->bg_other_lines[bg - 1U];
         }
-        (void)mipsnes2_ppu_mode0_mix(
+        (void)mipsnes2_ppu_window_mask_line(
+            &machine->windows, machine->window_hidden);
+        (void)mipsnes2_ppu_mode0_mix_masked(
             bg_lines, &machine->obj_pixels, machine->main_screen_enable,
-            &machine->mode0_line);
+            machine->window_hidden, &machine->mode0_line);
         if (machine->cgram != NULL) {
             (void)mipsnes2_ppu_mode0_resolve_color(
                 &machine->mode0_line, machine->cgram, machine->cgram_size,
@@ -187,6 +189,8 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
 
     (void)mipsnes2_ppu_bg_registers_write(&machine->bg_registers,
                                           (uint16_t)address, value);
+    (void)mipsnes2_ppu_window_mask_write(&machine->windows,
+                                          (uint16_t)address, value);
     if ((uint16_t)address == UINT16_C(0x212c)) {
         machine->main_screen_enable = value & UINT8_C(0x1f);
     }
@@ -237,6 +241,8 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     (void)memset(&machine->obj_line, 0, sizeof(machine->obj_line));
     (void)memset(&machine->obj_pixels, 0, sizeof(machine->obj_pixels));
     mipsnes2_ppu_bg_registers_init(&machine->bg_registers);
+    mipsnes2_ppu_window_mask_init(&machine->windows);
+    (void)memset(machine->window_hidden, 0, sizeof(machine->window_hidden));
     (void)memset(&machine->bg1_line, 0, sizeof(machine->bg1_line));
     (void)memset(&machine->bg_other_lines, 0,
                  sizeof(machine->bg_other_lines));

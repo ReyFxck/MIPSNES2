@@ -15,6 +15,7 @@ static mipsnes2_ppu_obj_pixels objects;
 static mipsnes2_ppu_mode0_line output;
 static mipsnes2_ppu_mode0_color_line colors;
 static uint8_t cgram[MIPSNES2_PPU_CGRAM_SIZE];
+static uint8_t hidden[256];
 
 int main(void)
 {
@@ -34,6 +35,15 @@ int main(void)
     objects.pixels[0].priority = 2U;
     CHECK(mipsnes2_ppu_mode0_mix(bg, &objects, UINT8_C(0x1f), &output));
     CHECK(output.pixels[0].color == 10U && output.pixels[0].source == 1U);
+    hidden[0] = 1U; /* Hide BG1, revealing BG2. */
+    CHECK(mipsnes2_ppu_mode0_mix_masked(
+        bg, &objects, UINT8_C(0x1f), hidden, &output));
+    CHECK(output.pixels[0].color == 11U && output.pixels[0].source == 2U);
+    hidden[0] = UINT8_C(0x1f); /* Every layer hidden: backdrop. */
+    CHECK(mipsnes2_ppu_mode0_mix_masked(
+        bg, &objects, UINT8_C(0x1f), hidden, &output));
+    CHECK(output.pixels[0].color == 0U && output.pixels[0].source == 0U);
+    hidden[0] = 0U;
     CHECK(output.pixels[1].color == 0U && output.pixels[1].source == 0U);
     objects.pixels[0].priority = 3U;
     CHECK(mipsnes2_ppu_mode0_mix(bg, &objects, UINT8_C(0x1f), &output));
