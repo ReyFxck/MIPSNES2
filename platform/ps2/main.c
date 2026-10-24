@@ -8,6 +8,7 @@
 
 #include "platform/ps2/diagnostic_suite.h"
 #include "platform/ps2/rom_file.h"
+#include "platform/ps2/video_frame.h"
 #include "core/machine/machine.h"
 
 enum {
@@ -24,6 +25,8 @@ static uint8_t sram[PS2_SRAM_CAPACITY];
 static uint8_t vram[MIPSNES2_PPU_VRAM_SIZE];
 static uint8_t cgram[MIPSNES2_PPU_CGRAM_SIZE];
 static uint8_t oam[MIPSNES2_PPU_OAM_SIZE];
+static uint32_t video_pixels[MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS];
+static mipsnes2_ps2_video_frame video_frame;
 static mipsnes2_machine machine;
 
 static void print_result(void *context, const char *name, bool passed)
@@ -69,6 +72,14 @@ static void run_rom_path(const char *path)
     config.oam = oam;
     config.oam_size = sizeof(oam);
     config.standard = MIPSNES2_HV_STANDARD_NTSC;
+    if (!mipsnes2_ps2_video_frame_init(
+            &video_frame, video_pixels,
+            MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS, 224U)) {
+        scr_printf("Video buffer unavailable.\n");
+        return;
+    }
+    config.video_line = mipsnes2_ps2_video_frame_line;
+    config.video_context = &video_frame;
     if (mipsnes2_machine_init(&machine, &config) != MIPSNES2_MACHINE_OK) {
         scr_printf("ROM header/mapper unsupported.\n");
         return;
@@ -85,6 +96,8 @@ static void run_rom_path(const char *path)
     scr_printf("Run: %u  Timing: %u  CPU: %u\n", (unsigned)run_result,
                (unsigned)timing_result,
                (unsigned)report.cpu_result);
+    scr_printf("PPU lines captured: %u / 224\n",
+               (unsigned)video_frame.delivered_rows);
     scr_printf("No SNES video/audio yet.\n");
     (void)printf("MIPSNES2 PS2 ROM CPU: %lu sequences, %lu clocks, "
                  "run=%u, timing=%u, cpu=%u\n", (unsigned long)steps,

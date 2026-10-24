@@ -40,6 +40,7 @@ TEST_CARTRIDGE_PREPARE = $(BUILD_DIR)/test-cartridge-prepare
 TEST_PS2_DIAGNOSTIC = $(BUILD_DIR)/test-ps2-diagnostic
 TEST_MACHINE = $(BUILD_DIR)/test-machine
 TEST_PS2_ROM_FILE = $(BUILD_DIR)/test-ps2-rom-file
+TEST_PS2_VIDEO_FRAME = $(BUILD_DIR)/test-ps2-video-frame
 CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o $(BUILD_DIR)/ppu_counters.o $(BUILD_DIR)/ppu_vram.o $(BUILD_DIR)/ppu_cgram.o $(BUILD_DIR)/ppu_oam.o $(BUILD_DIR)/ppu_tile4.o $(BUILD_DIR)/ppu_sprite_scanline.o $(BUILD_DIR)/ppu_bg2_scanline.o $(BUILD_DIR)/ppu_bg4_scanline.o $(BUILD_DIR)/ppu_bg_registers.o $(BUILD_DIR)/ppu_mode0_mix.o $(BUILD_DIR)/ppu_mode1_mix.o $(BUILD_DIR)/ppu_window_mask.o $(BUILD_DIR)/ppu_color_math.o \
 	$(BUILD_DIR)/cpu.o \
 	$(BUILD_DIR)/snes_bus.o $(BUILD_DIR)/scheduler.o \
@@ -233,10 +234,13 @@ $(TEST_MACHINE): tests/test_machine.c core/machine/machine.h $(LIB)
 $(TEST_PS2_ROM_FILE): tests/test_ps2_rom_file.c platform/ps2/rom_file.c platform/ps2/rom_file.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) tests/test_ps2_rom_file.c platform/ps2/rom_file.c $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_PS2_VIDEO_FRAME): tests/test_ps2_video_frame.c platform/ps2/video_frame.c platform/ps2/video_frame.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) tests/test_ps2_video_frame.c platform/ps2/video_frame.c $(LDFLAGS) $(LDLIBS) -o $@
+
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG4_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_MODE1_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG4_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_MODE1_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) $(TEST_PS2_VIDEO_FRAME) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
@@ -266,6 +270,7 @@ test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO
 	$(TEST_PS2_DIAGNOSTIC)
 	$(TEST_MACHINE)
 	$(TEST_PS2_ROM_FILE)
+	$(TEST_PS2_VIDEO_FRAME)
 	$(PYTHON) tests/test_host.py $(HOST)
 
 clean:

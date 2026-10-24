@@ -371,13 +371,23 @@ An optional synchronous video-line callback now exposes the completed
 256-pixel BGR555 reference line to a caller-owned backend. Synthetic machine
 fixtures cover line order, pixel delivery, forced blank and copying before
 buffer reuse. Host C99 `cc` `make clean && make -j2 test` passes
-(2026-10-24); PS2/PSP/host CI for this revision is pending. The callback
+(2026-10-24). Revision `307643b` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129271327),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129271341)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129271384). The callback
 does not present pixels on either console. See the
 [video-line audit](docs/video-line-handoff-audit.md).
 
+The PS2 ROM path now captures those lines into a bounded 256×256 RGBA32
+texture buffer with deterministic BGR555 conversion and black padding.
+Host fixtures cover packing, visible-row limits, duplicate lines and
+invalid initialization; C99 `cc` `make clean && make -j2 test` passes
+(2026-10-24). PS2/PSP/host CI for this revision is pending. No GS upload or
+screen presentation is implemented. See the
+[PS2 frame audit](docs/ps2-video-frame-audit.md).
+
 Next primary block: PS2 GS presentation of the caller-owned reference lines,
-with bounded frame storage and independent color conversion tests, followed
-by PS2 and PSP cross-builds. Emulator runtime checks and physical hardware
+followed by PS2 cross-build and console-emulator inspection. Physical PS2
 checks must remain separate evidence.
 
 ## State and evidence rules

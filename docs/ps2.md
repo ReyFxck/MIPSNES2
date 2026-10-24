@@ -13,7 +13,8 @@ qualification; `tests/test_ps2_diagnostic.c` runs the identical suite on the hos
 The optional `--rom PATH` entry reads an image through `fopen` from a filesystem
 that the launcher has already made available, constructs the shared machine and
 runs at most one NTSC H/V frame or 100,000 CPU sequences. It prints CPU and timing
-status; it cannot draw SNES frames, produce audio or persist SRAM. It does not
+status and captures bounded reference lines in a static RGBA32 texture; it
+cannot yet draw those lines on the GS, produce audio or persist SRAM. It does not
 mount a USB device or provide a file picker. The original five-case diagnostic
 still runs without arguments; it is not a game or the final GS/video backend.
 The new ROM path has no console runtime evidence. The default diagnostic has
@@ -21,6 +22,8 @@ user-captured emulator results, while physical PS2 validation remains open.
 The original scaffold record is in
 [bootstrap-audit.md](bootstrap-audit.md); see the
 [ARMSX2 diagnostic guide](ps2-armsx2-diagnostic.md) for the mobile test.
+See the [PS2 frame audit](ps2-video-frame-audit.md) for the capture format and
+its tested limits.
 
 The SDK's own [EE file-reading sample](https://github.com/ps2dev/ps2sdk/blob/2c670453980fcc3fe46ead6399b730b12c8556eb/ee/rpc/audsrv/samples/playwav/playwav.c)
 uses `sceSifInitRpc`, `fopen("host:...", "rb")` and `fread`. This adapter uses

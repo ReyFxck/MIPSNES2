@@ -145,6 +145,8 @@ published but hardware-unverified formula. Exact mid-line behavior and
 display output are absent. An optional synchronous callback hands the
 completed 256-pixel BGR555 line to caller-owned presentation code; the
 buffer stays machine-owned and can be reused after the callback returns.
+The PS2 ROM adapter copies that callback into a PS2-only RGBA32 frame;
+PSP remains independent and neither backend presents it yet.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending
