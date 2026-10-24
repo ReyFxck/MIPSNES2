@@ -110,6 +110,14 @@ behavior remain open. Host CI and PS2/PSP cross-builds pass at `de252cc`;
 see the [read audit](docs/ppu-vram-read-audit.md) and
 [write audit](docs/ppu-vram-write-audit.md). No picture is produced.
 
+The shared CGRAM port subset supplies `$2121/$2122/$213B` over 512 caller-owned
+bytes on the PS2 ROM path, with paired 15-bit writes, low/high reads, address
+wrap and PPU2 open-bus bit 7. `make test` passes with deterministic port and
+machine bus fixtures (2026-10-24, host C99 `cc`). PSP compiles the same core,
+but has no ROM runtime. Active-display access, mixed read/write byte selection
+and real hardware behavior remain unverified; see the
+[CGRAM port audit](docs/ppu-cgram-port-audit.md). CI evidence is pending.
+
 ## State and evidence rules
 
 - [ ] Not implemented or not verified
@@ -1344,9 +1352,9 @@ platform persistence remains incomplete.
 
 ## PPU
 
-- [ ] [IN PROGRESS] PPU register model — H/V counter and VRAM read/write subsets
+- [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM and CGRAM port subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
-- [ ] CGRAM
+- [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] OAM
 - [ ] BG Mode 0
 - [ ] BG Mode 1
@@ -1369,12 +1377,12 @@ platform persistence remains incomplete.
 - [ ] Interlace
 - [ ] Overscan
 - [ ] [IN PROGRESS] Relevant latching behavior — deterministic H/V subset; exact access timing pending
-- [ ] [IN PROGRESS] Relevant open-bus behavior — counter-register PPU2 subset only
+- [ ] [IN PROGRESS] Relevant open-bus behavior — counter and CGRAM high-read PPU2 subset
 - [ ] Scanline integration
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths host-verified; access-window/mixed-port behavior pending
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — H/V counter and VRAM read/write-port fixtures
+- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM and CGRAM port fixtures
 - [ ] Reference renderer integration
 
 ## SPC700

@@ -177,7 +177,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] PPU state ownership
 - [ ] Register reads/writes
 - [ ] [IN PROGRESS] VRAM ports — read/write buffering and remap exist; access gates/mixed-port behavior pending
-- [ ] CGRAM ports
+- [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
 - [ ] OAM ports
 - [ ] Tile decode fixtures
 - [ ] Reference scanline buffers
@@ -190,7 +190,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [ ] PPU register model
 - [ ] [IN PROGRESS] VRAM — storage and read/write-port subset; access gates and rendering absent
-- [ ] CGRAM
+- [ ] [IN PROGRESS] CGRAM — storage and CPU port subset; access gates and rendering absent
 - [ ] OAM
 - [ ] BG Mode 0
 - [ ] BG Mode 1

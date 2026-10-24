@@ -13,6 +13,7 @@ static uint8_t rom[64 * 1024];
 static uint8_t wram[MIPSNES2_SNES_WRAM_SIZE];
 static uint8_t sram[8 * 1024];
 static uint8_t vram[MIPSNES2_PPU_VRAM_SIZE];
+static uint8_t cgram[MIPSNES2_PPU_CGRAM_SIZE];
 static mipsnes2_machine machine;
 
 static void put16(uint8_t *data, uint16_t value)
@@ -159,6 +160,28 @@ int main(void)
           UINT8_C(0x4c));
     CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x00213a)) ==
           UINT8_C(0x3a));
+    config.cgram = cgram;
+    config.cgram_size = sizeof(cgram) - 1U;
+    CHECK(mipsnes2_machine_init(&machine, &config) ==
+          MIPSNES2_MACHINE_INVALID_ARGUMENT);
+    config.cgram_size = sizeof(cgram);
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002121), UINT8_C(0xff));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002122), UINT8_C(0x21));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002122), UINT8_C(0xfa));
+    CHECK(cgram[0x1fe] == UINT8_C(0x21));
+    CHECK(cgram[0x1ff] == UINT8_C(0x7a));
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    CHECK(cgram[0x1ff] == UINT8_C(0x7a));
+    CHECK(machine.cgram_ports.address == 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002121), UINT8_C(0xff));
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x00213b)) ==
+          UINT8_C(0x21));
+    machine.counters.open_bus2 = UINT8_C(0x80);
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x00213b)) ==
+          UINT8_C(0xfa));
+    CHECK(machine.counters.open_bus2 == UINT8_C(0xfa));
+    CHECK(machine.cgram_ports.address == 0U);
     (void)puts("machine integration: OK");
     return 0;
 }
