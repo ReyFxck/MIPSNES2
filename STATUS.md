@@ -85,9 +85,9 @@ with CPU, bus, CPU-I/O, counter registers, H/V, interrupt lines and scheduler.
 Its timed RESET and resumable instruction path executes a synthetic LoROM
 program that writes WRAM, including a paused write and a power cycle retaining
 WRAM/SRAM. `make test` passes on the host (2026-10-24); see
-[machine integration audit](docs/machine-integration-audit.md). PS2/PSP SDKs are
-unavailable in the current workspace, so target compilation and runtime behavior
-of this revision remain unverified. There is still no ROM-file adapter, PPU
+[machine integration audit](docs/machine-integration-audit.md). Pinned PS2 and PSP
+cross-builds and host CI pass at `2d2a836`; target runtime behavior of this
+revision remains unverified. There is still no ROM-file adapter, PPU
 renderer, APU, DMA or game runtime.
 
 ## State and evidence rules

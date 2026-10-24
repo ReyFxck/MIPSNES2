@@ -16,8 +16,12 @@ source was imported. Host validation: `make test` passes, including reset across
 a horizon, delayed WRAM write commit, instruction loop, H/V and bus clock
 alignment, retained WRAM/SRAM across power-on, PAL selection and malformed
 configuration/SRAM capacity rejection. The underlying 256-opcode and scheduler
-regressions also pass. SDKs for the pinned PS2 and PSP cross-builds are absent
-from this workspace; neither target build nor runtime was verified here.
+regressions also pass. SDKs for local PS2 and PSP cross-builds are absent from
+this workspace. At revision `2d2a836668441f64006b5899b6abfd0c2b913027`,
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40050336298),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40050336313) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40050336316)
+completed successfully. Target runtime was not verified for this revision.
 
 The CPU-I/O and PPU counter revisions initialized here are deterministic
 foundation defaults (2 and 3); full console revision selection is outstanding.
