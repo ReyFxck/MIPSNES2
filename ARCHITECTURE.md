@@ -18,7 +18,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI/ABORT boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
-| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line selection/composition, partial Mode 0 BG registers and BG1 line, scheduled overflow state and 4bpp tile decode; no BG/OBJ mixer or screen output |
+| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 BG lines and priority mixer, scheduled overflow state and 4bpp tile decode; no RGB or screen output |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
@@ -130,10 +130,11 @@ range/time overflow bits until the frame boundary. This phase is provisional;
 the first sprite follows `$2103` priority rotation and the current internal
 OAM pointer, and forced blank suppresses this model's
 selection. When caller-owned VRAM exists, selected 4bpp OBJ slivers produce a
-256-entry color/priority line. The same event prepares a Mode 0 BG1 2bpp
-line using machine-owned `$2105/$2107-$2114` subset state when VRAM exists.
-Scroll-write latches use a published but hardware-unverified formula. BG/OBJ
-mixing and display output are absent.
+256-entry color/priority line. The same event prepares four Mode 0 BG 2bpp
+lines using machine-owned `$2105/$2107-$2114` subset state when VRAM exists.
+`$212C` enables select which layers enter the Mode 0 CGRAM-index priority
+mixer. Scroll-write latches use a published but hardware-unverified formula.
+RGB conversion, windows and display output are absent.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending

@@ -29,18 +29,30 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
     mipsnes2_master_clock delay;
     uint8_t first_sprite;
     mipsnes2_ppu_bg2_config bg_config;
+    const mipsnes2_ppu_bg2_scanline *bg_lines[4];
+    unsigned bg;
 
     (void)token;
     (void)memset(&machine->obj_line, 0, sizeof(machine->obj_line));
     (void)memset(&machine->obj_pixels, 0, sizeof(machine->obj_pixels));
     (void)memset(&machine->bg1_line, 0, sizeof(machine->bg1_line));
+    (void)memset(&machine->bg_other_lines, 0,
+                 sizeof(machine->bg_other_lines));
+    (void)memset(&machine->mode0_line, 0, sizeof(machine->mode0_line));
     if (!machine->ppu_forced_blank && machine->vram != NULL &&
-        line + 1U < vblank &&
-        mipsnes2_ppu_bg_mode0_config(&machine->bg_registers, 0U,
-                                     &bg_config)) {
-        (void)mipsnes2_ppu_bg2_render_scanline(
-            machine->vram, machine->vram_size, &bg_config,
-            (uint16_t)line, &machine->bg1_line);
+        line + 1U < vblank) {
+        for (bg = 0U; bg < 4U; ++bg) {
+            mipsnes2_ppu_bg2_scanline *target = bg == 0U
+                ? &machine->bg1_line : &machine->bg_other_lines[bg - 1U];
+
+            if ((machine->main_screen_enable & (1U << bg)) != 0U &&
+                mipsnes2_ppu_bg_mode0_config(&machine->bg_registers, bg,
+                                             &bg_config)) {
+                (void)mipsnes2_ppu_bg2_render_scanline(
+                    machine->vram, machine->vram_size, &bg_config,
+                    (uint16_t)line, target);
+            }
+        }
     }
     if (!machine->ppu_forced_blank && line + 1U < vblank &&
         mipsnes2_ppu_oam_first_sprite(&machine->oam_ports, &first_sprite) &&
@@ -58,6 +70,16 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
                 &machine->oam_ports, machine->vram, machine->vram_size,
                 (uint8_t)line, &machine->obj_line, &machine->obj_pixels);
         }
+    }
+    if (!machine->ppu_forced_blank && machine->vram != NULL &&
+        line + 1U < vblank && (machine->bg_registers.mode & 7U) == 0U) {
+        bg_lines[0] = &machine->bg1_line;
+        for (bg = 1U; bg < 4U; ++bg) {
+            bg_lines[bg] = &machine->bg_other_lines[bg - 1U];
+        }
+        (void)mipsnes2_ppu_mode0_mix(
+            bg_lines, &machine->obj_pixels, machine->main_screen_enable,
+            &machine->mode0_line);
     }
     delay = line + 2U < vblank
                 ? MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS
@@ -158,6 +180,9 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
 
     (void)mipsnes2_ppu_bg_registers_write(&machine->bg_registers,
                                           (uint16_t)address, value);
+    if ((uint16_t)address == UINT16_C(0x212c)) {
+        machine->main_screen_enable = value & UINT8_C(0x1f);
+    }
 
     if ((uint16_t)address == UINT16_C(0x2100)) {
         bool next_forced_blank = (value & UINT8_C(0x80)) != 0U;
@@ -204,6 +229,10 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     (void)memset(&machine->obj_pixels, 0, sizeof(machine->obj_pixels));
     mipsnes2_ppu_bg_registers_init(&machine->bg_registers);
     (void)memset(&machine->bg1_line, 0, sizeof(machine->bg1_line));
+    (void)memset(&machine->bg_other_lines, 0,
+                 sizeof(machine->bg_other_lines));
+    (void)memset(&machine->mode0_line, 0, sizeof(machine->mode0_line));
+    machine->main_screen_enable = 0U;
     if (machine->vram != NULL &&
         !mipsnes2_ppu_vram_ports_init(&machine->vram_ports,
                                      machine->vram, machine->vram_size)) {

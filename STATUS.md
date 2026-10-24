@@ -260,14 +260,27 @@ the same provisional HBlank boundary as OBJ; the other BG register sets can
 produce pure configurations but are not yet scheduled for pixels. Host
 fixtures cover register base/size decode, shared scroll-write latches, mode
 rejection and the machine event boundary. C99 `cc` `make test` passes
-(2026-10-24). PS2/PSP/host CI for this register revision is pending.
+(2026-10-24). Revision `b1fd6ef` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40102344749),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40102344753) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40102344720).
 Scroll latch behavior follows a published hardware-research hypothesis and
 needs real-console validation. Mosaic, BG enable/window selection, BG/OBJ
 mixing, mid-line register effects and screen output remain open. See the
 [BG register audit](docs/ppu-bg-register-audit.md).
 
-Next primary block: compose all four Mode 0 BG layers and OBJ by documented
-priority order into a reference pixel line, with transparent/priority ties.
+The shared Mode 0 mixer now selects among all four BG lines, OBJ and backdrop
+using the documented layer order, with `$212C` main-screen enables. The machine
+prepares enabled BG1-4 lines and a 256-entry CGRAM-index/source line at the
+provisional scanline event. Synthetic tests cover all four BG layers, OBJ
+priority bands, transparent fall-through, disabled layers and machine BG/OBJ
+priority inversion; C99 `cc` `make test` passes (2026-10-24). PS2/PSP/host CI
+for this mixer revision is pending. This is not RGB rendering: windows,
+sub-screen, color math, brightness, CGRAM lookup and display output remain
+open. See the [Mode 0 mixer audit](docs/ppu-mode0-mix-audit.md).
+
+Next primary block: resolve the mixed CGRAM indices to a bounded 15-bit color
+line, including backdrop and brightness semantics, with deterministic tests.
 
 ## State and evidence rules
 
@@ -1508,7 +1521,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; BG mixing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel fixtures tested; other PPU formats pending
-- [ ] [IN PROGRESS] BG Mode 0 — BG1 register-driven 2bpp line tested; other BGs, mixer and output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines and OBJ priority mixer tested; CGRAM color/output absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

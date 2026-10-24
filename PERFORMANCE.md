@@ -30,9 +30,10 @@ measurements. In particular, bus time within CPU time must not be double-counted
 | Bus | TBD | TBD | |
 | PPU | TBD | TBD | OBJ selection scans up to 128 records at each visible-line HBlank (224 NTSC or 239 overscan events/frame); optional OBJ composition decodes up to 34 full 4bpp tiles per line. PS2 and PSP cost unmeasured. |
 
-The BG1 Mode 0 reference path currently fetches a tilemap entry and 2bpp
-row per pixel at a scanline event. Measure on PS2 before replacing it with
-a cached-tile path; no console throughput claim is made.
+Each enabled Mode 0 BG reference path currently fetches a tilemap entry and
+2bpp row per pixel at a scanline event; the mixer then scans the four layer
+pixels and OBJ. Measure on PS2 before replacing it with cached-tile paths;
+no console throughput claim is made.
 | DMA/HDMA | TBD | TBD | |
 | SPC700 | TBD | TBD | |
 | DSP | TBD | TBD | |

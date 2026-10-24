@@ -5,6 +5,7 @@
 #include "core/cartridge/prepare.h"
 #include "core/ppu/cgram_ports.h"
 #include "core/ppu/bg_registers.h"
+#include "core/ppu/mode0_mix.h"
 #include "core/ppu/oam_ports.h"
 #include "core/ppu/sprite_scanline.h"
 #include "core/ppu/vram_ports.h"
@@ -62,6 +63,8 @@ typedef struct {
     mipsnes2_ppu_obj_pixels obj_pixels;
     mipsnes2_ppu_bg_registers bg_registers;
     mipsnes2_ppu_bg2_scanline bg1_line;
+    mipsnes2_ppu_bg2_scanline bg_other_lines[3];
+    mipsnes2_ppu_mode0_line mode0_line;
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
@@ -79,6 +82,7 @@ typedef struct {
     bool ppu_forced_blank;
     uint8_t ppu1_open_bus;
     uint8_t obj_overflow;
+    uint8_t main_screen_enable;
     bool ready;
 } mipsnes2_machine;
 

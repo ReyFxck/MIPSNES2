@@ -2,7 +2,7 @@
 
 The shared core has non-interlaced H/V counter registers, caller-owned
 VRAM/CGRAM/OAM CPU ports, OAM sprite descriptor and tile-address helpers,
-sprite scanline selection/composition, partial BG registers and 2bpp BG tilemap scanlines,
+sprite scanline selection/composition, partial BG registers, 2bpp BG tilemap scanlines and a Mode 0 layer mixer,
 machine-timed `$213E` overflow flags and a 4bpp tile decoder. These are PPU
 foundations, not a renderer.
 Display access windows, scanline evaluation, pixel composition and

@@ -11,7 +11,7 @@ No emulator source code was consulted or copied.
 four character bases and shared horizontal/vertical scroll latches. Its
 Mode 0 decoder supplies explicit configurations to the pure 2bpp line helper.
 The machine routes those writes through the shared PPU callback and prepares
-BG1 at the provisional HBlank event when caller-owned VRAM exists. This also
+enabled BG1-4 lines at the provisional HBlank event when caller-owned VRAM exists. This also
 works when OAM storage is absent. Power-on resets the register subset and
 line while retaining VRAM bytes.
 
@@ -20,8 +20,9 @@ high VRAM-word wrap, shared scroll latches, non-Mode-0 rejection and BG1
 selection at the exact scheduler event boundary. C99 `cc` `make test` passes
 (2026-10-24). Cross-build CI for this revision is pending.
 
-BG2-4 configurations are decoded but only BG1 pixels are scheduled. `$2106`
-mosaic, `$212C` layer enable, window masks, BG priority mixing, Mode 1+,
+BG1-4 Mode 0 configurations are scheduled when enabled by `$212C`; see the
+[mixer audit](ppu-mode0-mix-audit.md). `$2106`
+mosaic, window masks, CGRAM color conversion, Mode 1+,
 mid-line writes, interlace and target runtime remain open. The event phase
 and shared scroll-latch behavior need real-console validation. The reference
 per-pixel path needs target profiling before performance claims.
