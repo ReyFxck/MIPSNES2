@@ -53,7 +53,13 @@ performance or establish actual SNES electrical behavior.
   nonempty 32-bit MIPS N32 ELF; SHA-256
   `d1d58f1de90b98025ea3533b1d4951829680114f05753fb3d8ef3ad72223b37a`.
 - [x] Pinned PSP v20261001 build — unchanged secondary backend compiled.
-- [ ] Record the PS2 and Host CI conclusions for the implementation revision.
+- [x] Implementation commit
+  [`405d0c7587bf8059051e7c1a076a47d77f35b428`](https://github.com/ReyFxck/MIPSNES2/commit/405d0c7587bf8059051e7c1a076a47d77f35b428):
+  [Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40014123841),
+  [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40014123914)
+  and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40014123797)
+  completed successfully. Their respective nonempty Host GCC/Clang, PS2 and
+  PSP artifacts were inspected in the run metadata (PS2 archive: 660,272 bytes).
 - [ ] Record ARMSX2 version, baseline settings and visible `5 PASS / 0 FAIL`
   (or precise failure details) from the user's Android run.
 - [ ] Run on real PS2 for a hardware boot claim.
