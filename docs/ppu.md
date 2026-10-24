@@ -71,8 +71,13 @@ write. `$2104` commits low-table pairs on the odd-byte write and high-table
 bytes immediately. `$2138` reads one byte and advances the pointer. The
 high table mirrors over its 512-byte logical region, physically using 32
 bytes. Port state resets on machine power-on; OAM bytes remain. Priority
-rotation is retained as a register bit, without sprite evaluation. VBlank
-reload, active-display access and rendering remain open. See the
+rotation is retained as a register bit, without sprite evaluation. A machine
+scheduler event reloads the internal address at horizontal dot 10 of the
+VBlank start line while forced blank is off; `$2100` bit 7 supplies the gate.
+This timing choice follows independent hardware notes and still needs a real
+hardware check. Power-on begins in deterministic forced-blank state. The
+forced-blank release transition, active-display access and rendering remain
+open. See the
 [OAM port audit](ppu-oam-port-audit.md).
 
 ## Design direction
@@ -91,7 +96,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] PPU register model — counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] OAM — CPU read/write ports; VBlank reload and rendering absent
+- [ ] [IN PROGRESS] OAM — CPU ports and scheduled VBlank reload; display access and rendering absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2

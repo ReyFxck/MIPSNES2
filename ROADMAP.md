@@ -178,7 +178,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Register reads/writes
 - [ ] [IN PROGRESS] VRAM ports — read/write buffering and remap exist; access gates/mixed-port behavior pending
 - [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
-- [ ] [IN PROGRESS] OAM ports — CPU read/write subset; VBlank reload and access windows pending
+- [ ] [IN PROGRESS] OAM ports — CPU read/write and scheduled VBlank reload; forced-blank release and access windows pending
 - [ ] Tile decode fixtures
 - [ ] Reference scanline buffers
 - [ ] Basic Mode 0/1 output
@@ -191,7 +191,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] PPU register model
 - [ ] [IN PROGRESS] VRAM — storage and read/write-port subset; access gates and rendering absent
 - [ ] [IN PROGRESS] CGRAM — storage and CPU port subset; access gates and rendering absent
-- [ ] [IN PROGRESS] OAM — storage and CPU ports; VBlank reload, sprite evaluation and rendering absent
+- [ ] [IN PROGRESS] OAM — storage, CPU ports and VBlank reload; sprite evaluation and rendering absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2

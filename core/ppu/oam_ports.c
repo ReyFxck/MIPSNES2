@@ -82,3 +82,15 @@ bool mipsnes2_ppu_oam_ports_read(mipsnes2_ppu_oam_ports *ports,
     advance_address(ports);
     return true;
 }
+
+bool mipsnes2_ppu_oam_ports_vblank_reload(mipsnes2_ppu_oam_ports *ports,
+                                         bool forced_blank)
+{
+    if (ports == NULL || !ports->initialized) {
+        return false;
+    }
+    if (!forced_blank) {
+        reload_address(ports);
+    }
+    return true;
+}

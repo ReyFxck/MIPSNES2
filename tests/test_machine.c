@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "core/machine/machine.h"
+#include "core/scheduler/master_timing.h"
 
 #define CHECK(value) do { if (!(value)) { \
     (void)fprintf(stderr, "line %d: %s\n", __LINE__, #value); \
@@ -62,6 +63,8 @@ int main(void)
     mipsnes2_cpu_timing_report report;
     mipsnes2_master_clock end_reset;
     mipsnes2_cpu_timing_result timing_result;
+    mipsnes2_master_timing_report master_report;
+    mipsnes2_master_clock oam_event;
     size_t sequences;
 
     CHECK(make_image() == 0);
@@ -175,6 +178,7 @@ int main(void)
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
     CHECK(cgram[0x1ff] == UINT8_C(0x7a));
     CHECK(machine.cgram_ports.address == 0U);
+    config.standard = MIPSNES2_HV_STANDARD_NTSC;
     config.oam = oam;
     config.oam_size = sizeof(oam) - 1U;
     CHECK(mipsnes2_machine_init(&machine, &config) ==
@@ -194,6 +198,37 @@ int main(void)
           UINT8_C(0x55));
     CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x002138)) ==
           UINT8_C(0xaa));
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x200));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x802100), UINT8_C(0x0f));
+    CHECK(!machine.ppu_forced_blank);
+    CHECK(mipsnes2_scheduler_next_event_time(&machine.scheduler, &oam_event));
+    CHECK(oam_event == (mipsnes2_master_clock)225U * 1364U + 40U);
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              oam_event - 1U, 1U, &master_report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x200));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              oam_event, 0U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_SCHEDULER_ERROR);
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x200));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              oam_event, 1U, &master_report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(master_report.events_dispatched == 1U);
+    CHECK(machine.hv.v_counter == 225U && machine.hv.h_master_clock == 40U);
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x1fe));
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x002138)) ==
+          UINT8_C(0x55));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), UINT8_C(0x8f));
+    CHECK(machine.ppu_forced_blank);
+    CHECK(mipsnes2_scheduler_next_event_time(&machine.scheduler, &oam_event));
+    CHECK(oam_event == (mipsnes2_master_clock)225U * 1364U + 40U +
+                       (mipsnes2_master_clock)262U * 1364U - 4U);
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              oam_event, 1U, &master_report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x1ff));
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002121), UINT8_C(0xff));
     CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x00213b)) ==
           UINT8_C(0x21));
@@ -202,6 +237,17 @@ int main(void)
           UINT8_C(0xfa));
     CHECK(machine.counters.open_bus2 == UINT8_C(0xfa));
     CHECK(machine.cgram_ports.address == 0U);
+    config.standard = MIPSNES2_HV_STANDARD_PAL;
+    config.overscan = true;
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    CHECK(mipsnes2_scheduler_next_event_time(&machine.scheduler, &oam_event));
+    CHECK(oam_event == (mipsnes2_master_clock)240U * 1364U + 40U);
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              oam_event, 1U, &master_report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.hv.v_counter == 240U && machine.hv.h_master_clock == 40U);
+    CHECK(mipsnes2_scheduler_next_event_time(&machine.scheduler, &oam_event));
+    CHECK(oam_event == (mipsnes2_master_clock)(240U + 312U) * 1364U + 40U);
     (void)puts("machine integration: OK");
     return 0;
 }

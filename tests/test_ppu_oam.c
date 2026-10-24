@@ -78,6 +78,15 @@ int main(void)
     CHECK(!mipsnes2_ppu_oam_ports_write(&ports, 0x2101, 0U));
     CHECK(!mipsnes2_ppu_oam_ports_read(&ports, 0x2139, &value));
     CHECK(!mipsnes2_ppu_oam_ports_read(&ports, 0x2138, NULL));
+    CHECK(mipsnes2_ppu_oam_ports_write(&ports, 0x2102, 0x7f));
+    CHECK(mipsnes2_ppu_oam_ports_write(&ports, 0x2103, 0U));
+    CHECK(mipsnes2_ppu_oam_ports_read(&ports, 0x2138, &value));
+    CHECK(ports.byte_address == 0xffU);
+    CHECK(mipsnes2_ppu_oam_ports_vblank_reload(&ports, true));
+    CHECK(ports.byte_address == 0xffU);
+    CHECK(mipsnes2_ppu_oam_ports_vblank_reload(&ports, false));
+    CHECK(ports.byte_address == 0xfeU && oam[0xfe] == 0x12U);
+    CHECK(!mipsnes2_ppu_oam_ports_vblank_reload(NULL, false));
     CHECK(mipsnes2_ppu_oam_ports_init(&ports, oam, sizeof(oam)));
     CHECK(ports.byte_address == 0U && oam[0x1ff] == 0x78U);
     (void)puts("PPU OAM ports: OK");

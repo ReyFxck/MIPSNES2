@@ -128,9 +128,18 @@ fixtures (2026-10-24). Revision `28ed5c1` passed
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076823004),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076823013) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076822995).
-The PSP build includes the same core module. VBlank address reload,
-active-display access, sprite priority and rendering remain open. See the
+The PSP build includes the same core module. Active-display access,
+sprite priority and rendering remain open. See the
 [OAM port audit](docs/ppu-oam-port-audit.md).
+
+The machine now schedules an OAM pointer reload at horizontal dot 10 of the
+VBlank start line when forced blank is off. `$2100` bit 7 is tracked for this
+purpose, and a recurring core scheduler event handles NTSC's alternating
+short line and PAL's longer frame. Host fixtures cover the event boundary,
+event-budget refusal, forced blank and PAL overscan. The exact hardware
+reload clock, forced-blank release behavior, active-display invalidation and
+sprite rotation effects remain unverified; see the OAM audit. Cross-build
+CI for this revision is pending.
 
 ## State and evidence rules
 
@@ -1369,7 +1378,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes and CPU ports; VBlank reload, access windows and rendering absent
+- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports and scheduled VBlank pointer reload; access windows and rendering absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2

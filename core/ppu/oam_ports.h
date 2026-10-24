@@ -24,5 +24,10 @@ bool mipsnes2_ppu_oam_ports_write(mipsnes2_ppu_oam_ports *ports,
                                  uint16_t offset, uint8_t value);
 bool mipsnes2_ppu_oam_ports_read(mipsnes2_ppu_oam_ports *ports,
                                 uint16_t offset, uint8_t *value);
+/* At VBlank, the internal pointer reloads from the saved address only while
+ * display is enabled. The write latch and physical OAM bytes are retained.
+ */
+bool mipsnes2_ppu_oam_ports_vblank_reload(mipsnes2_ppu_oam_ports *ports,
+                                         bool forced_blank);
 
 #endif

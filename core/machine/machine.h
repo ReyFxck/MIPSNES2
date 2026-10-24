@@ -70,6 +70,7 @@ typedef struct {
     size_t oam_size;
     mipsnes2_hv_standard standard;
     bool overscan;
+    bool ppu_forced_blank;
     bool ready;
 } mipsnes2_machine;
 

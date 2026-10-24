@@ -3,6 +3,35 @@
 
 #include <string.h>
 
+enum { MIPSNES2_OAM_RELOAD_H_CLOCK = 40 };
+
+static void machine_oam_vblank(void *context,
+                                mipsnes2_master_clock timestamp,
+                                mipsnes2_scheduler_token token)
+{
+    mipsnes2_machine *machine = context;
+    mipsnes2_master_clock frame_clocks =
+        (mipsnes2_master_clock)mipsnes2_hv_frame_scanlines(&machine->hv) *
+        MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+
+    (void)token;
+    (void)mipsnes2_ppu_oam_ports_vblank_reload(
+        &machine->oam_ports, machine->ppu_forced_blank);
+    if (machine->standard == MIPSNES2_HV_STANDARD_NTSC && machine->hv.field) {
+        frame_clocks -= MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS -
+                        MIPSNES2_HV_NTSC_SHORT_SCANLINE_CLOCKS;
+    }
+    if (timestamp > UINT64_MAX - frame_clocks) {
+        return; /* No representable timestamp for the next frame. */
+    }
+    if (mipsnes2_scheduler_schedule(&machine->scheduler,
+                                    timestamp + frame_clocks, 0U,
+                                    machine_oam_vblank, machine, NULL) !=
+        MIPSNES2_SCHEDULER_OK) {
+        machine->ready = false;
+    }
+}
+
 static uint8_t machine_ppu_read(void *context, mipsnes2_address address)
 {
     mipsnes2_machine *machine = context;
@@ -33,6 +62,10 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
 {
     mipsnes2_machine *machine = context;
 
+    if ((uint16_t)address == UINT16_C(0x2100)) {
+        machine->ppu_forced_blank = (value & UINT8_C(0x80)) != 0U;
+        /* Other display-control behavior remains with the PPU callback. */
+    }
     if (mipsnes2_ppu_oam_ports_write(&machine->oam_ports,
                                     (uint16_t)address, value)) {
         return;
@@ -59,6 +92,7 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     }
     mipsnes2_cpu_io_init(&machine->io, UINT8_C(2));
     mipsnes2_ppu_counters_init(&machine->counters, UINT8_C(3), 0U);
+    machine->ppu_forced_blank = true;
     if (machine->vram != NULL &&
         !mipsnes2_ppu_vram_ports_init(&machine->vram_ports,
                                      machine->vram, machine->vram_size)) {
@@ -106,6 +140,15 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     mipsnes2_cpu_init(&machine->cpu,
                       mipsnes2_snes_bus_make_interface(&machine->bus));
     mipsnes2_scheduler_init(&machine->scheduler);
+    if (machine->oam != NULL &&
+        mipsnes2_scheduler_schedule(
+            &machine->scheduler,
+            (mipsnes2_master_clock)mipsnes2_hv_vblank_start_line(&machine->hv) *
+                MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS + MIPSNES2_OAM_RELOAD_H_CLOCK,
+            0U, machine_oam_vblank, machine, NULL) != MIPSNES2_SCHEDULER_OK) {
+        machine->ready = false;
+        return MIPSNES2_MACHINE_TIMING_ERROR;
+    }
     mipsnes2_interrupt_lines_init(&machine->interrupts);
     mipsnes2_cpu_timing_state_init(&machine->cursor);
     if (mipsnes2_cpu_timing_state_begin_reset(&machine->cursor) !=

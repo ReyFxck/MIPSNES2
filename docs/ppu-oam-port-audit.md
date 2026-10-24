@@ -29,8 +29,23 @@ revision `28ed5c1f9d106c84e9f421f8cefc16f88e6d8f37` passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076822995).
 No runtime result on either target is claimed.
 
-The PPU's automatic OAM address reload at the beginning of VBlank, forced
-blank transition, active-display address invalidation and access restrictions
-are not implemented. Sprite decoding, priority rotation effects, DMA/HDMA,
+An OAM-only machine scheduler callback now reloads the internal pointer at
+horizontal dot 10 (40 master clocks) of the VBlank start line, provided
+`$2100` bit 7 indicates display is enabled. The callback schedules the next
+frame, accounting for NTSC's alternating four-clock short line and PAL's
+normal frame length. The machine's power-on state starts forced blank as a
+deterministic policy. [Independent timing research](https://wiki.superfamicom.org/timing)
+places this reload at dot 10; Nintendo's manual confirms automatic reload
+near VBlank but does not specify this exact clock. The timing remains a
+hardware-validation target.
+
+`tests/test_machine.c` also checks refusal when the event budget is zero,
+reload precisely at the event boundary, forced-blank suppression and the PAL
+overscan event position. Direct host `make test` passes for this extension;
+cross-target CI for its implementation revision is pending.
+
+The forced-blank 1-to-0 transition, active-display address invalidation and
+access restrictions are not implemented. Sprite decoding, priority rotation
+effects, DMA/HDMA,
 rendering and real-console behavior are also unverified. The OAM and PPU
 parent tasks remain incomplete.
