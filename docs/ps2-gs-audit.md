@@ -6,11 +6,15 @@ caller-owned, 64-byte-aligned EE buffer with a GIF DMA chain. The 224 visible
 SNES rows occupy the top of the buffer; remaining rows are black. The path
 uses no SNES behavior in `platform/ps2/gs_present.c`, and the core knows
 nothing about GS addresses, DMA or pixel formats.
+The backend flushes the EE data cache before sending the chain because
+PS2SDK's chain helper flushes its packet but not separately referenced
+texture data.
 
 The design follows the public PS2SDK
 [graph example](https://github.com/ps2dev/ps2sdk/blob/master/ee/graph/samples/graph.c),
 [texture transfer example](https://github.com/ps2dev/ps2sdk/blob/master/ee/draw/samples/texture/texture.c),
 and [draw sample link list](https://github.com/ps2dev/ps2sdk/blob/master/ee/draw/samples/teapot/Makefile.sample)
+plus [DMA source-chain cache notes](https://github.com/ps2dev/ps2sdk/blob/master/ee/dma/src/dma.c)
 consulted on 2026-10-24. This is original backend code using SDK APIs, not
 code from another emulator.
 

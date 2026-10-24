@@ -6,6 +6,7 @@
 #include <draw.h>
 #include <graph.h>
 #include <gs_psm.h>
+#include <kernel.h>
 #include <packet.h>
 
 bool mipsnes2_ps2_gs_present(const uint32_t *pixels, size_t pixel_count)
@@ -45,8 +46,14 @@ bool mipsnes2_ps2_gs_present(const uint32_t *pixels, size_t pixel_count)
                               GS_PSM_32, address,
                               MIPSNES2_PS2_VIDEO_WIDTH);
     q = draw_texture_flush(q);
-    dma_channel_send_chain(DMA_CHANNEL_GIF, packet->data,
-                           q - packet->data, 0, 0);
+    /* The DMA chain references the texture separately from its packet.
+     * PS2SDK only flushes the packet in dma_channel_send_chain(). */
+    FlushCache(0);
+    if (dma_channel_send_chain(DMA_CHANNEL_GIF, packet->data,
+                               q - packet->data, 0, 0) < 0) {
+        packet_free(packet);
+        return false;
+    }
     dma_wait_fast();
     graph_wait_vsync();
     packet_free(packet);
