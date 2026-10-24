@@ -317,9 +317,13 @@ fixed-color channels; the sub-screen backdrop uses this fixed color. This
 raw line is an intermediate color-math source, not a displayed image.
 Synthetic fixtures cover channel retention, independent main/sub layer
 selection, masked sub-screen fallback, fixed-color backdrop and invalid
-inputs. Host C99 `cc` `make test` passes (2026-10-24); PS2/PSP/host CI for
-this sub-screen revision is pending. Color math, color window, mid-line
-register changes and target runtime remain open. See the
+inputs. Host C99 `cc` `make clean && make test` passes (2026-10-24).
+Revision `b258135` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40104037923),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40104037911)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40104037891).
+Color math, color window, mid-line register changes and target runtime
+remain open. See the
 [sub-screen audit](docs/ppu-subscreen-audit.md).
 
 Next primary block: implement bounded Mode 0 color math using unattenuated

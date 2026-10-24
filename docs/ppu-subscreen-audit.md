@@ -20,8 +20,11 @@ unattenuated main colors before combining them.
 
 Deterministic host fixtures cover independent main/sub layer selection,
 masked sub-screen fallback, fixed-color channel retention, CGRAM source
-colors and invalid resolver arguments. Host C99 `cc` `make test` passes
-(2026-10-24); PS2/PSP/host CI for this revision is pending.
+colors and invalid resolver arguments. Host C99 `cc` with
+`make clean && make test` passes (2026-10-24). Revision `b258135` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40104037923),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40104037911)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40104037891).
 
 Color math, color-window clipping, pseudo-hires output, mid-line register
 changes and exact hardware fetch phases remain open. No PS2/PSP runtime or
