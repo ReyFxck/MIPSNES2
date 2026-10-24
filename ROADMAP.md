@@ -180,7 +180,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
 - [ ] [IN PROGRESS] OAM ports — CPU read/write, scheduled VBlank reload, first-line forced-blank release, `$2101` storage, sprite descriptor decode and priority rotation; display access windows pending
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and BG1 2bpp scanlines verified; 8bpp and final output absent
-- [ ] [IN PROGRESS] Reference scanline buffers — scheduled OBJ, four Mode 0 or three Mode 1 BG lines, main/sub priority and layer/color windows, CGRAM lookup, fixed-color backdrop, color math and optional line handoff exist; PS2 captures a frame but display is absent
+- [ ] [IN PROGRESS] Reference scanline buffers — scheduled OBJ, four Mode 0 or three Mode 1 BG lines, main/sub priority and layer/color windows, CGRAM lookup, fixed-color backdrop, color math and optional line handoff exist; PS2 has unverified single-frame GS submission but no continuous display
 - [ ] Basic Mode 0/1 output
 - [ ] Scheduler scanline integration
 

@@ -382,13 +382,24 @@ The PS2 ROM path now captures those lines into a bounded 256×256 RGBA32
 texture buffer with deterministic BGR555 conversion and black padding.
 Host fixtures cover packing, visible-row limits, duplicate lines and
 invalid initialization; C99 `cc` `make clean && make -j2 test` passes
-(2026-10-24). PS2/PSP/host CI for this revision is pending. No GS upload or
-screen presentation is implemented. See the
+(2026-10-24). Revision `e003265` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129509895),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129509814)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129509884).
+At that revision no GS upload or screen presentation was implemented. See the
 [PS2 frame audit](docs/ps2-video-frame-audit.md).
 
-Next primary block: PS2 GS presentation of the caller-owned reference lines,
-followed by PS2 cross-build and console-emulator inspection. Physical PS2
-checks must remain separate evidence.
+The PS2 `--rom` path now submits a captured 256×256 RGBA32 image directly
+to a GS framebuffer when at least one reference line exists. The host
+conversion and machine-handoff tests pass; PS2 cross-build and target
+runtime evidence for this revision are pending. This is a static, single
+buffer without scaling or a continuous frame loop. No visual result in
+ARMSX2/NetherSX2 or physical PS2 is claimed. See the
+[GS audit](docs/ps2-gs-audit.md).
+
+Next primary block: verify the GS submission in a PS2 emulator with a
+redistributable synthetic ROM and then build a continuous, frame-boundary
+presentation loop. Keep emulator and physical-PS2 evidence distinct.
 
 ## State and evidence rules
 

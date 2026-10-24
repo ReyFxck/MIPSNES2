@@ -146,7 +146,10 @@ display output are absent. An optional synchronous callback hands the
 completed 256-pixel BGR555 line to caller-owned presentation code; the
 buffer stays machine-owned and can be reused after the callback returns.
 The PS2 ROM adapter copies that callback into a PS2-only RGBA32 frame;
-PSP remains independent and neither backend presents it yet.
+PSP remains independent and has no presentation path yet.
+The PS2 backend can submit the captured buffer once to a GS framebuffer;
+there is no verified runtime display or frame loop. PSP still has no
+presentation path.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending

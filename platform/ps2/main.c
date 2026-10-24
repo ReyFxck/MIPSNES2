@@ -7,6 +7,7 @@
 #include <sifrpc.h>
 
 #include "platform/ps2/diagnostic_suite.h"
+#include "platform/ps2/gs_present.h"
 #include "platform/ps2/rom_file.h"
 #include "platform/ps2/video_frame.h"
 #include "core/machine/machine.h"
@@ -25,7 +26,8 @@ static uint8_t sram[PS2_SRAM_CAPACITY];
 static uint8_t vram[MIPSNES2_PPU_VRAM_SIZE];
 static uint8_t cgram[MIPSNES2_PPU_CGRAM_SIZE];
 static uint8_t oam[MIPSNES2_PPU_OAM_SIZE];
-static uint32_t video_pixels[MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS];
+static uint32_t video_pixels[MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS]
+    __attribute__((aligned(64)));
 static mipsnes2_ps2_video_frame video_frame;
 static mipsnes2_machine machine;
 
@@ -105,6 +107,15 @@ static void run_rom_path(const char *path)
                  (unsigned)run_result, (unsigned)timing_result,
                  (unsigned)report.cpu_result);
     (void)fflush(stdout);
+    if (video_frame.delivered_rows != 0U) {
+        bool presented = mipsnes2_ps2_gs_present(
+            video_pixels, MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS);
+
+        (void)printf("MIPSNES2 PS2 GS: %s, %u reference lines\n",
+                     presented ? "submitted" : "failed",
+                     (unsigned)video_frame.delivered_rows);
+        (void)fflush(stdout);
+    }
 }
 
 int main(int argc, char **argv)
