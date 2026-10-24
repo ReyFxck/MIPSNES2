@@ -2,8 +2,9 @@
 
 Project foundation plus a 256-opcode 65C816, partial real SNES logical bus, base
 LoROM/HiROM and Mode 25/35 ExHiROM mapping, explicit internal-header analysis and deterministic scheduler/
-timing foundation with a partial non-interlaced H/V model. No ROM loader or runnable
-SNES machine, complete emulated subsystem,
+timing foundation with a partial non-interlaced H/V model and a platform-neutral
+machine instance. No platform ROM-file loader or runnable
+SNES machine capable of running games, complete emulated subsystem,
 console runtime validation,
 compatibility result or hardware benchmark exists. Read
 [bootstrap audit](docs/bootstrap-audit.md) and the CPU/bus evidence in
@@ -78,6 +79,16 @@ and `5 PASS / 0 FAIL` in both emulators. ARMSX2 version/settings and on-device
 ELF checksum are not yet recorded; no real-PS2 execution is claimed. The test
 steps, screenshot hashes, upstream test-ROM provenance and limits are in
 [docs/ps2-armsx2-diagnostic.md](docs/ps2-armsx2-diagnostic.md).
+
+The new `core/machine` composes a caller-owned cartridge image, WRAM and SRAM
+with CPU, bus, CPU-I/O, counter registers, H/V, interrupt lines and scheduler.
+Its timed RESET and resumable instruction path executes a synthetic LoROM
+program that writes WRAM, including a paused write and a power cycle retaining
+WRAM/SRAM. `make test` passes on the host (2026-10-24); see
+[machine integration audit](docs/machine-integration-audit.md). PS2/PSP SDKs are
+unavailable in the current workspace, so target compilation and runtime behavior
+of this revision remain unverified. There is still no ROM-file adapter, PPU
+renderer, APU, DMA or game runtime.
 
 ## State and evidence rules
 

@@ -3,7 +3,7 @@ TARGET = mipsnes2-psp
 OBJS = main.o log.o bus.o cpu_io.o ppu_counters.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
-	cartridge_prepare.o
+	cartridge_prepare.o machine.o
 BUILD_PRX = 1
 INCDIR = ../..
 CFLAGS = -O2 -std=c99 -Wall -Wextra -Werror
@@ -62,6 +62,9 @@ cartridge_image.o: ../../core/cartridge/image.c ../../core/cartridge/image.h ../
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 cartridge_prepare.o: ../../core/cartridge/prepare.c ../../core/cartridge/prepare.h ../../core/cartridge/image.h ../../core/cartridge/cartridge.h
+	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
+
+machine.o: ../../core/machine/machine.c ../../core/machine/machine.h
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 main.o: main.c ../../core/common/log.h ../../core/common/project.h

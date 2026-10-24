@@ -25,12 +25,20 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
+| core/machine | Stable instance composition and timed power-on/CPU execution | Caller-owned ROM/WRAM/SRAM, cartridge, CPU, bus, CPU-I/O, counters, H/V and scheduler |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | On-screen five-case core diagnostic; runtime unverified, machine backend absent |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
 Directories without source contain an explicit scope README, not stub functions.
-There is no machine instance, ROM runner, renderer or APU. CPU reset implements only
+There is a partial machine instance, but no platform ROM-file loader, full ROM runner,
+renderer or APU. `mipsnes2_machine_init` validates an image and constructs the
+cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
+interrupts, retaining caller-owned WRAM and SRAM bytes. `resume` advances one
+timed RESET sequence or instruction to a caller-specified horizon. The instance
+has a stable address because its CPU and bus callbacks point into it; callers
+must not copy or move it. PS2 and PSP compile this shared module but still have
+no backend path to open a ROM and present its video/audio. CPU reset implements only
 the documented programmer-visible foundation and resumable vector reads; complete
 signal-level RESET timing remains open.
 The partial SNES bus is not a complete machine map: it has no complete cartridge

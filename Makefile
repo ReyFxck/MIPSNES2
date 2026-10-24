@@ -26,6 +26,7 @@ TEST_CARTRIDGE = $(BUILD_DIR)/test-cartridge
 TEST_CARTRIDGE_IMAGE = $(BUILD_DIR)/test-cartridge-image
 TEST_CARTRIDGE_PREPARE = $(BUILD_DIR)/test-cartridge-prepare
 TEST_PS2_DIAGNOSTIC = $(BUILD_DIR)/test-ps2-diagnostic
+TEST_MACHINE = $(BUILD_DIR)/test-machine
 CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o $(BUILD_DIR)/ppu_counters.o \
 	$(BUILD_DIR)/cpu.o \
 	$(BUILD_DIR)/snes_bus.o $(BUILD_DIR)/scheduler.o \
@@ -34,7 +35,7 @@ CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o $(BUILD_
 	$(BUILD_DIR)/master_timing.o \
 	$(BUILD_DIR)/cpu_timing.o \
 	$(BUILD_DIR)/cartridge.o $(BUILD_DIR)/cartridge_image.o \
-	$(BUILD_DIR)/cartridge_prepare.o
+	$(BUILD_DIR)/cartridge_prepare.o $(BUILD_DIR)/machine.o
 
 .PHONY: all test check clean
 all: $(HOST)
@@ -85,6 +86,9 @@ $(BUILD_DIR)/cartridge_image.o: core/cartridge/image.c core/cartridge/image.h co
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/cartridge_prepare.o: core/cartridge/prepare.c core/cartridge/prepare.h core/cartridge/image.h core/cartridge/cartridge.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/machine.o: core/machine/machine.c core/machine/machine.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(LIB): $(CORE_OBJS)
@@ -138,10 +142,13 @@ $(TEST_CARTRIDGE_PREPARE): tests/test_cartridge_prepare.c core/cartridge/prepare
 $(TEST_PS2_DIAGNOSTIC): tests/test_ps2_diagnostic.c platform/ps2/diagnostic_suite.c platform/ps2/diagnostic_suite.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) tests/test_ps2_diagnostic.c platform/ps2/diagnostic_suite.c $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_MACHINE): tests/test_machine.c core/machine/machine.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
@@ -157,6 +164,7 @@ test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO
 	$(TEST_CARTRIDGE_IMAGE)
 	$(TEST_CARTRIDGE_PREPARE)
 	$(TEST_PS2_DIAGNOSTIC)
+	$(TEST_MACHINE)
 	$(PYTHON) tests/test_host.py $(HOST)
 
 clean:
@@ -171,4 +179,4 @@ clean:
 	$(BUILD_DIR)/master_timing.d \
 	$(BUILD_DIR)/cpu_timing.d \
 	$(BUILD_DIR)/cartridge.d $(BUILD_DIR)/cartridge_image.d \
-	$(BUILD_DIR)/cartridge_prepare.d
+	$(BUILD_DIR)/cartridge_prepare.d $(BUILD_DIR)/machine.d

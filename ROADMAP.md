@@ -286,9 +286,9 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [ ] Phase 9 exit gate verified
 
-- [ ] Machine ownership and lifecycle
-- [ ] Cartridge reset path
-- [ ] CPU/bus/scheduler integration
+- [x] Machine ownership and lifecycle — stable caller-owned image/WRAM/SRAM and platform-neutral instance verified on host
+- [ ] [IN PROGRESS] Cartridge reset path — timed CPU reset and power cycle verified; complete hardware reset behavior remains open
+- [ ] [IN PROGRESS] CPU/bus/scheduler integration — ROM instruction/WRAM/H-V execution verified; remaining devices absent
 - [ ] PPU event integration
 - [ ] APU sample integration
 - [ ] Input integration

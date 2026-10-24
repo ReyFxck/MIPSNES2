@@ -6,7 +6,7 @@ EE_BIN = mipsnes2-ps2.elf
 EE_OBJS = main.o diagnostic_suite.o log.o bus.o cpu_io.o ppu_counters.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
-	cartridge_prepare.o
+	cartridge_prepare.o machine.o
 EE_LIBS = -ldebug -lc
 EE_INCS = -I../..
 EE_CFLAGS = -std=c99 -Wextra -Werror
@@ -57,6 +57,9 @@ cartridge_image.o: ../../core/cartridge/image.c ../../core/cartridge/image.h ../
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 cartridge_prepare.o: ../../core/cartridge/prepare.c ../../core/cartridge/prepare.h ../../core/cartridge/image.h ../../core/cartridge/cartridge.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+machine.o: ../../core/machine/machine.c ../../core/machine/machine.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 main.o: main.c diagnostic_suite.h
