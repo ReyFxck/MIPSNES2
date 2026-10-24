@@ -150,6 +150,15 @@ int main(void)
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
     CHECK(vram[0xffff] == UINT8_C(0x3a));
     CHECK(machine.vram_ports.word_address == 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002115), UINT8_C(0x80));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002116), UINT8_C(0xff));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002117), UINT8_C(0x7f));
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x002139)) == 0U);
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x00213a)) == 0U);
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x002139)) ==
+          UINT8_C(0x4c));
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x00213a)) ==
+          UINT8_C(0x3a));
     (void)puts("machine integration: OK");
     return 0;
 }

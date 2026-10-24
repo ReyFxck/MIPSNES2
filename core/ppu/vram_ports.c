@@ -1,4 +1,4 @@
-/* MIPSNES2 PPU VRAM write-port foundation. See LICENSE for GPL-3.0 terms. */
+/* MIPSNES2 PPU VRAM port foundation. See LICENSE for GPL-3.0 terms. */
 #include "core/ppu/vram_ports.h"
 
 #include <string.h>
@@ -76,4 +76,27 @@ bool mipsnes2_ppu_vram_ports_write(mipsnes2_ppu_vram_ports *ports,
     default:
         return false;
     }
+}
+
+bool mipsnes2_ppu_vram_ports_read(mipsnes2_ppu_vram_ports *ports,
+                                 uint16_t offset, uint8_t *value)
+{
+    uint32_t index;
+
+    if (ports == NULL || !ports->initialized || value == NULL ||
+        (offset != UINT16_C(0x2139) && offset != UINT16_C(0x213a))) {
+        return false;
+    }
+    *value = offset == UINT16_C(0x2139)
+                 ? (uint8_t)ports->read_buffer
+                 : (uint8_t)(ports->read_buffer >> 8);
+    if (((ports->vmain & UINT8_C(0x80)) == 0U) ==
+        (offset == UINT16_C(0x2139))) {
+        index = (uint32_t)mapped_word(ports) * 2U;
+        ports->read_buffer = (uint16_t)(
+            (uint16_t)ports->vram[index] |
+            ((uint16_t)ports->vram[index + 1U] << 8));
+        increment_address(ports);
+    }
+    return true;
 }

@@ -18,7 +18,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI/ABORT boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
-| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counter registers plus 64 KiB VRAM write-port subset; no renderer |
+| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counter registers plus 64 KiB buffered VRAM read/write ports; no renderer |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |

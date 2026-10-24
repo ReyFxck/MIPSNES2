@@ -4,8 +4,9 @@
 
 Separate state, register behavior, rendering, timing and platform presentation.
 `core/ppu/counters.c` implements the non-interlaced H/V counter-register
-foundation. `core/ppu/vram_ports.c` adds caller-owned 64 KiB VRAM storage and
-the `$2115-$2119` write-port subset. VRAM reads, CGRAM/OAM, pixel composition
+foundation. `core/ppu/vram_ports.c` adds caller-owned 64 KiB VRAM storage,
+the `$2115-$2119` write ports and `$2139/$213A` buffered read ports.
+CGRAM/OAM, pixel composition
 and presentation are absent. GS/GU
 must not be called here; no render API exists.
 
@@ -33,16 +34,21 @@ unverified; do not infer cycle-perfect gun or raster behavior. External edge set
 must be followed by bus synchronization before advancing time. See
 [hv-counter-latch-audit.md](hv-counter-latch-audit.md) for sources and verification.
 
-## VRAM write-port subset
+## VRAM port subset
 
 The machine optionally accepts a 64 KiB caller-owned VRAM buffer and routes
-PPU writes to the write-port state before any external PPU callback. VMAIN
+its VRAM ports before any external PPU callback. VMAIN
 selects increment after low/high byte, step 1/32/128 words, and 32/64/128-word
 full-graphic remapping. The 16-bit logical address wraps naturally; physical
 VRAM wraps at 32K words. A machine power-on resets port registers but retains
-buffer bytes. This is storage semantics only: `$2139/$213A` reads, active-display
-access qualification, DMA/HDMA, register reset values on actual hardware, and
-rendering remain open. See [VRAM port audit](ppu-vram-write-audit.md).
+buffer bytes. `$2139/$213A` return the previous buffered word; the selected
+incrementing read fetches the current remapped word before advancing the address.
+Changing VMADD does not reload the buffer, so the first selected read is a
+dummy read. Initial buffer contents are a deterministic zero policy, not a
+hardware RESET claim. Active-display access qualification, mixed read/write
+effects, DMA/HDMA, register reset values on actual hardware and rendering remain
+open. See the [write](ppu-vram-write-audit.md) and
+[read](ppu-vram-read-audit.md) audits.
 
 ## Design direction
 
@@ -57,8 +63,8 @@ Fixtures must exercise port increment/remap, VRAM/CGRAM/OAM boundaries, tile dec
 Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Unchecked items
 remain incomplete; narrow verified counter behavior does not complete the PPU.
 
-- [ ] [IN PROGRESS] PPU register model — counter and VRAM write subsets
-- [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU write port; reads and rendering absent
+- [ ] [IN PROGRESS] PPU register model — counter and VRAM read/write subsets
+- [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU read/write ports; access windows and rendering absent
 - [ ] CGRAM
 - [ ] OAM
 - [ ] BG Mode 0
@@ -84,10 +90,10 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] Relevant latching behavior — H/V subset with explicit timing approximations
 - [ ] [IN PROGRESS] Relevant open-bus behavior — counter-register PPU2 latch only
 - [ ] Scanline integration
-- [ ] [IN PROGRESS] VRAM port increment/remap behavior — write path checked; read and access-window behavior absent
+- [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths checked; access-window and mixed-port behavior pending
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — counter and VRAM write-port fixtures
+- [ ] [IN PROGRESS] PPU tests — counter and VRAM read/write-port fixtures
 - [ ] Reference renderer integration
 
 ## Research and decisions

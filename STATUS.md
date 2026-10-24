@@ -102,9 +102,12 @@ See [PS2 ROM adapter audit](docs/ps2-rom-adapter-audit.md).
 An optional caller-owned 64 KiB VRAM buffer now connects `$2115-$2119` write
 ports to the shared machine and PS2 ROM path. Increment modes, address wrapping
 and 32/64/128-word remapping pass deterministic host tests. Host CI and PS2/PSP
-cross-builds pass at `f816a73`. VRAM reads and
-active-display access rules are not implemented; see
-[VRAM write audit](docs/ppu-vram-write-audit.md). No picture is produced.
+cross-builds pass at `f816a73`. Buffered `$2139/$213A` reads now return the
+previous word and fetch before the selected increment, with a dummy first read
+after VMADD changes; host fixtures cover both increment modes, remapping,
+wrapping and machine bus routing. Active-display access and mixed read/write
+behavior remain open; see the [read audit](docs/ppu-vram-read-audit.md) and
+[write audit](docs/ppu-vram-write-audit.md). No picture is produced.
 
 ## State and evidence rules
 
@@ -1340,8 +1343,8 @@ platform persistence remains incomplete.
 
 ## PPU
 
-- [ ] [IN PROGRESS] PPU register model — H/V counter and VRAM write subsets
-- [ ] [IN PROGRESS] VRAM — caller-owned bytes and write ports; reads and rendering absent
+- [ ] [IN PROGRESS] PPU register model — H/V counter and VRAM read/write subsets
+- [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] CGRAM
 - [ ] OAM
 - [ ] BG Mode 0
@@ -1367,10 +1370,10 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Relevant latching behavior — deterministic H/V subset; exact access timing pending
 - [ ] [IN PROGRESS] Relevant open-bus behavior — counter-register PPU2 subset only
 - [ ] Scanline integration
-- [ ] [IN PROGRESS] VRAM port increment/remap behavior — write path verified; read/access-window behavior absent
+- [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths host-verified; access-window/mixed-port behavior pending
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — H/V counter and VRAM write-port fixtures
+- [ ] [IN PROGRESS] PPU tests — H/V counter and VRAM read/write-port fixtures
 - [ ] Reference renderer integration
 
 ## SPC700

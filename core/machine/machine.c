@@ -6,7 +6,12 @@
 static uint8_t machine_ppu_read(void *context, mipsnes2_address address)
 {
     mipsnes2_machine *machine = context;
+    uint8_t value;
 
+    if (mipsnes2_ppu_vram_ports_read(&machine->vram_ports,
+                                    (uint16_t)address, &value)) {
+        return value;
+    }
     if (machine->ppu.read8 != NULL) {
         return machine->ppu.read8(machine->ppu.context, address);
     }

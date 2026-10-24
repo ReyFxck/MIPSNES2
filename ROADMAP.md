@@ -176,7 +176,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [ ] PPU state ownership
 - [ ] Register reads/writes
-- [ ] [IN PROGRESS] VRAM ports — write side and remap exist; read buffering/access gates pending
+- [ ] [IN PROGRESS] VRAM ports — read/write buffering and remap exist; access gates/mixed-port behavior pending
 - [ ] CGRAM ports
 - [ ] OAM ports
 - [ ] Tile decode fixtures
@@ -189,7 +189,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Phase 6 exit gate verified
 
 - [ ] PPU register model
-- [ ] [IN PROGRESS] VRAM — storage and write-port subset; reads and rendering absent
+- [ ] [IN PROGRESS] VRAM — storage and read/write-port subset; access gates and rendering absent
 - [ ] CGRAM
 - [ ] OAM
 - [ ] BG Mode 0
@@ -215,7 +215,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Relevant latching behavior
 - [ ] Relevant open-bus behavior
 - [ ] Scanline integration
-- [ ] [IN PROGRESS] VRAM port increment/remap behavior — write side verified; read side pending
+- [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write sides host-verified; active-display and mixed-port behavior pending
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
 - [ ] PPU tests

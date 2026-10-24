@@ -73,6 +73,62 @@ int main(void)
     CHECK(mipsnes2_ppu_vram_ports_init(&ports, vram, sizeof(vram)));
     CHECK(ports.word_address == 0U && ports.vmain == 0U);
     CHECK(vram[0xfffe] == UINT8_C(0x34));
-    (void)puts("PPU VRAM write ports: OK");
+    {
+        uint8_t value = UINT8_C(0x91);
+
+        vram[0x20] = UINT8_C(0x12);
+        vram[0x21] = UINT8_C(0x34);
+        vram[0x22] = UINT8_C(0x56);
+        vram[0x23] = UINT8_C(0x78);
+        CHECK(mipsnes2_ppu_vram_ports_write(&ports, 0x2115, UINT8_C(0x80)));
+        CHECK(set_address(&ports, UINT16_C(0x0010)) == 0);
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x2139, &value));
+        CHECK(value == 0U && ports.word_address == UINT16_C(0x0010));
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x213a, &value));
+        CHECK(value == 0U && ports.word_address == UINT16_C(0x0011));
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x2139, &value));
+        CHECK(value == UINT8_C(0x12));
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x213a, &value));
+        CHECK(value == UINT8_C(0x34) && ports.word_address == UINT16_C(0x0012));
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x2139, &value));
+        CHECK(value == UINT8_C(0x56));
+        CHECK(set_address(&ports, UINT16_C(0x0020)) == 0);
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x2139, &value));
+        CHECK(value == UINT8_C(0x56)); /* VMADD leaves the latch intact. */
+        CHECK(!mipsnes2_ppu_vram_ports_read(&ports, 0x2138, &value));
+        CHECK(!mipsnes2_ppu_vram_ports_read(&ports, 0x213a, NULL));
+
+        CHECK(mipsnes2_ppu_vram_ports_init(&ports, vram, sizeof(vram)));
+        CHECK(set_address(&ports, UINT16_C(0x0010)) == 0);
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x2139, &value));
+        CHECK(value == 0U && ports.word_address == UINT16_C(0x0011));
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x213a, &value));
+        CHECK(value == UINT8_C(0x34));
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x2139, &value));
+        CHECK(value == UINT8_C(0x12) && ports.word_address == UINT16_C(0x0012));
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x213a, &value));
+        CHECK(value == UINT8_C(0x78));
+
+        CHECK(mipsnes2_ppu_vram_ports_init(&ports, vram, sizeof(vram)));
+        CHECK(mipsnes2_ppu_vram_ports_write(&ports, 0x2115, UINT8_C(0x84)));
+        vram[17] = UINT8_C(0xab);
+        vram[16] = UINT8_C(0xcd);
+        CHECK(set_address(&ports, 1U) == 0);
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x213a, &value));
+        CHECK(value == 0U && ports.word_address == 2U);
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x2139, &value));
+        CHECK(value == UINT8_C(0xcd));
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x213a, &value));
+        CHECK(value == UINT8_C(0xab));
+
+        CHECK(mipsnes2_ppu_vram_ports_init(&ports, vram, sizeof(vram)));
+        CHECK(mipsnes2_ppu_vram_ports_write(&ports, 0x2115, UINT8_C(0x80)));
+        CHECK(set_address(&ports, UINT16_C(0xffff)) == 0);
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x213a, &value));
+        CHECK(ports.word_address == 0U && ports.read_buffer == UINT16_C(0x5634));
+        CHECK(mipsnes2_ppu_vram_ports_read(&ports, 0x2139, &value));
+        CHECK(value == UINT8_C(0x34));
+    }
+    (void)puts("PPU VRAM ports: OK");
     return 0;
 }
