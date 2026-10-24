@@ -60,7 +60,11 @@ effect of writes around horizontal dot 10 also needs verification.
 `tests/test_machine.c` exercises release on the first VBlank line through a
 mirrored bus bank, repeated enabled-display writes, the reverse transition,
 release on the next line and the next scheduled VBlank reload. A clean
-`make test` run passes on host C99 `cc` (2026-10-24); PS2/PSP CI is pending.
+`make test` run passes on host C99 `cc` (2026-10-24). Revision
+`fdffb76625652926df6587ec7fd27c8476b59c7b` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40084717479),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40084717451) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40084717441).
 
 Active-display address invalidation and access restrictions are not
 implemented. Sprite decoding, priority rotation

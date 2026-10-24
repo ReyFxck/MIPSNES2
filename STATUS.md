@@ -148,7 +148,10 @@ the first VBlank scanline. A clean host `make test` passes with mirrored-bank
 write, repeated-write and next-line controls (2026-10-24, C99 `cc`).
 Independent research differs on whether this transition can reload outside
 the first VBlank line; the narrower behavior is implemented and the broader
-claim remains unverified. Cross-build CI for this revision is pending.
+claim remains unverified. Revision `fdffb76` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40084717479),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40084717451) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40084717441).
 
 ## State and evidence rules
 

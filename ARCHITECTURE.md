@@ -34,7 +34,7 @@ Directories without source contain an explicit scope README, not stub functions.
 There is a partial machine instance and an explicit-path PS2 ROM-file adapter,
 but no full ROM runner, renderer or APU. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
-interrupts and VRAM/CGRAM port registers, retaining caller-owned WRAM, SRAM and
+interrupts and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
 optional VRAM/CGRAM/OAM bytes. `resume` advances one
 timed RESET sequence or instruction to a caller-specified horizon; `run_until`
 also bounds completed sequences and retains a paused cursor. The instance
