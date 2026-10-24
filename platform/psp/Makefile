@@ -1,6 +1,6 @@
 # SDK conventions verified against pspdev/pspsdk; see docs/psp.md.
 TARGET = mipsnes2-psp
-OBJS = main.o log.o bus.o cpu_io.o ppu_counters.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
+OBJS = main.o log.o bus.o cpu_io.o ppu_counters.o ppu_vram.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
 	cartridge_prepare.o machine.o
@@ -29,6 +29,9 @@ cpu_io.o: ../../core/bus/cpu_io.c ../../core/bus/cpu_io.h
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 ppu_counters.o: ../../core/ppu/counters.c ../../core/ppu/counters.h ../../core/scheduler/hv_timing.h
+	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
+
+ppu_vram.o: ../../core/ppu/vram_ports.c ../../core/ppu/vram_ports.h
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 snes_bus.o: ../../core/bus/snes_bus.c ../../core/bus/snes_bus.h ../../core/bus/cpu_io.h ../../core/bus/interface.h ../../core/cartridge/interface.h ../../core/common/address.h ../../core/scheduler/5a22_timing.h

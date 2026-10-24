@@ -21,6 +21,7 @@ enum {
 static uint8_t rom[PS2_ROM_CAPACITY];
 static uint8_t wram[MIPSNES2_SNES_WRAM_SIZE];
 static uint8_t sram[PS2_SRAM_CAPACITY];
+static uint8_t vram[MIPSNES2_PPU_VRAM_SIZE];
 static mipsnes2_machine machine;
 
 static void print_result(void *context, const char *name, bool passed)
@@ -59,6 +60,8 @@ static void run_rom_path(const char *path)
     config.wram_size = sizeof(wram);
     config.sram = sram;
     config.sram_capacity = sizeof(sram);
+    config.vram = vram;
+    config.vram_size = sizeof(vram);
     config.standard = MIPSNES2_HV_STANDARD_NTSC;
     if (mipsnes2_machine_init(&machine, &config) != MIPSNES2_MACHINE_OK) {
         scr_printf("ROM header/mapper unsupported.\n");

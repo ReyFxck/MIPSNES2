@@ -3,6 +3,7 @@
 #define MIPSNES2_MACHINE_H
 
 #include "core/cartridge/prepare.h"
+#include "core/ppu/vram_ports.h"
 #include "core/scheduler/cpu_timing.h"
 
 typedef enum {
@@ -23,6 +24,8 @@ typedef struct {
     size_t wram_size;
     uint8_t *sram;
     size_t sram_capacity;
+    uint8_t *vram;
+    size_t vram_size;
     mipsnes2_hv_standard standard;
     bool overscan;
     mipsnes2_bus_interface ppu;
@@ -43,12 +46,15 @@ typedef struct {
     mipsnes2_interrupt_lines interrupts;
     mipsnes2_cpu_io io;
     mipsnes2_ppu_counters counters;
+    mipsnes2_ppu_vram_ports vram_ports;
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
     mipsnes2_bus_interface dma;
     uint8_t *wram;
     size_t wram_size;
+    uint8_t *vram;
+    size_t vram_size;
     mipsnes2_hv_standard standard;
     bool overscan;
     bool ready;

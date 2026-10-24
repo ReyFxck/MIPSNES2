@@ -3,8 +3,10 @@
 ## Scope and current state
 
 Separate state, register behavior, rendering, timing and platform presentation.
-`core/ppu/counters.c` implements only the non-interlaced H/V counter-register
-foundation. VRAM/CGRAM/OAM, pixel composition and presentation are absent. GS/GU
+`core/ppu/counters.c` implements the non-interlaced H/V counter-register
+foundation. `core/ppu/vram_ports.c` adds caller-owned 64 KiB VRAM storage and
+the `$2115-$2119` write-port subset. VRAM reads, CGRAM/OAM, pixel composition
+and presentation are absent. GS/GU
 must not be called here; no render API exists.
 
 ## Counter-register foundation
@@ -31,6 +33,17 @@ unverified; do not infer cycle-perfect gun or raster behavior. External edge set
 must be followed by bus synchronization before advancing time. See
 [hv-counter-latch-audit.md](hv-counter-latch-audit.md) for sources and verification.
 
+## VRAM write-port subset
+
+The machine optionally accepts a 64 KiB caller-owned VRAM buffer and routes
+PPU writes to the write-port state before any external PPU callback. VMAIN
+selects increment after low/high byte, step 1/32/128 words, and 32/64/128-word
+full-graphic remapping. The 16-bit logical address wraps naturally; physical
+VRAM wraps at 32K words. A machine power-on resets port registers but retains
+buffer bytes. This is storage semantics only: `$2139/$213A` reads, active-display
+access qualification, DMA/HDMA, register reset values on actual hardware, and
+rendering remain open. See [VRAM port audit](ppu-vram-write-audit.md).
+
 ## Design direction
 
 Begin with sourced register semantics and independent state tests, then reference scanline output. Decide synchronization granularity from software-visible behavior, including mid-frame writes. Candidate accelerated pixel kernels need exact formats, alignment and reference equivalence; final frame upload belongs to platform.
@@ -44,8 +57,8 @@ Fixtures must exercise port increment/remap, VRAM/CGRAM/OAM boundaries, tile dec
 Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Unchecked items
 remain incomplete; narrow verified counter behavior does not complete the PPU.
 
-- [ ] [IN PROGRESS] PPU register model — counter subset only
-- [ ] VRAM
+- [ ] [IN PROGRESS] PPU register model — counter and VRAM write subsets
+- [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU write port; reads and rendering absent
 - [ ] CGRAM
 - [ ] OAM
 - [ ] BG Mode 0
@@ -71,10 +84,10 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] Relevant latching behavior — H/V subset with explicit timing approximations
 - [ ] [IN PROGRESS] Relevant open-bus behavior — counter-register PPU2 latch only
 - [ ] Scanline integration
-- [ ] VRAM port increment/remap behavior
+- [ ] [IN PROGRESS] VRAM port increment/remap behavior — write path checked; read and access-window behavior absent
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — counter fixtures only
+- [ ] [IN PROGRESS] PPU tests — counter and VRAM write-port fixtures
 - [ ] Reference renderer integration
 
 ## Research and decisions

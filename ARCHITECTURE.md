@@ -18,14 +18,14 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI/ABORT boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
-| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counter-register subset only; no renderer or PPU memory |
+| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counter registers plus 64 KiB VRAM write-port subset; no renderer |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
-| core/machine | Stable instance composition and timed power-on/CPU execution | Caller-owned ROM/WRAM/SRAM, cartridge, CPU, bus, CPU-I/O, counters, H/V and scheduler |
+| core/machine | Stable instance composition and timed power-on/CPU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM, cartridge, CPU, bus, CPU-I/O, counters, H/V and scheduler |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path to bounded CPU-only machine run; target runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
@@ -34,7 +34,8 @@ Directories without source contain an explicit scope README, not stub functions.
 There is a partial machine instance and an explicit-path PS2 ROM-file adapter,
 but no full ROM runner, renderer or APU. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
-interrupts, retaining caller-owned WRAM and SRAM bytes. `resume` advances one
+interrupts and VRAM write-port registers, retaining caller-owned WRAM, SRAM and
+optional VRAM bytes. `resume` advances one
 timed RESET sequence or instruction to a caller-specified horizon; `run_until`
 also bounds completed sequences and retains a paused cursor. The instance
 has a stable address because its CPU and bus callbacks point into it; callers

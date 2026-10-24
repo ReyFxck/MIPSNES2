@@ -3,6 +3,30 @@
 
 #include <string.h>
 
+static uint8_t machine_ppu_read(void *context, mipsnes2_address address)
+{
+    mipsnes2_machine *machine = context;
+
+    if (machine->ppu.read8 != NULL) {
+        return machine->ppu.read8(machine->ppu.context, address);
+    }
+    return machine->bus.open_value;
+}
+
+static void machine_ppu_write(void *context, mipsnes2_address address,
+                              uint8_t value)
+{
+    mipsnes2_machine *machine = context;
+
+    if (mipsnes2_ppu_vram_ports_write(&machine->vram_ports,
+                                     (uint16_t)address, value)) {
+        return;
+    }
+    if (machine->ppu.write8 != NULL) {
+        machine->ppu.write8(machine->ppu.context, address, value);
+    }
+}
+
 mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
 {
     mipsnes2_snes_bus_config config;
@@ -12,6 +36,12 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     }
     mipsnes2_cpu_io_init(&machine->io, UINT8_C(2));
     mipsnes2_ppu_counters_init(&machine->counters, UINT8_C(3), 0U);
+    if (machine->vram != NULL &&
+        !mipsnes2_ppu_vram_ports_init(&machine->vram_ports,
+                                     machine->vram, machine->vram_size)) {
+        machine->ready = false;
+        return MIPSNES2_MACHINE_INVALID_ARGUMENT;
+    }
     if (mipsnes2_hv_timing_init(&machine->hv, machine->standard,
                                machine->overscan, &machine->io) != MIPSNES2_HV_OK) {
         machine->ready = false;
@@ -23,7 +53,13 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     config.cpu_io_state = &machine->io;
     config.ppu_counters = &machine->counters;
     config.hv_timing = &machine->hv;
-    config.ppu = machine->ppu;
+    if (machine->vram != NULL) {
+        config.ppu.context = machine;
+        config.ppu.read8 = machine_ppu_read;
+        config.ppu.write8 = machine_ppu_write;
+    } else {
+        config.ppu = machine->ppu;
+    }
     config.apu = machine->apu;
     config.dma = machine->dma;
     config.cartridge = mipsnes2_cartridge_make_interface(&machine->cartridge);
@@ -58,6 +94,9 @@ mipsnes2_machine_result mipsnes2_machine_init(
     if (config->image == NULL || config->wram == NULL ||
         config->wram_size < MIPSNES2_SNES_WRAM_SIZE ||
         (config->sram_capacity != 0U && config->sram == NULL) ||
+        ((config->vram == NULL && config->vram_size != 0U) ||
+         (config->vram != NULL &&
+          config->vram_size < MIPSNES2_PPU_VRAM_SIZE)) ||
         (config->standard != MIPSNES2_HV_STANDARD_NTSC &&
          config->standard != MIPSNES2_HV_STANDARD_PAL)) {
         return MIPSNES2_MACHINE_INVALID_ARGUMENT;
@@ -76,6 +115,8 @@ mipsnes2_machine_result mipsnes2_machine_init(
     machine->cartridge = cartridge;
     machine->wram = config->wram;
     machine->wram_size = config->wram_size;
+    machine->vram = config->vram;
+    machine->vram_size = config->vram_size;
     machine->standard = config->standard;
     machine->overscan = config->overscan;
     machine->ppu = config->ppu;

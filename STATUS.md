@@ -99,6 +99,12 @@ pass; PS2/PSP cross-builds and host CI also pass at `8261563`. Target runtime
 and mounted-device/launcher arguments have not been checked.
 See [PS2 ROM adapter audit](docs/ps2-rom-adapter-audit.md).
 
+An optional caller-owned 64 KiB VRAM buffer now connects `$2115-$2119` write
+ports to the shared machine and PS2 ROM path. Increment modes, address wrapping
+and 32/64/128-word remapping pass deterministic host tests. VRAM reads and
+active-display access rules are not implemented; see
+[VRAM write audit](docs/ppu-vram-write-audit.md). No picture is produced.
+
 ## State and evidence rules
 
 - [ ] Not implemented or not verified
@@ -1333,8 +1339,8 @@ platform persistence remains incomplete.
 
 ## PPU
 
-- [ ] [IN PROGRESS] PPU register model — H/V counter subset only
-- [ ] VRAM
+- [ ] [IN PROGRESS] PPU register model — H/V counter and VRAM write subsets
+- [ ] [IN PROGRESS] VRAM — caller-owned bytes and write ports; reads and rendering absent
 - [ ] CGRAM
 - [ ] OAM
 - [ ] BG Mode 0
@@ -1360,10 +1366,10 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Relevant latching behavior — deterministic H/V subset; exact access timing pending
 - [ ] [IN PROGRESS] Relevant open-bus behavior — counter-register PPU2 subset only
 - [ ] Scanline integration
-- [ ] VRAM port increment/remap behavior
+- [ ] [IN PROGRESS] VRAM port increment/remap behavior — write path verified; read/access-window behavior absent
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — H/V counter fixtures only
+- [ ] [IN PROGRESS] PPU tests — H/V counter and VRAM write-port fixtures
 - [ ] Reference renderer integration
 
 ## SPC700

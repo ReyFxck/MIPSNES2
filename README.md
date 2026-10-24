@@ -55,7 +55,7 @@ acknowledge stale asynchronous data.
 No-match and ambiguous images are rejected instead of guessed. PS2 has an
 explicit-path ROM adapter and a bounded CPU-only run; there is no file picker,
 unofficial ExLoROM, padded/board-specific irregular mapping or enhancement hardware.
-Only the PPU counter-register subset exists; there is no renderer, PPU memory,
+Only PPU counter registers and VRAM write ports exist; there is no renderer or VRAM read path,
 APU, ROM runner, compatibility or performance claim.
 
 Current milestone: Phase 4 — Ricoh 5A22 interrupt/timer foundation.
@@ -100,7 +100,9 @@ external pin levels and a consumable bit-7 falling edge. A caller-owned PPU coun
 component now implements `$2137/$213C/$213D/$213F`, WRIO/external-edge capture,
 independent byte selectors and a PPU2 open-bus latch. It samples the current H/V
 snapshot; exact within-instruction capture and WRIO's measured one-dot latency
-difference remain incomplete. No rendering or PPU memory was added.
+difference remain incomplete. That counter-register milestone added no rendering
+or PPU memory; the later VRAM write-port subset is documented in
+[docs/ppu.md](docs/ppu.md).
 Unofficial ExLoROM remains research-only until stronger evidence exists.
 Do not start with a dynarec,
 renderer or enhancement chips.

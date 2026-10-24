@@ -12,6 +12,7 @@
 static uint8_t rom[64 * 1024];
 static uint8_t wram[MIPSNES2_SNES_WRAM_SIZE];
 static uint8_t sram[8 * 1024];
+static uint8_t vram[MIPSNES2_PPU_VRAM_SIZE];
 static mipsnes2_machine machine;
 
 static void put16(uint8_t *data, uint16_t value)
@@ -133,6 +134,22 @@ int main(void)
     config.sram_capacity = sizeof(sram);
     CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
     CHECK(machine.hv.standard == MIPSNES2_HV_STANDARD_PAL);
+    config.vram = vram;
+    config.vram_size = sizeof(vram) - 1U;
+    CHECK(mipsnes2_machine_init(&machine, &config) ==
+          MIPSNES2_MACHINE_INVALID_ARGUMENT);
+    config.vram_size = sizeof(vram);
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002115), UINT8_C(0x80));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002116), UINT8_C(0xff));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002117), UINT8_C(0x7f));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002118), UINT8_C(0x4c));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002119), UINT8_C(0x3a));
+    CHECK(vram[0xfffe] == UINT8_C(0x4c));
+    CHECK(vram[0xffff] == UINT8_C(0x3a));
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    CHECK(vram[0xffff] == UINT8_C(0x3a));
+    CHECK(machine.vram_ports.word_address == 0U);
     (void)puts("machine integration: OK");
     return 0;
 }
