@@ -95,7 +95,11 @@ The helper returns the first word of a selected unflipped 8×8 tile; it
 applies 32K-word VRAM wrap and rejects tile coordinates outside the selected
 OBJ size. `tests/test_ppu_oam.c` covers `$1FE` row/column wrap, base and
 second-table selection, VRAM wrap, size limits and invalid inputs. A clean
-host C99 `cc` `make test` passes (2026-10-24); cross-build CI is pending.
+host C99 `cc` `make test` passes (2026-10-24). Implementation revision
+`920ae0ce7ad465e2bde0aa01dc1e38e0186baf67` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085599497),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085599465) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085599449).
 The helper does not read VRAM, perform flips, evaluate scanlines or render.
 
 Active-display address invalidation and access restrictions are not

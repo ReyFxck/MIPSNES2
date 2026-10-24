@@ -174,7 +174,10 @@ column wrap independently within the selected 16×16 character grid, and
 the 32K-word VRAM address wraps. Deterministic host fixtures exercise
 character `$1FE` across row/column edges, second-table and base selection,
 VRAM wrap, sprite-size bounds and invalid inputs. A clean host C99 `cc`
-`make test` passes (2026-10-24); PS2/PSP CI for this revision is pending.
+`make test` passes (2026-10-24). Revision `920ae0c` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085599497),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085599465) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085599449).
 This helper does not fetch VRAM bytes or decide tile order after flips,
 scanline limits, palette composition or rendering.
 
