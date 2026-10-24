@@ -18,7 +18,13 @@ launcher are outside this slice. The program never loads USB drivers implicitly.
 Host verification: `make test` includes `tests/test_ps2_rom_file.c` (exact-sized,
 oversized, empty, invalid and absent files) and `tests/test_machine.c` (bounded
 CPU execution, horizon pause and sequence limit on an original synthetic LoROM).
-No third-party ROM bytes are committed. PS2/PSP cross-build evidence and workflow
-URLs will be recorded after CI runs. The optional PS2 command-line path, file
+No third-party ROM bytes are committed. At implementation revision
+`8261563bb03cb5bff35108c7fbcc9d6577496805`,
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40051034228),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40051034392) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40051034170)
+completed successfully, including GCC/Clang sanitizer jobs. The PS2 build
+published a nonexpired ELF artifact archive (683,603 bytes). The optional
+PS2 command-line path, file
 availability, SRAM initialization policy, full reset, controller input, PPU,
 DMA, APU and sustained execution remain unverified or unimplemented as named.

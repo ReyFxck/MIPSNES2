@@ -95,7 +95,8 @@ available target filesystem, reads at most 8 MiB plus an optional copier prefix,
 and feeds the bytes to the shared machine. It runs only a bounded NTSC CPU/H-V
 slice and reports its result on the debug screen. The five-case diagnostic stays
 the default when no path is passed. Host file-boundary and bounded-run fixtures
-pass; target runtime and mounted-device/launcher arguments have not been checked.
+pass; PS2/PSP cross-builds and host CI also pass at `8261563`. Target runtime
+and mounted-device/launcher arguments have not been checked.
 See [PS2 ROM adapter audit](docs/ps2-rom-adapter-audit.md).
 
 ## State and evidence rules
