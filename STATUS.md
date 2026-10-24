@@ -101,7 +101,8 @@ See [PS2 ROM adapter audit](docs/ps2-rom-adapter-audit.md).
 
 An optional caller-owned 64 KiB VRAM buffer now connects `$2115-$2119` write
 ports to the shared machine and PS2 ROM path. Increment modes, address wrapping
-and 32/64/128-word remapping pass deterministic host tests. VRAM reads and
+and 32/64/128-word remapping pass deterministic host tests. Host CI and PS2/PSP
+cross-builds pass at `f816a73`. VRAM reads and
 active-display access rules are not implemented; see
 [VRAM write audit](docs/ppu-vram-write-audit.md). No picture is produced.
 

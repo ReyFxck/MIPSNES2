@@ -20,7 +20,12 @@ The source is a hardware manual and hardware research, not emulator source.
 three full-graphic groups, 32/128-word steps, unknown-register routing and
 storage retention across port reset. `tests/test_machine.c` verifies bus-to-VRAM
 composition and rejects a short VRAM buffer. `make test` passes on the host;
-target build and runtime evidence for this revision will be recorded after CI.
+at implementation revision `f816a7331fcb0be4723a14860bd93d2e821c9785`,
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40051520882),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40051520900) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40051520967)
+completed successfully. These are builds and host regressions, not target runtime
+validation.
 
 This does not implement `$2139/$213A` reads, internal read buffering,
 forced-blank/VBlank/HBlank access gates, DMA/HDMA, PPU fetch contention or any
