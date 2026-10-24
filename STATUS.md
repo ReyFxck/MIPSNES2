@@ -201,8 +201,11 @@ list (34 slivers), in priority order and reverse fetch order respectively.
 It handles 9-bit X clipping including X=`$100`, 8-bit Y wrap, square size
 modes 0-5, flips and an explicit first-sprite index. Host fixtures cover
 exact and overflow boundaries, list order, X/Y edges and invalid inputs.
-A clean C99 `cc` `make test` passes (2026-10-24); PS2/PSP CI for this
-revision is pending. This is pure selection using a caller-supplied
+A clean C99 `cc` `make test` passes (2026-10-24). Revision `25f0ae9`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629267),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629246) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629261).
+This is pure selection using a caller-supplied
 sprite-addressed Y: scheduler phase, priority-rotation first-index timing,
 `$213E` sticky flags, active-display writes, pixels and hardware runtime
 are not implemented. See the [OBJ scanline audit](docs/ppu-sprite-scanline-audit.md).

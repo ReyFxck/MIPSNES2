@@ -20,8 +20,11 @@ because the current OBJ size lookup does not document them.
 `tests/test_ppu_sprite_scanline.c` uses synthetic OAM bytes and checks
 32/33 sprites, 34/35 slivers, circular first-index order, reverse fetch
 order, X=`$100`, negative X boundaries, horizontal/vertical flips, Y wrap
-and invalid inputs. C99 `cc` `make test` passes on host (2026-10-24);
-PS2/PSP cross-build CI is pending.
+and invalid inputs. C99 `cc` `make test` passes on host (2026-10-24).
+Implementation revision `25f0ae9a84fc3621f1da1456868d60e130a0d8ee`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629267),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629246) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629261).
 
 This selection is not a timed PPU evaluation. `$213E` sticky flags,
 line-zero blanking, active-display OAM invalidation, priority rotation's
