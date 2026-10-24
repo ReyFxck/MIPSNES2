@@ -81,6 +81,14 @@ Independent sources disagree about transitions on other scanlines; that case,
 active-display access and rendering remain open. See the
 [OAM port audit](ppu-oam-port-audit.md).
 
+`$2101` is now retained alongside the OAM ports. A read-only core helper
+decodes one of 128 sprite records directly from caller-owned OAM without
+touching the CPU port pointer. It exposes the packed high-table X/size bits
+and low-table fields; a second helper maps the six documented `$2101` size
+pairs to square pixel dimensions. Undocumented size codes 6-7 return failure.
+The helper does not decide scanline visibility, priority rotation, VRAM tile
+addresses or pixels; those still need a sprite evaluator and renderer.
+
 ## Design direction
 
 Begin with sourced register semantics and independent state tests, then reference scanline output. Decide synchronization granularity from software-visible behavior, including mid-frame writes. Candidate accelerated pixel kernels need exact formats, alignment and reference equivalence; final frame upload belongs to platform.
@@ -97,7 +105,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] PPU register model — counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] OAM — CPU ports and scheduled VBlank reload; display access and rendering absent
+- [ ] [IN PROGRESS] OAM — CPU ports, scheduled VBlank reload and sprite descriptor decode; display access and rendering absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2

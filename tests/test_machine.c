@@ -185,6 +185,8 @@ int main(void)
           MIPSNES2_MACHINE_INVALID_ARGUMENT);
     config.oam_size = sizeof(oam);
     CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x802101), UINT8_C(0xa5));
+    CHECK(machine.oam_ports.obj_select == UINT8_C(0xa5));
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002102), UINT8_C(0xff));
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002103), 0U);
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002104), UINT8_C(0x55));
@@ -193,6 +195,7 @@ int main(void)
     CHECK(oam[0x1fe] == UINT8_C(0x55) && oam[0x1ff] == UINT8_C(0xaa));
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
     CHECK(oam[0x1ff] == UINT8_C(0xaa) && machine.oam_ports.byte_address == 0U);
+    CHECK(machine.oam_ports.obj_select == 0U);
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002102), UINT8_C(0xff));
     CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x002138)) ==
           UINT8_C(0x55));

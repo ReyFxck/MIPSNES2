@@ -66,6 +66,22 @@ release on the next line and the next scheduled VBlank reload. A clean
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40084717451) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40084717441).
 
+The OAM module also retains `$2101` OBJSEL and offers a read-only decoder
+for the 128 physical sprite records. Nintendo's *SNES Development Manual,
+Book I*, [PPU register page 2-27-1 and appendix A-3](https://floating.muncher.se/bot/manual/book1_text.pdf),
+specifies the six `$2101` size pairs, four-byte low-table records and packed
+high-table X/size bits. [Independent sprite hardware notes](https://wiki.superfamicom.org/sprites)
+corroborate field placement. The decoder returns raw nine-bit X (including
+values 256-511), Y, nine-bit character, palette, background priority, flips
+and large-size selection without changing the OAM CPU pointer. The size helper
+returns false for undocumented `$2101` codes 6-7. The low-table write latch
+still controls when a partially written record becomes visible to this decoder.
+`tests/test_ppu_oam.c` checks the four bit-pair positions, the final record,
+attributes, pointer non-mutation, invalid inputs and every documented size
+pair; `tests/test_machine.c` checks mirrored `$2101` routing and power-on
+reset. A clean host `make test` passes with C99 `cc` (2026-10-24); target CI
+for this revision is pending. No source code from other emulators was used.
+
 Active-display address invalidation and access restrictions are not
 implemented. Sprite decoding, priority rotation
 effects, DMA/HDMA,
