@@ -180,7 +180,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
 - [ ] [IN PROGRESS] OAM ports — CPU read/write, scheduled VBlank reload, first-line forced-blank release, `$2101` storage and sprite descriptor decode; display access windows pending
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp planar OBJ-compatible tiles verified; 2bpp/8bpp and scanline output absent
-- [ ] Reference scanline buffers
+- [ ] [IN PROGRESS] Reference scanline buffers — pure OBJ range/time selection exists; pixel buffer absent
 - [ ] Basic Mode 0/1 output
 - [ ] Scheduler scanline integration
 
@@ -216,7 +216,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Relevant open-bus behavior
 - [ ] Scanline integration
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write sides host-verified; active-display and mixed-port behavior pending
-- [ ] Sprite limits and overflow flags
+- [ ] [IN PROGRESS] Sprite limits and overflow flags — pure 32 OBJ/34 sliver selection verified; `$213E` timing/latching absent
 - [ ] Mid-frame register effects
 - [ ] PPU tests
 - [ ] Reference renderer integration

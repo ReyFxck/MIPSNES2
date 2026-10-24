@@ -196,11 +196,19 @@ suite passed. The cause of that local artifact failure is unconfirmed.
 No palette lookup, transparency decision, flipping, scanline rendering or
 target runtime is claimed. See the [4bpp tile audit](docs/ppu-tile4-audit.md).
 
-Next primary block: research and implement shared sprite scanline selection,
-including the 32-object range and 34-tile time limits, with independent
-deterministic fixtures before any pixel renderer. The active-display OAM
-access window and exact priority-rotation edge cases remain separate
-hardware-validation work.
+The core now selects a bounded OBJ scanline range (32 sprites) and tile-fetch
+list (34 slivers), in priority order and reverse fetch order respectively.
+It handles 9-bit X clipping including X=`$100`, 8-bit Y wrap, square size
+modes 0-5, flips and an explicit first-sprite index. Host fixtures cover
+exact and overflow boundaries, list order, X/Y edges and invalid inputs.
+A clean C99 `cc` `make test` passes (2026-10-24); PS2/PSP CI for this
+revision is pending. This is pure selection using a caller-supplied
+sprite-addressed Y: scheduler phase, priority-rotation first-index timing,
+`$213E` sticky flags, active-display writes, pixels and hardware runtime
+are not implemented. See the [OBJ scanline audit](docs/ppu-sprite-scanline-audit.md).
+
+Next primary block: integrate OBJ line selection with H/V timing and
+`$213E` range/time-over state using deterministic event-boundary tests.
 
 ## State and evidence rules
 
@@ -1439,7 +1447,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite descriptor decode and tile-address lookup; access windows and rendering absent
+- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode and pure scanline range/time selection; timed status and rendering absent
 - [ ] [IN PROGRESS] Tile decode fixtures — shared 4bpp tile indices and OBJ address handoff tested; other PPU formats and pixels pending
 - [ ] BG Mode 0
 - [ ] BG Mode 1
@@ -1465,9 +1473,9 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Relevant open-bus behavior — counter and CGRAM high-read PPU2 subset
 - [ ] Scanline integration
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths host-verified; access-window/mixed-port behavior pending
-- [ ] Sprite limits and overflow flags
+- [ ] [IN PROGRESS] Sprite limits and overflow flags — pure 32 OBJ/34 sliver selection tested; `$213E` timing/latching absent
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM, OAM port and 4bpp tile fixtures
+- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM, OAM, pure OBJ scanline and 4bpp tile fixtures
 - [ ] Reference renderer integration
 
 ## SPC700

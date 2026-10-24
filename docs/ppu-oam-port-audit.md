@@ -103,7 +103,7 @@ host C99 `cc` `make test` passes (2026-10-24). Implementation revision
 The helper does not read VRAM, perform flips, evaluate scanlines or render.
 
 Active-display address invalidation and access restrictions are not
-implemented. Sprite scanline evaluation, priority rotation
-effects, DMA/HDMA,
+implemented. Pure sprite scanline selection exists separately, while its
+timing, priority rotation effects, DMA/HDMA,
 rendering and real-console behavior are also unverified. The OAM and PPU
 parent tasks remain incomplete.

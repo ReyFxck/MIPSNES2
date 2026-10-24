@@ -93,6 +93,17 @@ VRAM word using OBJSEL base/name bits. It wraps rows and columns within the
 selected 16×16 character grid and rejects tile coordinates outside the
 selected sprite size. It does not fetch or decode tile pixels.
 
+## OBJ scanline selection
+
+`core/ppu/sprite_scanline.c` scans the 128 OAM records from an explicit
+first-sprite index and sprite-addressed Y value. It retains at most 32
+sprites, then selects up to 34 visible 8-pixel slivers from those sprites
+in reverse priority order. X=`$100` counts against both limits despite
+being off-screen. The returned sliver records carry their source tile
+coordinates after flip and true screen X. This pure result does not set
+`$213E`, choose the first index from priority rotation, advance H/V time,
+fetch VRAM or compose pixels. See the [scanline audit](ppu-sprite-scanline-audit.md).
+
 ## 4bpp tile decode
 
 The shared decoder reads the four interleaved bitplanes of one 8×8 tile
@@ -120,6 +131,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — CPU ports, scheduled VBlank reload, sprite descriptor decode and tile-address lookup; display access and rendering absent
+- [ ] [IN PROGRESS] Sprite limits — pure 32 OBJ/34 tile selection; timed `$213E` flags and pixels absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp tile indices and OBJ address handoff tested; other formats and renderer absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
