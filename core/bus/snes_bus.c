@@ -203,6 +203,11 @@ static void write_system_area(mipsnes2_snes_bus *bus,
         return;
     }
     if (offset >= UINT16_C(0x4000) && offset <= UINT16_C(0x421f)) {
+        if (offset == UINT16_C(0x420b) && bus->dma_registers != NULL) {
+            bus->dma_request_mask = value;
+            bus->dma_grace_cycles = value != 0U ? 1U : 0U;
+            return;
+        }
         if (offset == UINT16_C(0x420d)) {
             bus->fastrom_enabled = (value & UINT8_C(1)) != 0U;
             return;
@@ -271,6 +276,63 @@ bool mipsnes2_snes_bus_sync_hv_latch(mipsnes2_snes_bus *bus)
         return false;
     }
     return mipsnes2_ppu_counters_capture(bus->ppu_counters, bus->hv_timing);
+}
+
+static bool dma_a_blocked(mipsnes2_address address)
+{
+    uint16_t offset = (uint16_t)address;
+
+    return is_system_bank((uint8_t)(address >> 16)) &&
+        ((offset >= UINT16_C(0x2100) && offset <= UINT16_C(0x21ff)) ||
+         offset == UINT16_C(0x420b) || offset == UINT16_C(0x420c) ||
+         (offset >= UINT16_C(0x4300) && offset <= UINT16_C(0x437f)));
+}
+
+void mipsnes2_snes_bus_dma_byte(mipsnes2_snes_bus *bus,
+    mipsnes2_address a_address, mipsnes2_address b_address, bool b_to_a)
+{
+    uint32_t index;
+    uint8_t value;
+    bool a_wram;
+    bool blocked;
+    bool b_conflict;
+
+    if (bus == NULL || bus->wram == NULL ||
+        b_address < UINT32_C(0x2100) || b_address > UINT32_C(0x21ff)) {
+        return;
+    }
+    a_address = mipsnes2_address24(a_address);
+    a_wram = wram_index(a_address, &index);
+    blocked = dma_a_blocked(a_address);
+    b_conflict = a_wram && b_address >= UINT32_C(0x2180) &&
+                            b_address <= UINT32_C(0x2183);
+    if (b_to_a) {
+        value = b_conflict ? bus->open_value :
+            read_system_area(bus, b_address, (uint16_t)b_address);
+        if (!blocked) {
+            if (a_wram) {
+                bus->wram[index] = value;
+            } else if (is_system_bank((uint8_t)(a_address >> 16))) {
+                write_system_area(bus, a_address, (uint16_t)a_address, value);
+            } else {
+                cartridge_write(bus, a_address, value);
+            }
+        }
+    } else {
+        if (blocked) {
+            value = bus->open_value;
+        } else if (a_wram) {
+            value = bus->wram[index];
+        } else if (is_system_bank((uint8_t)(a_address >> 16))) {
+            value = read_system_area(bus, a_address, (uint16_t)a_address);
+        } else {
+            value = cartridge_read(bus, a_address);
+        }
+        if (!b_conflict) {
+            write_system_area(bus, b_address, (uint16_t)b_address, value);
+        }
+    }
+    bus->open_value = value;
 }
 
 uint8_t mipsnes2_snes_bus_read(mipsnes2_snes_bus *bus,

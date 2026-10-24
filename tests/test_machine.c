@@ -633,6 +633,54 @@ int main(void)
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
     CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x004373)) ==
           UINT8_C(0xff));
+    /* CPU-triggered DMA reaches real shared VRAM, OAM and CGRAM ports. */
+    config.oam = oam;
+    config.oam_size = sizeof(oam);
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    CHECK(mipsnes2_machine_resume(&machine, UINT64_MAX, 0U, &report) ==
+          MIPSNES2_CPU_TIMING_OK);
+    machine.cpu.pc = 0U;
+    machine.cpu.a = 7U;
+    wram[0] = UINT8_C(0x8d);
+    wram[1] = UINT8_C(0x0b);
+    wram[2] = UINT8_C(0x42);
+    wram[3] = UINT8_C(0xea);
+    wram[0x1000] = UINT8_C(0x12);
+    wram[0x1001] = UINT8_C(0x03);
+    wram[0x1002] = UINT8_C(0x56);
+    wram[0x1003] = UINT8_C(0x07);
+    mipsnes2_snes_bus_write(&machine.bus, 0x2115U, UINT8_C(0x80));
+    mipsnes2_snes_bus_write(&machine.bus, 0x2116U, 0U);
+    mipsnes2_snes_bus_write(&machine.bus, 0x2117U, 0U);
+    mipsnes2_snes_bus_write(&machine.bus, 0x2102U, 0U);
+    mipsnes2_snes_bus_write(&machine.bus, 0x2103U, 0U);
+    mipsnes2_snes_bus_write(&machine.bus, 0x2121U, 0U);
+    {
+        unsigned channel;
+        const uint8_t modes[3] = {1U, 2U, 2U};
+        const uint8_t ports[3] = {0x18U, 4U, 0x22U};
+        for (channel = 0U; channel < 3U; ++channel) {
+            uint8_t *state = machine.dma_registers.channel[channel];
+            state[0] = modes[channel];
+            state[1] = ports[channel];
+            state[2] = 0U;
+            state[3] = 0x10U;
+            state[4] = 0x7eU;
+            state[5] = 4U;
+            state[6] = 0U;
+        }
+    }
+    CHECK(mipsnes2_machine_resume(&machine, UINT64_MAX, 0U, &report) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(machine.bus.dma_request_mask == 7U);
+    CHECK(mipsnes2_machine_resume(&machine, UINT64_MAX, 0U, &report) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.dma_bytes == 12U && report.processor_cycles == 2U);
+    CHECK(memcmp(vram, wram + 0x1000, 4U) == 0);
+    CHECK(memcmp(oam, wram + 0x1000, 4U) == 0);
+    CHECK(memcmp(cgram, wram + 0x1000, 4U) == 0);
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    CHECK(machine.bus.dma_request_mask == 0U && !machine.cursor.dma_active);
     (void)puts("machine integration: OK");
     return 0;
 }

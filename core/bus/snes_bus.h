@@ -52,6 +52,8 @@ typedef struct {
     uint64_t access_count;
     uint64_t master_clocks;
     uint8_t open_value;
+    uint8_t dma_request_mask;
+    uint8_t dma_grace_cycles;
     bool fastrom_enabled;
     bool timing_overflow;
 } mipsnes2_snes_bus;
@@ -78,5 +80,9 @@ bool mipsnes2_snes_bus_interface_matches(
     mipsnes2_bus_interface interface);
 /* Call immediately after external I/O changes, before advancing emulated time. */
 bool mipsnes2_snes_bus_sync_hv_latch(mipsnes2_snes_bus *bus);
+/* One untimed DMA data phase. No CPU cycle/access counters or math cycles
+ * are charged. The timing owner must charge one eight-master-clock slot. */
+void mipsnes2_snes_bus_dma_byte(mipsnes2_snes_bus *bus,
+    mipsnes2_address a_address, mipsnes2_address b_address, bool b_to_a);
 
 #endif

@@ -419,15 +419,22 @@ Revision `7fc0d79` passed
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40131063212),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40131063247)
 and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40131063232).
-The cursor itself is untimed: `$420B` does not start a transfer, the CPU is
-not stalled, and machine bus restrictions and HDMA remain unimplemented. See
-the [DMA foundation audit](docs/dma-register-foundation-audit.md) and
-[bounded transfer audit](docs/dma-bounded-transfer-audit.md).
+The machine now consumes `$420B` requests after one extra CPU cycle and
+suspends CPU operation admission while DMA advances through scheduler/H/V
+horizons. One data slot transfers one byte through the shared A/B bus policy;
+CPU access counters are not double-charged. Fixtures cover actual VRAM/OAM/
+CGRAM ports, channel setup, resynchronization, interrupts and exact-once
+resume. The byte effects commit at slot endpoints as an explicit reference
+approximation. WRAM refresh, HDMA arbitration, electrical phases and DMA/math
+overlap remain pending. See the [machine DMA audit](docs/dma-machine-audit.md).
+Host C99 suite passed with `make -W tests/test_cpu_io.c test` (2026-10-24).
+The preceding clean build produced a non-executable CPU-I/O test binary;
+rebuilding that generated target resolved the local failure. PS2/PSP/host CI
+for this integration is pending.
 
-Next primary block: integrate `$420B` with the machine's A/B bus policy and
-resumable CPU stall/timing accounting, starting with general-purpose DMA
-and retaining the cursor's bounded byte progress. Keep PS2 GS emulator
-and physical-console checks as separate pending validation.
+Next primary block: implement shared WRAM refresh stalls for CPU and general
+DMA, preserving event horizons and exact-once bus effects. PS2 GS emulator
+and physical-console checks remain separate pending validation.
 
 ## State and evidence rules
 
@@ -1648,9 +1655,9 @@ platform persistence remains incomplete.
 
 ## DMA / HDMA
 
-- [ ] [IN PROGRESS] DMA registers — eight `$43x0-$43xB` banks and alias routed; `$420B/$420C` effects absent
-- [ ] [IN PROGRESS] DMA transfer modes — bounded untimed A/B-byte cursor for all eight; machine/timing integration absent
-- [ ] DMA timing
+- [ ] [IN PROGRESS] DMA registers — channel banks and `$420B` start integrated; `$420C` HDMA effects absent
+- [ ] [IN PROGRESS] DMA transfer modes — timed machine byte path for all eight; HDMA and electrical edge cases pending
+- [ ] [IN PROGRESS] DMA timing — grace cycle, slots, setup and CPU resynchronization; refresh/HDMA/electrical phases pending
 - [ ] DMA source/destination wrapping
 - [ ] HDMA initialization
 - [ ] HDMA scanline behavior

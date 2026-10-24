@@ -52,7 +52,7 @@ after a bounded run. No throughput, transfer latency, cache-stall or frame
 budget measurement exists; it is not a continuous renderer.
 The color-window predicate adds one evaluation per pixel before arithmetic;
 the reference path has no target timing measurement.
-| DMA/HDMA | TBD | TBD | |
+| DMA/HDMA | TBD | TBD | Reference DMA bridge snapshots CPU/channel state for each slot and invokes one shared byte callback; PS2/PSP cost unmeasured. |
 | SPC700 | TBD | TBD | |
 | DSP | TBD | TBD | |
 | Scheduler | TBD | TBD | |

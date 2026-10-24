@@ -8,6 +8,7 @@
 
 #include "core/bus/snes_bus.h"
 #include "core/cpu/65c816/cpu.h"
+#include "core/dma/transfer.h"
 #include "core/scheduler/hv_timing.h"
 #include "core/scheduler/interrupt_lines.h"
 #include "core/scheduler/scheduler.h"
@@ -44,7 +45,9 @@ typedef struct {
     uint64_t processor_cycles;
     uint64_t bus_accesses;
     uint64_t internal_cycles;
-    uint64_t master_clocks;
+    uint64_t master_clocks; /* committed CPU clocks plus DMA stall clocks */
+    uint64_t dma_master_clocks;
+    uint64_t dma_bytes;
     mipsnes2_master_clock target_time;
     size_t events_dispatched;
 } mipsnes2_cpu_timing_report;
@@ -55,7 +58,10 @@ typedef struct {
  * A READ, WRITE or INTERNAL operation is first admitted with a fixed 6/8/12
  * master-clock cost.  The scheduler/H-V domain may then advance through that
  * interval in several calls.  The CPU/bus effect is committed exactly once,
- * after the operation endpoint has been reached.  The fields are private to
+ * after the operation endpoint has been reached. General-purpose DMA may
+ * suspend admission of the next CPU operation after one request grace cycle;
+ * DMA phases use the same scheduler horizons and commit bytes at endpoints.
+ * The fields are private to
  * cpu_timing.c; initialize them with mipsnes2_cpu_timing_state_init().
  */
 typedef struct {
@@ -63,6 +69,8 @@ typedef struct {
     mipsnes2_cpu_operation pending_operation;
     mipsnes2_cpu pending_cpu_snapshot;
     mipsnes2_cpu abort_cpu_checkpoint;
+    mipsnes2_dma_cursor dma_cursor;
+    mipsnes2_dma_registers dma_register_snapshot;
     mipsnes2_cpu *bound_cpu;
     mipsnes2_snes_bus *bound_bus;
     mipsnes2_scheduler *bound_scheduler;
@@ -77,9 +85,16 @@ typedef struct {
     mipsnes2_master_clock domain_time;
     mipsnes2_master_clock operation_start_time;
     mipsnes2_master_clock operation_end_time;
+    mipsnes2_master_clock dma_start_time;
+    mipsnes2_master_clock dma_end_time;
+    uint64_t dma_master_clocks;
+    uint64_t dma_bytes;
     size_t events_dispatched;
     mipsnes2_cpu_result cpu_result;
     uint8_t operation_master_clocks;
+    uint8_t dma_phase;
+    uint8_t dma_phase_clocks;
+    uint8_t dma_cpu_clocks;
     uint8_t abort_status_at_pulse;
     mipsnes2_cpu_abort_write_disposition abort_write_disposition;
     bool pending_fastrom_enabled;
@@ -87,6 +102,8 @@ typedef struct {
     bool irq_level_delivered;
     bool active;
     bool operation_pending;
+    bool dma_active;
+    bool dma_phase_pending;
     bool reset_requested;
     bool reset_sequence;
     bool abort_opcode_fetched;

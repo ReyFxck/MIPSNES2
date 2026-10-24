@@ -86,6 +86,8 @@ static void fill_resumable_report(
     report->nmi_delivered = state->nmi_delivered;
     report->irq_level_delivered = state->irq_level_delivered;
     report->target_time = scheduler->now;
+    report->dma_master_clocks = state->dma_master_clocks;
+    report->dma_bytes = state->dma_bytes;
 
     if (!state->reset_sequence &&
         cpu->instruction_cycles >= state->processor_cycles_before) {
@@ -98,7 +100,8 @@ static void fill_resumable_report(
     }
     if (bus->master_clocks >= state->bus_clocks_before) {
         report->master_clocks =
-            bus->master_clocks - state->bus_clocks_before;
+            bus->master_clocks - state->bus_clocks_before +
+            state->dma_master_clocks;
     }
     if (!state->reset_sequence &&
         report->processor_cycles >= report->bus_accesses) {
@@ -121,7 +124,7 @@ static void sample_interrupt_lines(
     }
     (void)mipsnes2_interrupt_lines_sample_cpu_io(
         interrupt_lines, bus->cpu_io_state);
-    if (drive_cpu) {
+    if (drive_cpu && bus->dma_request_mask == 0U && !state->dma_active) {
         (void)mipsnes2_interrupt_lines_drive_cpu(
             interrupt_lines, cpu, &delivered);
         state->nmi_delivered = state->nmi_delivered || delivered;
@@ -380,6 +383,12 @@ static mipsnes2_cpu_timing_result commit_pending_operation(
     bool inhibited = state->abort_latched &&
         state->pending_operation.kind == MIPSNES2_CPU_OPERATION_WRITE &&
         state->abort_write_disposition == MIPSNES2_CPU_ABORT_WRITE_INHIBIT;
+    bool dma_grace = bus->dma_request_mask != 0U &&
+                      bus->dma_grace_cycles != 0U;
+    bool requests_dma = state->pending_operation.kind ==
+                            MIPSNES2_CPU_OPERATION_WRITE &&
+        (state->pending_operation.address & UINT32_C(0x40ffff)) ==
+            UINT32_C(0x00420b);
 
     result = validate_pending_operation(
         cpu, bus, state->bound_scheduler, state);
@@ -443,6 +452,9 @@ static mipsnes2_cpu_timing_result commit_pending_operation(
     } else if (cpu->instruction_cycles != cycles_before + expected_cycles) {
         return MIPSNES2_CPU_TIMING_ACCESS_CYCLE_MISMATCH;
     }
+    if (dma_grace && !requests_dma && bus->dma_grace_cycles != 0U) {
+        --bus->dma_grace_cycles;
+    }
     return MIPSNES2_CPU_TIMING_OK;
 }
 
@@ -468,6 +480,10 @@ static void bind_resumable_state(
     state->nmi_delivered = false;
     state->irq_level_delivered = false;
     state->operation_pending = false;
+    state->dma_active = false;
+    state->dma_phase_pending = false;
+    state->dma_master_clocks = 0U;
+    state->dma_bytes = 0U;
     state->reset_sequence = state->reset_requested;
     state->reset_requested = false;
     state->abort_opcode_fetched = false;
@@ -498,6 +514,106 @@ static void restore_aborted_registers(mipsnes2_cpu *cpu,
     cpu->waiting = checkpoint->waiting;
     cpu->clock_stopped = checkpoint->clock_stopped;
     mipsnes2_cpu_pulse_abort(cpu);
+}
+
+enum { DMA_INIT = 1, DMA_CHANNEL, DMA_BYTE, DMA_TAIL };
+
+static void dma_byte(void *context, mipsnes2_address a_address,
+                      mipsnes2_address b_address, bool b_to_a)
+{
+    mipsnes2_snes_bus_dma_byte(context, a_address, b_address, b_to_a);
+}
+
+static mipsnes2_cpu_timing_result resume_dma(
+    mipsnes2_cpu *cpu, mipsnes2_snes_bus *bus,
+    mipsnes2_scheduler *scheduler, mipsnes2_hv_timing *hv_timing,
+    mipsnes2_interrupt_lines *interrupt_lines,
+    mipsnes2_cpu_timing_state *state, mipsnes2_master_clock horizon,
+    size_t *event_budget, mipsnes2_cpu_timing_report *report)
+{
+    while (state->dma_active) {
+        mipsnes2_cpu_timing_result result;
+        mipsnes2_master_clock target;
+
+        if (!state->dma_phase_pending) {
+            uint8_t clocks = 8U;
+
+            if (state->dma_phase == DMA_INIT) {
+                clocks = (uint8_t)(8U - (scheduler->now & 7U) + 8U);
+            } else if (state->dma_phase == DMA_TAIL) {
+                clocks = (uint8_t)(state->dma_cpu_clocks -
+                    (scheduler->now - state->dma_start_time) %
+                        state->dma_cpu_clocks);
+            }
+            if (scheduler->now > UINT64_MAX - clocks ||
+                state->dma_master_clocks > UINT64_MAX - clocks ||
+                bus->master_clocks - state->bus_clocks_before >
+                    UINT64_MAX - state->dma_master_clocks - clocks) {
+                return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+            }
+            state->dma_end_time = scheduler->now + clocks;
+            state->dma_phase_clocks = clocks;
+            (void)memcpy(&state->pending_cpu_snapshot, cpu, sizeof(*cpu));
+            state->pending_bus_accesses = bus->access_count;
+            state->pending_bus_clocks = bus->master_clocks;
+            state->pending_fastrom_enabled = bus->fastrom_enabled;
+            state->dma_register_snapshot = *bus->dma_registers;
+            state->dma_phase_pending = true;
+        }
+        if (state->dma_cursor.registers != bus->dma_registers ||
+            bus->dma_request_mask != 0U ||
+            memcmp(cpu, &state->pending_cpu_snapshot, sizeof(*cpu)) != 0 ||
+            bus->access_count != state->pending_bus_accesses ||
+            bus->master_clocks != state->pending_bus_clocks ||
+            bus->fastrom_enabled != state->pending_fastrom_enabled ||
+            memcmp(bus->dma_registers, &state->dma_register_snapshot,
+                   sizeof(*bus->dma_registers)) != 0) {
+            return MIPSNES2_CPU_TIMING_STALE_STATE;
+        }
+        target = state->dma_end_time < horizon ? state->dma_end_time : horizon;
+        result = run_resumable_until(cpu, bus, scheduler, hv_timing,
+            interrupt_lines, state, target, event_budget, report);
+        if (result != MIPSNES2_CPU_TIMING_OK) {
+            return result;
+        }
+        /* Recheck after callbacks before admitting any device effect. */
+        if (state->dma_cursor.registers != bus->dma_registers ||
+            memcmp(cpu, &state->pending_cpu_snapshot, sizeof(*cpu)) != 0 ||
+            bus->access_count != state->pending_bus_accesses ||
+            bus->master_clocks != state->pending_bus_clocks ||
+            bus->fastrom_enabled != state->pending_fastrom_enabled ||
+            bus->dma_request_mask != 0U ||
+            memcmp(bus->dma_registers, &state->dma_register_snapshot,
+                   sizeof(*bus->dma_registers)) != 0) {
+            return MIPSNES2_CPU_TIMING_STALE_STATE;
+        }
+        if (scheduler->now < state->dma_end_time) {
+            return MIPSNES2_CPU_TIMING_HORIZON_REACHED;
+        }
+        state->dma_master_clocks += state->dma_phase_clocks;
+        state->dma_phase_pending = false;
+        if (state->dma_phase == DMA_INIT) {
+            state->dma_phase = DMA_CHANNEL;
+        } else if (state->dma_phase == DMA_CHANNEL) {
+            state->dma_phase = DMA_BYTE;
+        } else if (state->dma_phase == DMA_BYTE) {
+            uint32_t done;
+            uint8_t previous_channel = state->dma_cursor.channel;
+            mipsnes2_dma_run_result dma_result = mipsnes2_dma_cursor_run(
+                &state->dma_cursor, 1U, dma_byte, bus, &done);
+
+            if (dma_result == MIPSNES2_DMA_RUN_INVALID_ARGUMENT || done != 1U) {
+                return MIPSNES2_CPU_TIMING_STALE_STATE;
+            }
+            ++state->dma_bytes;
+            state->dma_phase = dma_result == MIPSNES2_DMA_RUN_COMPLETE
+                ? DMA_TAIL : (previous_channel != state->dma_cursor.channel
+                    ? DMA_CHANNEL : DMA_BYTE);
+        } else {
+            state->dma_active = false;
+        }
+    }
+    return MIPSNES2_CPU_TIMING_OK;
 }
 
 static mipsnes2_cpu_timing_result resumable_timed_step(
@@ -562,6 +678,16 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
         mipsnes2_cpu_cycle_result cycle_result;
         mipsnes2_cpu_operation operation;
 
+        if (state->dma_active) {
+            result = resume_dma(cpu, bus, scheduler, hv_timing,
+                interrupt_lines, state, requested_horizon,
+                &remaining_budget, report);
+            if (result != MIPSNES2_CPU_TIMING_OK) {
+                fill_resumable_report(state, cpu, bus, scheduler, report);
+                return result;
+            }
+        }
+
         if (state->operation_pending) {
             mipsnes2_master_clock target;
 
@@ -607,6 +733,22 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
             if (result != MIPSNES2_CPU_TIMING_OK) {
                 fill_resumable_report(state, cpu, bus, scheduler, report);
                 return result;
+            }
+            if (operation.kind != MIPSNES2_CPU_OPERATION_CONTROL &&
+                bus->dma_request_mask != 0U &&
+                bus->dma_grace_cycles == 0U) {
+                if (!mipsnes2_dma_cursor_begin(&state->dma_cursor,
+                    bus->dma_registers, bus->dma_request_mask)) {
+                    fill_resumable_report(state, cpu, bus, scheduler, report);
+                    return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+                }
+                bus->dma_request_mask = 0U;
+                state->dma_start_time = scheduler->now;
+                state->dma_cpu_clocks = state->operation_master_clocks;
+                state->dma_phase = DMA_INIT;
+                state->dma_active = true;
+                state->dma_phase_pending = false;
+                continue;
             }
             if (operation.kind == MIPSNES2_CPU_OPERATION_CONTROL) {
                 result = commit_control_operation(

@@ -10,7 +10,7 @@ eight modes use the separately tested B-port sequences.
 
 This is an **untimed** core primitive. Its callback contract assumes the
 caller performs one byte's effects exactly once and does not mutate DMA
-registers during the callback. The current machine does not invoke it:
+registers during the callback. At revision `7fc0d79` the machine did not invoke it:
 `$420B` has no start effect, CPU suspension and scheduler arbitration are
 absent, and DMA-specific A/B restrictions (including I/O and WRAM-port
 conflicts) are not yet applied. An ordinary pair of CPU bus read/write calls
@@ -34,3 +34,6 @@ Hardware references consulted on 2026-10-24:
 - [Super Famicom Development Wiki DMA/HDMA overview](https://wiki.superfamicom.org/dma-and-hdma), channel priority, byte direction, address/count update and A/B-bus constraints.
 
 The implementation and tests are original; no emulator source was used.
+
+The later [machine DMA integration](dma-machine-audit.md) now supplies the
+timed caller and A/B-bus policy; the primitive itself remains untimed.

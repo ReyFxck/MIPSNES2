@@ -157,9 +157,9 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] 5A22 CPU-I/O register/latch foundation
 - [x] Non-interlaced NTSC/PAL H/V timing foundation
 - [x] Stable-register non-interlaced H/V timer-IRQ foundation
-- [ ] [IN PROGRESS] DMA registers — eight channel banks routed; enable/start behavior absent
-- [ ] [IN PROGRESS] DMA transfer modes — bounded untimed A/B-byte cursor; timed machine integration absent
-- [ ] DMA timing
+- [ ] [IN PROGRESS] DMA registers — channel banks and general DMA start; HDMA enable effects absent
+- [ ] [IN PROGRESS] DMA transfer modes — timed general DMA machine path; HDMA and electrical edges pending
+- [ ] [IN PROGRESS] DMA timing — general DMA slots/resynchronization; refresh and HDMA pending
 - [ ] DMA source/destination wrapping
 - [ ] HDMA initialization
 - [ ] HDMA scanline behavior
