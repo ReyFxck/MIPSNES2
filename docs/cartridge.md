@@ -18,9 +18,10 @@ buffers. The first cartridge foundation now provides:
 - an allocation-free plan/construction contract over caller-owned ROM/SRAM storage.
 - revisioned dirty-state handoff for platform-owned SRAM persistence.
 
-There is no file loader, board resolver or automatic executable-cartridge
-allocation. A preparation call can connect successful analysis to executable-cartridge
-configuration, but the platform still owns file acquisition and storage lifetime.
+The PS2 has an explicit-path file adapter, but no device selection, general board
+resolver or automatic executable-cartridge allocation. A preparation call connects
+successful analysis to executable-cartridge configuration; the platform owns file
+acquisition and storage lifetime.
 Supported base ROM sizes begin at 32 KiB for LoROM or 64 KiB for
 HiROM and end at 4 MiB; ExHiROM accepts 64 KiB-aligned payloads larger than 4 MiB
 through 8 MiB. A ROM may be a power of two or one larger power-of-two region followed
@@ -207,7 +208,7 @@ independent of ROM titles.
 Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Partial items remain
 unchecked until their complete verification gates are met.
 
-- [ ] [IN PROGRESS] ROM loading — common preparation/construction exists; platform file adapters absent
+- [ ] [IN PROGRESS] ROM loading — common preparation/construction and explicit PS2 path adapter exist; device selection and PSP adapter absent
 - [ ] [IN PROGRESS] ROM metadata — standard and registration fields parsed; special variants absent
 - [ ] [IN PROGRESS] Header analysis — conservative LoROM/HiROM/ExHiROM selection; special variants absent
 - [ ] [IN PROGRESS] LoROM — power-of-two/unambiguous two-region base map and conservative selection verified

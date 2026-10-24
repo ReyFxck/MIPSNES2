@@ -3,7 +3,7 @@
 Project foundation plus a 256-opcode 65C816, partial real SNES logical bus, base
 LoROM/HiROM and Mode 25/35 ExHiROM mapping, explicit internal-header analysis and deterministic scheduler/
 timing foundation with a partial non-interlaced H/V model and a platform-neutral
-machine instance. No platform ROM-file loader or runnable
+machine instance and an explicit-path PS2 ROM-file adapter. No runnable
 SNES machine capable of running games, complete emulated subsystem,
 console runtime validation,
 compatibility result or hardware benchmark exists. Read
@@ -87,8 +87,16 @@ program that writes WRAM, including a paused write and a power cycle retaining
 WRAM/SRAM. `make test` passes on the host (2026-10-24); see
 [machine integration audit](docs/machine-integration-audit.md). Pinned PS2 and PSP
 cross-builds and host CI pass at `2d2a836`; target runtime behavior of this
-revision remains unverified. There is still no ROM-file adapter, PPU
+revision remains unverified. There is still no PPU
 renderer, APU, DMA or game runtime.
+
+The PS2 backend now accepts `--rom PATH` as an explicit file path on an already
+available target filesystem, reads at most 8 MiB plus an optional copier prefix,
+and feeds the bytes to the shared machine. It runs only a bounded NTSC CPU/H-V
+slice and reports its result on the debug screen. The five-case diagnostic stays
+the default when no path is passed. Host file-boundary and bounded-run fixtures
+pass; target runtime and mounted-device/launcher arguments have not been checked.
+See [PS2 ROM adapter audit](docs/ps2-rom-adapter-audit.md).
 
 ## State and evidence rules
 
@@ -1155,7 +1163,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 
 ## Cartridge
 
-- [ ] [IN PROGRESS] ROM loading — platform-neutral analysis/construction contract verified; platform file adapters absent
+- [ ] [IN PROGRESS] ROM loading — core construction plus explicit-path PS2 file adapter verified on host; device setup/selection and PSP adapter absent
 - [ ] [IN PROGRESS] ROM metadata — standard fields, registration prefix and conservative mapper evidence parsed; special variants/hardware resolution absent
 - [ ] [IN PROGRESS] Header analysis — conservative LoROM/HiROM/ExHiROM selection verified; special variants absent
 - [ ] [IN PROGRESS] LoROM — power-of-two and unambiguous two-region base ROM mapping, base SRAM and conservative detection verified; broader boards absent
@@ -1430,7 +1438,7 @@ platform persistence remains incomplete.
 - [ ] GIF packet lifetime
 - [ ] DMA cache coherency
 - [ ] Pad input
-- [ ] Storage and ROM selection
+- [ ] [IN PROGRESS] Storage and ROM selection — explicit PS2 path adapter exists; mount lifecycle and picker absent
 - [ ] SRAM persistence
 - [ ] SPU2 output
 - [ ] Audio buffering

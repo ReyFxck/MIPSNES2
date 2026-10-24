@@ -52,7 +52,8 @@ agrees. A platform-neutral, allocation-free preparation contract then reports re
 SRAM and constructs the executable mapper over caller-owned buffers. Value-changing
 SRAM writes carry a revisioned dirty-state handoff so platform save backends cannot
 acknowledge stale asynchronous data.
-No-match and ambiguous images are rejected instead of guessed. There is no file loader,
+No-match and ambiguous images are rejected instead of guessed. PS2 has an
+explicit-path ROM adapter and a bounded CPU-only run; there is no file picker,
 unofficial ExLoROM, padded/board-specific irregular mapping or enhancement hardware.
 Only the PPU counter-register subset exists; there is no renderer, PPU memory,
 APU, ROM runner, compatibility or performance claim.

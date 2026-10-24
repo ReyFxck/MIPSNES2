@@ -105,7 +105,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Access timing — meaningful accesses integrated; exact cycle placement/refresh/arbitration pending
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO plus base and Mode 25/35 ExHiROM maps verified; padded/ExLoROM/enhancement pending
 - [ ] Page/block mapping benchmark
-- [ ] [IN PROGRESS] ROM loading — platform-neutral analysis/construction contract verified; platform file adapters absent
+- [ ] [IN PROGRESS] ROM loading — core construction and explicit PS2 path adapter exist; mounted-device/PSP adapters and selection remain
 - [ ] [IN PROGRESS] ROM metadata — standard and 16-byte registration fields parsed; special variants pending
 - [ ] [IN PROGRESS] Header analysis — conservative LoROM/HiROM/ExHiROM selection verified; special variants pending
 - [ ] [IN PROGRESS] LoROM — power-of-two and unambiguous two-region base mapping plus conservative detection verified; broader boards pending

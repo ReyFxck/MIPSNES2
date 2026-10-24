@@ -26,19 +26,21 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | core/machine | Stable instance composition and timed power-on/CPU execution | Caller-owned ROM/WRAM/SRAM, cartridge, CPU, bus, CPU-I/O, counters, H/V and scheduler |
-| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | On-screen five-case core diagnostic; runtime unverified, machine backend absent |
+| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path to bounded CPU-only machine run; target runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
 Directories without source contain an explicit scope README, not stub functions.
-There is a partial machine instance, but no platform ROM-file loader, full ROM runner,
-renderer or APU. `mipsnes2_machine_init` validates an image and constructs the
+There is a partial machine instance and an explicit-path PS2 ROM-file adapter,
+but no full ROM runner, renderer or APU. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, retaining caller-owned WRAM and SRAM bytes. `resume` advances one
-timed RESET sequence or instruction to a caller-specified horizon. The instance
+timed RESET sequence or instruction to a caller-specified horizon; `run_until`
+also bounds completed sequences and retains a paused cursor. The instance
 has a stable address because its CPU and bus callbacks point into it; callers
-must not copy or move it. PS2 and PSP compile this shared module but still have
-no backend path to open a ROM and present its video/audio. CPU reset implements only
+must not copy or move it. PS2 accepts a file path from an explicit command-line
+argument into preallocated EE memory, while PSP still has no file adapter. Neither
+backend can present SNES video/audio. CPU reset implements only
 the documented programmer-visible foundation and resumable vector reads; complete
 signal-level RESET timing remains open.
 The partial SNES bus is not a complete machine map: it has no complete cartridge

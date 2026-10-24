@@ -58,6 +58,8 @@ int main(void)
     mipsnes2_machine_config config;
     mipsnes2_cpu_timing_report report;
     mipsnes2_master_clock end_reset;
+    mipsnes2_cpu_timing_result timing_result;
+    size_t sequences;
 
     CHECK(make_image() == 0);
     (void)memset(&config, 0, sizeof(config));
@@ -106,6 +108,19 @@ int main(void)
     CHECK(mipsnes2_machine_resume(&machine, UINT64_MAX, 0U, &report) ==
           MIPSNES2_CPU_TIMING_OK);
     CHECK(machine.cpu.pc == UINT16_C(0x8000));
+    CHECK(mipsnes2_machine_run_until(
+              &machine, machine.scheduler.now + UINT64_C(1000), 1000U,
+              0U, &sequences, &report, &timing_result) ==
+          MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(sequences > 0U && timing_result == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(machine.scheduler.now == report.target_time && wram[0] == UINT8_C(0x5a));
+    CHECK(mipsnes2_machine_run_until(
+              &machine, UINT64_MAX, 1U, 0U, &sequences,
+              &report, &timing_result) == MIPSNES2_MACHINE_RUN_SEQUENCE_LIMIT);
+    CHECK(sequences == 1U && timing_result == MIPSNES2_CPU_TIMING_OK);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, UINT64_MAX, 0U, 0U, &sequences,
+              &report, &timing_result) == MIPSNES2_MACHINE_RUN_INVALID_ARGUMENT);
 
     config.standard = (mipsnes2_hv_standard)2;
     CHECK(mipsnes2_machine_init(&machine, &config) ==

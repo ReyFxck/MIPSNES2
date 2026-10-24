@@ -6,16 +6,25 @@ when measured gains preserve correctness and isolation.
 
 ## Current diagnostic and build
 
-`platform/ps2/main.c` displays five deterministic shared-core checks using the
-PS2SDK debug screen and logs the same results to stdout. Its original embedded
+`platform/ps2/main.c` displays five deterministic shared-core checks by default
+using the PS2SDK debug screen and logs the same results to stdout. Its original embedded
 fixtures exercise CPU instructions, scheduler horizons and explicit ABORT write
 qualification; `tests/test_ps2_diagnostic.c` runs the identical suite on the host.
-This diagnostic is not a game, a ROM runner, or the final GS/video backend. It
-does not initialize pads, cartridge files, IOP peripherals or audio. PS2 runtime
-remains unverified until its screen result is captured in an emulator and then on
-physical hardware. The original scaffold record is in
+The optional `--rom PATH` entry reads an image through `fopen` from a filesystem
+that the launcher has already made available, constructs the shared machine and
+runs at most one NTSC H/V frame or 100,000 CPU sequences. It prints CPU and timing
+status; it cannot draw SNES frames, produce audio or persist SRAM. It does not
+mount a USB device or provide a file picker. The original five-case diagnostic
+still runs without arguments; it is not a game or the final GS/video backend.
+The new ROM path has no console runtime evidence. The default diagnostic has
+user-captured emulator results, while physical PS2 validation remains open.
+The original scaffold record is in
 [bootstrap-audit.md](bootstrap-audit.md); see the
 [ARMSX2 diagnostic guide](ps2-armsx2-diagnostic.md) for the mobile test.
+
+The SDK's own [EE file-reading sample](https://github.com/ps2dev/ps2sdk/blob/2c670453980fcc3fe46ead6399b730b12c8556eb/ee/rpc/audsrv/samples/playwav/playwav.c)
+uses `sceSifInitRpc`, `fopen("host:...", "rb")` and `fread`. This adapter uses
+standard C file calls only; device registration remains a separate backend task.
 
 Linux x86-64 toolchain pin: ps2dev **v2.0.0**, archive SHA-256 and URL in
 [tools/toolchains.json](../tools/toolchains.json). Despite `latest` in the asset

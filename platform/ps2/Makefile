@@ -3,7 +3,7 @@ ifeq ($(strip $(PS2SDK)),)
 $(error PS2SDK is unset; see docs/ps2.md)
 endif
 EE_BIN = mipsnes2-ps2.elf
-EE_OBJS = main.o diagnostic_suite.o log.o bus.o cpu_io.o ppu_counters.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
+EE_OBJS = main.o diagnostic_suite.o rom_file.o log.o bus.o cpu_io.o ppu_counters.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
 	cartridge_prepare.o machine.o
@@ -65,6 +65,9 @@ machine.o: ../../core/machine/machine.c ../../core/machine/machine.h
 main.o: main.c diagnostic_suite.h
 
 diagnostic_suite.o: diagnostic_suite.c diagnostic_suite.h ../../core/bus/snes_bus.h ../../core/cpu/65c816/cpu.h ../../core/scheduler/cpu_timing.h
+
+rom_file.o: rom_file.c rom_file.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 clean:
 	rm -f $(EE_BIN) $(EE_OBJS)

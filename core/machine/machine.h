@@ -72,4 +72,23 @@ mipsnes2_cpu_timing_result mipsnes2_machine_resume(
     mipsnes2_machine *machine, mipsnes2_master_clock horizon,
     size_t event_budget, mipsnes2_cpu_timing_report *report);
 
+typedef enum {
+    MIPSNES2_MACHINE_RUN_HORIZON = 0,
+    MIPSNES2_MACHINE_RUN_SEQUENCE_LIMIT,
+    MIPSNES2_MACHINE_RUN_CPU_STOP,
+    MIPSNES2_MACHINE_RUN_TIMING_ERROR,
+    MIPSNES2_MACHINE_RUN_INVALID_ARGUMENT
+} mipsnes2_machine_run_result;
+
+/* Bounded CPU-only execution: report holds the final sequence or paused
+ * operation, and sequences counts only fully completed RESET/instructions.
+ * A horizon return retains the operation cursor for the next call. Callers
+ * must arrange missing device events, renderer and audio separately.
+ */
+mipsnes2_machine_run_result mipsnes2_machine_run_until(
+    mipsnes2_machine *machine, mipsnes2_master_clock horizon,
+    size_t sequence_limit, size_t event_budget,
+    size_t *sequences, mipsnes2_cpu_timing_report *report,
+    mipsnes2_cpu_timing_result *timing_result);
+
 #endif
