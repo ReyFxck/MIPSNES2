@@ -160,8 +160,11 @@ flags and the large-size bit. A separate size lookup covers the six pairs
 documented for `$2101` modes 0-5; modes 6-7 return unsupported. Host tests
 cover low/high table packing including sprite 127, field extraction, pointer
 non-mutation, all documented size pairs, invalid inputs and mirrored machine
-routing. A clean C99 `cc` `make test` passes (2026-10-24). PS2/PSP and host
-CI for this revision are pending. This is descriptor decoding only: sprite
+routing. A clean C99 `cc` `make test` passes (2026-10-24). Revision
+`e65cf63` passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085196446),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085196496) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085196410).
+This is descriptor decoding only: sprite
 scanline eligibility, priority rotation effects, tile fetch and rendering
 remain open. See the [OAM port audit](docs/ppu-oam-port-audit.md).
 

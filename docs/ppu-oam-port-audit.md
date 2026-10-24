@@ -79,8 +79,12 @@ still controls when a partially written record becomes visible to this decoder.
 `tests/test_ppu_oam.c` checks the four bit-pair positions, the final record,
 attributes, pointer non-mutation, invalid inputs and every documented size
 pair; `tests/test_machine.c` checks mirrored `$2101` routing and power-on
-reset. A clean host `make test` passes with C99 `cc` (2026-10-24); target CI
-for this revision is pending. No source code from other emulators was used.
+reset. A clean host `make test` passes with C99 `cc` (2026-10-24).
+Implementation revision `e65cf6374f9fc54b50bfa145db750922c90d8169`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085196446),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085196496) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085196410).
+No source code from other emulators was used.
 
 Active-display address invalidation and access restrictions are not
 implemented. Sprite decoding, priority rotation
