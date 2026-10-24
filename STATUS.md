@@ -121,6 +121,14 @@ and real hardware behavior remain unverified; see the
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052572654) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052572626).
 
+The shared OAM port subset supplies `$2102-$2104/$2138` over 544
+caller-owned bytes in the PS2 ROM path. Host `make test` passes on C99 `cc`
+with table-boundary, mirror, pair-commit, address-reload and bus-routing
+fixtures (2026-10-24). The PSP build includes the same core module. VBlank
+address reload, active-display access, sprite priority and rendering remain
+open; target CI results are pending. See the
+[OAM port audit](docs/ppu-oam-port-audit.md).
+
 ## State and evidence rules
 
 - [ ] Not implemented or not verified
@@ -1355,10 +1363,10 @@ platform persistence remains incomplete.
 
 ## PPU
 
-- [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM and CGRAM port subsets
+- [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
-- [ ] OAM
+- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes and CPU ports; VBlank reload, access windows and rendering absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2
@@ -1385,7 +1393,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths host-verified; access-window/mixed-port behavior pending
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM and CGRAM port fixtures
+- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM and OAM port fixtures
 - [ ] Reference renderer integration
 
 ## SPC700

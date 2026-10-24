@@ -4,6 +4,7 @@
 
 #include "core/cartridge/prepare.h"
 #include "core/ppu/cgram_ports.h"
+#include "core/ppu/oam_ports.h"
 #include "core/ppu/vram_ports.h"
 #include "core/scheduler/cpu_timing.h"
 
@@ -29,6 +30,8 @@ typedef struct {
     size_t vram_size;
     uint8_t *cgram;
     size_t cgram_size;
+    uint8_t *oam;
+    size_t oam_size;
     mipsnes2_hv_standard standard;
     bool overscan;
     mipsnes2_bus_interface ppu;
@@ -52,6 +55,7 @@ typedef struct {
     mipsnes2_ppu_counters counters;
     mipsnes2_ppu_vram_ports vram_ports;
     mipsnes2_ppu_cgram_ports cgram_ports;
+    mipsnes2_ppu_oam_ports oam_ports;
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
@@ -62,6 +66,8 @@ typedef struct {
     size_t vram_size;
     uint8_t *cgram;
     size_t cgram_size;
+    uint8_t *oam;
+    size_t oam_size;
     mipsnes2_hv_standard standard;
     bool overscan;
     bool ready;
@@ -73,7 +79,7 @@ typedef struct {
 mipsnes2_machine_result mipsnes2_machine_init(
     mipsnes2_machine *machine, const mipsnes2_machine_config *config);
 /* Power cycle the CPU, I/O, counters, PPU ports, clock and event queue.
- * Caller-owned WRAM/SRAM/VRAM/CGRAM retain their bytes. Events are discarded.
+ * Caller-owned WRAM/SRAM/VRAM/CGRAM/OAM retain bytes. Events are discarded.
  * The timed RESET vector sequence is then performed by resume().
  */
 mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine);

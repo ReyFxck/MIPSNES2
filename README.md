@@ -55,7 +55,7 @@ acknowledge stale asynchronous data.
 No-match and ambiguous images are rejected instead of guessed. PS2 has an
 explicit-path ROM adapter and a bounded CPU-only run; there is no file picker,
 unofficial ExLoROM, padded/board-specific irregular mapping or enhancement hardware.
-Only PPU counter registers, VRAM ports and CGRAM ports exist; there is no renderer or active-display access model,
+Only PPU counter registers, VRAM ports, CGRAM ports and OAM ports exist; there is no renderer or active-display access model,
 APU, ROM runner, compatibility or performance claim.
 
 Current milestone: Phase 4 — Ricoh 5A22 interrupt/timer foundation.

@@ -7,7 +7,8 @@ Separate state, register behavior, rendering, timing and platform presentation.
 foundation. `core/ppu/vram_ports.c` adds caller-owned 64 KiB VRAM storage,
 the `$2115-$2119` write ports and `$2139/$213A` buffered read ports.
 `core/ppu/cgram_ports.c` owns the `$2121/$2122/$213B` palette port state
-over a caller-owned 512-byte CGRAM buffer. OAM, pixel composition
+over a caller-owned 512-byte CGRAM buffer. `core/ppu/oam_ports.c` adds
+`$2102-$2104/$2138` over 544 caller-owned OAM bytes. Pixel composition
 and presentation are absent. GS/GU
 must not be called here; no render API exists.
 
@@ -62,6 +63,18 @@ high; high bit 7 comes from the PPU2 open-bus latch. Power-on resets the port
 state but retains memory. Active-display access and mixed read/write sequences
 need hardware checks. See the [CGRAM audit](ppu-cgram-port-audit.md).
 
+## OAM port subset
+
+The machine optionally accepts 544 caller-owned OAM bytes. `$2102/$2103`
+select a nine-bit word address and reset the internal byte pointer on either
+write. `$2104` commits low-table pairs on the odd-byte write and high-table
+bytes immediately. `$2138` reads one byte and advances the pointer. The
+high table mirrors over its 512-byte logical region, physically using 32
+bytes. Port state resets on machine power-on; OAM bytes remain. Priority
+rotation is retained as a register bit, without sprite evaluation. VBlank
+reload, active-display access and rendering remain open. See the
+[OAM port audit](ppu-oam-port-audit.md).
+
 ## Design direction
 
 Begin with sourced register semantics and independent state tests, then reference scanline output. Decide synchronization granularity from software-visible behavior, including mid-frame writes. Candidate accelerated pixel kernels need exact formats, alignment and reference equivalence; final frame upload belongs to platform.
@@ -75,10 +88,10 @@ Fixtures must exercise port increment/remap, VRAM/CGRAM/OAM boundaries, tile dec
 Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Unchecked items
 remain incomplete; narrow verified counter behavior does not complete the PPU.
 
-- [ ] [IN PROGRESS] PPU register model — counter, VRAM and CGRAM port subsets
+- [ ] [IN PROGRESS] PPU register model — counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — CPU read/write ports; access windows and rendering absent
-- [ ] OAM
+- [ ] [IN PROGRESS] OAM — CPU read/write ports; VBlank reload and rendering absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2
@@ -105,7 +118,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths checked; access-window and mixed-port behavior pending
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — counter, VRAM and CGRAM port fixtures
+- [ ] [IN PROGRESS] PPU tests — counter, VRAM, CGRAM and OAM port fixtures
 - [ ] Reference renderer integration
 
 ## Research and decisions

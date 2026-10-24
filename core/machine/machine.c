@@ -8,6 +8,10 @@ static uint8_t machine_ppu_read(void *context, mipsnes2_address address)
     mipsnes2_machine *machine = context;
     uint8_t value;
 
+    if (mipsnes2_ppu_oam_ports_read(&machine->oam_ports,
+                                   (uint16_t)address, &value)) {
+        return value;
+    }
     if (mipsnes2_ppu_vram_ports_read(&machine->vram_ports,
                                     (uint16_t)address, &value)) {
         return value;
@@ -29,6 +33,10 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
 {
     mipsnes2_machine *machine = context;
 
+    if (mipsnes2_ppu_oam_ports_write(&machine->oam_ports,
+                                    (uint16_t)address, value)) {
+        return;
+    }
     if (mipsnes2_ppu_vram_ports_write(&machine->vram_ports,
                                      (uint16_t)address, value)) {
         return;
@@ -63,6 +71,12 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
         machine->ready = false;
         return MIPSNES2_MACHINE_INVALID_ARGUMENT;
     }
+    if (machine->oam != NULL &&
+        !mipsnes2_ppu_oam_ports_init(&machine->oam_ports,
+                                    machine->oam, machine->oam_size)) {
+        machine->ready = false;
+        return MIPSNES2_MACHINE_INVALID_ARGUMENT;
+    }
     if (mipsnes2_hv_timing_init(&machine->hv, machine->standard,
                                machine->overscan, &machine->io) != MIPSNES2_HV_OK) {
         machine->ready = false;
@@ -74,7 +88,8 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     config.cpu_io_state = &machine->io;
     config.ppu_counters = &machine->counters;
     config.hv_timing = &machine->hv;
-    if (machine->vram != NULL || machine->cgram != NULL) {
+    if (machine->vram != NULL || machine->cgram != NULL ||
+        machine->oam != NULL) {
         config.ppu.context = machine;
         config.ppu.read8 = machine_ppu_read;
         config.ppu.write8 = machine_ppu_write;
@@ -121,6 +136,9 @@ mipsnes2_machine_result mipsnes2_machine_init(
         ((config->cgram == NULL && config->cgram_size != 0U) ||
          (config->cgram != NULL &&
           config->cgram_size < MIPSNES2_PPU_CGRAM_SIZE)) ||
+        ((config->oam == NULL && config->oam_size != 0U) ||
+         (config->oam != NULL &&
+          config->oam_size < MIPSNES2_PPU_OAM_SIZE)) ||
         (config->standard != MIPSNES2_HV_STANDARD_NTSC &&
          config->standard != MIPSNES2_HV_STANDARD_PAL)) {
         return MIPSNES2_MACHINE_INVALID_ARGUMENT;
@@ -143,6 +161,8 @@ mipsnes2_machine_result mipsnes2_machine_init(
     machine->vram_size = config->vram_size;
     machine->cgram = config->cgram;
     machine->cgram_size = config->cgram_size;
+    machine->oam = config->oam;
+    machine->oam_size = config->oam_size;
     machine->standard = config->standard;
     machine->overscan = config->overscan;
     machine->ppu = config->ppu;
