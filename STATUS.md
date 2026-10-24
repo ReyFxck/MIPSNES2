@@ -274,13 +274,27 @@ using the documented layer order, with `$212C` main-screen enables. The machine
 prepares enabled BG1-4 lines and a 256-entry CGRAM-index/source line at the
 provisional scanline event. Synthetic tests cover all four BG layers, OBJ
 priority bands, transparent fall-through, disabled layers and machine BG/OBJ
-priority inversion; C99 `cc` `make test` passes (2026-10-24). PS2/PSP/host CI
-for this mixer revision is pending. This is not RGB rendering: windows,
-sub-screen, color math, brightness, CGRAM lookup and display output remain
-open. See the [Mode 0 mixer audit](docs/ppu-mode0-mix-audit.md).
+priority inversion; C99 `cc` `make test` passes (2026-10-24). Revision
+`91170f3` passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40102722188),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40102722237)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40102722289).
 
-Next primary block: resolve the mixed CGRAM indices to a bounded 15-bit color
-line, including backdrop and brightness semantics, with deterministic tests.
+The same shared Mode 0 path now resolves CGRAM indices to a bounded BGR555
+line from caller-owned palette bytes. `$2100` supplies brightness 0-15; each
+5-bit channel is scaled by brightness/15 with downward integer rounding.
+Backdrop uses CGRAM index zero, and forced blank leaves the stored color line
+black at the scheduled line event. Pure fixtures cover color packing, high
+bit masking, last palette entry, backdrop, brightness 0/8/15, forced blank,
+invalid inputs and unchanged output on failure. Machine fixtures cover
+BG/OBJ palette selection and brightness writes. Host C99 `cc` `make test`
+passes (2026-10-24); PS2/PSP/host CI for this color revision is pending.
+This digital brightness model is not an analog DAC measurement. Windows,
+sub-screen, color math, mid-line writes, exact fetch timing, target runtime
+and video output remain open. See the [Mode 0 mixer audit](docs/ppu-mode0-mix-audit.md).
+
+Next primary block: add main-screen window masks for Mode 0 BG/OBJ priority
+selection, starting with sourced `$2123-$212B/$212E` semantics and bounded
+deterministic fixtures.
 
 ## State and evidence rules
 
@@ -1521,7 +1535,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; BG mixing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel fixtures tested; other PPU formats pending
-- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines and OBJ priority mixer tested; CGRAM color/output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer and CGRAM BGR555 lookup tested; windows/output absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

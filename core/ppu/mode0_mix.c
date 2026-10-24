@@ -1,5 +1,6 @@
 /* MIPSNES2 Mode 0 layer-order reference. See LICENSE for GPL-3.0 terms. */
 #include "core/ppu/mode0_mix.h"
+#include "core/ppu/cgram_ports.h"
 
 /* Bottom-to-top ranks from the Mode 0 priority chart. */
 static const uint8_t bg_rank[4][2] = {
@@ -55,6 +56,37 @@ bool mipsnes2_ppu_mode0_mix(
         }
         output->pixels[x].color = color;
         output->pixels[x].source = source;
+    }
+    return true;
+}
+
+bool mipsnes2_ppu_mode0_resolve_color(
+    const mipsnes2_ppu_mode0_line *indices, const uint8_t *cgram,
+    size_t cgram_size, uint8_t brightness, bool forced_blank,
+    mipsnes2_ppu_mode0_color_line *output)
+{
+    uint8_t scaled[32];
+    unsigned component;
+    unsigned x;
+
+    if (indices == NULL || cgram == NULL ||
+        cgram_size < MIPSNES2_PPU_CGRAM_SIZE || brightness > 15U ||
+        output == NULL) {
+        return false;
+    }
+    for (component = 0U; component < 32U; ++component) {
+        scaled[component] =
+            (uint8_t)((component * (unsigned)brightness) / 15U);
+    }
+    for (x = 0U; x < 256U; ++x) {
+        size_t address = (size_t)indices->pixels[x].color * 2U;
+        uint16_t color = (uint16_t)cgram[address] |
+                         (uint16_t)((uint16_t)cgram[address + 1U] << 8);
+
+        output->pixels[x] = forced_blank ? 0U :
+            (uint16_t)((uint16_t)scaled[color & 31U] |
+                       (uint16_t)((uint16_t)scaled[(color >> 5) & 31U] << 5) |
+                       (uint16_t)((uint16_t)scaled[(color >> 10) & 31U] << 10));
     }
     return true;
 }

@@ -39,6 +39,8 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
     (void)memset(&machine->bg_other_lines, 0,
                  sizeof(machine->bg_other_lines));
     (void)memset(&machine->mode0_line, 0, sizeof(machine->mode0_line));
+    (void)memset(&machine->mode0_color_line, 0,
+                 sizeof(machine->mode0_color_line));
     if (!machine->ppu_forced_blank && machine->vram != NULL &&
         line + 1U < vblank) {
         for (bg = 0U; bg < 4U; ++bg) {
@@ -80,6 +82,11 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
         (void)mipsnes2_ppu_mode0_mix(
             bg_lines, &machine->obj_pixels, machine->main_screen_enable,
             &machine->mode0_line);
+        if (machine->cgram != NULL) {
+            (void)mipsnes2_ppu_mode0_resolve_color(
+                &machine->mode0_line, machine->cgram, machine->cgram_size,
+                machine->ppu_brightness, false, &machine->mode0_color_line);
+        }
     }
     delay = line + 2U < vblank
                 ? MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS
@@ -194,6 +201,7 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
                                                        false);
         }
         machine->ppu_forced_blank = next_forced_blank;
+        machine->ppu_brightness = value & UINT8_C(0x0f);
         /* Other display-control behavior remains with the PPU callback. */
     }
     if (mipsnes2_ppu_oam_ports_write(&machine->oam_ports,
@@ -223,6 +231,7 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     mipsnes2_cpu_io_init(&machine->io, UINT8_C(2));
     mipsnes2_ppu_counters_init(&machine->counters, UINT8_C(3), 0U);
     machine->ppu_forced_blank = true;
+    machine->ppu_brightness = 0U;
     machine->ppu1_open_bus = 0U;
     machine->obj_overflow = 0U;
     (void)memset(&machine->obj_line, 0, sizeof(machine->obj_line));
@@ -232,6 +241,8 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     (void)memset(&machine->bg_other_lines, 0,
                  sizeof(machine->bg_other_lines));
     (void)memset(&machine->mode0_line, 0, sizeof(machine->mode0_line));
+    (void)memset(&machine->mode0_color_line, 0,
+                 sizeof(machine->mode0_color_line));
     machine->main_screen_enable = 0U;
     if (machine->vram != NULL &&
         !mipsnes2_ppu_vram_ports_init(&machine->vram_ports,

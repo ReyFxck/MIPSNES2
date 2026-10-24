@@ -17,10 +17,26 @@ and combines them with its existing OBJ line at the provisional HBlank event.
 OBJ overflow evaluation remains independent of the OBJ display-enable bit.
 Synthetic host vectors cover BG priority ties across layers, OBJ bands,
 transparency, disabled layers, backdrop, invalid pointers and the machine
-BG/OBJ handoff. C99 `cc` `make test` passes (2026-10-24). Cross-build CI for
-this revision is pending.
+BG/OBJ handoff. C99 `cc` `make test` passes (2026-10-24). Revision `91170f3`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40102722188),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40102722237) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40102722289).
 
-This line is not a screen image. CGRAM lookup, brightness, windows, sub
-screen, color math, forced-blank color, hires, interlace, mid-line changes
-and target hardware runtime remain unimplemented or unverified. The line
-event phase and reference performance require target measurement.
+The color pass uses the 256 15-bit entries described by the
+[SNESdev palette reference](https://snes.nesdev.org/wiki/Palettes), including
+entry zero for backdrop. [SNESdev's `$2100` register description](https://snes.nesdev.org/wiki/PPU_registers)
+defines brightness steps 0-15 and forced blank. The pass converts each
+BGR555 component to `floor(component * brightness / 15)`. This is an
+explicitly nominal digital representation; no analog DAC transfer curve or
+brightness-transition latency is claimed. The machine retains `$2100` low
+bits and computes the color line at the provisional HBlank event when both
+VRAM and CGRAM are present. Forced blank clears the stored line at that
+event. Tests cover red/green/white, high-bit masking, CGRAM index 255,
+backdrop, brightness 0/8/15, forced blank, invalid input and machine BG/OBJ
+palette routing. C99 `cc` `make test` passes (2026-10-24); PS2/PSP/host CI for
+this color revision is pending. No emulator source code was consulted.
+
+This line is not a screen image. Windows, sub screen, color math, hires,
+interlace, mid-line changes and target hardware runtime remain unimplemented
+or unverified. The line-event phase and reference performance require target
+measurement.

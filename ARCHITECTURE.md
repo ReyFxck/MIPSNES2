@@ -133,8 +133,11 @@ selection. When caller-owned VRAM exists, selected 4bpp OBJ slivers produce a
 256-entry color/priority line. The same event prepares four Mode 0 BG 2bpp
 lines using machine-owned `$2105/$2107-$2114` subset state when VRAM exists.
 `$212C` enables select which layers enter the Mode 0 CGRAM-index priority
-mixer. Scroll-write latches use a published but hardware-unverified formula.
-RGB conversion, windows and display output are absent.
+mixer. A separate shared pass resolves those indices through caller-owned
+CGRAM to a BGR555 line, with `$2100` brightness approximated in 5-bit digital
+levels; forced blank leaves the scheduled color line black. Scroll-write
+latches use a published but hardware-unverified formula. Windows, color
+math, exact mid-line behavior and display output are absent.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending

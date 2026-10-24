@@ -408,6 +408,10 @@ int main(void)
         oam[4U * i + 1U] = UINT8_C(0x80);
     }
     oam[3] = UINT8_C(0x30); /* OBJ priority 3 above BG1. */
+    cgram[258] = UINT8_C(0x1f); /* OBJ index 129: red. */
+    cgram[259] = 0U;
+    cgram[2] = UINT8_C(0xe0); /* BG index 1: green. */
+    cgram[3] = UINT8_C(0x03);
     vram[0] = UINT8_C(0x80);
     vram[0x400U * 2U] = 2U;
     vram[32] = UINT8_C(0x80);
@@ -422,19 +426,23 @@ int main(void)
           MIPSNES2_MASTER_TIMING_OK);
     CHECK(machine.mode0_line.pixels[0].color == 129U &&
           machine.mode0_line.pixels[0].source == 5U);
+    CHECK(machine.ppu_brightness == 15U &&
+          machine.mode0_color_line.pixels[0] == UINT16_C(0x001f));
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
     oam[3] = 0U;
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212c),
                              UINT8_C(0x11));
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100),
-                             UINT8_C(0x0f));
+                             UINT8_C(0x08));
     CHECK(mipsnes2_master_timing_run_until(
               &machine.scheduler, &machine.hv, &machine.io,
               MIPSNES2_HV_HBLANK_START_CLOCK, 1U, &master_report) ==
           MIPSNES2_MASTER_TIMING_OK);
     CHECK(machine.mode0_line.pixels[0].color == 1U &&
           machine.mode0_line.pixels[0].source == 1U);
+    CHECK(machine.ppu_brightness == 8U &&
+          machine.mode0_color_line.pixels[0] == UINT16_C(0x0200));
     CHECK(machine.mode0_line.pixels[0].color == 1U &&
           machine.mode0_line.pixels[0].source == 1U);
     config.oam = NULL;

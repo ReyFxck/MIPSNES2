@@ -65,6 +65,7 @@ typedef struct {
     mipsnes2_ppu_bg2_scanline bg1_line;
     mipsnes2_ppu_bg2_scanline bg_other_lines[3];
     mipsnes2_ppu_mode0_line mode0_line;
+    mipsnes2_ppu_mode0_color_line mode0_color_line;
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
@@ -80,6 +81,7 @@ typedef struct {
     mipsnes2_hv_standard standard;
     bool overscan;
     bool ppu_forced_blank;
+    uint8_t ppu_brightness;
     uint8_t ppu1_open_bus;
     uint8_t obj_overflow;
     uint8_t main_screen_enable;

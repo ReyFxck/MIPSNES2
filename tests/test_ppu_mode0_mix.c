@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core/ppu/cgram_ports.h"
 #include "core/ppu/mode0_mix.h"
 
 #define CHECK(value) do { if (!(value)) { \
@@ -12,6 +13,8 @@
 static mipsnes2_ppu_bg2_scanline backgrounds[4];
 static mipsnes2_ppu_obj_pixels objects;
 static mipsnes2_ppu_mode0_line output;
+static mipsnes2_ppu_mode0_color_line colors;
+static uint8_t cgram[MIPSNES2_PPU_CGRAM_SIZE];
 
 int main(void)
 {
@@ -51,6 +54,37 @@ int main(void)
     CHECK(!mipsnes2_ppu_mode0_mix(bg, &objects, 1U, &output));
     CHECK(output.pixels[0].color == UINT8_C(0x5a));
     CHECK(mipsnes2_ppu_mode0_mix(bg, &objects, 0U, &output));
+    (void)memset(cgram, 0, sizeof(cgram));
+    cgram[0] = UINT8_C(0x1f); /* Backdrop: red. */
+    cgram[2] = UINT8_C(0xe0); /* Index 1: green. */
+    cgram[3] = UINT8_C(0x83); /* Bit 15 must be ignored. */
+    cgram[510] = UINT8_C(0xff); /* Last entry: white. */
+    cgram[511] = UINT8_C(0x7f);
+    output.pixels[0].color = 1U;
+    output.pixels[1].color = 255U;
+    CHECK(mipsnes2_ppu_mode0_resolve_color(
+        &output, cgram, sizeof(cgram), 15U, false, &colors));
+    CHECK(colors.pixels[0] == UINT16_C(0x03e0));
+    CHECK(colors.pixels[1] == UINT16_C(0x7fff));
+    CHECK(colors.pixels[2] == UINT16_C(0x001f));
+    CHECK(mipsnes2_ppu_mode0_resolve_color(
+        &output, cgram, sizeof(cgram), 8U, false, &colors));
+    CHECK(colors.pixels[0] == UINT16_C(0x0200));
+    CHECK(colors.pixels[1] == UINT16_C(0x4210));
+    CHECK(colors.pixels[2] == UINT16_C(0x0010));
+    CHECK(mipsnes2_ppu_mode0_resolve_color(
+        &output, cgram, sizeof(cgram), 15U, true, &colors));
+    CHECK(colors.pixels[0] == 0U && colors.pixels[2] == 0U);
+    CHECK(mipsnes2_ppu_mode0_resolve_color(
+        &output, cgram, sizeof(cgram), 0U, false, &colors));
+    CHECK(colors.pixels[0] == 0U && colors.pixels[1] == 0U);
+    colors.pixels[0] = UINT16_C(0x1234);
+    CHECK(!mipsnes2_ppu_mode0_resolve_color(
+        &output, cgram, sizeof(cgram) - 1U, 15U, false, &colors));
+    CHECK(colors.pixels[0] == UINT16_C(0x1234));
+    CHECK(!mipsnes2_ppu_mode0_resolve_color(
+        &output, cgram, sizeof(cgram), 16U, false, &colors));
+    CHECK(colors.pixels[0] == UINT16_C(0x1234));
     (void)puts("PPU Mode 0 mixer: OK");
     return 0;
 }

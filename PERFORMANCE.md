@@ -32,8 +32,9 @@ measurements. In particular, bus time within CPU time must not be double-counted
 
 Each enabled Mode 0 BG reference path currently fetches a tilemap entry and
 2bpp row per pixel at a scanline event; the mixer then scans the four layer
-pixels and OBJ. Measure on PS2 before replacing it with cached-tile paths;
-no console throughput claim is made.
+pixels and OBJ. The color pass uses a 32-entry brightness table and a
+256-pixel CGRAM lookup. Measure on PS2 before replacing these reference
+paths with cached-tile paths; no console throughput claim is made.
 | DMA/HDMA | TBD | TBD | |
 | SPC700 | TBD | TBD | |
 | DSP | TBD | TBD | |

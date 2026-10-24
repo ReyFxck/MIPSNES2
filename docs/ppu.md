@@ -121,7 +121,9 @@ VRAM into a 256-entry line of color, priority and opacity, including tilemap
 quadrants and flips. The machine now owns a partial BG register subset and
 prepares all enabled BGs at HBlank start in Mode 0; this phase and the scroll
 latch formula need hardware validation. The Mode 0 mixer combines BG/OBJ
-priority into CGRAM indices using `$212C`; it does not produce RGB or a frame. See the
+priority into CGRAM indices using `$212C`. A second pass reads caller-owned
+CGRAM to produce a BGR555 line with nominal `$2100` brightness; it does not
+produce a frame or model the analog output. See the
 [BG line audit](ppu-bg2-scanline-audit.md) and
 [register audit](ppu-bg-register-audit.md) and
 [mixer audit](ppu-mode0-mix-audit.md).
@@ -155,7 +157,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] OAM — CPU ports, scheduled VBlank reload, sprite descriptor decode and tile-address lookup; display access and rendering absent
 - [ ] [IN PROGRESS] Sprite limits — 32 OBJ/34 tile selection, scheduled `$213E` flags and OBJ pixel line; exact timing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel lines tested; other formats and renderer absent
-- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines and OBJ priority mixer tested; RGB and output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer and BGR555 lookup tested; windows and output absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3
