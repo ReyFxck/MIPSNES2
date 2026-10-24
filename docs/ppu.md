@@ -141,6 +141,11 @@ brightness. `$2125/$212B` produce the color-window predicate used by
 [color math audit](ppu-color-math-audit.md) and
 [color-window audit](ppu-color-window-audit.md).
 
+Mode 1 reuses the same source/color lines. Its BG1/BG2 pixels come from a
+pure 4bpp scanline helper; BG3 remains 2bpp. The mixer implements the Mode 1
+priority chart including `$2105` bit 3. See the
+[Mode 1 audit](ppu-mode1-audit.md).
+
 ## 4bpp tile decode
 
 The shared decoder reads the four interleaved bitplanes of one 8×8 tile
@@ -171,7 +176,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] Sprite limits — 32 OBJ/34 tile selection, scheduled `$213E` flags and OBJ pixel line; exact timing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel lines tested; other formats and renderer absent
 - [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, main/sub layer and color windows, OBJ priority mixer, BGR555 lookup and color math tested; output and timing validation absent
-- [ ] BG Mode 1
+- [ ] [IN PROGRESS] BG Mode 1 — reference 4bpp/2bpp BG and priority lines; display and timing validation absent
 - [ ] BG Mode 2
 - [ ] BG Mode 3
 - [ ] BG Mode 4

@@ -3,7 +3,7 @@ ifeq ($(strip $(PS2SDK)),)
 $(error PS2SDK is unset; see docs/ps2.md)
 endif
 EE_BIN = mipsnes2-ps2.elf
-EE_OBJS = main.o diagnostic_suite.o rom_file.o log.o bus.o cpu_io.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
+EE_OBJS = main.o diagnostic_suite.o rom_file.o log.o bus.o cpu_io.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg4_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_mode1_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
 	cartridge_prepare.o machine.o
@@ -44,10 +44,16 @@ ppu_sprite_scanline.o: ../../core/ppu/sprite_scanline.c ../../core/ppu/sprite_sc
 ppu_bg2_scanline.o: ../../core/ppu/bg2_scanline.c ../../core/ppu/bg2_scanline.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
+ppu_bg4_scanline.o: ../../core/ppu/bg4_scanline.c ../../core/ppu/bg4_scanline.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
 ppu_bg_registers.o: ../../core/ppu/bg_registers.c ../../core/ppu/bg_registers.h ../../core/ppu/bg2_scanline.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 ppu_mode0_mix.o: ../../core/ppu/mode0_mix.c ../../core/ppu/mode0_mix.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+ppu_mode1_mix.o: ../../core/ppu/mode1_mix.c ../../core/ppu/mode1_mix.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 ppu_window_mask.o: ../../core/ppu/window_mask.c ../../core/ppu/window_mask.h

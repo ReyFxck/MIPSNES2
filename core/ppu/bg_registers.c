@@ -69,3 +69,28 @@ bool mipsnes2_ppu_bg_mode0_config(const mipsnes2_ppu_bg_registers *registers,
     *output = config;
     return true;
 }
+
+bool mipsnes2_ppu_bg_mode1_config(const mipsnes2_ppu_bg_registers *registers,
+                                 unsigned bg, mipsnes2_ppu_bg2_config *output)
+{
+    mipsnes2_ppu_bg2_config config;
+    unsigned nibble;
+
+    if (registers == NULL || !registers->initialized || bg >= 3U ||
+        output == NULL || (registers->mode & 7U) != 1U) {
+        return false;
+    }
+    nibble = (unsigned)registers->tile_bases[bg / 2U] >>
+             ((bg & 1U) * 4U);
+    config.screen_base_word =
+        (uint16_t)((((unsigned)registers->screen[bg] & 0xfcU) << 8) &
+                   0x7fffU);
+    config.tile_base_word = (uint16_t)(((nibble & 15U) << 12) & 0x7fffU);
+    config.scroll_x = registers->hofs[bg];
+    config.scroll_y = registers->vofs[bg];
+    config.screen_size = registers->screen[bg] & 3U;
+    config.palette_base = 0U;
+    config.tile_size16 = (registers->mode & (UINT8_C(0x10) << bg)) != 0U;
+    *output = config;
+    return true;
+}

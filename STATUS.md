@@ -254,10 +254,11 @@ output. Revision `5b9cfc6` passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/a
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101892125). See the
 [BG 2bpp audit](docs/ppu-bg2-scanline-audit.md).
 
-The machine now owns partial BG register state for `$2105`, `$2107-$210C`
-and `$210D-$2114`. Mode 0 BG1 renders a 2bpp line from caller-owned VRAM at
-the same provisional HBlank boundary as OBJ; the other BG register sets can
-produce pure configurations but are not yet scheduled for pixels. Host
+At revision `b1fd6ef` the machine acquired partial BG register state for
+`$2105`, `$2107-$210C` and `$210D-$2114`. Mode 0 BG1 rendered a 2bpp line
+from caller-owned VRAM at the same provisional HBlank boundary as OBJ; the
+other BG register sets then produced pure configurations without scheduled
+pixels. Host
 fixtures cover register base/size decode, shared scroll-write latches, mode
 rejection and the machine event boundary. C99 `cc` `make test` passes
 (2026-10-24). Revision `b1fd6ef` passed
@@ -347,13 +348,25 @@ The shared color-window pass now uses `$2125` high-nibble enable/inversion,
 pixel to black before math and suppress math in a separate region. Fixtures
 cover inside/outside/never/always, XOR, disabled windows, half-math
 suppression on clipped main pixels and the machine bus/event route. Host
-C99 `cc` `make test` passes (2026-10-24); PS2/PSP/host CI for this revision
-is pending. Mid-line changes, pseudo-hires, analog output and target runtime
+C99 `cc` `make test` passes (2026-10-24). Revision `5e36e8b` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40128545747),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40128545742)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40128545745).
+Mid-line changes, pseudo-hires, analog output and target runtime
 remain open. See the [color-window audit](docs/ppu-color-window-audit.md).
 
-Next primary block: Mode 1 reference BG pixels and layer priority, starting
-with 4bpp BG1/BG2 scanline decoding in the shared core and deterministic
-tilemap, palette, flip and transparency fixtures.
+The shared Mode 1 reference path now decodes BG1/BG2 in 4bpp and BG3 in
+2bpp, selecting main/sub pixels with Mode 1 BG/OBJ priority. `$2105` bit 3
+raises BG3 priority-1 pixels. Synthetic fixtures cover bitplanes, tilemap
+boundaries, flip, transparency, register routing, priority/masks and a
+scheduled machine line. Host C99 `cc` `make clean && make -j2 test` passes
+(2026-10-24). PS2/PSP/host CI for this revision is pending. There is no
+PS2 or PSP screen output and no target runtime validation. See the
+[Mode 1 audit](docs/ppu-mode1-audit.md).
+
+Next primary block: connect the reference scanline to a bounded PS2 visual
+output path for caller-owned test patterns, then inspect it in console
+emulators without treating that as real-hardware validation.
 
 ## State and evidence rules
 
@@ -1589,13 +1602,13 @@ platform persistence remains incomplete.
 
 ## PPU
 
-- [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM, OAM and Mode 0 BG register subsets
+- [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM, OAM and Mode 0/1 BG register subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes, CPU read/write ports and Mode 0 color lookup; access windows and video output absent
 - [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; final display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel fixtures tested; other PPU formats pending
 - [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer, main/sub layer windows, CGRAM lookup, color math and color windows tested; output and timing validation absent
-- [ ] BG Mode 1
+- [ ] [IN PROGRESS] BG Mode 1 — reference BG/OBJ scanline and color path; display and timing validation absent
 - [ ] BG Mode 2
 - [ ] BG Mode 3
 - [ ] BG Mode 4

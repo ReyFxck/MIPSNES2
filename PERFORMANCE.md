@@ -35,6 +35,8 @@ Each enabled Mode 0 BG reference path currently fetches a tilemap entry and
 pixels and OBJ. The color pass uses a 32-entry brightness table and a
 256-pixel CGRAM lookup. Measure on PS2 before replacing these reference
 paths with cached-tile paths; no console throughput claim is made.
+Mode 1 follows the same per-pixel map lookup pattern, fetching four
+bitplanes for BG1/BG2 and two for BG3. Its PS2 and PSP cost is unmeasured.
 The main-screen window pass currently evaluates up to five layer predicates
 at each of 256 pixels. Its cost and cache behavior remain unmeasured on PS2
 and PSP.

@@ -21,5 +21,8 @@ bool mipsnes2_ppu_bg_registers_write(mipsnes2_ppu_bg_registers *registers,
 /* Currently only Mode 0 has a 2bpp configuration for all four BGs. */
 bool mipsnes2_ppu_bg_mode0_config(const mipsnes2_ppu_bg_registers *registers,
                                  unsigned bg, mipsnes2_ppu_bg2_config *output);
+/* Mode 1: BG1/BG2 are 4bpp, BG3 is 2bpp (CGRAM base zero). */
+bool mipsnes2_ppu_bg_mode1_config(const mipsnes2_ppu_bg_registers *registers,
+                                 unsigned bg, mipsnes2_ppu_bg2_config *output);
 
 #endif

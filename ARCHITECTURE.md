@@ -18,7 +18,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI/ABORT boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
-| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 BG lines and priority mixer, scheduled overflow state and 4bpp tile decode; no RGB or screen output |
+| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; no screen output |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
@@ -131,9 +131,10 @@ the first sprite follows `$2103` priority rotation and the current internal
 OAM pointer, and forced blank suppresses this model's
 selection. When caller-owned VRAM exists, selected 4bpp OBJ slivers produce a
 256-entry color/priority line. The same event prepares four Mode 0 BG 2bpp
-lines using machine-owned `$2105/$2107-$2114` subset state when VRAM exists.
-`$212C/$212D` independently select main/sub layers for the Mode 0 priority
-mixer. `$2123-$212B/$212E/$212F` produce separate layer masks before
+lines or three Mode 1 lines (4bpp BG1/BG2 and 2bpp BG3) using machine-owned
+`$2105/$2107-$2114` subset state when VRAM exists. `$212C/$212D`
+independently select main/sub layers for the mode's priority mixer.
+`$2123-$212B/$212E/$212F` produce separate layer masks before
 selection. Shared passes resolve unattenuated main/sub BGR555 lines through
 caller-owned CGRAM, with `$2132` fixed color as the sub backdrop. A bounded
 `$2130/$2131` math pass combines them or uses fixed color, then applies

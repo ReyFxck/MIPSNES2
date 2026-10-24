@@ -46,6 +46,18 @@ int main(void)
     CHECK(!mipsnes2_ppu_bg_registers_write(&registers, 0x2106U, 1U));
     CHECK(mipsnes2_ppu_bg_registers_write(&registers, 0x2105U, 1U));
     CHECK(!mipsnes2_ppu_bg_mode0_config(&registers, 0U, &config));
+    CHECK(mipsnes2_ppu_bg_mode1_config(&registers, 0U, &config));
+    CHECK(config.screen_base_word == UINT16_C(0x7c00) &&
+          config.tile_base_word == UINT16_C(0x3000) &&
+          config.palette_base == 0U);
+    CHECK(mipsnes2_ppu_bg_mode1_config(&registers, 1U, &config));
+    CHECK(config.tile_base_word == UINT16_C(0x7000) &&
+          config.palette_base == 0U);
+    CHECK(mipsnes2_ppu_bg_mode1_config(&registers, 2U, &config));
+    CHECK(config.palette_base == 0U);
+    CHECK(!mipsnes2_ppu_bg_mode1_config(&registers, 3U, &config));
+    CHECK(mipsnes2_ppu_bg_registers_write(&registers, 0x2105U, 9U));
+    CHECK(mipsnes2_ppu_bg_mode1_config(&registers, 2U, &config));
     CHECK(!mipsnes2_ppu_bg_registers_write(NULL, 0x2105U, 0U));
     (void)puts("PPU BG register subset: OK");
     return 0;

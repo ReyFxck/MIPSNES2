@@ -1,5 +1,7 @@
 /* MIPSNES2 platform-neutral machine composition. See LICENSE for GPL-3.0 terms. */
 #include "core/machine/machine.h"
+#include "core/ppu/bg4_scanline.h"
+#include "core/ppu/mode1_mix.h"
 
 #include <string.h>
 
@@ -50,17 +52,27 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
                  sizeof(machine->color_window_inside));
     if (!machine->ppu_forced_blank && machine->vram != NULL &&
         line + 1U < vblank) {
-        for (bg = 0U; bg < 4U; ++bg) {
+        unsigned mode = machine->bg_registers.mode & 7U;
+
+        for (bg = 0U; bg < (mode == 0U ? 4U : 3U); ++bg) {
             mipsnes2_ppu_bg2_scanline *target = bg == 0U
                 ? &machine->bg1_line : &machine->bg_other_lines[bg - 1U];
 
             if (((machine->main_screen_enable | machine->sub_screen_enable) &
                  (1U << bg)) != 0U &&
-                mipsnes2_ppu_bg_mode0_config(&machine->bg_registers, bg,
-                                             &bg_config)) {
-                (void)mipsnes2_ppu_bg2_render_scanline(
-                    machine->vram, machine->vram_size, &bg_config,
-                    (uint16_t)line, target);
+                ((mode == 0U && mipsnes2_ppu_bg_mode0_config(
+                    &machine->bg_registers, bg, &bg_config)) ||
+                 (mode == 1U && mipsnes2_ppu_bg_mode1_config(
+                    &machine->bg_registers, bg, &bg_config)))) {
+                if (mode == 1U && bg < 2U) {
+                    (void)mipsnes2_ppu_bg4_render_scanline(
+                        machine->vram, machine->vram_size, &bg_config,
+                        line, target);
+                } else {
+                    (void)mipsnes2_ppu_bg2_render_scanline(
+                        machine->vram, machine->vram_size, &bg_config,
+                        line, target);
+                }
             }
         }
     }
@@ -82,21 +94,39 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
         }
     }
     if (!machine->ppu_forced_blank && machine->vram != NULL &&
-        line + 1U < vblank && (machine->bg_registers.mode & 7U) == 0U) {
+        line + 1U < vblank && (machine->bg_registers.mode & 7U) <= 1U) {
         bg_lines[0] = &machine->bg1_line;
         for (bg = 1U; bg < 4U; ++bg) {
             bg_lines[bg] = &machine->bg_other_lines[bg - 1U];
         }
         (void)mipsnes2_ppu_window_mask_line(
             &machine->windows, machine->window_hidden);
-        (void)mipsnes2_ppu_mode0_mix_masked(
-            bg_lines, &machine->obj_pixels, machine->main_screen_enable,
-            machine->window_hidden, &machine->mode0_line);
+        if ((machine->bg_registers.mode & 7U) == 0U) {
+            (void)mipsnes2_ppu_mode0_mix_masked(
+                bg_lines, &machine->obj_pixels,
+                machine->main_screen_enable, machine->window_hidden,
+                &machine->mode0_line);
+        } else {
+            (void)mipsnes2_ppu_mode1_mix_masked(
+                bg_lines, &machine->obj_pixels,
+                machine->main_screen_enable,
+                (machine->bg_registers.mode & 8U) != 0U,
+                machine->window_hidden, &machine->mode0_line);
+        }
         (void)mipsnes2_ppu_window_mask_sub_line(
             &machine->windows, machine->sub_window_hidden);
-        (void)mipsnes2_ppu_mode0_mix_masked(
-            bg_lines, &machine->obj_pixels, machine->sub_screen_enable,
-            machine->sub_window_hidden, &machine->sub_line);
+        if ((machine->bg_registers.mode & 7U) == 0U) {
+            (void)mipsnes2_ppu_mode0_mix_masked(
+                bg_lines, &machine->obj_pixels,
+                machine->sub_screen_enable, machine->sub_window_hidden,
+                &machine->sub_line);
+        } else {
+            (void)mipsnes2_ppu_mode1_mix_masked(
+                bg_lines, &machine->obj_pixels,
+                machine->sub_screen_enable,
+                (machine->bg_registers.mode & 8U) != 0U,
+                machine->sub_window_hidden, &machine->sub_line);
+        }
         if (machine->cgram != NULL) {
             (void)mipsnes2_ppu_mode0_resolve_color(
                 &machine->mode0_line, machine->cgram, machine->cgram_size,

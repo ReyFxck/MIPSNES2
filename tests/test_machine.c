@@ -534,6 +534,50 @@ int main(void)
           MIPSNES2_MASTER_TIMING_OK);
     CHECK(machine.bg1_line.pixels[0].opaque &&
           machine.bg1_line.pixels[0].color == 1U);
+    /* Mode 1: 4bpp BG1/BG2, 2bpp BG3 and $2105 priority override. */
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    (void)memset(vram, 0, sizeof(vram));
+    vram[0] = UINT8_C(0x80); /* BG1 4bpp color 1. */
+    vram[0x2001] = UINT8_C(0x80); /* BG2 4bpp color 2. */
+    vram[0x4000] = UINT8_C(0x80); /* BG3 2bpp color 3. */
+    vram[0x4001] = UINT8_C(0x80);
+    vram[0x800 * 2U + 1U] = UINT8_C(0x20); /* BG2 high priority. */
+    vram[0xc00 * 2U + 1U] = UINT8_C(0x20); /* BG3 high priority. */
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002105), 1U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002108), 8U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002109), 12U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00210b), 0x10U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00210c), 0x02U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212c), 7U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), 15U);
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.bg1_line.pixels[0].opaque &&
+          machine.bg1_line.pixels[0].color == 1U);
+    CHECK(machine.bg_other_lines[0].pixels[0].opaque &&
+          machine.bg_other_lines[0].pixels[0].color == 2U);
+    CHECK(machine.bg_other_lines[1].pixels[0].opaque &&
+          machine.bg_other_lines[1].pixels[0].color == 3U);
+    CHECK(machine.mode0_line.pixels[0].source == 2U &&
+          machine.mode0_line.pixels[0].color == 2U);
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002105), 9U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002108), 8U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002109), 12U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00210b), 0x10U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00210c), 0x02U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212c), 7U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), 15U);
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.mode0_line.pixels[0].source == 3U &&
+          machine.mode0_line.pixels[0].color == 3U);
     (void)puts("machine integration: OK");
     return 0;
 }

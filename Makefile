@@ -23,8 +23,10 @@ TEST_PPU_OAM = $(BUILD_DIR)/test-ppu-oam
 TEST_PPU_TILE4 = $(BUILD_DIR)/test-ppu-tile4
 TEST_PPU_SPRITE_SCANLINE = $(BUILD_DIR)/test-ppu-sprite-scanline
 TEST_PPU_BG2_SCANLINE = $(BUILD_DIR)/test-ppu-bg2-scanline
+TEST_PPU_BG4_SCANLINE = $(BUILD_DIR)/test-ppu-bg4-scanline
 TEST_PPU_BG_REGISTERS = $(BUILD_DIR)/test-ppu-bg-registers
 TEST_PPU_MODE0_MIX = $(BUILD_DIR)/test-ppu-mode0-mix
+TEST_PPU_MODE1_MIX = $(BUILD_DIR)/test-ppu-mode1-mix
 TEST_PPU_WINDOW_MASK = $(BUILD_DIR)/test-ppu-window-mask
 TEST_PPU_COLOR_MATH = $(BUILD_DIR)/test-ppu-color-math
 TEST_HV_TIMING = $(BUILD_DIR)/test-hv-timing
@@ -38,7 +40,7 @@ TEST_CARTRIDGE_PREPARE = $(BUILD_DIR)/test-cartridge-prepare
 TEST_PS2_DIAGNOSTIC = $(BUILD_DIR)/test-ps2-diagnostic
 TEST_MACHINE = $(BUILD_DIR)/test-machine
 TEST_PS2_ROM_FILE = $(BUILD_DIR)/test-ps2-rom-file
-CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o $(BUILD_DIR)/ppu_counters.o $(BUILD_DIR)/ppu_vram.o $(BUILD_DIR)/ppu_cgram.o $(BUILD_DIR)/ppu_oam.o $(BUILD_DIR)/ppu_tile4.o $(BUILD_DIR)/ppu_sprite_scanline.o $(BUILD_DIR)/ppu_bg2_scanline.o $(BUILD_DIR)/ppu_bg_registers.o $(BUILD_DIR)/ppu_mode0_mix.o $(BUILD_DIR)/ppu_window_mask.o $(BUILD_DIR)/ppu_color_math.o \
+CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o $(BUILD_DIR)/ppu_counters.o $(BUILD_DIR)/ppu_vram.o $(BUILD_DIR)/ppu_cgram.o $(BUILD_DIR)/ppu_oam.o $(BUILD_DIR)/ppu_tile4.o $(BUILD_DIR)/ppu_sprite_scanline.o $(BUILD_DIR)/ppu_bg2_scanline.o $(BUILD_DIR)/ppu_bg4_scanline.o $(BUILD_DIR)/ppu_bg_registers.o $(BUILD_DIR)/ppu_mode0_mix.o $(BUILD_DIR)/ppu_mode1_mix.o $(BUILD_DIR)/ppu_window_mask.o $(BUILD_DIR)/ppu_color_math.o \
 	$(BUILD_DIR)/cpu.o \
 	$(BUILD_DIR)/snes_bus.o $(BUILD_DIR)/scheduler.o \
 	$(BUILD_DIR)/5a22_timing.o $(BUILD_DIR)/hv_timing.o \
@@ -84,10 +86,16 @@ $(BUILD_DIR)/ppu_sprite_scanline.o: core/ppu/sprite_scanline.c core/ppu/sprite_s
 $(BUILD_DIR)/ppu_bg2_scanline.o: core/ppu/bg2_scanline.c core/ppu/bg2_scanline.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
+$(BUILD_DIR)/ppu_bg4_scanline.o: core/ppu/bg4_scanline.c core/ppu/bg4_scanline.h core/ppu/bg2_scanline.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
 $(BUILD_DIR)/ppu_bg_registers.o: core/ppu/bg_registers.c core/ppu/bg_registers.h core/ppu/bg2_scanline.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/ppu_mode0_mix.o: core/ppu/mode0_mix.c core/ppu/mode0_mix.h core/ppu/bg2_scanline.h core/ppu/sprite_scanline.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/ppu_mode1_mix.o: core/ppu/mode1_mix.c core/ppu/mode1_mix.h core/ppu/mode0_mix.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/ppu_window_mask.o: core/ppu/window_mask.c core/ppu/window_mask.h | $(BUILD_DIR)
@@ -174,10 +182,16 @@ $(TEST_PPU_SPRITE_SCANLINE): tests/test_ppu_sprite_scanline.c core/ppu/sprite_sc
 $(TEST_PPU_BG2_SCANLINE): tests/test_ppu_bg2_scanline.c core/ppu/bg2_scanline.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_PPU_BG4_SCANLINE): tests/test_ppu_bg4_scanline.c core/ppu/bg4_scanline.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(TEST_PPU_BG_REGISTERS): tests/test_ppu_bg_registers.c core/ppu/bg_registers.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
 $(TEST_PPU_MODE0_MIX): tests/test_ppu_mode0_mix.c core/ppu/mode0_mix.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
+$(TEST_PPU_MODE1_MIX): tests/test_ppu_mode1_mix.c core/ppu/mode1_mix.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
 $(TEST_PPU_WINDOW_MASK): tests/test_ppu_window_mask.c core/ppu/window_mask.h $(LIB)
@@ -222,7 +236,7 @@ $(TEST_PS2_ROM_FILE): tests/test_ps2_rom_file.c platform/ps2/rom_file.c platform
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG4_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_MODE1_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
@@ -235,8 +249,10 @@ test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO
 	$(TEST_PPU_TILE4)
 	$(TEST_PPU_SPRITE_SCANLINE)
 	$(TEST_PPU_BG2_SCANLINE)
+	$(TEST_PPU_BG4_SCANLINE)
 	$(TEST_PPU_BG_REGISTERS)
 	$(TEST_PPU_MODE0_MIX)
+	$(TEST_PPU_MODE1_MIX)
 	$(TEST_PPU_WINDOW_MASK)
 	$(TEST_PPU_COLOR_MATH)
 	$(TEST_HV_TIMING)
@@ -256,7 +272,7 @@ clean:
 	$(RM) -r $(BUILD_DIR)
 
 -include $(BUILD_DIR)/log.d $(BUILD_DIR)/bus.d $(BUILD_DIR)/cpu_io.d \
-	$(BUILD_DIR)/ppu_counters.d $(BUILD_DIR)/ppu_vram.d $(BUILD_DIR)/ppu_cgram.d $(BUILD_DIR)/ppu_oam.d $(BUILD_DIR)/ppu_tile4.d $(BUILD_DIR)/ppu_sprite_scanline.d $(BUILD_DIR)/ppu_bg2_scanline.d $(BUILD_DIR)/ppu_bg_registers.d $(BUILD_DIR)/ppu_mode0_mix.d $(BUILD_DIR)/ppu_window_mask.d $(BUILD_DIR)/ppu_color_math.d \
+	$(BUILD_DIR)/ppu_counters.d $(BUILD_DIR)/ppu_vram.d $(BUILD_DIR)/ppu_cgram.d $(BUILD_DIR)/ppu_oam.d $(BUILD_DIR)/ppu_tile4.d $(BUILD_DIR)/ppu_sprite_scanline.d $(BUILD_DIR)/ppu_bg2_scanline.d $(BUILD_DIR)/ppu_bg4_scanline.d $(BUILD_DIR)/ppu_bg_registers.d $(BUILD_DIR)/ppu_mode0_mix.d $(BUILD_DIR)/ppu_mode1_mix.d $(BUILD_DIR)/ppu_window_mask.d $(BUILD_DIR)/ppu_color_math.d \
 	$(BUILD_DIR)/snes_bus.d \
 	$(BUILD_DIR)/cpu.d $(BUILD_DIR)/scheduler.d \
 	$(BUILD_DIR)/5a22_timing.d $(BUILD_DIR)/hv_timing.d \
