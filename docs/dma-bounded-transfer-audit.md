@@ -23,6 +23,10 @@ B-port modes, `$21FF` wrapping, 16-bit A offset wrapping with fixed bank,
 fixed/decrement/increment, per-byte A1T/DAS updates, transfer completion and
 the full 65536-byte zero-count path. It uses a callback with test-owned byte
 arrays; it does not verify machine bus side effects or hardware timing.
+Revision `7fc0d79` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40131063212),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40131063247)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40131063232).
 
 Hardware references consulted on 2026-10-24:
 

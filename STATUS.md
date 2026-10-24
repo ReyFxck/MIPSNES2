@@ -414,8 +414,11 @@ enabled channels in priority order, derives one A/B-bus data phase per byte,
 and updates A1T/DAS after each callback. Deterministic synthetic tests cover
 all eight modes, both directions, channel order, fixed/decrement/increment,
 bank and B-port wrapping, pause/resume, zero count and register completion.
-Serial `make clean && make test` passes on host C99 (2026-10-24);
-PS2/PSP cross-build CI for this cursor revision is pending.
+Serial `make clean && make test` passes on host C99 (2026-10-24).
+Revision `7fc0d79` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40131063212),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40131063247)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40131063232).
 The cursor itself is untimed: `$420B` does not start a transfer, the CPU is
 not stalled, and machine bus restrictions and HDMA remain unimplemented. See
 the [DMA foundation audit](docs/dma-register-foundation-audit.md) and
