@@ -291,18 +291,23 @@ passes (2026-10-24). Revision `ac3124c` passed
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103159833),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103159758)
 and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103159561).
-This digital brightness model is not an analog DAC measurement. Windows,
-sub-screen, color math, mid-line writes, exact fetch timing, target runtime
-and video output remain open. See the [Mode 0 mixer audit](docs/ppu-mode0-mix-audit.md).
+This digital brightness model is not an analog DAC measurement. At that
+revision, windows, sub-screen, color math, mid-line writes, exact fetch
+timing, target runtime and video output remained open. See the
+[Mode 0 mixer audit](docs/ppu-mode0-mix-audit.md).
 
 Main-screen layer windows now retain `$2123-$212B/$212E` in the shared
 machine. A pure 256-pixel mask applies inclusive edges, inversion and
 OR/AND/XOR/XNOR to BG1-4/OBJ before Mode 0 priority selection. Synthetic
 vectors cover all four operations, edge boundaries, inversion, disabled
 windows, reversed edges, BG4/OBJ separation, masked fall-through and the
-machine bus/event handoff. Host C99 `cc` `make test` passes (2026-10-24);
-PS2/PSP/host CI for this window revision is pending. Sub-screen and color
-windows, mid-line updates and target runtime remain open. See the
+machine bus/event handoff. Host C99 `cc` `make clean && make test` passes
+(2026-10-24). Revision `01fe1b8` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587677),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587679)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587649).
+Sub-screen and color windows, mid-line updates and target runtime remain
+open. See the
 [window audit](docs/ppu-window-mask-audit.md).
 
 Next primary block: produce a separate Mode 0 sub-screen index/color line

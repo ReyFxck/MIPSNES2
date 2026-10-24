@@ -21,8 +21,11 @@ priority selection, revealing lower layers or CGRAM backdrop index zero.
 Synthetic host vectors cover all four boolean operations, edge inclusion,
 single-window inversion, disabled layers, reversed edges, BG4/OBJ separate
 settings, masked fall-through and a machine bus/event fixture. Host C99
-`cc` `make test` passes (2026-10-24); PS2/PSP/host CI for this revision is
-pending. The core module is included in both target build graphs.
+`cc` `make clean && make test` passes (2026-10-24). Revision `01fe1b8`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587677),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587679)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587649).
+The core module is included in both target build graphs.
 
 This does not implement the color window, `$212F` sub-screen masking,
 `$2130` clip modes, mid-scanline writes, hardware fetch phase or a video
