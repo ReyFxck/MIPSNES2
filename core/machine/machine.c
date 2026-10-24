@@ -39,6 +39,8 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
     (void)memset(&machine->bg_other_lines, 0,
                  sizeof(machine->bg_other_lines));
     (void)memset(&machine->mode0_line, 0, sizeof(machine->mode0_line));
+    (void)memset(&machine->mode0_raw_line, 0,
+                 sizeof(machine->mode0_raw_line));
     (void)memset(&machine->mode0_color_line, 0,
                  sizeof(machine->mode0_color_line));
     (void)memset(&machine->sub_line, 0, sizeof(machine->sub_line));
@@ -96,10 +98,16 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
         if (machine->cgram != NULL) {
             (void)mipsnes2_ppu_mode0_resolve_color(
                 &machine->mode0_line, machine->cgram, machine->cgram_size,
-                machine->ppu_brightness, false, &machine->mode0_color_line);
+                15U, false, &machine->mode0_raw_line);
             (void)mipsnes2_ppu_mode0_resolve_sub_color(
                 &machine->sub_line, machine->cgram, machine->cgram_size,
                 machine->fixed_color, &machine->sub_color_line);
+            (void)mipsnes2_ppu_color_math_line(
+                &machine->mode0_line, &machine->mode0_raw_line,
+                &machine->sub_line, &machine->sub_color_line,
+                machine->fixed_color, machine->color_math_select,
+                machine->color_math_control, machine->ppu_brightness,
+                false, &machine->mode0_color_line);
         }
     }
     delay = line + 2U < vblank
@@ -209,6 +217,12 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
     if ((uint16_t)address == UINT16_C(0x212d)) {
         machine->sub_screen_enable = value & UINT8_C(0x1f);
     }
+    if ((uint16_t)address == UINT16_C(0x2130)) {
+        machine->color_math_select = value;
+    }
+    if ((uint16_t)address == UINT16_C(0x2131)) {
+        machine->color_math_control = value;
+    }
     if ((uint16_t)address == UINT16_C(0x2132)) {
         uint16_t channel = value & UINT8_C(0x1f);
 
@@ -282,6 +296,8 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     (void)memset(&machine->bg_other_lines, 0,
                  sizeof(machine->bg_other_lines));
     (void)memset(&machine->mode0_line, 0, sizeof(machine->mode0_line));
+    (void)memset(&machine->mode0_raw_line, 0,
+                 sizeof(machine->mode0_raw_line));
     (void)memset(&machine->mode0_color_line, 0,
                  sizeof(machine->mode0_color_line));
     (void)memset(&machine->sub_line, 0, sizeof(machine->sub_line));
@@ -290,6 +306,8 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     machine->main_screen_enable = 0U;
     machine->sub_screen_enable = 0U;
     machine->fixed_color = 0U;
+    machine->color_math_select = 0U;
+    machine->color_math_control = 0U;
     if (machine->vram != NULL &&
         !mipsnes2_ppu_vram_ports_init(&machine->vram_ports,
                                      machine->vram, machine->vram_size)) {

@@ -326,9 +326,21 @@ Color math, color window, mid-line register changes and target runtime
 remain open. See the
 [sub-screen audit](docs/ppu-subscreen-audit.md).
 
-Next primary block: implement bounded Mode 0 color math using unattenuated
-main/sub/fixed BGR555 pixels, then apply `$2100` brightness to the result;
-test add/subtract, half modes, layer enables and saturation.
+The shared Mode 0 path now resolves an unattenuated main line, performs
+`$2130/$2131` color addition or subtraction against the sub-screen or fixed
+color, and applies `$2100` brightness afterward. Per-layer enables include
+backdrop and OBJ palettes 4-7; half math is skipped for a sub-screen backdrop.
+Pure fixtures cover channel packing, saturation, subtraction clamp, half
+rounding, source gating, the backdrop exception, brightness order and invalid
+inputs. A machine fixture covers register routing and a combined BG/fixed
+color pixel. Host C99 `cc` `make clean && make test` passes (2026-10-24); PS2/PSP/host CI
+for this math revision is pending. Color-window clipping and its interaction
+with half math, mid-line behavior, target runtime and output remain open. See
+the [color math audit](docs/ppu-color-math-audit.md).
+
+Next primary block: implement the color-window region rules from
+`$2125/$212B/$2130`, including main-screen clipping and sub-screen math
+suppression, with deterministic inside/outside/never/always fixtures.
 
 ## State and evidence rules
 
@@ -1567,9 +1579,9 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM, OAM and Mode 0 BG register subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes, CPU read/write ports and Mode 0 color lookup; access windows and video output absent
-- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; BG mixing and display absent
+- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; final display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel fixtures tested; other PPU formats pending
-- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer, main/sub layer windows and CGRAM BGR555 lookup tested; color math, color windows and output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer, main/sub layer windows, CGRAM lookup and color math tested; color windows and output absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

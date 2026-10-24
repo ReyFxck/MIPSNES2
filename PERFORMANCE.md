@@ -41,6 +41,8 @@ and PSP.
 The sub-screen now adds another window pass, priority mix and CGRAM lookup
 when VRAM and CGRAM are present. Combined per-line cost remains unmeasured
 on either target; no frame-rate inference follows from cross-build success.
+The reference color-math pass currently performs three channel operations and
+brightness divisions per pixel. PS2 and PSP cost remains unmeasured.
 | DMA/HDMA | TBD | TBD | |
 | SPC700 | TBD | TBD | |
 | DSP | TBD | TBD | |

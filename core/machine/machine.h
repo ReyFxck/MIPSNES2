@@ -4,6 +4,7 @@
 
 #include "core/cartridge/prepare.h"
 #include "core/ppu/cgram_ports.h"
+#include "core/ppu/color_math.h"
 #include "core/ppu/bg_registers.h"
 #include "core/ppu/mode0_mix.h"
 #include "core/ppu/oam_ports.h"
@@ -66,6 +67,7 @@ typedef struct {
     mipsnes2_ppu_bg2_scanline bg1_line;
     mipsnes2_ppu_bg2_scanline bg_other_lines[3];
     mipsnes2_ppu_mode0_line mode0_line;
+    mipsnes2_ppu_mode0_color_line mode0_raw_line;
     mipsnes2_ppu_mode0_color_line mode0_color_line;
     mipsnes2_ppu_mode0_line sub_line;
     mipsnes2_ppu_mode0_color_line sub_color_line;
@@ -93,6 +95,8 @@ typedef struct {
     uint8_t main_screen_enable;
     uint8_t sub_screen_enable;
     uint16_t fixed_color;
+    uint8_t color_math_select;
+    uint8_t color_math_control;
     bool ready;
 } mipsnes2_machine;
 

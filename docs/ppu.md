@@ -122,8 +122,8 @@ quadrants and flips. The machine now owns a partial BG register subset and
 prepares all enabled BGs at HBlank start in Mode 0; this phase and the scroll
 latch formula need hardware validation. The Mode 0 mixer combines BG/OBJ
 priority into CGRAM indices using `$212C`. A second pass reads caller-owned
-CGRAM to produce a BGR555 line with nominal `$2100` brightness; it does not
-produce a frame or model the analog output. See the
+CGRAM to produce raw BGR555 for color math, followed by nominal `$2100`
+brightness. It does not produce a frame or model analog output. See the
 [BG line audit](ppu-bg2-scanline-audit.md) and
 [register audit](ppu-bg-register-audit.md) and
 [mixer audit](ppu-mode0-mix-audit.md).
@@ -133,6 +133,11 @@ and produces separate 256-entry hidden-layer masks. The Mode 0 mixer applies
 each mask before choosing the visible BG/OBJ pixel. `$2132` supplies the
 sub-screen's fixed-color backdrop. See the [window audit](ppu-window-mask-audit.md)
 and [sub-screen audit](ppu-subscreen-audit.md).
+
+`core/ppu/color_math.c` combines unattenuated main colors with sub-screen or
+fixed colors under `$2130/$2131` layer and operation bits, then applies
+brightness. Color-window effects remain open. See the
+[color math audit](ppu-color-math-audit.md).
 
 ## 4bpp tile decode
 
@@ -163,7 +168,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] OAM — CPU ports, scheduled VBlank reload, sprite descriptor decode and tile-address lookup; display access and rendering absent
 - [ ] [IN PROGRESS] Sprite limits — 32 OBJ/34 tile selection, scheduled `$213E` flags and OBJ pixel line; exact timing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel lines tested; other formats and renderer absent
-- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, main/sub layer windows, OBJ priority mixer and BGR555 lookup tested; color math and output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, main/sub layer windows, OBJ priority mixer, BGR555 lookup and basic color math tested; color windows and output absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

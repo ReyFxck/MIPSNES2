@@ -134,12 +134,13 @@ selection. When caller-owned VRAM exists, selected 4bpp OBJ slivers produce a
 lines using machine-owned `$2105/$2107-$2114` subset state when VRAM exists.
 `$212C/$212D` independently select main/sub layers for the Mode 0 priority
 mixer. `$2123-$212B/$212E/$212F` produce separate layer masks before
-selection. A shared pass resolves main indices through caller-owned CGRAM to
-a BGR555 line, with `$2100` brightness approximated in 5-bit digital levels;
-forced blank leaves the scheduled lines black. A separate raw BGR555 sub line
-uses `$2132` fixed color for its backdrop. Scroll-write latches use a
-published but hardware-unverified formula. Color windows, color math, exact
-mid-line behavior and display output are absent.
+selection. Shared passes resolve unattenuated main/sub BGR555 lines through
+caller-owned CGRAM, with `$2132` fixed color as the sub backdrop. A bounded
+`$2130/$2131` math pass combines them or uses fixed color, then applies
+`$2100` brightness in nominal 5-bit digital levels. Forced blank leaves the
+scheduled lines black. Scroll-write latches use a published but
+hardware-unverified formula. Color windows, exact mid-line behavior and
+display output are absent.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending
