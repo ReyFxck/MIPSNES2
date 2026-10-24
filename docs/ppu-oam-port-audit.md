@@ -86,8 +86,20 @@ passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085196446),
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40085196410).
 No source code from other emulators was used.
 
+The OBJ tile-address helper uses `$2101` base and name selection plus the
+sprite character code. Nintendo's *SNES Development Manual, Book I*,
+[PPU page 2-27-1 and appendix A-1](https://floating.muncher.se/bot/manual/book1_text.pdf),
+specifies the base/name VRAM regions. [Independent sprite hardware notes](https://wiki.superfamicom.org/sprites)
+describe the separate row/column wrapping within each 16×16 character grid.
+The helper returns the first word of a selected unflipped 8×8 tile; it
+applies 32K-word VRAM wrap and rejects tile coordinates outside the selected
+OBJ size. `tests/test_ppu_oam.c` covers `$1FE` row/column wrap, base and
+second-table selection, VRAM wrap, size limits and invalid inputs. A clean
+host C99 `cc` `make test` passes (2026-10-24); cross-build CI is pending.
+The helper does not read VRAM, perform flips, evaluate scanlines or render.
+
 Active-display address invalidation and access restrictions are not
-implemented. Sprite decoding, priority rotation
+implemented. Sprite scanline evaluation, priority rotation
 effects, DMA/HDMA,
 rendering and real-console behavior are also unverified. The OAM and PPU
 parent tasks remain incomplete.

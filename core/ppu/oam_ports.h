@@ -53,5 +53,13 @@ bool mipsnes2_ppu_oam_decode_sprite(const mipsnes2_ppu_oam_ports *ports,
 /* Returns false for undocumented $2101 size codes 6 and 7. */
 bool mipsnes2_ppu_oam_sprite_size(uint8_t obj_select, bool large,
                                  uint8_t *pixels);
+/* Resolve one 8x8 tile's first VRAM word. Tile coordinates are local and
+ * unflipped; callers apply flip/scanline selection before this lookup.
+ * The OBJ 16x16 character grid wraps within the selected name table.
+ */
+bool mipsnes2_ppu_oam_sprite_tile_word(uint8_t obj_select,
+                                      const mipsnes2_ppu_oam_sprite *sprite,
+                                      unsigned tile_x, unsigned tile_y,
+                                      uint16_t *word_address);
 
 #endif

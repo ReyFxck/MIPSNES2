@@ -168,6 +168,16 @@ This is descriptor decoding only: sprite
 scanline eligibility, priority rotation effects, tile fetch and rendering
 remain open. See the [OAM port audit](docs/ppu-oam-port-audit.md).
 
+The shared OBJ tile-address helper now resolves an unflipped sprite-local
+8×8 tile to its first VRAM word using `$2101` base/name selection. Row and
+column wrap independently within the selected 16×16 character grid, and
+the 32K-word VRAM address wraps. Deterministic host fixtures exercise
+character `$1FE` across row/column edges, second-table and base selection,
+VRAM wrap, sprite-size bounds and invalid inputs. A clean host C99 `cc`
+`make test` passes (2026-10-24); PS2/PSP CI for this revision is pending.
+This helper does not fetch VRAM bytes or decide tile order after flips,
+scanline limits, palette composition or rendering.
+
 ## State and evidence rules
 
 - [ ] Not implemented or not verified
@@ -1405,7 +1415,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload and sprite descriptor decode; access windows and rendering absent
+- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite descriptor decode and tile-address lookup; access windows and rendering absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2

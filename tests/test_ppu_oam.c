@@ -82,6 +82,64 @@ static int test_sprite_decode(void)
     return 0;
 }
 
+static int test_sprite_tile_address(void)
+{
+    mipsnes2_ppu_oam_sprite sprite;
+    uint16_t address = 0U;
+
+    (void)memset(&sprite, 0, sizeof(sprite));
+    sprite.character = 0x1feU;
+    sprite.large = true;
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 0U, 0U,
+                                           &address));
+    CHECK(address == 0x1fe0U);
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 1U, 0U,
+                                           &address));
+    CHECK(address == 0x1ff0U);
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 2U, 0U,
+                                           &address));
+    CHECK(address == 0x1f00U);
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 0U, 1U,
+                                           &address));
+    CHECK(address == 0x10e0U);
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 3U, 3U,
+                                           &address));
+    CHECK(address == 0x1210U);
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 7U, 7U,
+                                           &address));
+    CHECK(address == 0x1650U);
+
+    /* OBJSEL base and second-table selection both wrap at 32K words. */
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xa3U, &sprite, 0U, 0U,
+                                           &address));
+    CHECK(address == 0x7fe0U);
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xbfU, &sprite, 0U, 0U,
+                                           &address));
+    CHECK(address == 0x2fe0U);
+    sprite.character = 0xfeU;
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xbfU, &sprite, 0U, 0U,
+                                           &address));
+    CHECK(address == 0x6fe0U);
+
+    sprite.large = false; /* mode 5 small is 32x32. */
+    CHECK(mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 3U, 3U,
+                                           &address));
+    address = 0x55aaU;
+    CHECK(!mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 4U, 0U,
+                                            &address));
+    CHECK(!mipsnes2_ppu_oam_sprite_tile_word(0xc0U, &sprite, 0U, 0U,
+                                            &address));
+    sprite.character = 0x200U;
+    CHECK(!mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 0U, 0U,
+                                            &address));
+    CHECK(!mipsnes2_ppu_oam_sprite_tile_word(0xa0U, NULL, 0U, 0U,
+                                            &address));
+    CHECK(!mipsnes2_ppu_oam_sprite_tile_word(0xa0U, &sprite, 0U, 0U,
+                                            NULL));
+    CHECK(address == 0x55aaU);
+    return 0;
+}
+
 int main(void)
 {
     mipsnes2_ppu_oam_ports ports;
@@ -161,6 +219,7 @@ int main(void)
     CHECK(mipsnes2_ppu_oam_ports_init(&ports, oam, sizeof(oam)));
     CHECK(ports.byte_address == 0U && oam[0x1ff] == 0x78U);
     CHECK(test_sprite_decode() == 0);
+    CHECK(test_sprite_tile_address() == 0);
     (void)puts("PPU OAM ports: OK");
     return 0;
 }

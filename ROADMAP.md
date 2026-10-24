@@ -191,7 +191,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] PPU register model
 - [ ] [IN PROGRESS] VRAM — storage and read/write-port subset; access gates and rendering absent
 - [ ] [IN PROGRESS] CGRAM — storage and CPU port subset; access gates and rendering absent
-- [ ] [IN PROGRESS] OAM — storage, CPU ports, VBlank reload and descriptor decode; sprite evaluation and rendering absent
+- [ ] [IN PROGRESS] OAM — storage, CPU ports, VBlank reload, descriptor decode and tile-address lookup; sprite evaluation and rendering absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2

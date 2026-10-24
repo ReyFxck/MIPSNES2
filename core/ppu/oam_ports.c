@@ -142,3 +142,30 @@ bool mipsnes2_ppu_oam_sprite_size(uint8_t obj_select, bool large,
     *pixels = sizes[mode][large ? 1U : 0U];
     return true;
 }
+
+bool mipsnes2_ppu_oam_sprite_tile_word(uint8_t obj_select,
+                                      const mipsnes2_ppu_oam_sprite *sprite,
+                                      unsigned tile_x, unsigned tile_y,
+                                      uint16_t *word_address)
+{
+    uint8_t pixels;
+    unsigned character;
+    unsigned base;
+
+    if (sprite == NULL || word_address == NULL ||
+        sprite->character > UINT16_C(0x1ff) ||
+        !mipsnes2_ppu_oam_sprite_size(obj_select, sprite->large, &pixels) ||
+        tile_x >= (unsigned)pixels / 8U ||
+        tile_y >= (unsigned)pixels / 8U) {
+        return false;
+    }
+    /* The row and column wrap separately in a 16x16 character grid. */
+    character = (((unsigned)sprite->character + tile_y * 16U) & 0xf0U) |
+                (((unsigned)sprite->character + tile_x) & 0x0fU);
+    base = ((unsigned)obj_select & 7U) * 8192U;
+    if ((sprite->character & UINT16_C(0x100)) != 0U) {
+        base += ((((unsigned)obj_select >> 3) & 3U) + 1U) * 4096U;
+    }
+    *word_address = (uint16_t)((base + character * 16U) & 0x7fffU);
+    return true;
+}
