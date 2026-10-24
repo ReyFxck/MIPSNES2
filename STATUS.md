@@ -181,6 +181,18 @@ VRAM wrap, sprite-size bounds and invalid inputs. A clean host C99 `cc`
 This helper does not fetch VRAM bytes or decide tile order after flips,
 scanline limits, palette composition or rendering.
 
+A separate platform-neutral 4bpp decoder now converts one 8×8 VRAM tile
+to 64 row-major color indices. It is shared by future OBJ and BG paths,
+and wired into both PS2 and PSP build graphs. Deterministic host fixtures
+cover zero/full colors, each bitplane at distinct pixels, a mixed pixel,
+VRAM-end wrap, invalid buffers and the OBJ tile-address handoff. A clean
+host C99 `cc` `make test` passes (2026-10-24); cross-build CI is pending.
+The first clean run stopped on an unrelated zero-byte generated
+`test-interrupt-lines` executable; rebuilding it and rerunning the full
+suite passed. The cause of that local artifact failure is unconfirmed.
+No palette lookup, transparency decision, flipping, scanline rendering or
+target runtime is claimed. See the [4bpp tile audit](docs/ppu-tile4-audit.md).
+
 ## State and evidence rules
 
 - [ ] Not implemented or not verified
@@ -1419,6 +1431,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite descriptor decode and tile-address lookup; access windows and rendering absent
+- [ ] [IN PROGRESS] Tile decode fixtures — shared 4bpp tile indices and OBJ address handoff tested; other PPU formats and pixels pending
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2
@@ -1445,7 +1458,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths host-verified; access-window/mixed-port behavior pending
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM and OAM port fixtures
+- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM, OAM port and 4bpp tile fixtures
 - [ ] Reference renderer integration
 
 ## SPC700

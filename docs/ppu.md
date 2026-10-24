@@ -8,7 +8,8 @@ foundation. `core/ppu/vram_ports.c` adds caller-owned 64 KiB VRAM storage,
 the `$2115-$2119` write ports and `$2139/$213A` buffered read ports.
 `core/ppu/cgram_ports.c` owns the `$2121/$2122/$213B` palette port state
 over a caller-owned 512-byte CGRAM buffer. `core/ppu/oam_ports.c` adds
-`$2102-$2104/$2138` over 544 caller-owned OAM bytes. Pixel composition
+`$2101-$2104/$2138` over 544 caller-owned OAM bytes. `core/ppu/tile4.c`
+decodes one 4bpp VRAM tile into color indices. Pixel composition
 and presentation are absent. GS/GU
 must not be called here; no render API exists.
 
@@ -92,6 +93,16 @@ VRAM word using OBJSEL base/name bits. It wraps rows and columns within the
 selected 16×16 character grid and rejects tile coordinates outside the
 selected sprite size. It does not fetch or decode tile pixels.
 
+## 4bpp tile decode
+
+The shared decoder reads the four interleaved bitplanes of one 8×8 tile
+from caller-owned 64 KiB VRAM and writes 64 row-major indices in 0-15.
+The OBJ tile-address helper can supply its word address; the decoder itself
+also applies the 32K-word VRAM wrap. Color index zero remains zero for the
+caller to interpret in its layer context. No palette, flips, sprite range,
+pixel composition or target presentation is part of this API. See the
+[tile audit](ppu-tile4-audit.md).
+
 ## Design direction
 
 Begin with sourced register semantics and independent state tests, then reference scanline output. Decide synchronization granularity from software-visible behavior, including mid-frame writes. Candidate accelerated pixel kernels need exact formats, alignment and reference equivalence; final frame upload belongs to platform.
@@ -109,6 +120,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — CPU ports, scheduled VBlank reload, sprite descriptor decode and tile-address lookup; display access and rendering absent
+- [ ] [IN PROGRESS] Tile decode fixtures — 4bpp tile indices and OBJ address handoff tested; other formats and renderer absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2
