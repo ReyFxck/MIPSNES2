@@ -4,6 +4,7 @@
 
 #include "core/cartridge/prepare.h"
 #include "core/ppu/cgram_ports.h"
+#include "core/ppu/bg_registers.h"
 #include "core/ppu/oam_ports.h"
 #include "core/ppu/sprite_scanline.h"
 #include "core/ppu/vram_ports.h"
@@ -59,6 +60,8 @@ typedef struct {
     mipsnes2_ppu_oam_ports oam_ports;
     mipsnes2_ppu_obj_scanline obj_line;
     mipsnes2_ppu_obj_pixels obj_pixels;
+    mipsnes2_ppu_bg_registers bg_registers;
+    mipsnes2_ppu_bg2_scanline bg1_line;
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;

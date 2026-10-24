@@ -378,6 +378,40 @@ int main(void)
     CHECK(machine.obj_pixels.pixels[0].color == 129U &&
           machine.obj_pixels.pixels[0].sprite_index == 0U &&
           machine.obj_pixels.pixels[1].color == 0U);
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    (void)memset(vram, 0, sizeof(vram));
+    vram[0x402U * 2U] = 1U; /* BG1 screen map tile 1 at column 1. */
+    vram[16] = UINT8_C(0x80);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00210d), 16U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00210d), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100),
+                             UINT8_C(0x0f));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK - 1U, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(!machine.bg1_line.pixels[0].opaque);
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.bg1_line.pixels[0].opaque &&
+          machine.bg1_line.pixels[0].color == 1U);
+    config.oam = NULL;
+    config.oam_size = 0U;
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00210d), 16U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00210d), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100),
+                             UINT8_C(0x0f));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.bg1_line.pixels[0].opaque &&
+          machine.bg1_line.pixels[0].color == 1U);
     (void)puts("machine integration: OK");
     return 0;
 }

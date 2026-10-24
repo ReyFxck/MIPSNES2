@@ -19,8 +19,9 @@ the 64x64 bottom-right quadrant, 16x16 double flip and invalid inputs.
 Host C99 `cc` `make test` passes (2026-10-24). Cross-build CI for this
 revision is pending.
 
-This helper is not connected to BG control, tilemap, tile-base or scroll
-registers. It does not model mid-scanline changes, windows, BG/OBJ ordering,
+The machine now connects BG1 Mode 0 control, tilemap, tile-base and scroll
+registers to this helper at a provisional HBlank event; see the
+[register audit](ppu-bg-register-audit.md). It does not model mid-scanline changes, windows, BG/OBJ ordering,
 color math, hires/interlace or screen presentation. No target runtime or
 real-hardware verification is claimed. The per-pixel lookup is a reference
 path and needs profiling before it becomes a PS2/PSP hot path.

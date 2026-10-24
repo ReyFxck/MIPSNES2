@@ -249,11 +249,25 @@ explicit base/scroll/configuration values and covers the four 32x32 screen
 layouts, flips, palettes, transparency and coordinate wrap. Synthetic host
 fixtures pass with C99 `cc` (2026-10-24). It is not wired to `$2105-$2114`,
 does not model display-time register changes, and has no BG/OBJ mixing or
-output. PS2/PSP/host CI for this BG revision is pending. See the
+output. Revision `5b9cfc6` passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101892040),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101892187) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101892125). See the
 [BG 2bpp audit](docs/ppu-bg2-scanline-audit.md).
 
-Next primary block: connect BG mode/size/tilemap/scroll register state to
-the pure BG line, with deterministic machine-level register and H/V tests.
+The machine now owns partial BG register state for `$2105`, `$2107-$210C`
+and `$210D-$2114`. Mode 0 BG1 renders a 2bpp line from caller-owned VRAM at
+the same provisional HBlank boundary as OBJ; the other BG register sets can
+produce pure configurations but are not yet scheduled for pixels. Host
+fixtures cover register base/size decode, shared scroll-write latches, mode
+rejection and the machine event boundary. C99 `cc` `make test` passes
+(2026-10-24). PS2/PSP/host CI for this register revision is pending.
+Scroll latch behavior follows a published hardware-research hypothesis and
+needs real-console validation. Mosaic, BG enable/window selection, BG/OBJ
+mixing, mid-line register effects and screen output remain open. See the
+[BG register audit](docs/ppu-bg-register-audit.md).
+
+Next primary block: compose all four Mode 0 BG layers and OBJ by documented
+priority order into a reference pixel line, with transparent/priority ties.
 
 ## State and evidence rules
 
@@ -1489,12 +1503,12 @@ platform persistence remains incomplete.
 
 ## PPU
 
-- [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM and OAM port subsets
+- [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM, OAM and Mode 0 BG register subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; BG mixing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel fixtures tested; other PPU formats pending
-- [ ] [IN PROGRESS] BG Mode 0 — pure 2bpp tilemap line tested; registers and mixer absent
+- [ ] [IN PROGRESS] BG Mode 0 — BG1 register-driven 2bpp line tested; other BGs, mixer and output absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3
