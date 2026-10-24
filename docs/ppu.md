@@ -100,9 +100,13 @@ first-sprite index and sprite-addressed Y value. It retains at most 32
 sprites, then selects up to 34 visible 8-pixel slivers from those sprites
 in reverse priority order. X=`$100` counts against both limits despite
 being off-screen. The returned sliver records carry their source tile
-coordinates after flip and true screen X. This pure result does not set
-`$213E`, choose the first index from priority rotation, advance H/V time,
-fetch VRAM or compose pixels. See the [scanline audit](ppu-sprite-scanline-audit.md).
+coordinates after flip and true screen X. The machine now evaluates the
+next visible line at HBlank start, retains its bounded selection and ORs
+the two overflow bits into `$213E` until the next frame begins. Reads
+return PPU1 version 1 and the PPU1 open-bus bit 5. This is a documented
+phase approximation: exact overflow assertion timing, priority rotation,
+forced-blank transitions, active-display OAM writes, tile fetch and pixels
+remain open. See the [scanline audit](ppu-sprite-scanline-audit.md).
 
 ## 4bpp tile decode
 
@@ -131,7 +135,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — CPU ports, scheduled VBlank reload, sprite descriptor decode and tile-address lookup; display access and rendering absent
-- [ ] [IN PROGRESS] Sprite limits — pure 32 OBJ/34 tile selection; timed `$213E` flags and pixels absent
+- [ ] [IN PROGRESS] Sprite limits — 32 OBJ/34 tile selection and scheduled `$213E` flags; exact timing and pixels absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp tile indices and OBJ address handoff tested; other formats and renderer absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1

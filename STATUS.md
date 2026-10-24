@@ -205,13 +205,19 @@ A clean C99 `cc` `make test` passes (2026-10-24). Revision `25f0ae9`
 passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629267),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629246) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629261).
-This is pure selection using a caller-supplied
-sprite-addressed Y: scheduler phase, priority-rotation first-index timing,
-`$213E` sticky flags, active-display writes, pixels and hardware runtime
-are not implemented. See the [OBJ scanline audit](docs/ppu-sprite-scanline-audit.md).
+The pure helper still accepts caller-supplied sprite-addressed Y. The machine
+now schedules OBJ selection at HBlank start for the next visible line, retains
+the bounded line and accumulates `$213E` range/time-over bits until the next
+frame. Host fixtures cover exact event boundaries, disabled event budget,
+both overflow bits, read-only status, PPU1 open-bus bit 5, forced-blank
+retention and PAL frame clear. C99 `cc` `make test` passes (2026-10-24).
+PS2/PSP/host cross-build CI for this revision is pending. This is a phase
+approximation: exact intra-line assertion, rotation start index, forced-blank
+behavior, active-display writes, pixels and hardware runtime remain open.
+See the [OBJ scanline audit](docs/ppu-sprite-scanline-audit.md).
 
-Next primary block: integrate OBJ line selection with H/V timing and
-`$213E` range/time-over state using deterministic event-boundary tests.
+Next primary block: validate and model OBJ priority rotation's first-sprite
+selection from `$2103` and the OAM address at the scanline boundary.
 
 ## State and evidence rules
 
@@ -1450,7 +1456,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode and pure scanline range/time selection; timed status and rendering absent
+- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode and scheduled scanline range/time selection; exact status phase and rendering absent
 - [ ] [IN PROGRESS] Tile decode fixtures — shared 4bpp tile indices and OBJ address handoff tested; other PPU formats and pixels pending
 - [ ] BG Mode 0
 - [ ] BG Mode 1
@@ -1476,9 +1482,9 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Relevant open-bus behavior — counter and CGRAM high-read PPU2 subset
 - [ ] Scanline integration
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths host-verified; access-window/mixed-port behavior pending
-- [ ] [IN PROGRESS] Sprite limits and overflow flags — pure 32 OBJ/34 sliver selection tested; `$213E` timing/latching absent
+- [ ] [IN PROGRESS] Sprite limits and overflow flags — 32 OBJ/34 sliver selection and scheduled sticky `$213E` host tested; exact hardware phase absent
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM, OAM, pure OBJ scanline and 4bpp tile fixtures
+- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM, OAM, timed OBJ status and 4bpp tile fixtures
 - [ ] Reference renderer integration
 
 ## SPC700

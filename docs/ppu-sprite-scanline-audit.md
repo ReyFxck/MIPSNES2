@@ -9,8 +9,7 @@ reverse tile-fetch order, left-to-right tile traversal, X clipping and the
 X=`$100` exception. No other emulator's source code was used or indexed.
 
 `core/ppu/sprite_scanline.c` makes a bounded, read-only selection from
-caller-owned OAM. Its input line is already in sprite Y coordinates; the
-future timed PPU integration must translate the machine H/V line. An explicit
+caller-owned OAM. Its input line is already in sprite Y coordinates. An explicit
 first-sprite index avoids guessing priority-rotation state. The result
 contains up to 32 selected sprite indices and 34 tile slivers with source
 tile coordinates after flip and true screen X. It reports overflow when
@@ -26,7 +25,15 @@ passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629267),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629246) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40088629261).
 
-This selection is not a timed PPU evaluation. `$213E` sticky flags,
-line-zero blanking, active-display OAM invalidation, priority rotation's
-line-dependent edge cases, fetch timing, interlace and real-console
-behavior remain unverified. No renderer or frame output exists.
+Machine integration now prepares line V+1 at the HBlank start of line V
+(line zero prepares the first visible line), retaining a selected sliver list.
+`$213E` bits 6/7 accumulate range/time overflow until the next frame's
+H=0 boundary. The PPU1 status read includes version 1 and prior PPU1
+open-bus bit 5. Forced blank currently suppresses line evaluation while
+preserving already latched bits. These choices form a coarse scheduling
+model; available register documentation establishes bit meanings and
+end-of-VBlank clearing, but not the exact intra-line assertion phase or
+forced-blank evaluation behavior. The latter require hardware fixtures.
+Priority rotation still starts at sprite zero; active-display OAM writes,
+tile fetch phase, interlace, real-console behavior and pixels remain open.
+No renderer or frame output exists.

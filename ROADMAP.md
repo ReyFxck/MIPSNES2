@@ -180,7 +180,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
 - [ ] [IN PROGRESS] OAM ports — CPU read/write, scheduled VBlank reload, first-line forced-blank release, `$2101` storage and sprite descriptor decode; display access windows pending
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp planar OBJ-compatible tiles verified; 2bpp/8bpp and scanline output absent
-- [ ] [IN PROGRESS] Reference scanline buffers — pure OBJ range/time selection exists; pixel buffer absent
+- [ ] [IN PROGRESS] Reference scanline buffers — scheduled OBJ range/time selection exists; pixel buffer absent
 - [ ] Basic Mode 0/1 output
 - [ ] Scheduler scanline integration
 
@@ -191,7 +191,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] PPU register model
 - [ ] [IN PROGRESS] VRAM — storage and read/write-port subset; access gates and rendering absent
 - [ ] [IN PROGRESS] CGRAM — storage and CPU port subset; access gates and rendering absent
-- [ ] [IN PROGRESS] OAM — storage, CPU ports, VBlank reload, descriptor decode and tile-address lookup; sprite evaluation and rendering absent
+- [ ] [IN PROGRESS] OAM — storage, CPU ports, VBlank reload, descriptor decode, tile-address lookup and scheduled OBJ selection; exact evaluation phase and rendering absent
 - [ ] BG Mode 0
 - [ ] BG Mode 1
 - [ ] BG Mode 2
@@ -216,7 +216,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Relevant open-bus behavior
 - [ ] Scanline integration
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write sides host-verified; active-display and mixed-port behavior pending
-- [ ] [IN PROGRESS] Sprite limits and overflow flags — pure 32 OBJ/34 sliver selection verified; `$213E` timing/latching absent
+- [ ] [IN PROGRESS] Sprite limits and overflow flags — scheduled 32 OBJ/34 sliver selection and sticky `$213E` verified on host; hardware phase and pixels absent
 - [ ] Mid-frame register effects
 - [ ] PPU tests
 - [ ] Reference renderer integration

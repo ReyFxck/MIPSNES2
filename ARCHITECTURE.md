@@ -18,7 +18,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI/ABORT boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
-| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, pure sprite scanline selection and 4bpp tile decode; no renderer |
+| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, pure sprite scanline selection, scheduled OBJ overflow state and 4bpp tile decode; no renderer |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
@@ -124,8 +124,11 @@ Machine-owned VRAM, CGRAM and OAM ports run before the optional external PPU cal
 unhandled PPU addresses use that callback. CGRAM high reads share the PPU2
 open-bus state held by the counter registers. The machine schedules an OAM
 VBlank pointer reload in the shared clock domain and tracks `$2100` forced
-blank for that gate and its first-VBlank-line release transition. There is no
-pixel renderer.
+blank for that gate and its first-VBlank-line release transition. An OBJ
+event at HBlank start prepares the next visible line and accumulates `$213E`
+range/time overflow bits until the frame boundary. This phase is provisional;
+the first sprite remains index zero, and forced blank suppresses this model's
+selection. There is no pixel renderer.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending

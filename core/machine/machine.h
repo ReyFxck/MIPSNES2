@@ -5,6 +5,7 @@
 #include "core/cartridge/prepare.h"
 #include "core/ppu/cgram_ports.h"
 #include "core/ppu/oam_ports.h"
+#include "core/ppu/sprite_scanline.h"
 #include "core/ppu/vram_ports.h"
 #include "core/scheduler/cpu_timing.h"
 
@@ -56,6 +57,7 @@ typedef struct {
     mipsnes2_ppu_vram_ports vram_ports;
     mipsnes2_ppu_cgram_ports cgram_ports;
     mipsnes2_ppu_oam_ports oam_ports;
+    mipsnes2_ppu_obj_scanline obj_line;
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
@@ -71,6 +73,8 @@ typedef struct {
     mipsnes2_hv_standard standard;
     bool overscan;
     bool ppu_forced_blank;
+    uint8_t ppu1_open_bus;
+    uint8_t obj_overflow;
     bool ready;
 } mipsnes2_machine;
 

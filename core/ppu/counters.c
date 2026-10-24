@@ -91,5 +91,6 @@ bool mipsnes2_ppu_counters_read(mipsnes2_ppu_counters *counters,
 bool mipsnes2_ppu_counters_write_ignored(uint16_t offset)
 {
     return offset == UINT16_C(0x2137) || offset == UINT16_C(0x213c) ||
+           offset == UINT16_C(0x213e) ||
            offset == UINT16_C(0x213d) || offset == UINT16_C(0x213f);
 }

@@ -166,7 +166,7 @@ static int test_registers_and_selectors(void)
     CHECK(mipsnes2_ppu_counters_write_ignored(UINT16_C(0x213c)));
     CHECK(mipsnes2_ppu_counters_write_ignored(UINT16_C(0x213d)));
     CHECK(mipsnes2_ppu_counters_write_ignored(UINT16_C(0x213f)));
-    CHECK(!mipsnes2_ppu_counters_write_ignored(UINT16_C(0x213e)));
+    CHECK(mipsnes2_ppu_counters_write_ignored(UINT16_C(0x213e)));
     return 0;
 }
 

@@ -5,22 +5,88 @@
 
 enum { MIPSNES2_OAM_RELOAD_H_CLOCK = 40 };
 
+static mipsnes2_master_clock machine_frame_clocks(const mipsnes2_machine *machine)
+{
+    mipsnes2_master_clock clocks =
+        (mipsnes2_master_clock)mipsnes2_hv_frame_scanlines(&machine->hv) *
+        MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+
+    if (machine->standard == MIPSNES2_HV_STANDARD_NTSC && machine->hv.field) {
+        clocks -= MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS -
+                  MIPSNES2_HV_NTSC_SHORT_SCANLINE_CLOCKS;
+    }
+    return clocks;
+}
+
+/* The range is prepared for the next visible line at this HBlank boundary.
+ * The exact hardware phase of the two status bits remains unverified. */
+static void machine_obj_line(void *context, mipsnes2_master_clock timestamp,
+                             mipsnes2_scheduler_token token)
+{
+    mipsnes2_machine *machine = context;
+    uint16_t line = machine->hv.v_counter;
+    uint16_t vblank = mipsnes2_hv_vblank_start_line(&machine->hv);
+    mipsnes2_master_clock delay;
+
+    (void)token;
+    if (!machine->ppu_forced_blank && line + 1U < vblank &&
+        mipsnes2_ppu_obj_select_scanline(
+            &machine->oam_ports, (uint8_t)line, 0U,
+            &machine->obj_line)) {
+        if (machine->obj_line.range_over) {
+            machine->obj_overflow |= UINT8_C(0x40);
+        }
+        if (machine->obj_line.time_over) {
+            machine->obj_overflow |= UINT8_C(0x80);
+        }
+    }
+    delay = line + 2U < vblank
+                ? MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS
+                : machine_frame_clocks(machine) -
+                      (mipsnes2_master_clock)line *
+                          MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+    if (timestamp > UINT64_MAX - delay ||
+        mipsnes2_scheduler_schedule(&machine->scheduler, timestamp + delay,
+                                    0U, machine_obj_line, machine, NULL) !=
+            MIPSNES2_SCHEDULER_OK) {
+        machine->ready = false;
+    }
+}
+
+static void machine_obj_frame(void *context, mipsnes2_master_clock timestamp,
+                              mipsnes2_scheduler_token token)
+{
+    mipsnes2_machine *machine = context;
+    mipsnes2_master_clock delay =
+        (mipsnes2_master_clock)mipsnes2_hv_frame_scanlines(&machine->hv) *
+        MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+
+    /* At H=0 the field toggle at H=4 has not happened yet. */
+    if (machine->standard == MIPSNES2_HV_STANDARD_NTSC &&
+        !machine->hv.field) {
+        delay -= 4U;
+    }
+
+    (void)token;
+    machine->obj_overflow = 0U;
+    if (timestamp > UINT64_MAX - delay ||
+        mipsnes2_scheduler_schedule(&machine->scheduler, timestamp + delay,
+                                    0U, machine_obj_frame, machine, NULL) !=
+            MIPSNES2_SCHEDULER_OK) {
+        machine->ready = false;
+    }
+}
+
 static void machine_oam_vblank(void *context,
                                 mipsnes2_master_clock timestamp,
                                 mipsnes2_scheduler_token token)
 {
     mipsnes2_machine *machine = context;
-    mipsnes2_master_clock frame_clocks =
-        (mipsnes2_master_clock)mipsnes2_hv_frame_scanlines(&machine->hv) *
-        MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+    mipsnes2_master_clock frame_clocks = machine_frame_clocks(machine);
 
     (void)token;
     (void)mipsnes2_ppu_oam_ports_vblank_reload(
         &machine->oam_ports, machine->ppu_forced_blank);
-    if (machine->standard == MIPSNES2_HV_STANDARD_NTSC && machine->hv.field) {
-        frame_clocks -= MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS -
-                        MIPSNES2_HV_NTSC_SHORT_SCANLINE_CLOCKS;
-    }
     if (timestamp > UINT64_MAX - frame_clocks) {
         return; /* No representable timestamp for the next frame. */
     }
@@ -37,12 +103,21 @@ static uint8_t machine_ppu_read(void *context, mipsnes2_address address)
     mipsnes2_machine *machine = context;
     uint8_t value;
 
+    if ((uint16_t)address == UINT16_C(0x213e)) {
+        value = (uint8_t)(machine->obj_overflow |
+                          (machine->ppu1_open_bus & UINT8_C(0x20)) | 1U);
+        machine->ppu1_open_bus = value;
+        return value;
+    }
+
     if (mipsnes2_ppu_oam_ports_read(&machine->oam_ports,
                                    (uint16_t)address, &value)) {
+        machine->ppu1_open_bus = value;
         return value;
     }
     if (mipsnes2_ppu_vram_ports_read(&machine->vram_ports,
                                     (uint16_t)address, &value)) {
+        machine->ppu1_open_bus = value;
         return value;
     }
     if (mipsnes2_ppu_cgram_ports_read(&machine->cgram_ports,
@@ -101,6 +176,9 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     mipsnes2_cpu_io_init(&machine->io, UINT8_C(2));
     mipsnes2_ppu_counters_init(&machine->counters, UINT8_C(3), 0U);
     machine->ppu_forced_blank = true;
+    machine->ppu1_open_bus = 0U;
+    machine->obj_overflow = 0U;
+    (void)memset(&machine->obj_line, 0, sizeof(machine->obj_line));
     if (machine->vram != NULL &&
         !mipsnes2_ppu_vram_ports_init(&machine->vram_ports,
                                      machine->vram, machine->vram_size)) {
@@ -154,6 +232,20 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
             (mipsnes2_master_clock)mipsnes2_hv_vblank_start_line(&machine->hv) *
                 MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS + MIPSNES2_OAM_RELOAD_H_CLOCK,
             0U, machine_oam_vblank, machine, NULL) != MIPSNES2_SCHEDULER_OK) {
+        machine->ready = false;
+        return MIPSNES2_MACHINE_TIMING_ERROR;
+    }
+    if (machine->oam != NULL &&
+        (mipsnes2_scheduler_schedule(
+             &machine->scheduler, MIPSNES2_HV_HBLANK_START_CLOCK, 0U,
+             machine_obj_line, machine, NULL) != MIPSNES2_SCHEDULER_OK ||
+         mipsnes2_scheduler_schedule(
+             &machine->scheduler,
+             (mipsnes2_master_clock)mipsnes2_hv_frame_scanlines(&machine->hv) *
+                 MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS -
+                 (machine->standard == MIPSNES2_HV_STANDARD_NTSC ? 4U : 0U),
+             0U, machine_obj_frame, machine, NULL) !=
+             MIPSNES2_SCHEDULER_OK)) {
         machine->ready = false;
         return MIPSNES2_MACHINE_TIMING_ERROR;
     }
