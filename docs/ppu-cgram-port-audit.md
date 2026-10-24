@@ -20,7 +20,11 @@ was used or indexed.
 order, open-bus high bit, address wrap, selector reset and memory retention.
 `tests/test_machine.c` covers capacity rejection and CPU bus routing, including
 power-on retention. Host `make test` passes with C99 `cc` on 2026-10-24.
-Cross-target CI results are recorded in STATUS.md after completion.
+Implementation revision `37b9ab68c6102a5accdf6693e0a2c4be13b45a8e`
+passed [PS2 cross-build CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052572567),
+[PSP cross-build CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052572654)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052572626).
+No runtime check on either real console is claimed.
 
 The read/write byte selector is modeled as shared. Exact behavior when reads
 and writes are interleaved has not been verified on hardware. Writes during

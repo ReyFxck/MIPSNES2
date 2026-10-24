@@ -116,7 +116,10 @@ wrap and PPU2 open-bus bit 7. `make test` passes with deterministic port and
 machine bus fixtures (2026-10-24, host C99 `cc`). PSP compiles the same core,
 but has no ROM runtime. Active-display access, mixed read/write byte selection
 and real hardware behavior remain unverified; see the
-[CGRAM port audit](docs/ppu-cgram-port-audit.md). CI evidence is pending.
+[CGRAM port audit](docs/ppu-cgram-port-audit.md). Implementation revision
+`37b9ab6` passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052572567),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052572654) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052572626).
 
 ## State and evidence rules
 
