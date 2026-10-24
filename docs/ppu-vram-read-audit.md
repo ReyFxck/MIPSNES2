@@ -20,7 +20,11 @@ are behavior references, not emulator implementation code.
 buffer after VMADD changes, remapped read, physical/logical wrap and ignored
 registers. `tests/test_machine.c` checks routing of buffered reads through the
 machine bus after power-on. `make test` passes on the host; console builds and
-CI evidence for this revision are pending.
+CI for implementation revision `de252cc632e63b4a28d9b9a63c35f91d2f73e3c3`
+completed successfully: [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052089722),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052089632) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40052089693).
+No PS2/PSP runtime result is claimed.
 
 The power-on buffer starts at zero as an explicit deterministic test policy;
 real initial electrical contents are unverified. CPU reads outside the allowed

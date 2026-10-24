@@ -106,7 +106,8 @@ cross-builds pass at `f816a73`. Buffered `$2139/$213A` reads now return the
 previous word and fetch before the selected increment, with a dummy first read
 after VMADD changes; host fixtures cover both increment modes, remapping,
 wrapping and machine bus routing. Active-display access and mixed read/write
-behavior remain open; see the [read audit](docs/ppu-vram-read-audit.md) and
+behavior remain open. Host CI and PS2/PSP cross-builds pass at `de252cc`;
+see the [read audit](docs/ppu-vram-read-audit.md) and
 [write audit](docs/ppu-vram-write-audit.md). No picture is produced.
 
 ## State and evidence rules
