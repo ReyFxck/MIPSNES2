@@ -186,12 +186,21 @@ to 64 row-major color indices. It is shared by future OBJ and BG paths,
 and wired into both PS2 and PSP build graphs. Deterministic host fixtures
 cover zero/full colors, each bitplane at distinct pixels, a mixed pixel,
 VRAM-end wrap, invalid buffers and the OBJ tile-address handoff. A clean
-host C99 `cc` `make test` passes (2026-10-24); cross-build CI is pending.
+host C99 `cc` `make test` passes (2026-10-24). Revision `6b23966`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40086023302),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40086023320) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40086023326).
 The first clean run stopped on an unrelated zero-byte generated
 `test-interrupt-lines` executable; rebuilding it and rerunning the full
 suite passed. The cause of that local artifact failure is unconfirmed.
 No palette lookup, transparency decision, flipping, scanline rendering or
 target runtime is claimed. See the [4bpp tile audit](docs/ppu-tile4-audit.md).
+
+Next primary block: research and implement shared sprite scanline selection,
+including the 32-object range and 34-tile time limits, with independent
+deterministic fixtures before any pixel renderer. The active-display OAM
+access window and exact priority-rotation edge cases remain separate
+hardware-validation work.
 
 ## State and evidence rules
 

@@ -18,6 +18,10 @@ end-of-VRAM wrap, invalid inputs and an OBJ address-to-VRAM fixture.
 
 A clean host C99 `cc` `make test` passes (2026-10-24) after rebuilding an
 unrelated generated `test-interrupt-lines` executable that had become
-zero-byte on the first attempt; its cause is unconfirmed. PS2 and PSP
-cross-build CI for this revision is pending. No target runtime, graphics
+zero-byte on the first attempt; its cause is unconfirmed. Implementation
+revision `6b23966a5b32856f7f4e8575c0d06eec24fab2cb` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40086023302),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40086023320) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40086023326).
+No target runtime, graphics
 output, palette behavior, flipping or scanline sprite evaluation is claimed.
