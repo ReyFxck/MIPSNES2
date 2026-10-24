@@ -75,3 +75,15 @@ commands and CI results are recorded in [STATUS.md](../STATUS.md).
 
 Only hardware descriptions and independent research were consulted. No source
 code from another emulator was used or indexed.
+
+## Build evidence
+
+On 2026-10-24, the complete host C99 suite passed after rebuilding a generated
+CPU-I/O executable that lacked its execute bit; no source change was needed
+for that local artifact failure. The DMA timing fixture passed ASan/UBSan
+with leak detection disabled because LeakSanitizer cannot inspect process
+threads in this runtime. This does not constitute a leak check.
+Revision `71c22cf` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40132743907),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40132743906)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40132743939).

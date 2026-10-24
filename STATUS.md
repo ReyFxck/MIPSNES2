@@ -429,8 +429,12 @@ approximation. WRAM refresh, HDMA arbitration, electrical phases and DMA/math
 overlap remain pending. See the [machine DMA audit](docs/dma-machine-audit.md).
 Host C99 suite passed with `make -W tests/test_cpu_io.c test` (2026-10-24).
 The preceding clean build produced a non-executable CPU-I/O test binary;
-rebuilding that generated target resolved the local failure. PS2/PSP/host CI
-for this integration is pending.
+rebuilding that generated target resolved the local failure. The new DMA
+fixture also passes AddressSanitizer/UBSan with `ASAN_OPTIONS=detect_leaks=0`;
+LeakSanitizer cannot inspect this runtime's process tasks. Revision `71c22cf`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40132743907),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40132743906)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40132743939).
 
 Next primary block: implement shared WRAM refresh stalls for CPU and general
 DMA, preserving event horizons and exact-once bus effects. PS2 GS emulator
