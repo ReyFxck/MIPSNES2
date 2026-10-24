@@ -216,7 +216,7 @@ Revision `49904ce` passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/r
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40100944805).
 This is a phase
 approximation: exact intra-line assertion, forced-blank
-behavior, active-display writes, pixels and hardware runtime remain open.
+behavior, active-display writes, screen output and hardware runtime remain open.
 See the [OBJ scanline audit](docs/ppu-sprite-scanline-audit.md).
 
 OBJ priority rotation now derives the first candidate from the current
@@ -236,12 +236,24 @@ first-sprite precedence. Machine HBlank events populate this line when VRAM
 is present. Synthetic host vectors cover overlap with a transparent top
 pixel, palette/priority metadata, negative-X clipping, both flips, invalid
 inputs and the machine handoff. C99 `cc` `make test` passes (2026-10-24).
-PS2/PSP/host CI for this compositor revision is pending. There is no BG/OBJ
+Revision `b2de8a9` passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101533032),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101533044) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40101533121).
+There is no BG/OBJ
 priority mixing, screen output, mid-line VRAM fetch timing or console-runtime
 validation. See the [OBJ scanline audit](docs/ppu-sprite-scanline-audit.md).
 
-Next primary block: implement the first BG tilemap/2bpp scanline path with
-deterministic coordinate, palette and transparency fixtures.
+The new pure BG 2bpp scanline helper reads 8x8/16x16 tilemaps from
+caller-owned VRAM into a 256-pixel color/priority/opacity line. It accepts
+explicit base/scroll/configuration values and covers the four 32x32 screen
+layouts, flips, palettes, transparency and coordinate wrap. Synthetic host
+fixtures pass with C99 `cc` (2026-10-24). It is not wired to `$2105-$2114`,
+does not model display-time register changes, and has no BG/OBJ mixing or
+output. PS2/PSP/host CI for this BG revision is pending. See the
+[BG 2bpp audit](docs/ppu-bg2-scanline-audit.md).
+
+Next primary block: connect BG mode/size/tilemap/scroll register state to
+the pure BG line, with deterministic machine-level register and H/V tests.
 
 ## State and evidence rules
 
@@ -1481,8 +1493,8 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; BG mixing and display absent
-- [ ] [IN PROGRESS] Tile decode fixtures — shared 4bpp tile indices and OBJ address handoff tested; other PPU formats and pixels pending
-- [ ] BG Mode 0
+- [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel fixtures tested; other PPU formats pending
+- [ ] [IN PROGRESS] BG Mode 0 — pure 2bpp tilemap line tested; registers and mixer absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3
@@ -1508,7 +1520,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths host-verified; access-window/mixed-port behavior pending
 - [ ] [IN PROGRESS] Sprite limits and overflow flags — 32 OBJ/34 sliver selection, scheduled sticky `$213E` and OBJ pixel line host tested; exact hardware phase absent
 - [ ] Mid-frame register effects
-- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM, OAM, timed OBJ status and 4bpp tile fixtures
+- [ ] [IN PROGRESS] PPU tests — H/V counter, VRAM, CGRAM, OAM, timed OBJ status, 4bpp OBJ and pure 2bpp BG fixtures
 - [ ] Reference renderer integration
 
 ## SPC700

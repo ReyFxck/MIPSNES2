@@ -113,6 +113,14 @@ index, priority and source sprite; transparent color zero leaves lower sprites
 visible. BG mixing and output are absent. See the
 [scanline audit](ppu-sprite-scanline-audit.md).
 
+## Pure 2bpp BG scanline
+
+`core/ppu/bg2_scanline.c` accepts caller-supplied Mode 0-style BG map/tile
+bases, scroll, screen size, 8x8/16x16 tile size and palette range. It reads
+VRAM into a 256-entry line of color, priority and opacity, including tilemap
+quadrants and flips. No BG register state drives it yet, and it does not mix
+with OBJ or produce a frame. See the [BG audit](ppu-bg2-scanline-audit.md).
+
 ## 4bpp tile decode
 
 The shared decoder reads the four interleaved bitplanes of one 8×8 tile
@@ -140,9 +148,9 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] OAM — CPU ports, scheduled VBlank reload, sprite descriptor decode and tile-address lookup; display access and rendering absent
-- [ ] [IN PROGRESS] Sprite limits — 32 OBJ/34 tile selection and scheduled `$213E` flags; exact timing and pixels absent
-- [ ] [IN PROGRESS] Tile decode fixtures — 4bpp tile indices and OBJ address handoff tested; other formats and renderer absent
-- [ ] BG Mode 0
+- [ ] [IN PROGRESS] Sprite limits — 32 OBJ/34 tile selection, scheduled `$213E` flags and OBJ pixel line; exact timing and display absent
+- [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel lines tested; other formats and renderer absent
+- [ ] [IN PROGRESS] BG Mode 0 — pure 2bpp map line tested; register and mixer integration absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

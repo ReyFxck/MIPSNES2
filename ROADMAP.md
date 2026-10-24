@@ -179,8 +179,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] VRAM ports — read/write buffering and remap exist; access gates/mixed-port behavior pending
 - [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
 - [ ] [IN PROGRESS] OAM ports — CPU read/write, scheduled VBlank reload, first-line forced-blank release, `$2101` storage, sprite descriptor decode and priority rotation; display access windows pending
-- [ ] [IN PROGRESS] Tile decode fixtures — 4bpp planar OBJ-compatible tiles verified; 2bpp/8bpp and scanline output absent
-- [ ] [IN PROGRESS] Reference scanline buffers — scheduled OBJ selection and bounded 4bpp OBJ pixel line exist; BG, mixing and display absent
+- [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG scanline verified; 8bpp and timed BG output absent
+- [ ] [IN PROGRESS] Reference scanline buffers — scheduled OBJ and pure 2bpp BG pixel lines exist; BG register integration, mixing and display absent
 - [ ] Basic Mode 0/1 output
 - [ ] Scheduler scanline integration
 
@@ -192,7 +192,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] VRAM — storage and read/write-port subset; access gates and rendering absent
 - [ ] [IN PROGRESS] CGRAM — storage and CPU port subset; access gates and rendering absent
 - [ ] [IN PROGRESS] OAM — storage, CPU ports, VBlank reload, descriptor decode, tile-address lookup and scheduled OBJ selection; exact evaluation phase and rendering absent
-- [ ] BG Mode 0
+- [ ] [IN PROGRESS] BG Mode 0 — pure 2bpp tilemap scanline exists; register integration and mixing absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3
