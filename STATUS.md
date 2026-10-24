@@ -124,9 +124,12 @@ and real hardware behavior remain unverified; see the
 The shared OAM port subset supplies `$2102-$2104/$2138` over 544
 caller-owned bytes in the PS2 ROM path. Host `make test` passes on C99 `cc`
 with table-boundary, mirror, pair-commit, address-reload and bus-routing
-fixtures (2026-10-24). The PSP build includes the same core module. VBlank
-address reload, active-display access, sprite priority and rendering remain
-open; target CI results are pending. See the
+fixtures (2026-10-24). Revision `28ed5c1` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076823004),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076823013) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076822995).
+The PSP build includes the same core module. VBlank address reload,
+active-display access, sprite priority and rendering remain open. See the
 [OAM port audit](docs/ppu-oam-port-audit.md).
 
 ## State and evidence rules

@@ -22,8 +22,12 @@ other emulators was used or indexed.
 high-table mirror, pointer wrap, register reload, mixed read/write latch,
 priority-rotation bit storage and power-on byte retention.
 `tests/test_machine.c` checks buffer-capacity rejection and routing through
-the SNES bus. Host C99 `make test` and repository checks passed; target CI
-results must be recorded only after the runs finish.
+the SNES bus. Host C99 `make test` and repository checks passed. Implementation
+revision `28ed5c1f9d106c84e9f421f8cefc16f88e6d8f37` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076823004),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076823013) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40076822995).
+No runtime result on either target is claimed.
 
 The PPU's automatic OAM address reload at the beginning of VBlank, forced
 blank transition, active-display address invalidation and access restrictions
