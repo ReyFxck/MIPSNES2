@@ -23,6 +23,14 @@ typedef enum {
     MIPSNES2_MACHINE_NOT_READY
 } mipsnes2_machine_result;
 
+/* Called synchronously after a visible reference line is resolved at the
+ * provisional HBlank event. Pixels are nominal BGR555 and remain owned by
+ * the machine; a backend must copy them before returning. Do not reenter the
+ * machine from this callback. This is not an analog/display timing contract.
+ */
+typedef void (*mipsnes2_video_line_sink)(
+    void *context, uint16_t line_y, const uint16_t pixels[256]);
+
 typedef struct {
     const uint8_t *image;
     size_t image_size;
@@ -42,6 +50,8 @@ typedef struct {
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
     mipsnes2_bus_interface dma;
+    mipsnes2_video_line_sink video_line;
+    void *video_context;
 } mipsnes2_machine_config;
 
 /* Stable address required: bus and CPU callbacks point into this object.
@@ -79,6 +89,8 @@ typedef struct {
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
     mipsnes2_bus_interface dma;
+    mipsnes2_video_line_sink video_line;
+    void *video_context;
     uint8_t *wram;
     size_t wram_size;
     uint8_t *vram;

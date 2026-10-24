@@ -146,6 +146,11 @@ pure 4bpp scanline helper; BG3 remains 2bpp. The mixer implements the Mode 1
 priority chart including `$2105` bit 3. See the
 [Mode 1 audit](ppu-mode1-audit.md).
 
+The machine can pass each completed BGR555 reference line to a synchronous
+caller-owned callback. This is a copy-before-return handoff for future
+backends, not console display. See the
+[video-line audit](video-line-handoff-audit.md).
+
 ## 4bpp tile decode
 
 The shared decoder reads the four interleaved bitplanes of one 8×8 tile

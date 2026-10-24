@@ -17,6 +17,21 @@ static uint8_t vram[MIPSNES2_PPU_VRAM_SIZE];
 static uint8_t cgram[MIPSNES2_PPU_CGRAM_SIZE];
 static uint8_t oam[MIPSNES2_PPU_OAM_SIZE];
 static mipsnes2_machine machine;
+static uint16_t captured_y[2];
+static uint16_t captured_color[2];
+static unsigned captured_count;
+
+static void capture_line(void *context, uint16_t line_y,
+                         const uint16_t pixels[256])
+{
+    unsigned *count = context;
+
+    if (*count < 2U) {
+        captured_y[*count] = line_y;
+        captured_color[*count] = pixels[0];
+    }
+    ++*count;
+}
 
 static void put16(uint8_t *data, uint16_t value)
 {
@@ -578,6 +593,33 @@ int main(void)
           MIPSNES2_MASTER_TIMING_OK);
     CHECK(machine.mode0_line.pixels[0].source == 3U &&
           machine.mode0_line.pixels[0].color == 3U);
+    /* Optional video handoff copies each line before the next event. */
+    config.video_line = capture_line;
+    config.video_context = &captured_count;
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    (void)memset(vram, 0, sizeof(vram));
+    (void)memset(cgram, 0, sizeof(cgram));
+    vram[0] = UINT8_C(0x80);
+    cgram[2] = UINT8_C(0x1f);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212c), 1U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), 15U);
+    captured_count = 0U;
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(captured_count == 1U && captured_y[0] == 0U &&
+          captured_color[0] == UINT16_C(0x001f));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), 0x8fU);
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK +
+                  MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS,
+              1U, &master_report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(captured_count == 2U && captured_y[1] == 1U &&
+          captured_color[1] == 0U &&
+          captured_color[0] == UINT16_C(0x001f));
     (void)puts("machine integration: OK");
     return 0;
 }

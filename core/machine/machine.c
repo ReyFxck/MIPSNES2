@@ -145,6 +145,10 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
                 &machine->mode0_color_line);
         }
     }
+    if (machine->video_line != NULL && line + 1U < vblank) {
+        machine->video_line(machine->video_context, line,
+                            machine->mode0_color_line.pixels);
+    }
     delay = line + 2U < vblank
                 ? MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS
                 : machine_frame_clocks(machine) -
@@ -401,7 +405,8 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
         machine->ready = false;
         return MIPSNES2_MACHINE_TIMING_ERROR;
     }
-    if ((machine->oam != NULL || machine->vram != NULL) &&
+    if ((machine->oam != NULL || machine->vram != NULL ||
+         machine->video_line != NULL) &&
         (mipsnes2_scheduler_schedule(
              &machine->scheduler, MIPSNES2_HV_HBLANK_START_CLOCK, 0U,
              machine_ppu_line, machine, NULL) != MIPSNES2_SCHEDULER_OK ||
@@ -478,6 +483,8 @@ mipsnes2_machine_result mipsnes2_machine_init(
     machine->ppu = config->ppu;
     machine->apu = config->apu;
     machine->dma = config->dma;
+    machine->video_line = config->video_line;
+    machine->video_context = config->video_context;
     machine->ready = true;
     return mipsnes2_machine_power_on(machine);
 }

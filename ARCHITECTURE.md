@@ -142,7 +142,9 @@ caller-owned CGRAM, with `$2132` fixed color as the sub backdrop. A bounded
 color-window predicate feeds `$2130` main clipping and math suppression.
 Forced blank leaves the scheduled lines black. Scroll-write latches use a
 published but hardware-unverified formula. Exact mid-line behavior and
-display output are absent.
+display output are absent. An optional synchronous callback hands the
+completed 256-pixel BGR555 line to caller-owned presentation code; the
+buffer stays machine-owned and can be reused after the callback returns.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending

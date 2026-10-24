@@ -360,13 +360,25 @@ The shared Mode 1 reference path now decodes BG1/BG2 in 4bpp and BG3 in
 raises BG3 priority-1 pixels. Synthetic fixtures cover bitplanes, tilemap
 boundaries, flip, transparency, register routing, priority/masks and a
 scheduled machine line. Host C99 `cc` `make clean && make -j2 test` passes
-(2026-10-24). PS2/PSP/host CI for this revision is pending. There is no
+(2026-10-24). Revision `7d1f09d` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129043810),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129043772)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129043850). There is no
 PS2 or PSP screen output and no target runtime validation. See the
 [Mode 1 audit](docs/ppu-mode1-audit.md).
 
-Next primary block: connect the reference scanline to a bounded PS2 visual
-output path for caller-owned test patterns, then inspect it in console
-emulators without treating that as real-hardware validation.
+An optional synchronous video-line callback now exposes the completed
+256-pixel BGR555 reference line to a caller-owned backend. Synthetic machine
+fixtures cover line order, pixel delivery, forced blank and copying before
+buffer reuse. Host C99 `cc` `make clean && make -j2 test` passes
+(2026-10-24); PS2/PSP/host CI for this revision is pending. The callback
+does not present pixels on either console. See the
+[video-line audit](docs/video-line-handoff-audit.md).
+
+Next primary block: PS2 GS presentation of the caller-owned reference lines,
+with bounded frame storage and independent color conversion tests, followed
+by PS2 and PSP cross-builds. Emulator runtime checks and physical hardware
+checks must remain separate evidence.
 
 ## State and evidence rules
 
