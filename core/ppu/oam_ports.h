@@ -45,6 +45,11 @@ bool mipsnes2_ppu_oam_ports_read(mipsnes2_ppu_oam_ports *ports,
  */
 bool mipsnes2_ppu_oam_ports_vblank_reload(mipsnes2_ppu_oam_ports *ports,
                                          bool forced_blank);
+/* Priority rotation chooses the first sprite from the current internal
+ * OAM word pointer, modulo 128. Otherwise sprite zero starts the search.
+ */
+bool mipsnes2_ppu_oam_first_sprite(const mipsnes2_ppu_oam_ports *ports,
+                                  uint8_t *index);
 
 /* Read the current physical OAM bytes without changing CPU port state. */
 bool mipsnes2_ppu_oam_decode_sprite(const mipsnes2_ppu_oam_ports *ports,

@@ -218,6 +218,23 @@ int main(void)
     CHECK(!mipsnes2_ppu_oam_ports_vblank_reload(NULL, false));
     CHECK(mipsnes2_ppu_oam_ports_init(&ports, oam, sizeof(oam)));
     CHECK(ports.byte_address == 0U && oam[0x1ff] == 0x78U);
+    CHECK(mipsnes2_ppu_oam_first_sprite(&ports, &value) && value == 0U);
+    CHECK(mipsnes2_ppu_oam_ports_write(&ports, 0x2102, 2U));
+    CHECK(mipsnes2_ppu_oam_ports_write(&ports, 0x2103, 0x80U));
+    CHECK(mipsnes2_ppu_oam_first_sprite(&ports, &value) && value == 1U);
+    for (i = 0U; i < 4U; ++i) {
+        CHECK(mipsnes2_ppu_oam_ports_read(&ports, 0x2138, &value));
+    }
+    CHECK(mipsnes2_ppu_oam_first_sprite(&ports, &value) && value == 2U);
+    CHECK(mipsnes2_ppu_oam_ports_vblank_reload(&ports, false));
+    CHECK(mipsnes2_ppu_oam_first_sprite(&ports, &value) && value == 1U);
+    CHECK(mipsnes2_ppu_oam_ports_write(&ports, 0x2102, 0U));
+    CHECK(mipsnes2_ppu_oam_ports_write(&ports, 0x2103, 0x81U));
+    CHECK(mipsnes2_ppu_oam_first_sprite(&ports, &value) && value == 0U);
+    CHECK(mipsnes2_ppu_oam_ports_write(&ports, 0x2103, 0U));
+    CHECK(mipsnes2_ppu_oam_first_sprite(&ports, &value) && value == 0U);
+    CHECK(!mipsnes2_ppu_oam_first_sprite(NULL, &value));
+    CHECK(!mipsnes2_ppu_oam_first_sprite(&ports, NULL));
     CHECK(test_sprite_decode() == 0);
     CHECK(test_sprite_tile_address() == 0);
     (void)puts("PPU OAM ports: OK");

@@ -34,6 +34,10 @@ preserving already latched bits. These choices form a coarse scheduling
 model; available register documentation establishes bit meanings and
 end-of-VBlank clearing, but not the exact intra-line assertion phase or
 forced-blank evaluation behavior. The latter require hardware fixtures.
-Priority rotation still starts at sprite zero; active-display OAM writes,
+Priority rotation now derives its starting index from the current internal
+OAM word address when `$2103` bit 7 is set, as described by the independent
+[sprite hardware notes](https://wiki.superfamicom.org/sprites). Host tests
+check read increments, high-table wrap, VBlank pointer reload and a rotated
+range overflow at the machine event. Active-display address invalidation,
 tile fetch phase, interlace, real-console behavior and pixels remain open.
 No renderer or frame output exists.

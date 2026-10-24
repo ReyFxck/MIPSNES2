@@ -341,6 +341,25 @@ int main(void)
           machine.obj_line.time_over && !machine.obj_line.range_over);
     CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x00213e)) ==
           UINT8_C(0x81));
+    (void)memset(oam, 0, sizeof(oam));
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    for (unsigned i = 0U; i < 128U; ++i) {
+        oam[4U * i + 1U] = i < 32U || i == 127U
+                                  ? 0U : UINT8_C(0x80);
+    }
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002102),
+                             UINT8_C(0xfe));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002103),
+                             UINT8_C(0x80));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100),
+                             UINT8_C(0x0f));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.obj_line.range_over &&
+          machine.obj_line.range[0] == 127U &&
+          machine.obj_line.range[31] == 30U);
     (void)puts("machine integration: OK");
     return 0;
 }

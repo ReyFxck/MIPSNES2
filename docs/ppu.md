@@ -72,7 +72,7 @@ write. `$2104` commits low-table pairs on the odd-byte write and high-table
 bytes immediately. `$2138` reads one byte and advances the pointer. The
 high table mirrors over its 512-byte logical region, physically using 32
 bytes. Port state resets on machine power-on; OAM bytes remain. Priority
-rotation is retained as a register bit, without sprite evaluation. A machine
+rotation chooses the first sprite from the current internal OAM address. A machine
 scheduler event reloads the internal address at horizontal dot 10 of the
 VBlank start line while forced blank is off; `$2100` bit 7 supplies the gate.
 This timing choice follows independent hardware notes and still needs a real
@@ -103,8 +103,9 @@ being off-screen. The returned sliver records carry their source tile
 coordinates after flip and true screen X. The machine now evaluates the
 next visible line at HBlank start, retains its bounded selection and ORs
 the two overflow bits into `$213E` until the next frame begins. Reads
-return PPU1 version 1 and the PPU1 open-bus bit 5. This is a documented
-phase approximation: exact overflow assertion timing, priority rotation,
+return PPU1 version 1 and the PPU1 open-bus bit 5. Priority rotation uses
+the current internal OAM word address at that event. This is a documented
+phase approximation: exact overflow assertion timing,
 forced-blank transitions, active-display OAM writes, tile fetch and pixels
 remain open. See the [scanline audit](ppu-sprite-scanline-audit.md).
 

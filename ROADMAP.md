@@ -178,7 +178,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Register reads/writes
 - [ ] [IN PROGRESS] VRAM ports — read/write buffering and remap exist; access gates/mixed-port behavior pending
 - [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
-- [ ] [IN PROGRESS] OAM ports — CPU read/write, scheduled VBlank reload, first-line forced-blank release, `$2101` storage and sprite descriptor decode; display access windows pending
+- [ ] [IN PROGRESS] OAM ports — CPU read/write, scheduled VBlank reload, first-line forced-blank release, `$2101` storage, sprite descriptor decode and priority rotation; display access windows pending
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp planar OBJ-compatible tiles verified; 2bpp/8bpp and scanline output absent
 - [ ] [IN PROGRESS] Reference scanline buffers — scheduled OBJ range/time selection exists; pixel buffer absent
 - [ ] Basic Mode 0/1 output

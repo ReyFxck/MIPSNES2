@@ -27,11 +27,13 @@ static void machine_obj_line(void *context, mipsnes2_master_clock timestamp,
     uint16_t line = machine->hv.v_counter;
     uint16_t vblank = mipsnes2_hv_vblank_start_line(&machine->hv);
     mipsnes2_master_clock delay;
+    uint8_t first_sprite;
 
     (void)token;
     if (!machine->ppu_forced_blank && line + 1U < vblank &&
+        mipsnes2_ppu_oam_first_sprite(&machine->oam_ports, &first_sprite) &&
         mipsnes2_ppu_obj_select_scanline(
-            &machine->oam_ports, (uint8_t)line, 0U,
+            &machine->oam_ports, (uint8_t)line, first_sprite,
             &machine->obj_line)) {
         if (machine->obj_line.range_over) {
             machine->obj_overflow |= UINT8_C(0x40);

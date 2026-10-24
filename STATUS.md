@@ -211,13 +211,23 @@ the bounded line and accumulates `$213E` range/time-over bits until the next
 frame. Host fixtures cover exact event boundaries, disabled event budget,
 both overflow bits, read-only status, PPU1 open-bus bit 5, forced-blank
 retention and PAL frame clear. C99 `cc` `make test` passes (2026-10-24).
-PS2/PSP/host cross-build CI for this revision is pending. This is a phase
-approximation: exact intra-line assertion, rotation start index, forced-blank
+Revision `49904ce` passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40100944834),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40100944700) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40100944805).
+This is a phase
+approximation: exact intra-line assertion, forced-blank
 behavior, active-display writes, pixels and hardware runtime remain open.
 See the [OBJ scanline audit](docs/ppu-sprite-scanline-audit.md).
 
-Next primary block: validate and model OBJ priority rotation's first-sprite
-selection from `$2103` and the OAM address at the scanline boundary.
+OBJ priority rotation now derives the first candidate from the current
+internal OAM word address when `$2103` bit 7 is set. Host vectors cover
+pointer advancement by reads, high-table wrap, VBlank reload and a rotated
+33-sprite machine scanline; C99 `cc` `make test` passes (2026-10-24).
+The exact active-display address-invalidation interaction and hardware
+runtime remain unverified. CI for this rotation revision is pending.
+
+Next primary block: integrate OBJ sliver tile fetch from VRAM into a
+bounded shared scanline buffer with independently derived 4bpp pixel tests.
 
 ## State and evidence rules
 
@@ -1456,7 +1466,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode and scheduled scanline range/time selection; exact status phase and rendering absent
+- [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation and scheduled scanline range/time selection; exact status phase and rendering absent
 - [ ] [IN PROGRESS] Tile decode fixtures — shared 4bpp tile indices and OBJ address handoff tested; other PPU formats and pixels pending
 - [ ] BG Mode 0
 - [ ] BG Mode 1

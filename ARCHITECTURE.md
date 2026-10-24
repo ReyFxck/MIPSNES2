@@ -127,7 +127,8 @@ VBlank pointer reload in the shared clock domain and tracks `$2100` forced
 blank for that gate and its first-VBlank-line release transition. An OBJ
 event at HBlank start prepares the next visible line and accumulates `$213E`
 range/time overflow bits until the frame boundary. This phase is provisional;
-the first sprite remains index zero, and forced blank suppresses this model's
+the first sprite follows `$2103` priority rotation and the current internal
+OAM pointer, and forced blank suppresses this model's
 selection. There is no pixel renderer.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters

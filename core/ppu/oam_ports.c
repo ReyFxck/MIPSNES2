@@ -99,6 +99,18 @@ bool mipsnes2_ppu_oam_ports_vblank_reload(mipsnes2_ppu_oam_ports *ports,
     return true;
 }
 
+bool mipsnes2_ppu_oam_first_sprite(const mipsnes2_ppu_oam_ports *ports,
+                                  uint8_t *index)
+{
+    if (ports == NULL || !ports->initialized || index == NULL) {
+        return false;
+    }
+    *index = ports->priority_rotation
+                 ? (uint8_t)((ports->byte_address >> 2) & 127U)
+                 : 0U;
+    return true;
+}
+
 bool mipsnes2_ppu_oam_decode_sprite(const mipsnes2_ppu_oam_ports *ports,
                                    unsigned index,
                                    mipsnes2_ppu_oam_sprite *sprite)
