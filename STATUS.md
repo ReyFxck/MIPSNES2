@@ -1461,7 +1461,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] PPU MMIO routing — optional counter-register state with callback fallback; broader PPU registers remain unimplemented
 - [x] CPU I/O routing — callback route plus bus-owned `$420D`; CPU-I/O registers remain incomplete
 - [x] APU port routing — callback route only; APU ports remain unimplemented
-- [x] DMA register routing — callback route only; DMA registers remain unimplemented
+- [x] DMA register routing — callback route in the original bus foundation; shared channel register routing was added later
 - [ ] Enhancement windows
 - [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
 - [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent

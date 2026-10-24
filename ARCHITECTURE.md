@@ -18,22 +18,21 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI/ABORT boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
-| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; no core screen output |
+| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; optional reference video-line callback |
 | core/dma | Channel state and transfer planning | Eight register banks plus pure mode/address helpers; no byte transfer or HDMA engine |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
-| core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | core/machine | Stable instance composition and timed power-on/CPU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM, cartridge, CPU, bus, CPU-I/O, counters, H/V and scheduler |
-| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path to bounded CPU-only machine run; target runtime unverified |
+| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path to bounded CPU-only machine run and single-frame GS submission; GS runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
 Directories without source contain an explicit scope README, not stub functions.
 There is a partial machine instance and an explicit-path PS2 ROM-file adapter,
-but no full ROM runner, renderer or APU. `mipsnes2_machine_init` validates an image and constructs the
+but no full ROM runner, complete renderer or APU. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
 optional VRAM/CGRAM/OAM bytes. `resume` advances one
@@ -42,7 +41,7 @@ also bounds completed sequences and retains a paused cursor. The instance
 has a stable address because its CPU and bus callbacks point into it; callers
 must not copy or move it. PS2 accepts a file path from an explicit command-line
 argument into preallocated EE memory, while PSP still has no file adapter. Neither
-backend can present SNES video/audio. CPU reset implements only
+backend produces a verified continuous SNES video/audio stream. CPU reset implements only
 the documented programmer-visible foundation and resumable vector reads; complete
 signal-level RESET timing remains open.
 The partial SNES bus is not a complete machine map: it has no complete cartridge

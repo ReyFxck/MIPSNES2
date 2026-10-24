@@ -2,7 +2,7 @@
 
 ## Scope and current state
 
-SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. No SNES DMA implementation exists.
+SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. The shared core currently models the eight channel register banks and pure general-purpose mode/address sequences; it does not move bytes or start DMA from `$420B`.
 
 ## Design direction
 
@@ -14,11 +14,12 @@ Test every transfer mode, channel ordering, zero/maximum counts, fixed/increment
 
 ## Work breakdown
 
-Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Every item below
-remains unimplemented or unverified; document implementation evidence before promotion.
+Planning checklist; [STATUS.md](../STATUS.md) is canonical. Register and
+transfer-mode foundations are partial; document implementation evidence before
+promotion.
 
-- [ ] DMA registers
-- [ ] DMA transfer modes
+- [ ] [IN PROGRESS] DMA registers — channel bytes routed; start/enable effects absent
+- [ ] [IN PROGRESS] DMA transfer modes — address plan; byte transfers absent
 - [ ] DMA timing
 - [ ] DMA source/destination wrapping
 - [ ] HDMA initialization
@@ -32,7 +33,8 @@ remains unimplemented or unverified; document implementation evidence before pro
 
 ## Research and decisions
 
-No emulation semantics are claimed verified by bootstrap. Before implementation,
-record the exact hardware reference, section/revision and independently authored
-regression evidence. SDK documentation is not a source for SNES behavior.
-Intentional approximations: none implemented. Known subsystem bugs: not yet testable.
+The register/address-plan evidence and hardware references are recorded in the
+[DMA foundation audit](dma-register-foundation-audit.md). Before extending
+transfer behavior, record the exact hardware reference and independently
+authored regression evidence. SDK documentation is not a source for SNES
+behavior. Intentional timing approximations: none implemented yet.
