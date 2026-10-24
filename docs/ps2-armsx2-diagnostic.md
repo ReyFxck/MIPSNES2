@@ -60,13 +60,24 @@ performance or establish actual SNES electrical behavior.
   and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40014123797)
   completed successfully. Their respective nonempty Host GCC/Clang, PS2 and
   PSP artifacts were inspected in the run metadata (PS2 archive: 660,272 bytes).
-- [ ] Record ARMSX2 version, baseline settings and visible `5 PASS / 0 FAIL`
-  (or precise failure details) from the user's Android run.
+- [x] User-supplied Android screenshots show all five `PASS` lines and
+  `RESULT: 5 PASS / 0 FAIL` in ARMSX2 and NetherSX2 Turnip. Both display
+  `MIPSNES2 PS2 DIAGNOSTIC v1`. The NetherSX2 overlay identifies
+  `motorola fogos` and displays a build/version field; its frame-rate/EE
+  figures describe this idle diagnostic screen, not sustained SNES emulation.
+  The ARMSX2 screenshot displays the app's own
+  identification banner but not its version number. Evidence is user-uploaded
+  `804.png` (NetherSX2, SHA-256 `a235a10baa3b72b764a58cb6ffd0706194bcc43d020602f29a6eafb98b1cc06b`)
+  and `807.png` (ARMSX2, SHA-256 `b5378f8516a4de53548d5a6b96de0cb78fa7f066106b547d05a356784967d25e`).
+- [ ] [IN PROGRESS] Record the ARMSX2 version and exact profile/settings;
+  independently confirm the on-device ELF hash if a byte-for-byte identity
+  claim is needed. The screenshots establish the v1 screen and results, not
+  these metadata values.
 - [ ] Run on real PS2 for a hardware boot claim.
 
-The Android diagnostic milestone is complete only when the expected screen is
-captured in ARMSX2 and the exact ELF hash/version are recorded. Physical PS2
-validation remains a separate gate.
+The Android **functional screen check passed** in two PS2 emulators. Its
+reproducibility record remains open for the ARMSX2 version/settings and the
+on-device ELF checksum. Physical PS2 validation remains a separate gate.
 
 ## Independent SNES test ROMs
 

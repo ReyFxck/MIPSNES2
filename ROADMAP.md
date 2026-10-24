@@ -25,7 +25,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Core/platform boundary
 - [x] PS2 build scaffolding
 - [x] PS2 embedded core diagnostic host baseline and cross-build
-- [ ] PS2 diagnostic screen captured on ARMSX2 with version and settings
+- [x] PS2 v1 diagnostic screen captured with five PASS results on ARMSX2 and NetherSX2 Turnip
+- [ ] [IN PROGRESS] Record ARMSX2 version/settings and on-device ELF identity for reproducibility
 - [x] PSP build scaffolding
 - [ ] GitHub infrastructure
 
