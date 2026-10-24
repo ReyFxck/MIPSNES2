@@ -418,6 +418,13 @@ int main(void)
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212c),
                              UINT8_C(0x11));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212d), 1U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002132),
+                             UINT8_C(0x3f));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002132),
+                             UINT8_C(0x42));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002132),
+                             UINT8_C(0x81));
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100),
                              UINT8_C(0x0f));
     CHECK(mipsnes2_master_timing_run_until(
@@ -428,6 +435,11 @@ int main(void)
           machine.mode0_line.pixels[0].source == 5U);
     CHECK(machine.ppu_brightness == 15U &&
           machine.mode0_color_line.pixels[0] == UINT16_C(0x001f));
+    CHECK(machine.fixed_color == UINT16_C(0x045f));
+    CHECK(machine.sub_line.pixels[0].color == 1U &&
+          machine.sub_line.pixels[0].source == 1U);
+    CHECK(machine.sub_color_line.pixels[0] == UINT16_C(0x03e0));
+    CHECK(machine.sub_color_line.pixels[1] == UINT16_C(0x045f));
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
     oam[3] = 0U;
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
@@ -453,6 +465,10 @@ int main(void)
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002126), 0U);
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002127), 0U);
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212e), 1U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212d), 1U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212f), 1U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002132),
+                             UINT8_C(0x3f));
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100),
                              UINT8_C(0x0f));
     CHECK(mipsnes2_master_timing_run_until(
@@ -463,6 +479,9 @@ int main(void)
     CHECK(machine.mode0_line.pixels[0].color == 129U &&
           machine.mode0_line.pixels[0].source == 5U);
     CHECK(machine.mode0_color_line.pixels[0] == UINT16_C(0x001f));
+    CHECK(machine.sub_window_hidden[0] == 1U);
+    CHECK(machine.sub_line.pixels[0].source == 0U &&
+          machine.sub_color_line.pixels[0] == UINT16_C(0x001f));
     config.oam = NULL;
     config.oam_size = 0U;
     CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);

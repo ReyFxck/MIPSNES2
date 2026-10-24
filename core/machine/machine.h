@@ -67,8 +67,11 @@ typedef struct {
     mipsnes2_ppu_bg2_scanline bg_other_lines[3];
     mipsnes2_ppu_mode0_line mode0_line;
     mipsnes2_ppu_mode0_color_line mode0_color_line;
+    mipsnes2_ppu_mode0_line sub_line;
+    mipsnes2_ppu_mode0_color_line sub_color_line;
     mipsnes2_ppu_window_mask windows;
     uint8_t window_hidden[256];
+    uint8_t sub_window_hidden[256];
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
@@ -88,6 +91,8 @@ typedef struct {
     uint8_t ppu1_open_bus;
     uint8_t obj_overflow;
     uint8_t main_screen_enable;
+    uint8_t sub_screen_enable;
+    uint16_t fixed_color;
     bool ready;
 } mipsnes2_machine;
 

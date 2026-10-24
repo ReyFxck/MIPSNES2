@@ -1,4 +1,4 @@
-/* MIPSNES2 main-screen layer windows. See LICENSE for GPL-3.0 terms. */
+/* MIPSNES2 PPU layer windows. See LICENSE for GPL-3.0 terms. */
 #include "core/ppu/window_mask.h"
 
 #include <string.h>
@@ -24,6 +24,8 @@ bool mipsnes2_ppu_window_mask_write(mipsnes2_ppu_window_mask *state,
         state->logic[offset - UINT16_C(0x212a)] = value;
     } else if (offset == UINT16_C(0x212e)) {
         state->main_mask = value & UINT8_C(0x1f);
+    } else if (offset == UINT16_C(0x212f)) {
+        state->sub_mask = value & UINT8_C(0x1f);
     } else {
         return false;
     }
@@ -72,8 +74,8 @@ static bool layer_hidden(const mipsnes2_ppu_window_mask *state,
     }
 }
 
-bool mipsnes2_ppu_window_mask_line(const mipsnes2_ppu_window_mask *state,
-                                  uint8_t hidden[256])
+static bool window_mask_line(const mipsnes2_ppu_window_mask *state,
+                             uint8_t screen_mask, uint8_t hidden[256])
 {
     unsigned x;
     unsigned layer;
@@ -85,7 +87,7 @@ bool mipsnes2_ppu_window_mask_line(const mipsnes2_ppu_window_mask *state,
         uint8_t mask = 0U;
 
         for (layer = 0U; layer < 5U; ++layer) {
-            if ((state->main_mask & (1U << layer)) != 0U &&
+            if ((screen_mask & (1U << layer)) != 0U &&
                 layer_hidden(state, layer, x)) {
                 mask |= (uint8_t)(1U << layer);
             }
@@ -93,4 +95,18 @@ bool mipsnes2_ppu_window_mask_line(const mipsnes2_ppu_window_mask *state,
         hidden[x] = mask;
     }
     return true;
+}
+
+bool mipsnes2_ppu_window_mask_line(const mipsnes2_ppu_window_mask *state,
+                                  uint8_t hidden[256])
+{
+    return state != NULL &&
+        window_mask_line(state, state->main_mask, hidden);
+}
+
+bool mipsnes2_ppu_window_mask_sub_line(const mipsnes2_ppu_window_mask *state,
+                                      uint8_t hidden[256])
+{
+    return state != NULL &&
+        window_mask_line(state, state->sub_mask, hidden);
 }

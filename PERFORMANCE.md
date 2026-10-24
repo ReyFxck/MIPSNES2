@@ -38,6 +38,9 @@ paths with cached-tile paths; no console throughput claim is made.
 The main-screen window pass currently evaluates up to five layer predicates
 at each of 256 pixels. Its cost and cache behavior remain unmeasured on PS2
 and PSP.
+The sub-screen now adds another window pass, priority mix and CGRAM lookup
+when VRAM and CGRAM are present. Combined per-line cost remains unmeasured
+on either target; no frame-rate inference follows from cross-build success.
 | DMA/HDMA | TBD | TBD | |
 | SPC700 | TBD | TBD | |
 | DSP | TBD | TBD | |

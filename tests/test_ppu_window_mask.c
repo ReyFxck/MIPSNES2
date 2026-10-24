@@ -66,9 +66,13 @@ int main(void)
                                           UINT8_C(0x30)));
     CHECK(mipsnes2_ppu_window_mask_line(&state, hidden));
     CHECK(hidden[0] == 8U && hidden[15] == 24U);
-    CHECK(!mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x212f), 31U));
+    CHECK(mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x212f), 16U));
+    CHECK(mipsnes2_ppu_window_mask_sub_line(&state, hidden));
+    CHECK(hidden[0] == 0U && hidden[15] == 16U);
+    CHECK(!mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x2130), 31U));
     CHECK(!mipsnes2_ppu_window_mask_line(NULL, hidden));
     CHECK(!mipsnes2_ppu_window_mask_line(&state, NULL));
+    CHECK(!mipsnes2_ppu_window_mask_sub_line(NULL, hidden));
     (void)puts("PPU main-screen windows: OK");
     return 0;
 }

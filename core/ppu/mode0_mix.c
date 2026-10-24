@@ -100,3 +100,23 @@ bool mipsnes2_ppu_mode0_resolve_color(
     }
     return true;
 }
+
+bool mipsnes2_ppu_mode0_resolve_sub_color(
+    const mipsnes2_ppu_mode0_line *indices, const uint8_t *cgram,
+    size_t cgram_size, uint16_t fixed_color,
+    mipsnes2_ppu_mode0_color_line *output)
+{
+    unsigned x;
+
+    if (fixed_color > UINT16_C(0x7fff) ||
+        !mipsnes2_ppu_mode0_resolve_color(
+            indices, cgram, cgram_size, 15U, false, output)) {
+        return false;
+    }
+    for (x = 0U; x < 256U; ++x) {
+        if (indices->pixels[x].source == 0U) {
+            output->pixels[x] = fixed_color;
+        }
+    }
+    return true;
+}

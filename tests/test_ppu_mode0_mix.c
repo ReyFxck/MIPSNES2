@@ -77,6 +77,17 @@ int main(void)
     CHECK(colors.pixels[0] == UINT16_C(0x03e0));
     CHECK(colors.pixels[1] == UINT16_C(0x7fff));
     CHECK(colors.pixels[2] == UINT16_C(0x001f));
+    output.pixels[0].source = 1U;
+    output.pixels[1].source = 5U;
+    CHECK(mipsnes2_ppu_mode0_resolve_sub_color(
+        &output, cgram, sizeof(cgram), UINT16_C(0x0421), &colors));
+    CHECK(colors.pixels[0] == UINT16_C(0x03e0));
+    CHECK(colors.pixels[1] == UINT16_C(0x7fff));
+    CHECK(colors.pixels[2] == UINT16_C(0x0421));
+    colors.pixels[0] = UINT16_C(0x1234);
+    CHECK(!mipsnes2_ppu_mode0_resolve_sub_color(
+        &output, cgram, sizeof(cgram), UINT16_C(0x8000), &colors));
+    CHECK(colors.pixels[0] == UINT16_C(0x1234));
     CHECK(mipsnes2_ppu_mode0_resolve_color(
         &output, cgram, sizeof(cgram), 8U, false, &colors));
     CHECK(colors.pixels[0] == UINT16_C(0x0200));

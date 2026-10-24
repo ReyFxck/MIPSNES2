@@ -306,13 +306,25 @@ machine bus/event handoff. Host C99 `cc` `make clean && make test` passes
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587677),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587679)
 and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587649).
-Sub-screen and color windows, mid-line updates and target runtime remain
-open. See the
+At that revision, sub-screen and color windows, mid-line updates and target
+runtime remained open. See the
 [window audit](docs/ppu-window-mask-audit.md).
 
-Next primary block: produce a separate Mode 0 sub-screen index/color line
-from `$212D/$212F` using the same shared priority and window rules, with
-deterministic tests before color math.
+The shared machine now prepares a separate Mode 0 sub-screen index/source
+and raw BGR555 line from `$212D/$212F` with the same layer priority and
+window rules. `$2132` retains independently selected 5-bit red/green/blue
+fixed-color channels; the sub-screen backdrop uses this fixed color. This
+raw line is an intermediate color-math source, not a displayed image.
+Synthetic fixtures cover channel retention, independent main/sub layer
+selection, masked sub-screen fallback, fixed-color backdrop and invalid
+inputs. Host C99 `cc` `make test` passes (2026-10-24); PS2/PSP/host CI for
+this sub-screen revision is pending. Color math, color window, mid-line
+register changes and target runtime remain open. See the
+[sub-screen audit](docs/ppu-subscreen-audit.md).
+
+Next primary block: implement bounded Mode 0 color math using unattenuated
+main/sub/fixed BGR555 pixels, then apply `$2100` brightness to the result;
+test add/subtract, half modes, layer enables and saturation.
 
 ## State and evidence rules
 
@@ -1550,10 +1562,10 @@ platform persistence remains incomplete.
 
 - [ ] [IN PROGRESS] PPU register model — H/V counter, VRAM, CGRAM, OAM and Mode 0 BG register subsets
 - [ ] [IN PROGRESS] VRAM — caller-owned bytes and CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes and CPU read/write ports; access windows and rendering absent
+- [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes, CPU read/write ports and Mode 0 color lookup; access windows and video output absent
 - [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; BG mixing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel fixtures tested; other PPU formats pending
-- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer, main-screen layer windows and CGRAM BGR555 lookup tested; sub-screen, color windows and output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer, main/sub layer windows and CGRAM BGR555 lookup tested; color math, color windows and output absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

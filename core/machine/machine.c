@@ -41,13 +41,17 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
     (void)memset(&machine->mode0_line, 0, sizeof(machine->mode0_line));
     (void)memset(&machine->mode0_color_line, 0,
                  sizeof(machine->mode0_color_line));
+    (void)memset(&machine->sub_line, 0, sizeof(machine->sub_line));
+    (void)memset(&machine->sub_color_line, 0,
+                 sizeof(machine->sub_color_line));
     if (!machine->ppu_forced_blank && machine->vram != NULL &&
         line + 1U < vblank) {
         for (bg = 0U; bg < 4U; ++bg) {
             mipsnes2_ppu_bg2_scanline *target = bg == 0U
                 ? &machine->bg1_line : &machine->bg_other_lines[bg - 1U];
 
-            if ((machine->main_screen_enable & (1U << bg)) != 0U &&
+            if (((machine->main_screen_enable | machine->sub_screen_enable) &
+                 (1U << bg)) != 0U &&
                 mipsnes2_ppu_bg_mode0_config(&machine->bg_registers, bg,
                                              &bg_config)) {
                 (void)mipsnes2_ppu_bg2_render_scanline(
@@ -84,10 +88,18 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
         (void)mipsnes2_ppu_mode0_mix_masked(
             bg_lines, &machine->obj_pixels, machine->main_screen_enable,
             machine->window_hidden, &machine->mode0_line);
+        (void)mipsnes2_ppu_window_mask_sub_line(
+            &machine->windows, machine->sub_window_hidden);
+        (void)mipsnes2_ppu_mode0_mix_masked(
+            bg_lines, &machine->obj_pixels, machine->sub_screen_enable,
+            machine->sub_window_hidden, &machine->sub_line);
         if (machine->cgram != NULL) {
             (void)mipsnes2_ppu_mode0_resolve_color(
                 &machine->mode0_line, machine->cgram, machine->cgram_size,
                 machine->ppu_brightness, false, &machine->mode0_color_line);
+            (void)mipsnes2_ppu_mode0_resolve_sub_color(
+                &machine->sub_line, machine->cgram, machine->cgram_size,
+                machine->fixed_color, &machine->sub_color_line);
         }
     }
     delay = line + 2U < vblank
@@ -194,6 +206,27 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
     if ((uint16_t)address == UINT16_C(0x212c)) {
         machine->main_screen_enable = value & UINT8_C(0x1f);
     }
+    if ((uint16_t)address == UINT16_C(0x212d)) {
+        machine->sub_screen_enable = value & UINT8_C(0x1f);
+    }
+    if ((uint16_t)address == UINT16_C(0x2132)) {
+        uint16_t channel = value & UINT8_C(0x1f);
+
+        if ((value & UINT8_C(0x20)) != 0U) {
+            machine->fixed_color =
+                (machine->fixed_color & UINT16_C(0x7fe0)) | channel;
+        }
+        if ((value & UINT8_C(0x40)) != 0U) {
+            machine->fixed_color =
+                (machine->fixed_color & UINT16_C(0x7c1f)) |
+                (uint16_t)(channel << 5);
+        }
+        if ((value & UINT8_C(0x80)) != 0U) {
+            machine->fixed_color =
+                (machine->fixed_color & UINT16_C(0x03ff)) |
+                (uint16_t)(channel << 10);
+        }
+    }
 
     if ((uint16_t)address == UINT16_C(0x2100)) {
         bool next_forced_blank = (value & UINT8_C(0x80)) != 0U;
@@ -243,13 +276,20 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     mipsnes2_ppu_bg_registers_init(&machine->bg_registers);
     mipsnes2_ppu_window_mask_init(&machine->windows);
     (void)memset(machine->window_hidden, 0, sizeof(machine->window_hidden));
+    (void)memset(machine->sub_window_hidden, 0,
+                 sizeof(machine->sub_window_hidden));
     (void)memset(&machine->bg1_line, 0, sizeof(machine->bg1_line));
     (void)memset(&machine->bg_other_lines, 0,
                  sizeof(machine->bg_other_lines));
     (void)memset(&machine->mode0_line, 0, sizeof(machine->mode0_line));
     (void)memset(&machine->mode0_color_line, 0,
                  sizeof(machine->mode0_color_line));
+    (void)memset(&machine->sub_line, 0, sizeof(machine->sub_line));
+    (void)memset(&machine->sub_color_line, 0,
+                 sizeof(machine->sub_color_line));
     machine->main_screen_enable = 0U;
+    machine->sub_screen_enable = 0U;
+    machine->fixed_color = 0U;
     if (machine->vram != NULL &&
         !mipsnes2_ppu_vram_ports_init(&machine->vram_ports,
                                      machine->vram, machine->vram_size)) {

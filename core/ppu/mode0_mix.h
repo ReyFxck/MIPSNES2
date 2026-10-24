@@ -45,4 +45,12 @@ bool mipsnes2_ppu_mode0_resolve_color(
     size_t cgram_size, uint8_t brightness, bool forced_blank,
     mipsnes2_ppu_mode0_color_line *output);
 
+/* Sub-screen pixels use unattenuated CGRAM; uncovered pixels use $2132's
+ * fixed color. This is an intermediate color-math source, not screen output.
+ */
+bool mipsnes2_ppu_mode0_resolve_sub_color(
+    const mipsnes2_ppu_mode0_line *indices, const uint8_t *cgram,
+    size_t cgram_size, uint16_t fixed_color,
+    mipsnes2_ppu_mode0_color_line *output);
+
 #endif

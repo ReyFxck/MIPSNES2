@@ -128,9 +128,11 @@ produce a frame or model the analog output. See the
 [register audit](ppu-bg-register-audit.md) and
 [mixer audit](ppu-mode0-mix-audit.md).
 
-`core/ppu/window_mask.c` retains the main-screen subset of window registers
-and produces a 256-entry hidden-layer mask. The Mode 0 mixer applies this mask
-before choosing the visible BG/OBJ pixel. See the [window audit](ppu-window-mask-audit.md).
+`core/ppu/window_mask.c` retains the main/sub layer subset of window registers
+and produces separate 256-entry hidden-layer masks. The Mode 0 mixer applies
+each mask before choosing the visible BG/OBJ pixel. `$2132` supplies the
+sub-screen's fixed-color backdrop. See the [window audit](ppu-window-mask-audit.md)
+and [sub-screen audit](ppu-subscreen-audit.md).
 
 ## 4bpp tile decode
 
@@ -157,11 +159,11 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 
 - [ ] [IN PROGRESS] PPU register model — counter, VRAM, CGRAM and OAM port subsets
 - [ ] [IN PROGRESS] VRAM — 64 KiB storage and CPU read/write ports; access windows and rendering absent
-- [ ] [IN PROGRESS] CGRAM — CPU read/write ports; access windows and rendering absent
+- [ ] [IN PROGRESS] CGRAM — CPU read/write ports and Mode 0 color lookup; access windows and video output absent
 - [ ] [IN PROGRESS] OAM — CPU ports, scheduled VBlank reload, sprite descriptor decode and tile-address lookup; display access and rendering absent
 - [ ] [IN PROGRESS] Sprite limits — 32 OBJ/34 tile selection, scheduled `$213E` flags and OBJ pixel line; exact timing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel lines tested; other formats and renderer absent
-- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, main-screen layer windows, OBJ priority mixer and BGR555 lookup tested; sub-screen and output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, main/sub layer windows, OBJ priority mixer and BGR555 lookup tested; color math and output absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

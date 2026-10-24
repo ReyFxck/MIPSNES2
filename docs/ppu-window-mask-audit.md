@@ -27,8 +27,9 @@ passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587677),
 and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40103587649).
 The core module is included in both target build graphs.
 
-This does not implement the color window, `$212F` sub-screen masking,
-`$2130` clip modes, mid-scanline writes, hardware fetch phase or a video
-backend. Window registers are sampled as a full-line snapshot at the
-current provisional event. Neither target runtime nor real SNES hardware
-behavior has been measured.
+The next revision added `$212F` sub-screen layer masking with the same
+predicate; see the [sub-screen audit](ppu-subscreen-audit.md). The color
+window, `$2130` clip modes, mid-scanline writes, hardware fetch phase and a
+video backend remain absent. Window registers are sampled as a full-line
+snapshot at the current provisional event. Neither target runtime nor real
+SNES hardware behavior has been measured.
