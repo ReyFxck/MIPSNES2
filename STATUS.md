@@ -138,8 +138,10 @@ purpose, and a recurring core scheduler event handles NTSC's alternating
 short line and PAL's longer frame. Host fixtures cover the event boundary,
 event-budget refusal, forced blank and PAL overscan. The exact hardware
 reload clock, forced-blank release behavior, active-display invalidation and
-sprite rotation effects remain unverified; see the OAM audit. Cross-build
-CI for this revision is pending.
+sprite rotation effects remain unverified; see the OAM audit. Revision
+`af3ff1e` passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224129),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224195) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224329).
 
 ## State and evidence rules
 

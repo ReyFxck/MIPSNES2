@@ -42,7 +42,10 @@ hardware-validation target.
 `tests/test_machine.c` also checks refusal when the event budget is zero,
 reload precisely at the event boundary, forced-blank suppression and the PAL
 overscan event position. Direct host `make test` passes for this extension;
-cross-target CI for its implementation revision is pending.
+implementation revision `af3ff1e9f947f586638a5cb11e1ddc3df47b8be8`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224129),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224195) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224329).
 
 The forced-blank 1-to-0 transition, active-display address invalidation and
 access restrictions are not implemented. Sprite decoding, priority rotation
