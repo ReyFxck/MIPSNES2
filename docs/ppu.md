@@ -136,8 +136,10 @@ and [sub-screen audit](ppu-subscreen-audit.md).
 
 `core/ppu/color_math.c` combines unattenuated main colors with sub-screen or
 fixed colors under `$2130/$2131` layer and operation bits, then applies
-brightness. Color-window effects remain open. See the
-[color math audit](ppu-color-math-audit.md).
+brightness. `$2125/$212B` produce the color-window predicate used by
+`$2130` to clip main pixels or suppress math. See the
+[color math audit](ppu-color-math-audit.md) and
+[color-window audit](ppu-color-window-audit.md).
 
 ## 4bpp tile decode
 
@@ -168,7 +170,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] [IN PROGRESS] OAM — CPU ports, scheduled VBlank reload, sprite descriptor decode and tile-address lookup; display access and rendering absent
 - [ ] [IN PROGRESS] Sprite limits — 32 OBJ/34 tile selection, scheduled `$213E` flags and OBJ pixel line; exact timing and display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel lines tested; other formats and renderer absent
-- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, main/sub layer windows, OBJ priority mixer, BGR555 lookup and basic color math tested; color windows and output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, main/sub layer and color windows, OBJ priority mixer, BGR555 lookup and color math tested; output and timing validation absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

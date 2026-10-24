@@ -18,6 +18,12 @@ static uint8_t math_channel(uint8_t main, uint8_t addend,
     return (uint8_t)result;
 }
 
+static bool region_applies(uint8_t region, bool inside)
+{
+    return region == 3U || (region == 1U && !inside) ||
+           (region == 2U && inside);
+}
+
 bool mipsnes2_ppu_color_math_line(
     const mipsnes2_ppu_mode0_line *main_indices,
     const mipsnes2_ppu_mode0_color_line *main_raw,
@@ -25,6 +31,21 @@ bool mipsnes2_ppu_color_math_line(
     const mipsnes2_ppu_mode0_color_line *sub_raw,
     uint16_t fixed_color, uint8_t select, uint8_t control,
     uint8_t brightness, bool forced_blank,
+    mipsnes2_ppu_mode0_color_line *output)
+{
+    return mipsnes2_ppu_color_math_line_windowed(
+        main_indices, main_raw, sub_indices, sub_raw, fixed_color,
+        select, control, brightness, forced_blank, NULL, output);
+}
+
+bool mipsnes2_ppu_color_math_line_windowed(
+    const mipsnes2_ppu_mode0_line *main_indices,
+    const mipsnes2_ppu_mode0_color_line *main_raw,
+    const mipsnes2_ppu_mode0_line *sub_indices,
+    const mipsnes2_ppu_mode0_color_line *sub_raw,
+    uint16_t fixed_color, uint8_t select, uint8_t control,
+    uint8_t brightness, bool forced_blank,
+    const uint8_t color_window_inside[256],
     mipsnes2_ppu_mode0_color_line *output)
 {
     unsigned x;
@@ -41,10 +62,15 @@ bool mipsnes2_ppu_color_math_line(
             pixel->source == 5U && pixel->color >= UINT8_C(0xc0) ?
                 UINT8_C(0x10) : 0U;
         bool use_sub = (select & UINT8_C(0x02)) != 0U;
-        bool enabled = (control & enable_bit) != 0U;
+        bool inside = color_window_inside != NULL &&
+                      color_window_inside[x] != 0U;
+        bool clip_main = region_applies((select >> 6) & 3U, inside);
+        bool suppress_math = region_applies((select >> 4) & 3U, inside);
+        bool enabled = (control & enable_bit) != 0U && !suppress_math;
         bool half = (control & UINT8_C(0x40)) != 0U &&
+                    !clip_main &&
                     !(use_sub && sub_indices->pixels[x].source == 0U);
-        uint16_t main_color = main_raw->pixels[x];
+        uint16_t main_color = clip_main ? 0U : main_raw->pixels[x];
         uint16_t addend = use_sub ? sub_raw->pixels[x] : fixed_color;
         uint16_t result = 0U;
         unsigned channel;

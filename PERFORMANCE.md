@@ -43,6 +43,8 @@ when VRAM and CGRAM are present. Combined per-line cost remains unmeasured
 on either target; no frame-rate inference follows from cross-build success.
 The reference color-math pass currently performs three channel operations and
 brightness divisions per pixel. PS2 and PSP cost remains unmeasured.
+The color-window predicate adds one evaluation per pixel before arithmetic;
+the reference path has no target timing measurement.
 | DMA/HDMA | TBD | TBD | |
 | SPC700 | TBD | TBD | |
 | DSP | TBD | TBD | |

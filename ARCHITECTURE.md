@@ -137,9 +137,10 @@ mixer. `$2123-$212B/$212E/$212F` produce separate layer masks before
 selection. Shared passes resolve unattenuated main/sub BGR555 lines through
 caller-owned CGRAM, with `$2132` fixed color as the sub backdrop. A bounded
 `$2130/$2131` math pass combines them or uses fixed color, then applies
-`$2100` brightness in nominal 5-bit digital levels. Forced blank leaves the
-scheduled lines black. Scroll-write latches use a published but
-hardware-unverified formula. Color windows, exact mid-line behavior and
+`$2100` brightness in nominal 5-bit digital levels. The `$2125/$212B`
+color-window predicate feeds `$2130` main clipping and math suppression.
+Forced blank leaves the scheduled lines black. Scroll-write latches use a
+published but hardware-unverified formula. Exact mid-line behavior and
 display output are absent.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters

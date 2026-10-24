@@ -22,9 +22,12 @@ fixtures cover add/subtract, half rounding, saturation, per-channel
 packing, layer and OBJ palette gating, fixed and sub sources, the backdrop
 exception, brightness order, forced blank and invalid arguments. A machine
 fixture checks register routing and combined BG/fixed-color output. Host
-`make clean && make test` passes (2026-10-24); PS2/PSP/host CI is pending.
+`make clean && make test` passes (2026-10-24). Revision `b7fa3f5`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40128208302),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40128208329)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40128208307).
 
-`$2130` color-window region bits and direct-color bit are retained but not
-applied here. Color-window clipping can alter the half-math decision and
-remains the next block. Exact mid-line behavior, analog DAC response,
-target runtime and video output remain unverified or unimplemented.
+The following revision applies `$2130` color-window region bits; see the
+[color-window audit](ppu-color-window-audit.md). The direct-color bit remains
+unimplemented. Exact mid-line behavior, analog DAC response, target runtime
+and video output remain unverified or unimplemented.

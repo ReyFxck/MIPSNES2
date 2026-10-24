@@ -475,6 +475,27 @@ int main(void)
     CHECK(machine.mode0_color_line.pixels[0] == UINT16_C(0x0210));
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212c), 1U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002125),
+                             UINT8_C(0x20)); /* Color window 1. */
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002126), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002127), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002130),
+                             UINT8_C(0x80)); /* Clip main inside. */
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002131), 1U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002132),
+                             UINT8_C(0x3f));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100),
+                             UINT8_C(0x08));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              MIPSNES2_HV_HBLANK_START_CLOCK, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.color_window_inside[0] == 1U &&
+          machine.color_window_inside[1] == 0U);
+    CHECK(machine.mode0_color_line.pixels[0] == UINT16_C(0x0010));
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002107), 4U);
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00212c),
                              UINT8_C(0x11));
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002123), 2U);

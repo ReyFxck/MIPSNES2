@@ -333,14 +333,27 @@ backdrop and OBJ palettes 4-7; half math is skipped for a sub-screen backdrop.
 Pure fixtures cover channel packing, saturation, subtraction clamp, half
 rounding, source gating, the backdrop exception, brightness order and invalid
 inputs. A machine fixture covers register routing and a combined BG/fixed
-color pixel. Host C99 `cc` `make clean && make test` passes (2026-10-24); PS2/PSP/host CI
-for this math revision is pending. Color-window clipping and its interaction
-with half math, mid-line behavior, target runtime and output remain open. See
+color pixel. Host C99 `cc` `make clean && make test` passes (2026-10-24).
+Revision `b7fa3f5` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40128208302),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40128208329)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40128208307).
+At that revision color-window clipping, mid-line behavior, target runtime
+and output remained open. See
 the [color math audit](docs/ppu-color-math-audit.md).
 
-Next primary block: implement the color-window region rules from
-`$2125/$212B/$2130`, including main-screen clipping and sub-screen math
-suppression, with deterministic inside/outside/never/always fixtures.
+The shared color-window pass now uses `$2125` high-nibble enable/inversion,
+`$212B` color-window logic and `$2130` region bits. It can clip the main
+pixel to black before math and suppress math in a separate region. Fixtures
+cover inside/outside/never/always, XOR, disabled windows, half-math
+suppression on clipped main pixels and the machine bus/event route. Host
+C99 `cc` `make test` passes (2026-10-24); PS2/PSP/host CI for this revision
+is pending. Mid-line changes, pseudo-hires, analog output and target runtime
+remain open. See the [color-window audit](docs/ppu-color-window-audit.md).
+
+Next primary block: Mode 1 reference BG pixels and layer priority, starting
+with 4bpp BG1/BG2 scanline decoding in the shared core and deterministic
+tilemap, palette, flip and transparency fixtures.
 
 ## State and evidence rules
 
@@ -1581,7 +1594,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] CGRAM — 512 caller-owned bytes, CPU read/write ports and Mode 0 color lookup; access windows and video output absent
 - [ ] [IN PROGRESS] OAM — 544 caller-owned bytes, CPU ports, VBlank pointer reload, sprite decode, rotation, scheduled scanline selection and 4bpp OBJ pixel line; final display absent
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and pure 2bpp BG pixel fixtures tested; other PPU formats pending
-- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer, main/sub layer windows, CGRAM lookup and color math tested; color windows and output absent
+- [ ] [IN PROGRESS] BG Mode 0 — four register-driven 2bpp lines, OBJ priority mixer, main/sub layer windows, CGRAM lookup, color math and color windows tested; output and timing validation absent
 - [ ] BG Mode 1
 - [ ] BG Mode 2
 - [ ] BG Mode 3

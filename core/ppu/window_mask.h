@@ -25,5 +25,10 @@ bool mipsnes2_ppu_window_mask_line(const mipsnes2_ppu_window_mask *state,
 /* Same layer rules, independently gated by $212F. */
 bool mipsnes2_ppu_window_mask_sub_line(const mipsnes2_ppu_window_mask *state,
                                       uint8_t hidden[256]);
+/* Color-window predicate from $2125 high nibble and $212B bits 2-3.
+ * Output is 0/1 for each pixel, independent of $2130 region selection.
+ */
+bool mipsnes2_ppu_window_color_line(const mipsnes2_ppu_window_mask *state,
+                                   uint8_t inside[256]);
 
 #endif

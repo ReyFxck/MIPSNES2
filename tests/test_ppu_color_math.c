@@ -14,6 +14,7 @@ static mipsnes2_ppu_mode0_line sub_index;
 static mipsnes2_ppu_mode0_color_line main_raw;
 static mipsnes2_ppu_mode0_color_line sub_raw;
 static mipsnes2_ppu_mode0_color_line output;
+static uint8_t color_window[256];
 
 int main(void)
 {
@@ -97,6 +98,42 @@ int main(void)
         &main_index, &main_raw, &sub_index, &sub_raw,
         UINT16_C(0x0008), 0U, UINT8_C(0x20), 15U, false, &output));
     CHECK(output.pixels[0] == UINT16_C(0x0018));
+
+    main_index.pixels[0].source = 1U;
+    main_index.pixels[1].source = 1U;
+    main_raw.pixels[0] = UINT16_C(0x0010);
+    main_raw.pixels[1] = UINT16_C(0x0010);
+    color_window[0] = 1U;
+    CHECK(mipsnes2_ppu_color_math_line_windowed(
+        &main_index, &main_raw, &sub_index, &sub_raw,
+        UINT16_C(0x0008), UINT8_C(0x80), UINT8_C(0x41), 15U,
+        false, color_window, &output));
+    CHECK(output.pixels[0] == 8U && output.pixels[1] == 12U);
+    CHECK(mipsnes2_ppu_color_math_line_windowed(
+        &main_index, &main_raw, &sub_index, &sub_raw,
+        UINT16_C(0x0008), UINT8_C(0x40), UINT8_C(0x41), 15U,
+        false, color_window, &output));
+    CHECK(output.pixels[0] == 12U && output.pixels[1] == 8U);
+    CHECK(mipsnes2_ppu_color_math_line_windowed(
+        &main_index, &main_raw, &sub_index, &sub_raw,
+        UINT16_C(0x0008), UINT8_C(0x20), UINT8_C(0x41), 15U,
+        false, color_window, &output));
+    CHECK(output.pixels[0] == 16U && output.pixels[1] == 12U);
+    CHECK(mipsnes2_ppu_color_math_line_windowed(
+        &main_index, &main_raw, &sub_index, &sub_raw,
+        UINT16_C(0x0008), UINT8_C(0x30), UINT8_C(0x41), 15U,
+        false, color_window, &output));
+    CHECK(output.pixels[0] == 16U && output.pixels[1] == 16U);
+    CHECK(mipsnes2_ppu_color_math_line_windowed(
+        &main_index, &main_raw, &sub_index, &sub_raw,
+        UINT16_C(0x0008), UINT8_C(0xc0), UINT8_C(0x41), 15U,
+        false, color_window, &output));
+    CHECK(output.pixels[0] == 8U && output.pixels[1] == 8U);
+    CHECK(mipsnes2_ppu_color_math_line_windowed(
+        &main_index, &main_raw, &sub_index, &sub_raw,
+        UINT16_C(0x0008), UINT8_C(0xf0), UINT8_C(0x41), 15U,
+        false, color_window, &output));
+    CHECK(output.pixels[0] == 0U && output.pixels[1] == 0U);
 
     output.pixels[0] = UINT16_C(0x1234);
     CHECK(!mipsnes2_ppu_color_math_line(

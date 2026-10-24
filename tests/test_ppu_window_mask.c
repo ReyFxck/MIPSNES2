@@ -69,10 +69,23 @@ int main(void)
     CHECK(mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x212f), 16U));
     CHECK(mipsnes2_ppu_window_mask_sub_line(&state, hidden));
     CHECK(hidden[0] == 0U && hidden[15] == 16U);
+    CHECK(mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x2126), 10U));
+    CHECK(mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x2127), 20U));
+    CHECK(mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x2125),
+                                          UINT8_C(0xa0))); /* Both color windows. */
+    CHECK(mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x212b),
+                                          UINT8_C(0x08))); /* Color XOR. */
+    CHECK(mipsnes2_ppu_window_color_line(&state, hidden));
+    CHECK(hidden[9] == 0U && hidden[10] == 1U);
+    CHECK(hidden[15] == 0U && hidden[25] == 1U && hidden[26] == 0U);
+    CHECK(mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x2125), 0U));
+    CHECK(mipsnes2_ppu_window_color_line(&state, hidden));
+    CHECK(hidden[10] == 0U && hidden[25] == 0U);
     CHECK(!mipsnes2_ppu_window_mask_write(&state, UINT16_C(0x2130), 31U));
     CHECK(!mipsnes2_ppu_window_mask_line(NULL, hidden));
     CHECK(!mipsnes2_ppu_window_mask_line(&state, NULL));
     CHECK(!mipsnes2_ppu_window_mask_sub_line(NULL, hidden));
+    CHECK(!mipsnes2_ppu_window_color_line(NULL, hidden));
     (void)puts("PPU main-screen windows: OK");
     return 0;
 }

@@ -46,6 +46,8 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
     (void)memset(&machine->sub_line, 0, sizeof(machine->sub_line));
     (void)memset(&machine->sub_color_line, 0,
                  sizeof(machine->sub_color_line));
+    (void)memset(machine->color_window_inside, 0,
+                 sizeof(machine->color_window_inside));
     if (!machine->ppu_forced_blank && machine->vram != NULL &&
         line + 1U < vblank) {
         for (bg = 0U; bg < 4U; ++bg) {
@@ -102,12 +104,15 @@ static void machine_ppu_line(void *context, mipsnes2_master_clock timestamp,
             (void)mipsnes2_ppu_mode0_resolve_sub_color(
                 &machine->sub_line, machine->cgram, machine->cgram_size,
                 machine->fixed_color, &machine->sub_color_line);
-            (void)mipsnes2_ppu_color_math_line(
+            (void)mipsnes2_ppu_window_color_line(
+                &machine->windows, machine->color_window_inside);
+            (void)mipsnes2_ppu_color_math_line_windowed(
                 &machine->mode0_line, &machine->mode0_raw_line,
                 &machine->sub_line, &machine->sub_color_line,
                 machine->fixed_color, machine->color_math_select,
                 machine->color_math_control, machine->ppu_brightness,
-                false, &machine->mode0_color_line);
+                false, machine->color_window_inside,
+                &machine->mode0_color_line);
         }
     }
     delay = line + 2U < vblank
@@ -292,6 +297,8 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     (void)memset(machine->window_hidden, 0, sizeof(machine->window_hidden));
     (void)memset(machine->sub_window_hidden, 0,
                  sizeof(machine->sub_window_hidden));
+    (void)memset(machine->color_window_inside, 0,
+                 sizeof(machine->color_window_inside));
     (void)memset(&machine->bg1_line, 0, sizeof(machine->bg1_line));
     (void)memset(&machine->bg_other_lines, 0,
                  sizeof(machine->bg_other_lines));

@@ -44,8 +44,9 @@ static bool window_inside(const mipsnes2_ppu_window_mask *state,
 static bool layer_hidden(const mipsnes2_ppu_window_mask *state,
                          unsigned layer, unsigned x)
 {
-    unsigned shift = layer == 4U ? 0U : (layer & 1U) * 4U;
-    uint8_t select = state->select[layer == 4U ? 2U : layer / 2U];
+    unsigned shift = layer >= 4U ? (layer - 4U) * 4U :
+                     (layer & 1U) * 4U;
+    uint8_t select = state->select[layer >= 4U ? 2U : layer / 2U];
     uint8_t nibble = (uint8_t)((select >> shift) & 15U);
     bool first_enabled = (nibble & 2U) != 0U;
     bool second_enabled = (nibble & 8U) != 0U;
@@ -64,7 +65,8 @@ static bool layer_hidden(const mipsnes2_ppu_window_mask *state,
     if (!second_enabled) {
         return first;
     }
-    logic = layer == 4U ? state->logic[1] & 3U :
+    logic = layer >= 4U ?
+        (state->logic[1] >> ((layer - 4U) * 2U)) & 3U :
         (state->logic[0] >> (layer * 2U)) & 3U;
     switch (logic) {
     case 0U: return first || second;
@@ -109,4 +111,18 @@ bool mipsnes2_ppu_window_mask_sub_line(const mipsnes2_ppu_window_mask *state,
 {
     return state != NULL &&
         window_mask_line(state, state->sub_mask, hidden);
+}
+
+bool mipsnes2_ppu_window_color_line(const mipsnes2_ppu_window_mask *state,
+                                   uint8_t inside[256])
+{
+    unsigned x;
+
+    if (state == NULL || inside == NULL) {
+        return false;
+    }
+    for (x = 0U; x < 256U; ++x) {
+        inside[x] = layer_hidden(state, 5U, x) ? 1U : 0U;
+    }
+    return true;
 }

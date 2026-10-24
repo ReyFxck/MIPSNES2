@@ -18,4 +18,15 @@ bool mipsnes2_ppu_color_math_line(
     uint8_t brightness, bool forced_blank,
     mipsnes2_ppu_mode0_color_line *output);
 
+/* Optional color-window predicate enables $2130 region bits 4-7. */
+bool mipsnes2_ppu_color_math_line_windowed(
+    const mipsnes2_ppu_mode0_line *main_indices,
+    const mipsnes2_ppu_mode0_color_line *main_raw,
+    const mipsnes2_ppu_mode0_line *sub_indices,
+    const mipsnes2_ppu_mode0_color_line *sub_raw,
+    uint16_t fixed_color, uint8_t select, uint8_t control,
+    uint8_t brightness, bool forced_blank,
+    const uint8_t color_window_inside[256],
+    mipsnes2_ppu_mode0_color_line *output);
+
 #endif

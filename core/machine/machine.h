@@ -74,6 +74,7 @@ typedef struct {
     mipsnes2_ppu_window_mask windows;
     uint8_t window_hidden[256];
     uint8_t sub_window_hidden[256];
+    uint8_t color_window_inside[256];
     mipsnes2_cpu_timing_state cursor;
     mipsnes2_bus_interface ppu;
     mipsnes2_bus_interface apu;
