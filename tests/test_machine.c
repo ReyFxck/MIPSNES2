@@ -248,6 +248,33 @@ int main(void)
     CHECK(machine.hv.v_counter == 240U && machine.hv.h_master_clock == 40U);
     CHECK(mipsnes2_scheduler_next_event_time(&machine.scheduler, &oam_event));
     CHECK(oam_event == (mipsnes2_master_clock)(240U + 312U) * 1364U + 40U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002102), UINT8_C(0x0f));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002103), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002104), UINT8_C(0x11));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002104), UINT8_C(0x22));
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x20));
+    /* Forced blank release on the first VBlank line reloads immediately. */
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x802100), UINT8_C(0x0f));
+    CHECK(!machine.ppu_forced_blank);
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x1e));
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x002138)) ==
+          UINT8_C(0x11));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), UINT8_C(0x0f));
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x1f));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), UINT8_C(0x8f));
+    CHECK(machine.ppu_forced_blank &&
+          machine.oam_ports.byte_address == UINT16_C(0x1f));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              machine.scheduler.now + 1324U, 1U, &master_report) ==
+          MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.hv.v_counter == 241U && machine.hv.h_master_clock == 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), UINT8_C(0x0f));
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x1f));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              oam_event, 1U, &master_report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x1e));
     (void)puts("machine integration: OK");
     return 0;
 }

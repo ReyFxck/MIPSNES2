@@ -47,8 +47,23 @@ passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224129),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224195) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224329).
 
-The forced-blank 1-to-0 transition, active-display address invalidation and
-access restrictions are not implemented. Sprite decoding, priority rotation
+The machine now additionally reloads on a `$2100` bit-7 1-to-0 transition
+during the first VBlank scanline. `$2100` writes still reach any external PPU
+callback, which may later own brightness. [Fullsnes's independent hardware
+description](https://problemkaputt.de/fullsnes.htm#snesmemoryoamaccessspriteattributes)
+describes this first-line condition. [Anomie's timing notes](https://github.com/gilligan/snesdev/blob/master/docs/timing.txt)
+relay a broader report of any 1-to-0 transition. The documentation does not
+resolve that difference. The implementation chooses the narrower behavior;
+outside-first-line behavior needs a targeted hardware fixture. The exact
+effect of writes around horizontal dot 10 also needs verification.
+
+`tests/test_machine.c` exercises release on the first VBlank line through a
+mirrored bus bank, repeated enabled-display writes, the reverse transition,
+release on the next line and the next scheduled VBlank reload. A clean
+`make test` run passes on host C99 `cc` (2026-10-24); PS2/PSP CI is pending.
+
+Active-display address invalidation and access restrictions are not
+implemented. Sprite decoding, priority rotation
 effects, DMA/HDMA,
 rendering and real-console behavior are also unverified. The OAM and PPU
 parent tasks remain incomplete.

@@ -75,9 +75,10 @@ rotation is retained as a register bit, without sprite evaluation. A machine
 scheduler event reloads the internal address at horizontal dot 10 of the
 VBlank start line while forced blank is off; `$2100` bit 7 supplies the gate.
 This timing choice follows independent hardware notes and still needs a real
-hardware check. Power-on begins in deterministic forced-blank state. The
-forced-blank release transition, active-display access and rendering remain
-open. See the
+hardware check. Power-on begins in deterministic forced-blank state. A
+`$2100` bit-7 falling edge also reloads OAM during the first VBlank scanline.
+Independent sources disagree about transitions on other scanlines; that case,
+active-display access and rendering remain open. See the
 [OAM port audit](ppu-oam-port-audit.md).
 
 ## Design direction

@@ -63,7 +63,15 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
     mipsnes2_machine *machine = context;
 
     if ((uint16_t)address == UINT16_C(0x2100)) {
-        machine->ppu_forced_blank = (value & UINT8_C(0x80)) != 0U;
+        bool next_forced_blank = (value & UINT8_C(0x80)) != 0U;
+
+        if (machine->ppu_forced_blank && !next_forced_blank &&
+            machine->hv.v_counter ==
+                mipsnes2_hv_vblank_start_line(&machine->hv)) {
+            (void)mipsnes2_ppu_oam_ports_vblank_reload(&machine->oam_ports,
+                                                       false);
+        }
+        machine->ppu_forced_blank = next_forced_blank;
         /* Other display-control behavior remains with the PPU callback. */
     }
     if (mipsnes2_ppu_oam_ports_write(&machine->oam_ports,

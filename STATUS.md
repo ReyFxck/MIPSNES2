@@ -143,6 +143,13 @@ sprite rotation effects remain unverified; see the OAM audit. Revision
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224195) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40080224329).
 
+The OAM address now also reloads when `$2100` bit 7 falls from 1 to 0 on
+the first VBlank scanline. A clean host `make test` passes with mirrored-bank
+write, repeated-write and next-line controls (2026-10-24, C99 `cc`).
+Independent research differs on whether this transition can reload outside
+the first VBlank line; the narrower behavior is implemented and the broader
+claim remains unverified. Cross-build CI for this revision is pending.
+
 ## State and evidence rules
 
 - [ ] Not implemented or not verified

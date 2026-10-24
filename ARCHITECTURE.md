@@ -124,7 +124,8 @@ Machine-owned VRAM, CGRAM and OAM ports run before the optional external PPU cal
 unhandled PPU addresses use that callback. CGRAM high reads share the PPU2
 open-bus state held by the counter registers. The machine schedules an OAM
 VBlank pointer reload in the shared clock domain and tracks `$2100` forced
-blank for that gate. There is no pixel renderer.
+blank for that gate and its first-VBlank-line release transition. There is no
+pixel renderer.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending

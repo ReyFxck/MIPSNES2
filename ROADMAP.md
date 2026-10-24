@@ -178,7 +178,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Register reads/writes
 - [ ] [IN PROGRESS] VRAM ports — read/write buffering and remap exist; access gates/mixed-port behavior pending
 - [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
-- [ ] [IN PROGRESS] OAM ports — CPU read/write and scheduled VBlank reload; forced-blank release and access windows pending
+- [ ] [IN PROGRESS] OAM ports — CPU read/write, scheduled VBlank reload and first-line forced-blank release; display access windows pending
 - [ ] Tile decode fixtures
 - [ ] Reference scanline buffers
 - [ ] Basic Mode 0/1 output
