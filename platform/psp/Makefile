@@ -1,6 +1,6 @@
 # SDK conventions verified against pspdev/pspsdk; see docs/psp.md.
 TARGET = mipsnes2-psp
-OBJS = main.o log.o bus.o cpu_io.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg4_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_mode1_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
+OBJS = main.o log.o bus.o cpu_io.o dma_registers.o dma_transfer.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg4_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_mode1_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
 	cartridge_prepare.o machine.o
@@ -26,6 +26,12 @@ bus.o: ../../core/bus/bus.c ../../core/bus/bus.h ../../core/bus/interface.h ../.
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 cpu_io.o: ../../core/bus/cpu_io.c ../../core/bus/cpu_io.h
+	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
+
+dma_registers.o: ../../core/dma/registers.c ../../core/dma/registers.h
+	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
+
+dma_transfer.o: ../../core/dma/transfer.c ../../core/dma/transfer.h
 	$(CC) $(CFLAGS) $(addprefix -I,$(INCDIR)) -I$(PSPSDK)/include -c $< -o $@
 
 ppu_counters.o: ../../core/ppu/counters.c ../../core/ppu/counters.h ../../core/scheduler/hv_timing.h

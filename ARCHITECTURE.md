@@ -18,7 +18,8 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cpu/65c816 | Registers, interpreter, logical bus accesses, interrupts | Caller-owned state, 256-opcode dispatch, reset/vector and IRQ/NMI/ABORT boundary |
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
-| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; no screen output |
+| core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; no core screen output |
+| core/dma | Channel state and transfer planning | Eight register banks plus pure mode/address helpers; no byte transfer or HDMA engine |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/dma | SNES DMA/HDMA, bus ownership and timing | Directory only |
@@ -142,7 +143,7 @@ caller-owned CGRAM, with `$2132` fixed color as the sub backdrop. A bounded
 color-window predicate feeds `$2130` main clipping and math suppression.
 Forced blank leaves the scheduled lines black. Scroll-write latches use a
 published but hardware-unverified formula. Exact mid-line behavior and
-display output are absent. An optional synchronous callback hands the
+core display output are absent. An optional synchronous callback hands the
 completed 256-pixel BGR555 line to caller-owned presentation code; the
 buffer stays machine-owned and can be reused after the callback returns.
 The PS2 ROM adapter copies that callback into a PS2-only RGBA32 frame;

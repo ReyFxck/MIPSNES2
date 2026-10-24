@@ -82,6 +82,7 @@ typedef struct {
     mipsnes2_ppu_mode0_line sub_line;
     mipsnes2_ppu_mode0_color_line sub_color_line;
     mipsnes2_ppu_window_mask windows;
+    mipsnes2_dma_registers dma_registers;
     uint8_t window_hidden[256];
     uint8_t sub_window_hidden[256];
     uint8_t color_window_inside[256];

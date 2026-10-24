@@ -168,6 +168,10 @@ static uint8_t read_system_area(mipsnes2_snes_bus *bus,
         return routed_read(bus->cpu_io, address, bus->open_value);
     }
     if (offset >= UINT16_C(0x4300) && offset <= UINT16_C(0x437f)) {
+        if (bus->dma_registers != NULL &&
+            mipsnes2_dma_registers_read(bus->dma_registers, offset, &value)) {
+            return value;
+        }
         return routed_read(bus->dma, address, bus->open_value);
     }
     if ((offset >= UINT16_C(0x2100) && offset <= UINT16_C(0x21ff)) ||
@@ -212,6 +216,10 @@ static void write_system_area(mipsnes2_snes_bus *bus,
         return;
     }
     if (offset >= UINT16_C(0x4300) && offset <= UINT16_C(0x437f)) {
+        if (bus->dma_registers != NULL &&
+            mipsnes2_dma_registers_write(bus->dma_registers, offset, value)) {
+            return;
+        }
         routed_write(bus->dma, address, value);
         return;
     }
@@ -246,6 +254,7 @@ mipsnes2_snes_bus_result mipsnes2_snes_bus_init(
     bus->ppu_counters = config->ppu_counters;
     bus->hv_timing = config->hv_timing;
     bus->dma = config->dma;
+    bus->dma_registers = config->dma_registers;
     bus->cartridge = config->cartridge;
     bus->open_value = config->initial_open_value;
     return MIPSNES2_SNES_BUS_OK;

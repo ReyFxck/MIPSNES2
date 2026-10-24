@@ -391,15 +391,28 @@ At that revision no GS upload or screen presentation was implemented. See the
 
 The PS2 `--rom` path now submits a captured 256×256 RGBA32 image directly
 to a GS framebuffer when at least one reference line exists. The host
-conversion and machine-handoff tests pass; PS2 cross-build and target
-runtime evidence for this revision are pending. This is a static, single
+conversion and machine-handoff tests pass. Revision `4ff9020` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898305)
+and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898337);
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898350)
+also passed. Target runtime evidence is absent. This is a static, single
 buffer without scaling or a continuous frame loop. No visual result in
 ARMSX2/NetherSX2 or physical PS2 is claimed. See the
 [GS audit](docs/ps2-gs-audit.md).
 
-Next primary block: verify the GS submission in a PS2 emulator with a
-redistributable synthetic ROM and then build a continuous, frame-boundary
-presentation loop. Keep emulator and physical-PS2 evidence distinct.
+The shared DMA foundation now holds the eight `$43x0-$43xB` channel banks,
+including the `$43xB/$43xF` alias, and routes them through the machine bus.
+Pure helpers plan all eight B-bus port sequences, A-address increment/fix/
+decrement and zero-size length. Synthetic fixtures cover boundaries,
+mirroring, isolation and power-on; serial `make clean && make test` passes
+(2026-10-24). PS2/PSP/host CI for this revision is pending. `$420B` still
+does not start a transfer, and HDMA remains unimplemented. See the
+[DMA foundation audit](docs/dma-register-foundation-audit.md).
+
+Next primary block: implement bounded general-purpose DMA byte transfers
+through the existing A/B bus contracts, beginning with modes 0-4 and CPU
+stall/timing accounting. Keep PS2 GS emulator and physical-console checks
+as separate pending validation.
 
 ## State and evidence rules
 
@@ -1620,8 +1633,8 @@ platform persistence remains incomplete.
 
 ## DMA / HDMA
 
-- [ ] DMA registers
-- [ ] DMA transfer modes
+- [ ] [IN PROGRESS] DMA registers — eight `$43x0-$43xB` banks and alias routed; `$420B/$420C` effects absent
+- [ ] [IN PROGRESS] DMA transfer modes — pure B-bus sequence plan for all eight; byte transfers absent
 - [ ] DMA timing
 - [ ] DMA source/destination wrapping
 - [ ] HDMA initialization

@@ -41,7 +41,9 @@ TEST_PS2_DIAGNOSTIC = $(BUILD_DIR)/test-ps2-diagnostic
 TEST_MACHINE = $(BUILD_DIR)/test-machine
 TEST_PS2_ROM_FILE = $(BUILD_DIR)/test-ps2-rom-file
 TEST_PS2_VIDEO_FRAME = $(BUILD_DIR)/test-ps2-video-frame
-CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o $(BUILD_DIR)/ppu_counters.o $(BUILD_DIR)/ppu_vram.o $(BUILD_DIR)/ppu_cgram.o $(BUILD_DIR)/ppu_oam.o $(BUILD_DIR)/ppu_tile4.o $(BUILD_DIR)/ppu_sprite_scanline.o $(BUILD_DIR)/ppu_bg2_scanline.o $(BUILD_DIR)/ppu_bg4_scanline.o $(BUILD_DIR)/ppu_bg_registers.o $(BUILD_DIR)/ppu_mode0_mix.o $(BUILD_DIR)/ppu_mode1_mix.o $(BUILD_DIR)/ppu_window_mask.o $(BUILD_DIR)/ppu_color_math.o \
+TEST_DMA_REGISTERS = $(BUILD_DIR)/test-dma-registers
+TEST_DMA_TRANSFER = $(BUILD_DIR)/test-dma-transfer
+CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o $(BUILD_DIR)/dma_registers.o $(BUILD_DIR)/dma_transfer.o $(BUILD_DIR)/ppu_counters.o $(BUILD_DIR)/ppu_vram.o $(BUILD_DIR)/ppu_cgram.o $(BUILD_DIR)/ppu_oam.o $(BUILD_DIR)/ppu_tile4.o $(BUILD_DIR)/ppu_sprite_scanline.o $(BUILD_DIR)/ppu_bg2_scanline.o $(BUILD_DIR)/ppu_bg4_scanline.o $(BUILD_DIR)/ppu_bg_registers.o $(BUILD_DIR)/ppu_mode0_mix.o $(BUILD_DIR)/ppu_mode1_mix.o $(BUILD_DIR)/ppu_window_mask.o $(BUILD_DIR)/ppu_color_math.o \
 	$(BUILD_DIR)/cpu.o \
 	$(BUILD_DIR)/snes_bus.o $(BUILD_DIR)/scheduler.o \
 	$(BUILD_DIR)/5a22_timing.o $(BUILD_DIR)/hv_timing.o \
@@ -64,6 +66,12 @@ $(BUILD_DIR)/bus.o: core/bus/bus.c core/bus/bus.h core/bus/interface.h core/comm
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/cpu_io.o: core/bus/cpu_io.c core/bus/cpu_io.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/dma_registers.o: core/dma/registers.c core/dma/registers.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/dma_transfer.o: core/dma/transfer.c core/dma/transfer.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/ppu_counters.o: core/ppu/counters.c core/ppu/counters.h core/scheduler/hv_timing.h | $(BUILD_DIR)
@@ -237,15 +245,23 @@ $(TEST_PS2_ROM_FILE): tests/test_ps2_rom_file.c platform/ps2/rom_file.c platform
 $(TEST_PS2_VIDEO_FRAME): tests/test_ps2_video_frame.c platform/ps2/video_frame.c platform/ps2/video_frame.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) tests/test_ps2_video_frame.c platform/ps2/video_frame.c $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_DMA_REGISTERS): tests/test_dma_registers.c core/dma/registers.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
+$(TEST_DMA_TRANSFER): tests/test_dma_transfer.c core/dma/transfer.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG4_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_MODE1_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) $(TEST_PS2_VIDEO_FRAME) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO) $(TEST_DMA_REGISTERS) $(TEST_DMA_TRANSFER) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG4_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_MODE1_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) $(TEST_PS2_VIDEO_FRAME) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
 	$(TEST_CPU_CYCLES)
 	$(TEST_CPU_IO)
+	$(TEST_DMA_REGISTERS)
+	$(TEST_DMA_TRANSFER)
 	$(TEST_PPU_COUNTERS)
 	$(TEST_PPU_VRAM)
 	$(TEST_PPU_CGRAM)
@@ -276,7 +292,7 @@ test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_IO
 clean:
 	$(RM) -r $(BUILD_DIR)
 
--include $(BUILD_DIR)/log.d $(BUILD_DIR)/bus.d $(BUILD_DIR)/cpu_io.d \
+-include $(BUILD_DIR)/log.d $(BUILD_DIR)/bus.d $(BUILD_DIR)/cpu_io.d $(BUILD_DIR)/dma_registers.d $(BUILD_DIR)/dma_transfer.d \
 	$(BUILD_DIR)/ppu_counters.d $(BUILD_DIR)/ppu_vram.d $(BUILD_DIR)/ppu_cgram.d $(BUILD_DIR)/ppu_oam.d $(BUILD_DIR)/ppu_tile4.d $(BUILD_DIR)/ppu_sprite_scanline.d $(BUILD_DIR)/ppu_bg2_scanline.d $(BUILD_DIR)/ppu_bg4_scanline.d $(BUILD_DIR)/ppu_bg_registers.d $(BUILD_DIR)/ppu_mode0_mix.d $(BUILD_DIR)/ppu_mode1_mix.d $(BUILD_DIR)/ppu_window_mask.d $(BUILD_DIR)/ppu_color_math.d \
 	$(BUILD_DIR)/snes_bus.d \
 	$(BUILD_DIR)/cpu.d $(BUILD_DIR)/scheduler.d \

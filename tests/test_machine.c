@@ -620,6 +620,19 @@ int main(void)
     CHECK(captured_count == 2U && captured_y[1] == 1U &&
           captured_color[1] == 0U &&
           captured_color[0] == UINT16_C(0x001f));
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x004300)) ==
+          UINT8_C(0xff));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x804373),
+                            UINT8_C(0x9a));
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x004373)) ==
+          UINT8_C(0x9a));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00430b),
+                            UINT8_C(0x47));
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x80430f)) ==
+          UINT8_C(0x47));
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x004373)) ==
+          UINT8_C(0xff));
     (void)puts("machine integration: OK");
     return 0;
 }

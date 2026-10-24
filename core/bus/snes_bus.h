@@ -9,6 +9,7 @@
 #include "core/bus/cpu_io.h"
 #include "core/bus/interface.h"
 #include "core/cartridge/interface.h"
+#include "core/dma/registers.h"
 #include "core/ppu/counters.h"
 
 enum {
@@ -32,6 +33,7 @@ typedef struct {
     mipsnes2_ppu_counters *ppu_counters;
     const mipsnes2_hv_timing *hv_timing;
     mipsnes2_bus_interface dma;
+    mipsnes2_dma_registers *dma_registers;
     mipsnes2_cartridge_interface cartridge;
 } mipsnes2_snes_bus_config;
 
@@ -44,6 +46,7 @@ typedef struct {
     mipsnes2_ppu_counters *ppu_counters;
     const mipsnes2_hv_timing *hv_timing;
     mipsnes2_bus_interface dma;
+    mipsnes2_dma_registers *dma_registers;
     mipsnes2_cartridge_interface cartridge;
     uint32_t wram_port_address;
     uint64_t access_count;
