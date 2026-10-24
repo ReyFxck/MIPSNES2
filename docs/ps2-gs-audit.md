@@ -20,6 +20,10 @@ code from another emulator.
 
 The host tests validate the BGR555-to-RGBA32 input buffer and the machine
 handoff, not the GS. The PS2 cross-build tests API/link compatibility only.
+Revision `4ff9020` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898305),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898337)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898350).
 No emulator or physical-console execution of this GS path is claimed. Its
 256×256 single buffer has no scaling, double buffering or continuous frame
 loop. It replaces the debug text only after at least one line has been

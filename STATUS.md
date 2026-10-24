@@ -86,9 +86,9 @@ Its timed RESET and resumable instruction path executes a synthetic LoROM
 program that writes WRAM, including a paused write and a power cycle retaining
 WRAM/SRAM. `make test` passes on the host (2026-10-24); see
 [machine integration audit](docs/machine-integration-audit.md). Pinned PS2 and PSP
-cross-builds and host CI pass at `2d2a836`; target runtime behavior of this
-revision remains unverified. There is still no PPU
-renderer, APU, DMA or game runtime.
+cross-builds and host CI pass at `2d2a836`; target runtime behavior of that
+revision remains unverified. At that revision there was no PPU
+reference renderer, APU, DMA or game runtime.
 
 The PS2 backend now accepts `--rom PATH` as an explicit file path on an already
 available target filesystem, reads at most 8 MiB plus an optional copier prefix,
@@ -405,7 +405,11 @@ including the `$43xB/$43xF` alias, and routes them through the machine bus.
 Pure helpers plan all eight B-bus port sequences, A-address increment/fix/
 decrement and zero-size length. Synthetic fixtures cover boundaries,
 mirroring, isolation and power-on; serial `make clean && make test` passes
-(2026-10-24). PS2/PSP/host CI for this revision is pending. `$420B` still
+(2026-10-24). Revision `795f103` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40130384836),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40130385004)
+and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40130384830).
+`$420B` still
 does not start a transfer, and HDMA remains unimplemented. See the
 [DMA foundation audit](docs/dma-register-foundation-audit.md).
 
