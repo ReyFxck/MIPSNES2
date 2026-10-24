@@ -409,14 +409,22 @@ mirroring, isolation and power-on; serial `make clean && make test` passes
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40130384836),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40130385004)
 and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40130384830).
-`$420B` still
-does not start a transfer, and HDMA remains unimplemented. See the
-[DMA foundation audit](docs/dma-register-foundation-audit.md).
+The shared DMA core now also has a bounded, resumable byte cursor. It visits
+enabled channels in priority order, derives one A/B-bus data phase per byte,
+and updates A1T/DAS after each callback. Deterministic synthetic tests cover
+all eight modes, both directions, channel order, fixed/decrement/increment,
+bank and B-port wrapping, pause/resume, zero count and register completion.
+Serial `make clean && make test` passes on host C99 (2026-10-24);
+PS2/PSP cross-build CI for this cursor revision is pending.
+The cursor itself is untimed: `$420B` does not start a transfer, the CPU is
+not stalled, and machine bus restrictions and HDMA remain unimplemented. See
+the [DMA foundation audit](docs/dma-register-foundation-audit.md) and
+[bounded transfer audit](docs/dma-bounded-transfer-audit.md).
 
-Next primary block: implement bounded general-purpose DMA byte transfers
-through the existing A/B bus contracts, beginning with modes 0-4 and CPU
-stall/timing accounting. Keep PS2 GS emulator and physical-console checks
-as separate pending validation.
+Next primary block: integrate `$420B` with the machine's A/B bus policy and
+resumable CPU stall/timing accounting, starting with general-purpose DMA
+and retaining the cursor's bounded byte progress. Keep PS2 GS emulator
+and physical-console checks as separate pending validation.
 
 ## State and evidence rules
 
@@ -1638,7 +1646,7 @@ platform persistence remains incomplete.
 ## DMA / HDMA
 
 - [ ] [IN PROGRESS] DMA registers — eight `$43x0-$43xB` banks and alias routed; `$420B/$420C` effects absent
-- [ ] [IN PROGRESS] DMA transfer modes — pure B-bus sequence plan for all eight; byte transfers absent
+- [ ] [IN PROGRESS] DMA transfer modes — bounded untimed A/B-byte cursor for all eight; machine/timing integration absent
 - [ ] DMA timing
 - [ ] DMA source/destination wrapping
 - [ ] HDMA initialization

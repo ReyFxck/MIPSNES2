@@ -158,7 +158,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Non-interlaced NTSC/PAL H/V timing foundation
 - [x] Stable-register non-interlaced H/V timer-IRQ foundation
 - [ ] [IN PROGRESS] DMA registers — eight channel banks routed; enable/start behavior absent
-- [ ] [IN PROGRESS] DMA transfer modes — pure mode/address plan; bus transfers absent
+- [ ] [IN PROGRESS] DMA transfer modes — bounded untimed A/B-byte cursor; timed machine integration absent
 - [ ] DMA timing
 - [ ] DMA source/destination wrapping
 - [ ] HDMA initialization

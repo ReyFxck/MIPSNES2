@@ -2,7 +2,7 @@
 
 ## Scope and current state
 
-SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. The shared core currently models the eight channel register banks and pure general-purpose mode/address sequences; it does not move bytes or start DMA from `$420B`.
+SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. The shared core models eight channel register banks and all general-purpose mode/address sequences. A bounded untimed cursor issues byte effects through a caller-supplied A/B-bus callback; `$420B` does not start DMA yet.
 
 ## Design direction
 
@@ -19,7 +19,7 @@ transfer-mode foundations are partial; document implementation evidence before
 promotion.
 
 - [ ] [IN PROGRESS] DMA registers — channel bytes routed; start/enable effects absent
-- [ ] [IN PROGRESS] DMA transfer modes — address plan; byte transfers absent
+- [ ] [IN PROGRESS] DMA transfer modes — bounded byte cursor; machine bus and timing integration absent
 - [ ] DMA timing
 - [ ] DMA source/destination wrapping
 - [ ] HDMA initialization
@@ -34,7 +34,8 @@ promotion.
 ## Research and decisions
 
 The register/address-plan evidence and hardware references are recorded in the
-[DMA foundation audit](dma-register-foundation-audit.md). Before extending
+[DMA foundation audit](dma-register-foundation-audit.md) and
+[bounded transfer audit](dma-bounded-transfer-audit.md). Before extending
 transfer behavior, record the exact hardware reference and independently
 authored regression evidence. SDK documentation is not a source for SNES
 behavior. Intentional timing approximations: none implemented yet.
