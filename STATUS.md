@@ -478,6 +478,16 @@ Revision `dc56eb9` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151827359) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151827425).
 
+The shared HDMA engine now has a resumable operation cursor yielding global and
+per-channel overhead, table reads and A/B data slots. Its old atomic entry
+points use the same implementation. Deterministic host tests cover operation
+order/cost, stable peeks, stale-state rejection and pointer commit boundaries;
+the full C99 `cc` host suite and repository checker pass (2026-10-25). The
+cursor itself remains untimed: scheduler requests, refresh, CPU/DMA arbitration
+and horizon retries are the next block. See the
+[HDMA cursor audit](docs/hdma-cursor-audit.md). PS2/PSP CI and target runtime
+checks are pending for this revision.
+
 Next primary block: integrate HDMA frame/visible-line requests into the resumable
 scheduler, including priority over general DMA, shared refresh stalls and exact-once
 horizon retries. PS2 GS emulator and physical-console checks remain separate.

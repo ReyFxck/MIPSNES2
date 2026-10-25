@@ -2,7 +2,7 @@
 
 ## Scope and current state
 
-SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. The shared core models eight channel register banks, all general-purpose mode/address sequences and an untimed HDMA table/scanline engine. The resumable CPU bridge services `$420B`, pauses the CPU, advances scheduler/H/V time and shares WRAM refresh stalls with CPU operations. `$420C` is routed, but timed HDMA arbitration remains pending.
+SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. The shared core models eight channel register banks, all general-purpose mode/address sequences and an operation-granular but untimed HDMA table/scanline engine. The resumable CPU bridge services `$420B`, pauses the CPU, advances scheduler/H/V time and shares WRAM refresh stalls with CPU operations. `$420C` is routed, but timed HDMA arbitration remains pending.
 
 ## Design direction
 
@@ -43,4 +43,5 @@ behavior. Intentional timing approximations: none implemented yet.
 The current machine integration and explicit timing approximations are detailed
 in the [machine DMA audit](dma-machine-audit.md), with refresh follow-up in the
 [WRAM refresh audit](wram-refresh-audit.md) and logical HDMA state in the
-[HDMA table audit](hdma-table-audit.md).
+[HDMA table audit](hdma-table-audit.md). The resumable operation contract and
+approximate per-slot costs are in the [HDMA cursor audit](hdma-cursor-audit.md).

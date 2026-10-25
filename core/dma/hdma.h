@@ -27,7 +27,67 @@ typedef struct {
     uint8_t active_mask;
 } mipsnes2_hdma_report;
 
+typedef enum {
+    MIPSNES2_HDMA_OPERATION_OVERHEAD = 0,
+    MIPSNES2_HDMA_OPERATION_TABLE_READ,
+    MIPSNES2_HDMA_OPERATION_TRANSFER
+} mipsnes2_hdma_operation_kind;
+
+typedef struct {
+    mipsnes2_hdma_operation_kind kind;
+    mipsnes2_address a_address;
+    mipsnes2_address b_address;
+    uint8_t master_clocks;
+    uint8_t channel;
+    bool b_to_a;
+} mipsnes2_hdma_operation;
+
+typedef enum {
+    MIPSNES2_HDMA_CURSOR_INVALID_ARGUMENT = 0,
+    MIPSNES2_HDMA_CURSOR_READY,
+    MIPSNES2_HDMA_CURSOR_COMPLETE,
+    MIPSNES2_HDMA_CURSOR_STALE_OPERATION
+} mipsnes2_hdma_cursor_result;
+
+/* Caller-owned operation cursor. Fields are private to hdma.c. */
+typedef struct {
+    mipsnes2_hdma_state *state;
+    mipsnes2_dma_registers *registers;
+    mipsnes2_dma_registers register_snapshot;
+    mipsnes2_hdma_state state_snapshot;
+    mipsnes2_hdma_operation pending_operation;
+    mipsnes2_hdma_report report;
+    uint8_t selected_mask;
+    uint8_t channel;
+    uint8_t phase;
+    uint8_t byte_index;
+    uint8_t byte_count;
+    uint8_t descriptor;
+    bool frame_begin;
+    bool active;
+    bool operation_pending;
+} mipsnes2_hdma_cursor;
+
 void mipsnes2_hdma_state_init(mipsnes2_hdma_state *state);
+void mipsnes2_hdma_cursor_init(mipsnes2_hdma_cursor *cursor);
+
+/* Operation-granular form used by the scheduler. OVERHEAD operations have no
+ * bus effect. TABLE_READ commits the supplied read_value. TRANSFER describes
+ * one A/B byte effect that the caller must perform exactly once before commit.
+ */
+mipsnes2_hdma_cursor_result mipsnes2_hdma_cursor_begin_frame(
+    mipsnes2_hdma_cursor *cursor, mipsnes2_hdma_state *state,
+    mipsnes2_dma_registers *registers, uint8_t enable_mask);
+mipsnes2_hdma_cursor_result mipsnes2_hdma_cursor_begin_scanline(
+    mipsnes2_hdma_cursor *cursor, mipsnes2_hdma_state *state,
+    uint8_t enable_mask);
+mipsnes2_hdma_cursor_result mipsnes2_hdma_cursor_peek(
+    mipsnes2_hdma_cursor *cursor, mipsnes2_hdma_operation *operation);
+mipsnes2_hdma_cursor_result mipsnes2_hdma_cursor_commit(
+    mipsnes2_hdma_cursor *cursor,
+    const mipsnes2_hdma_operation *operation, uint8_t read_value);
+bool mipsnes2_hdma_cursor_report(
+    const mipsnes2_hdma_cursor *cursor, mipsnes2_hdma_report *report);
 
 /* Start-of-frame initialization for the channels selected by $420C. A1T is
  * copied to A2A, then the first line descriptor and any indirect pointer are

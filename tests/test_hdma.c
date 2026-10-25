@@ -250,12 +250,113 @@ static int test_invalid_arguments(void)
     return 0;
 }
 
+static int test_resumable_cursor_operations(void)
+{
+    mipsnes2_dma_registers registers = {0};
+    mipsnes2_hdma_state state;
+    mipsnes2_hdma_cursor cursor;
+    mipsnes2_hdma_operation operation;
+    mipsnes2_hdma_operation repeat;
+    mipsnes2_hdma_report report;
+    fixture f;
+    static const uint8_t frame_costs[] = {18U, 8U, 8U, 8U,
+                                          8U, 8U, 8U};
+    static const mipsnes2_hdma_operation_kind frame_kinds[] = {
+        MIPSNES2_HDMA_OPERATION_OVERHEAD,
+        MIPSNES2_HDMA_OPERATION_OVERHEAD,
+        MIPSNES2_HDMA_OPERATION_TABLE_READ,
+        MIPSNES2_HDMA_OPERATION_OVERHEAD,
+        MIPSNES2_HDMA_OPERATION_TABLE_READ,
+        MIPSNES2_HDMA_OPERATION_TABLE_READ,
+        MIPSNES2_HDMA_OPERATION_TABLE_READ
+    };
+    unsigned index;
+
+    (void)memset(&f, 0, sizeof(f));
+    mipsnes2_dma_registers_init(&registers);
+    mipsnes2_hdma_state_init(&state);
+    mipsnes2_hdma_cursor_init(&cursor);
+    configure(registers.channel[0], 1U, UINT8_C(0x18),
+              UINT16_C(0x1000), UINT8_C(0x7e));
+    configure(registers.channel[1], UINT8_C(0x40), UINT8_C(0x21),
+              UINT16_C(0x2000), UINT8_C(0x80));
+    registers.channel[1][7] = UINT8_C(0x7e);
+    f.bank_7e[0x1000] = 1U;
+    f.bank_80[0x2000] = 1U;
+    f.bank_80[0x2001] = UINT8_C(0x34);
+    f.bank_80[0x2002] = UINT8_C(0x12);
+    CHECK(mipsnes2_hdma_cursor_begin_frame(&cursor, &state, &registers, 3U) ==
+          MIPSNES2_HDMA_CURSOR_READY);
+    CHECK(mipsnes2_hdma_cursor_begin_scanline(&cursor, &state, 3U) ==
+          MIPSNES2_HDMA_CURSOR_INVALID_ARGUMENT);
+    for (index = 0U; index < 7U; ++index) {
+        uint8_t value = 0U;
+
+        CHECK(mipsnes2_hdma_cursor_peek(&cursor, &operation) ==
+              MIPSNES2_HDMA_CURSOR_READY);
+        CHECK(operation.kind == frame_kinds[index] &&
+              operation.master_clocks == frame_costs[index]);
+        CHECK(mipsnes2_hdma_cursor_peek(&cursor, &repeat) ==
+              MIPSNES2_HDMA_CURSOR_READY);
+        CHECK(memcmp(&operation, &repeat, sizeof(operation)) == 0);
+        if (index == 0U) {
+            ++registers.channel[0][1];
+            CHECK(mipsnes2_hdma_cursor_commit(&cursor, &operation, 0U) ==
+                  MIPSNES2_HDMA_CURSOR_STALE_OPERATION);
+            --registers.channel[0][1];
+            CHECK(registers.channel[0][8] == UINT8_C(0xff));
+        }
+        if (operation.kind == MIPSNES2_HDMA_OPERATION_TABLE_READ) {
+            uint8_t *channel = registers.channel[operation.channel];
+            uint16_t old_pointer = (uint16_t)(channel[8] | channel[9] << 8);
+
+            value = table_read(&f, operation.a_address);
+            CHECK((uint16_t)(channel[8] | channel[9] << 8) == old_pointer);
+        }
+        CHECK(mipsnes2_hdma_cursor_commit(&cursor, &operation, value) ==
+              (index == 6U ? MIPSNES2_HDMA_CURSOR_COMPLETE
+                           : MIPSNES2_HDMA_CURSOR_READY));
+    }
+    CHECK(mipsnes2_hdma_cursor_report(&cursor, &report));
+    CHECK(report.channels_visited == 2U && report.table_bytes == 4U &&
+          report.active_mask == 3U && f.read_count == 4U);
+    CHECK(registers.channel[1][5] == UINT8_C(0x34) &&
+          registers.channel[1][6] == UINT8_C(0x12));
+    CHECK(mipsnes2_hdma_cursor_begin_scanline(&cursor, &state, 3U) ==
+          MIPSNES2_HDMA_CURSOR_READY);
+    CHECK(mipsnes2_hdma_cursor_peek(&cursor, &operation) ==
+          MIPSNES2_HDMA_CURSOR_READY);
+    CHECK(operation.kind == MIPSNES2_HDMA_OPERATION_OVERHEAD &&
+          operation.master_clocks == 18U);
+    CHECK(mipsnes2_hdma_cursor_commit(&cursor, &operation, 0U) ==
+          MIPSNES2_HDMA_CURSOR_READY);
+    CHECK(mipsnes2_hdma_cursor_peek(&cursor, &operation) ==
+          MIPSNES2_HDMA_CURSOR_READY);
+    CHECK(operation.kind == MIPSNES2_HDMA_OPERATION_OVERHEAD &&
+          operation.master_clocks == 8U);
+    CHECK(mipsnes2_hdma_cursor_commit(&cursor, &operation, 0U) ==
+          MIPSNES2_HDMA_CURSOR_READY);
+    CHECK(mipsnes2_hdma_cursor_peek(&cursor, &operation) ==
+          MIPSNES2_HDMA_CURSOR_READY);
+    CHECK(operation.kind == MIPSNES2_HDMA_OPERATION_TRANSFER &&
+          operation.a_address == UINT32_C(0x7e1001) &&
+          operation.b_address == UINT32_C(0x2118));
+    CHECK(f.transfer_count == 0U && registers.channel[0][8] == 1U);
+    transfer_byte(&f, operation.a_address, operation.b_address,
+                  operation.b_to_a);
+    CHECK(mipsnes2_hdma_cursor_commit(&cursor, &operation, 0U) ==
+          MIPSNES2_HDMA_CURSOR_READY);
+    CHECK(f.transfer_count == 1U && registers.channel[0][8] == 2U);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_direct_indirect_and_line_counters() == 0);
     CHECK(test_pause_manual_enable_and_128_lines() == 0);
     CHECK(test_all_transfer_modes() == 0);
     CHECK(test_invalid_arguments() == 0);
+    CHECK(test_resumable_cursor_operations() == 0);
     (void)puts("HDMA table and scanline engine: OK");
     return 0;
 }
