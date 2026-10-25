@@ -26,12 +26,21 @@ static int supported_opcode(uint8_t opcode)
     case UINT8_C(0x00):
     case UINT8_C(0x20):
     case UINT8_C(0x40):
+    case UINT8_C(0x5d):
     case UINT8_C(0x60):
+    case UINT8_C(0x7d):
     case UINT8_C(0x80):
+    case UINT8_C(0x8d):
+    case UINT8_C(0x9d):
     case UINT8_C(0xa0):
+    case UINT8_C(0xbd):
     case UINT8_C(0xc0):
+    case UINT8_C(0xcd):
+    case UINT8_C(0xdd):
     case UINT8_C(0xe0):
+    case UINT8_C(0xe8):
     case UINT8_C(0xed):
+    case UINT8_C(0xfd):
         return 1;
     default:
         return 0;
@@ -64,7 +73,9 @@ int main(void)
     mipsnes2_spc700 blank_cpu;
     mipsnes2_spc700_registers initial;
     mipsnes2_spc700_registers before;
+    uint8_t expected_psw;
     unsigned i;
+    unsigned value_index;
 
     (void)memset(ram, UINT8_C(0xcc), sizeof(ram));
     (void)memset(synthetic_ipl, UINT8_C(0x01), sizeof(synthetic_ipl));
@@ -124,11 +135,114 @@ int main(void)
               cpu.last_opcode_address == initial.pc);
     }
 
+    /* Immediate MOV loads A/X/Y, consumes two bytes and derives only N/Z. */
+    {
+        static const uint8_t opcodes[] = {
+            UINT8_C(0xe8), UINT8_C(0xcd), UINT8_C(0x8d)
+        };
+        static const uint8_t values[] = {
+            UINT8_C(0x00), UINT8_C(0x7f), UINT8_C(0x80)
+        };
+
+        initial.pc = UINT16_C(0x2400);
+        initial.psw = UINT8_C(0xff);
+        for (i = 0U; i < sizeof(opcodes) / sizeof(opcodes[0]); ++i) {
+            for (value_index = 0U;
+                 value_index < sizeof(values) / sizeof(values[0]);
+                 ++value_index) {
+                ram[initial.pc] = opcodes[i];
+                ram[initial.pc + UINT16_C(1)] = values[value_index];
+                CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+                CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+                expected_psw = UINT8_C(0x7d);
+                if (values[value_index] == 0U) {
+                    expected_psw |= MIPSNES2_SPC700_FLAG_Z;
+                } else if ((values[value_index] & UINT8_C(0x80)) != 0U) {
+                    expected_psw |= MIPSNES2_SPC700_FLAG_N;
+                }
+                CHECK(cpu.registers.psw == expected_psw);
+                CHECK(cpu.registers.pc == UINT16_C(0x2402));
+                CHECK(cpu.instruction_cycles == UINT64_C(2));
+                if (opcodes[i] == UINT8_C(0xe8)) {
+                    CHECK(cpu.registers.a == values[value_index] &&
+                          cpu.registers.x == initial.x &&
+                          cpu.registers.y == initial.y);
+                } else if (opcodes[i] == UINT8_C(0xcd)) {
+                    CHECK(cpu.registers.x == values[value_index] &&
+                          cpu.registers.a == initial.a &&
+                          cpu.registers.y == initial.y);
+                } else {
+                    CHECK(cpu.registers.y == values[value_index] &&
+                          cpu.registers.a == initial.a &&
+                          cpu.registers.x == initial.x);
+                }
+            }
+        }
+    }
+
+    /* Register MOV forms transfer the documented source and derive N/Z except
+     * for MOV SP,X, which preserves the complete PSW. */
+    initial.pc = UINT16_C(0x2500);
+    initial.psw = UINT8_C(0xff);
+    initial.a = UINT8_C(0x00);
+    initial.x = UINT8_C(0x7f);
+    initial.y = UINT8_C(0x80);
+    initial.sp = UINT8_C(0x80);
+    ram[initial.pc] = UINT8_C(0x7d);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.a == UINT8_C(0x7f) &&
+          cpu.registers.psw == UINT8_C(0x7d));
+
+    ram[initial.pc] = UINT8_C(0xdd);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.a == UINT8_C(0x80) &&
+          cpu.registers.psw == UINT8_C(0xfd));
+
+    ram[initial.pc] = UINT8_C(0x5d);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.x == UINT8_C(0x00) &&
+          cpu.registers.psw == UINT8_C(0x7f));
+
+    ram[initial.pc] = UINT8_C(0xfd);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.y == UINT8_C(0x00) &&
+          cpu.registers.psw == UINT8_C(0x7f));
+
+    ram[initial.pc] = UINT8_C(0x9d);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.x == UINT8_C(0x80) &&
+          cpu.registers.psw == UINT8_C(0xfd));
+
+    ram[initial.pc] = UINT8_C(0xbd);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.sp == UINT8_C(0x7f) &&
+          cpu.registers.psw == UINT8_C(0xff));
+
+    /* The immediate operand wraps independently through the mapped address. */
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f1), 0U));
+    initial.pc = UINT16_C(0xffff);
+    initial.psw = 0U;
+    ram[0xffff] = UINT8_C(0xe8);
+    ram[0x0000] = UINT8_C(0x80);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.pc == UINT16_C(0x0001) &&
+          cpu.registers.a == UINT8_C(0x80) &&
+          cpu.registers.psw == MIPSNES2_SPC700_FLAG_N);
+
     /* Fetch observes the IPL overlay and the 16-bit PC wraps. */
     initial.psw = UINT8_C(0x5a);
     initial.pc = UINT16_C(0xffc0);
     synthetic_ipl[0] = UINT8_C(0x00);
     ram[0xffc0] = UINT8_C(0x01);
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f1),
+                                    UINT8_C(0x80)));
     CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
     CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
     CHECK(cpu.registers.pc == UINT16_C(0xffc1) &&
@@ -140,7 +254,7 @@ int main(void)
     CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
     CHECK(cpu.registers.pc == 0U);
 
-    /* Instruction cycles feed the existing timer block exactly once. */
+    /* Register-MOV cycles feed the existing timer block exactly once. */
     CHECK(mipsnes2_smp_memory_reset(&memory));
     CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00fc),
                                     UINT8_C(1)));
@@ -148,7 +262,7 @@ int main(void)
                                     UINT8_C(0x84)));
     initial.pc = UINT16_C(0x3000);
     for (i = 0U; i < 8U; ++i) {
-        ram[initial.pc + i] = UINT8_C(0x00);
+        ram[initial.pc + i] = UINT8_C(0x7d);
     }
     CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
     for (i = 0U; i < 8U; ++i) {
@@ -169,6 +283,17 @@ int main(void)
     CHECK(cpu.instruction_cycles == UINT64_MAX - UINT64_C(1));
     CHECK(memory.timers.stage1_phase == 0U);
 
+    /* Overflow is rejected before an immediate operand or register commit. */
+    initial.pc = UINT16_C(0x3000);
+    ram[0x3000] = UINT8_C(0xe8);
+    ram[0x3001] = UINT8_C(0x80);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    cpu.instruction_cycles = UINT64_MAX - UINT64_C(1);
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_CYCLE_OVERFLOW);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(memory.timers.stage1_phase == 0U);
+
     CHECK(mipsnes2_smp_memory_init(&no_ipl_memory, ram, sizeof(ram), &ports,
                                    NULL, 0U));
     initial.pc = UINT16_C(0xffc0);
@@ -179,6 +304,18 @@ int main(void)
     CHECK(same_registers(&cpu.registers, &before));
     CHECK(!cpu.has_fetched_opcode && cpu.instruction_cycles == 0U);
 
-    (void)puts("SPC700 register, fetch and initial dispatch foundation: OK");
+    /* A valid opcode followed by an unavailable IPL operand is atomic for CPU
+     * state and time, while retaining the fetched-opcode diagnostic. */
+    initial.pc = UINT16_C(0xffbf);
+    ram[0xffbf] = UINT8_C(0xe8);
+    CHECK(mipsnes2_spc700_init(&cpu, &no_ipl_memory, &initial));
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) ==
+          MIPSNES2_SPC700_MEMORY_UNAVAILABLE);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.has_fetched_opcode && cpu.last_opcode == UINT8_C(0xe8));
+    CHECK(cpu.instruction_cycles == 0U);
+
+    (void)puts("SPC700 fetch, PSW and register/immediate MOV foundation: OK");
     return 0;
 }

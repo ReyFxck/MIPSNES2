@@ -12,9 +12,10 @@ consistency checks.
 See [testing policy](../docs/testing.md). No external test ROM is committed yet.
 
 `test-spc700-cpu` exercises caller-owned SPC700 registers, mapped opcode fetch,
-IPL selection, PC wrap, all 256 dispatch byte values, the first nine one-byte
-instructions, cycle overflow and instruction-to-timer advancement. It does not
-claim a complete interpreter or per-cycle bus sequencing.
+IPL selection, PC/operand wrap, all 256 dispatch byte values, the initial PSW and
+register/immediate MOV instructions, N/Z transitions, unavailable operands, cycle
+overflow and instruction-to-timer advancement. It does not claim a complete
+interpreter or per-cycle bus sequencing.
 
 The CPU suite includes boundary-visible ABORT vectors, native/emulation stack layouts,
 priority, WAI restart-address behavior and invalid-bus diagnostics. It does not claim

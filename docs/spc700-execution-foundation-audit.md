@@ -54,5 +54,5 @@ loads/stores, arithmetic, branches, stack, interrupts, SLEEP/STOP, reset sequenc
 DSP access and S-CPU/S-SMP scheduling remain absent. Real PS2/PSP runtime behavior
 and physical SNES edge timing are not claimed.
 
-Next primary milestone: implement SPC700 immediate/register `MOV` forms and their
-N/Z flag behavior on this bounded execution contract.
+The immediate/register MOV milestone is recorded separately in the
+[SPC700 MOV audit](spc700-mov-foundation-audit.md).

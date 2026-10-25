@@ -53,10 +53,10 @@ bool mipsnes2_spc700_init(mipsnes2_spc700 *cpu,
                           mipsnes2_smp_memory *memory,
                           const mipsnes2_spc700_registers *registers);
 
-/* Executes one complete supported instruction atomically. A rejected opcode is
- * recorded for diagnostics but does not change programmer-visible registers,
- * the cycle total or timers. Memory-mapped fetch side effects remain those of
- * mipsnes2_smp_memory_read. */
+/* Executes one complete supported instruction atomically. A rejected opcode or
+ * unavailable operand is recorded for diagnostics but does not change
+ * programmer-visible registers, the cycle total or timers. Memory-mapped fetch
+ * side effects remain those of mipsnes2_smp_memory_read. */
 mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu);
 
 #endif

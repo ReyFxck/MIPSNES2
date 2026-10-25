@@ -227,9 +227,9 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC
 - [x] Instruction fetch — bounded S-SMP map, IPL overlay and PC wrap
-- [ ] [IN PROGRESS] Opcode dispatch — `NOP` and eight PSW-control opcodes implemented
-- [ ] Addressing modes
-- [ ] Load/store
+- [ ] [IN PROGRESS] Opcode dispatch — eighteen implied/PSW/register-MOV opcodes implemented
+- [ ] [IN PROGRESS] Addressing modes — immediate/register subset only
+- [ ] [IN PROGRESS] Load/store — immediate A/X/Y loads and register transfers only
 - [ ] [IN PROGRESS] Arithmetic and flags — PSW-control subset only
 - [ ] Decimal adjust
 - [ ] Logic and shifts
@@ -244,8 +244,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` input-pair clear verified; cross-clock timing pending
-- [ ] [IN PROGRESS] Instruction tests — 256-value dispatch coverage plus initial semantics
-- [ ] [IN PROGRESS] Timing regressions — initial instruction/timer coupling verified
+- [ ] [IN PROGRESS] Instruction tests — 256-value dispatch, PSW and register/immediate MOV coverage
+- [ ] [IN PROGRESS] Timing regressions — instruction/timer, overflow and missing-operand coverage
 
 ## Phase 8 — DSP / Audio
 
