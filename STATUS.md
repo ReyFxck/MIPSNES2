@@ -465,9 +465,17 @@ Revision `0a3dc11` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151173536) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151173541).
 
-Next primary block: implement HDMA initialization and per-scanline arbitration,
-preserving the shared refresh and general-DMA ownership rules. PS2 GS emulator
-and physical-console checks remain separate pending validation.
+The shared core now also contains a pure HDMA table/scanline engine. `$420C`
+stores its enable mask; frame initialization copies A1T to A2A and loads line
+descriptors plus indirect pointers. Visible-line calls process channels 0 through
+7 with all direct/indirect transfer modes, repeat/wait counters, pause/resume,
+bank/port wrapping and zero termination. Deterministic tests cover those logical
+effects. This layer is intentionally untimed; see the
+[HDMA table audit](docs/hdma-table-audit.md).
+
+Next primary block: integrate HDMA frame/visible-line requests into the resumable
+scheduler, including priority over general DMA, shared refresh stalls and exact-once
+horizon retries. PS2 GS emulator and physical-console checks remain separate.
 
 ## State and evidence rules
 
@@ -1688,13 +1696,13 @@ platform persistence remains incomplete.
 
 ## DMA / HDMA
 
-- [ ] [IN PROGRESS] DMA registers — channel banks and `$420B` start integrated; `$420C` HDMA effects absent
-- [ ] [IN PROGRESS] DMA transfer modes — timed machine byte path for all eight; HDMA and electrical edge cases pending
+- [ ] [IN PROGRESS] DMA registers — channel banks, `$420B` start and `$420C` HDMA enable mask integrated; timed HDMA requests pending
+- [ ] [IN PROGRESS] DMA transfer modes — timed general DMA path plus pure direct/indirect HDMA engine; timed HDMA/electrical edge cases pending
 - [ ] [IN PROGRESS] DMA timing — grace cycle, slots, setup, CPU resynchronization and shared WRAM refresh stalls; HDMA/electrical phases pending
 - [ ] DMA source/destination wrapping
-- [ ] HDMA initialization
-- [ ] HDMA scanline behavior
-- [ ] Indirect HDMA
+- [ ] [IN PROGRESS] HDMA initialization — pure table engine implemented; frame scheduler trigger pending
+- [ ] [IN PROGRESS] HDMA scanline behavior — pure line engine implemented; HBlank timing pending
+- [ ] [IN PROGRESS] Indirect HDMA — pointer/table behavior implemented; timed edge cases pending
 - [ ] Transfer edge cases
 - [ ] CPU interaction
 - [ ] Channel priority

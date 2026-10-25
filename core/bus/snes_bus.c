@@ -208,6 +208,10 @@ static void write_system_area(mipsnes2_snes_bus *bus,
             bus->dma_grace_cycles = value != 0U ? 1U : 0U;
             return;
         }
+        if (offset == UINT16_C(0x420c) && bus->dma_registers != NULL) {
+            bus->hdma_enable_mask = value;
+            return;
+        }
         if (offset == UINT16_C(0x420d)) {
             bus->fastrom_enabled = (value & UINT8_C(1)) != 0U;
             return;

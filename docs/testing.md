@@ -149,6 +149,10 @@ complete SNES interrupt generation or complete cartridge mapping. The DMA timing
 fixture separately verifies resumable WRAM refresh pauses for CPU and general DMA,
 normal-line H=538/H=534 alignment, NTSC short-line phase retention, horizon
 boundaries, exact-once byte effects and separate CPU/DMA/refresh clock totals.
+The pure HDMA fixture verifies frame initialization, channel priority, direct and
+indirect tables, repeat/wait counters, enable-mask pause/resume, pointer and port
+wrapping, both directions and termination. Scheduler timing is deliberately not
+claimed by that fixture.
 The PPU-counter executable enumerates every master-clock position on normal and NTSC
 short lines, verifies all valid H/V capture values, independent low/high selectors,
 PPU2 open bits, WRIO gating and field/region/version composition. Bus integration

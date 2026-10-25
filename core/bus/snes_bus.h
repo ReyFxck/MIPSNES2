@@ -54,6 +54,7 @@ typedef struct {
     uint8_t open_value;
     uint8_t dma_request_mask;
     uint8_t dma_grace_cycles;
+    uint8_t hdma_enable_mask;
     bool fastrom_enabled;
     bool timing_overflow;
 } mipsnes2_snes_bus;

@@ -630,6 +630,9 @@ int main(void)
                             UINT8_C(0x47));
     CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x80430f)) ==
           UINT8_C(0x47));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x80420c),
+                            UINT8_C(0xa5));
+    CHECK(machine.bus.hdma_enable_mask == UINT8_C(0xa5));
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
     CHECK(mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x004373)) ==
           UINT8_C(0xff));
@@ -680,7 +683,8 @@ int main(void)
     CHECK(memcmp(oam, wram + 0x1000, 4U) == 0);
     CHECK(memcmp(cgram, wram + 0x1000, 4U) == 0);
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
-    CHECK(machine.bus.dma_request_mask == 0U && !machine.cursor.dma_active);
+    CHECK(machine.bus.dma_request_mask == 0U &&
+          machine.bus.hdma_enable_mask == 0U && !machine.cursor.dma_active);
     (void)puts("machine integration: OK");
     return 0;
 }

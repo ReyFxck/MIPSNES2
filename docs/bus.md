@@ -121,7 +121,9 @@ clock class selected by its normalized address and current FastROM state. This i
 real per-meaningful-access accounting, but not complete CPU bus sequencing: the
 interpreter does not yet emit all dummy accesses, internal-cycle positions or MLB.
 The H/V-aware resumable bridge now pauses CPU and general DMA phases for WRAM
-refresh. HDMA ownership and electrical bus phases remain unimplemented.
+refresh. `$420C` stores the HDMA enable mask and the pure shared HDMA engine
+models logical table/scanline effects. Timed HDMA ownership and electrical bus
+phases remain unimplemented.
 
 Bus callbacks must remain free of scheduler dispatch while an operation is in
 flight. The rejected synchronous clock-sink design could leave partial
