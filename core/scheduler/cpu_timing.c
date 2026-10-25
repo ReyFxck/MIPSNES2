@@ -742,6 +742,24 @@ static mipsnes2_cpu_timing_result resume_hdma(
         if (start != MIPSNES2_HDMA_CURSOR_READY) {
             return MIPSNES2_CPU_TIMING_STALE_STATE;
         }
+        if (state->dma_active) {
+            uint8_t current = state->dma_cursor.channel;
+            uint8_t cancelled;
+
+            if (!mipsnes2_dma_cursor_cancel_channels(
+                    &state->dma_cursor, state->hdma_cursor.selected_mask,
+                    &cancelled)) {
+                return MIPSNES2_CPU_TIMING_STALE_STATE;
+            }
+            if (current < 8U &&
+                (cancelled & (uint8_t)(1U << current)) != 0U) {
+                if (state->dma_cursor.pending_mask == 0U) {
+                    state->dma_phase = DMA_TAIL;
+                } else if (state->dma_phase == DMA_BYTE) {
+                    state->dma_phase = DMA_CHANNEL;
+                }
+            }
+        }
         state->hdma_active = true;
     }
     while (state->hdma_active) {

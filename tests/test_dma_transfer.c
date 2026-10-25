@@ -153,6 +153,50 @@ static int check_zero_count_and_modes(void)
     return 0;
 }
 
+static int check_channel_cancellation(void)
+{
+    mipsnes2_dma_registers registers = {0};
+    mipsnes2_dma_cursor cursor = {0};
+    transfer_capture capture = {0};
+    uint32_t done = UINT32_MAX;
+    uint8_t removed = UINT8_C(0xff);
+    unsigned channel;
+
+    mipsnes2_dma_registers_init(&registers);
+    for (channel = 0U; channel < 3U; ++channel) {
+        registers.channel[channel][0] = 0U;
+        registers.channel[channel][1] = (uint8_t)(0x20U + channel);
+        registers.channel[channel][2] = (uint8_t)(0x10U + channel);
+        registers.channel[channel][4] = UINT8_C(0x7e);
+        registers.channel[channel][5] = 3U;
+        registers.channel[channel][6] = 0U;
+    }
+    CHECK(mipsnes2_dma_cursor_begin(&cursor, &registers, 7U));
+    CHECK(mipsnes2_dma_cursor_run(&cursor, 1U, capture_byte, &capture,
+                                  &done) == MIPSNES2_DMA_RUN_PAUSED);
+    CHECK(done == 1U && cursor.channel == 0U && cursor.remaining == 2U);
+    CHECK(mipsnes2_dma_cursor_cancel_channels(&cursor, 2U, &removed));
+    CHECK(removed == 2U && cursor.channel == 0U && cursor.remaining == 2U);
+    CHECK(mipsnes2_dma_cursor_cancel_channels(&cursor, 1U, &removed));
+    CHECK(removed == 1U && cursor.channel == 2U && cursor.remaining == 3U);
+    CHECK(registers.channel[0][5] == 2U && registers.channel[0][2] == 0x11U);
+    CHECK(registers.channel[1][5] == 3U && registers.channel[1][2] == 0x11U);
+    CHECK(mipsnes2_dma_cursor_cancel_channels(&cursor, 1U, &removed));
+    CHECK(removed == 0U && cursor.channel == 2U);
+    CHECK(mipsnes2_dma_cursor_run(&cursor, 4U, capture_byte, &capture,
+                                  &done) == MIPSNES2_DMA_RUN_COMPLETE);
+    CHECK(done == 3U && capture.count == 4U);
+    CHECK(capture.b[0] == UINT32_C(0x2120));
+    CHECK(capture.b[1] == UINT32_C(0x2122));
+    CHECK(capture.b[3] == UINT32_C(0x2122));
+    CHECK(registers.channel[2][5] == 0U);
+    CHECK(mipsnes2_dma_cursor_cancel_channels(&cursor, 4U, &removed));
+    CHECK(removed == 0U && cursor.channel == 8U);
+    CHECK(!mipsnes2_dma_cursor_cancel_channels(NULL, 1U, &removed));
+    CHECK(!mipsnes2_dma_cursor_cancel_channels(&cursor, 1U, NULL));
+    return 0;
+}
+
 int main(void)
 {
     static const uint8_t expected[8][8] = {
@@ -189,6 +233,7 @@ int main(void)
           UINT32_C(65535));
     CHECK(check_bounded_transfers() == 0);
     CHECK(check_zero_count_and_modes() == 0);
+    CHECK(check_channel_cancellation() == 0);
     (void)puts("DMA transfer address plan and bounded cursor: OK");
     return 0;
 }

@@ -74,6 +74,29 @@ bool mipsnes2_dma_cursor_begin(mipsnes2_dma_cursor *cursor,
     return true;
 }
 
+bool mipsnes2_dma_cursor_cancel_channels(mipsnes2_dma_cursor *cursor,
+                                         uint8_t mask,
+                                         uint8_t *cancelled_mask)
+{
+    uint8_t removed;
+    uint8_t current_bit;
+
+    if (cursor == NULL || !cursor->initialized ||
+        cursor->registers == NULL || !cursor->registers->initialized ||
+        cancelled_mask == NULL) {
+        return false;
+    }
+    removed = cursor->pending_mask & mask;
+    current_bit = cursor->channel < 8U
+        ? (uint8_t)(1U << cursor->channel) : 0U;
+    cursor->pending_mask &= (uint8_t)~removed;
+    if ((removed & current_bit) != 0U) {
+        select_channel(cursor);
+    }
+    *cancelled_mask = removed;
+    return true;
+}
+
 mipsnes2_dma_run_result mipsnes2_dma_cursor_run(
     mipsnes2_dma_cursor *cursor, uint32_t byte_budget,
     mipsnes2_dma_byte_transfer transfer, void *context,

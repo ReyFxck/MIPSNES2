@@ -28,7 +28,7 @@ promotion.
 - [ ] Transfer edge cases
 - [ ] CPU interaction
 - [ ] Channel priority
-- [ ] DMA and HDMA overlap
+- [ ] [IN PROGRESS] DMA and HDMA overlap — same-channel cancellation at slot boundaries; electrical phase pending
 - [ ] Tests
 
 ## Research and decisions
@@ -47,3 +47,5 @@ in the [machine DMA audit](dma-machine-audit.md), with refresh follow-up in the
 approximate per-slot costs are in the [HDMA cursor audit](hdma-cursor-audit.md).
 Frame/line scheduling and priority are in the
 [timed HDMA audit](hdma-timed-audit.md).
+Same-channel cancellation is scoped in the
+[DMA/HDMA overlap audit](dma-hdma-overlap-audit.md).

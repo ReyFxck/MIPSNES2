@@ -68,5 +68,6 @@ The cause of that artifact mode is unconfirmed.
 The first published integration revision `e18fe55` passed host CI but failed
 the PS2 and PSP link steps because their Makefiles lacked `hdma.o`. The target
 object lists are corrected, and the repository checker now guards host/target
-core-object parity. The corrected target runs must pass before this block is
-marked complete.
+core-object parity. Revision `8a0b915` passed all three CI workflows.
+Same-channel general-DMA cancellation is covered separately in the
+[DMA/HDMA overlap audit](dma-hdma-overlap-audit.md).

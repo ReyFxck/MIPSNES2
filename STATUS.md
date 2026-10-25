@@ -506,10 +506,22 @@ but [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176249749)
 and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176249757)
 failed at link because their object lists omitted `hdma.o`. Both Makefiles now
 include it, and the repository checker compares target core objects with the
-host list. New cross-build CI and target runtime checks remain pending.
+host list. Revision `8a0b915` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176428169),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176428148) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176428141).
+Target runtime checks remain pending.
 
-Next primary block: resolve same-channel DMA/HDMA register collisions with
-deterministic overlap fixtures and explicit VBlank deactivation policy. PS2 GS
+The general-DMA cursor now cancels channels selected by an admitted HDMA
+operation at a DMA slot boundary. An interrupted channel retains its remaining
+DAS count, while unrelated channels continue after HDMA. Pure cursor and timed
+machine fixtures cover active/future cancellation, incomplete count retention
+and a surviving channel. See the
+[DMA/HDMA overlap audit](docs/dma-hdma-overlap-audit.md). Target CI for this
+change and real-console behavior remain unverified.
+
+Next primary block: implement and test explicit VBlank HDMA deactivation
+policy. PS2 GS
 emulator and physical-console checks remain separate.
 
 ## State and evidence rules
@@ -1741,7 +1753,7 @@ platform persistence remains incomplete.
 - [ ] Transfer edge cases
 - [ ] CPU interaction
 - [ ] Channel priority
-- [ ] DMA and HDMA overlap
+- [ ] [IN PROGRESS] DMA and HDMA overlap — same-channel cancellation at admitted slot boundaries implemented; electrical phases pending
 - [ ] Tests
 
 ## PPU

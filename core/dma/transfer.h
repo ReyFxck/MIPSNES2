@@ -44,6 +44,11 @@ typedef enum {
 bool mipsnes2_dma_cursor_begin(mipsnes2_dma_cursor *cursor,
                                mipsnes2_dma_registers *registers,
                                uint8_t channel_mask);
+/* HDMA ownership cancels overlapping general-DMA channels at a phase
+ * boundary. Reports the channels removed, selecting the next survivor. */
+bool mipsnes2_dma_cursor_cancel_channels(mipsnes2_dma_cursor *cursor,
+                                         uint8_t mask,
+                                         uint8_t *cancelled_mask);
 /* Bounded byte effects, channel 0 first. Updates A1T/DAS after each callback.
  * This is an untimed engine; do not call it from CPU execution without the
  * scheduler/bus-ownership layer. A zero byte_budget performs no effects.

@@ -19,7 +19,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/bus | WRAM/ROM/SRAM/MMIO/mirrors/open bus | Test region table plus partial SNES map with WRAM, CPU-I/O latches/math, mirrors, MMIO routes, FastROM state and per-access clocks |
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
 | core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; optional reference video-line callback |
-| core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh and A/B bus policy integrated; same-channel and electrical timing pending |
+| core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy and same-channel cancellation integrated; electrical timing pending |
 | core/apu/spc700 | SPC700 execution/state | Directory only |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |

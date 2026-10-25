@@ -848,6 +848,86 @@ int main(void)
         CHECK(!machine.cursor.hdma_active &&
               vram[0] == UINT8_C(0xc7));
     }
+    /* HDMA on channel 0 ends that channel's in-flight general DMA after
+     * the admitted byte. Channel 1 still runs after HDMA releases the bus. */
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    (void)memset(vram, 0, sizeof(vram));
+    (void)memset(wram + 0x1000, 0, 256U);
+    wram[0x1000] = 1U;
+    wram[0x1001] = UINT8_C(0xc7);
+    wram[0x1002] = 0U;
+    wram[0x2000] = UINT8_C(0x93);
+    machine.dma_registers.channel[0][0] = 0U;
+    machine.dma_registers.channel[0][1] = UINT8_C(0x18);
+    machine.dma_registers.channel[0][2] = 0U;
+    machine.dma_registers.channel[0][3] = UINT8_C(0x10);
+    machine.dma_registers.channel[0][4] = UINT8_C(0x7e);
+    machine.dma_registers.channel[0][5] = 200U;
+    machine.dma_registers.channel[0][6] = 0U;
+    machine.dma_registers.channel[1][0] = 0U;
+    machine.dma_registers.channel[1][1] = UINT8_C(0x18);
+    machine.dma_registers.channel[1][2] = 0U;
+    machine.dma_registers.channel[1][3] = UINT8_C(0x20);
+    machine.dma_registers.channel[1][4] = UINT8_C(0x7e);
+    machine.dma_registers.channel[1][5] = 1U;
+    machine.dma_registers.channel[1][6] = 0U;
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002115), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002116), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002117), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c), 1U);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, 1000U, 1000U, 8U, &sequences, &report,
+              &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(mipsnes2_machine_resume(&machine, UINT64_MAX, 8U, &report) ==
+          MIPSNES2_CPU_TIMING_OK);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420b), 3U);
+    {
+        mipsnes2_master_clock horizon;
+        uint16_t cancelled_size;
+        uint16_t cancelled_address;
+        uint64_t dma_bytes;
+
+        for (horizon = machine.scheduler.now + 1U; horizon < 1200U;
+             ++horizon) {
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, horizon, 1000U, 8U, &sequences, &report,
+                      &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+            if (machine.cursor.hdma_active) {
+                break;
+            }
+        }
+        CHECK(horizon < 1200U && machine.cursor.dma_active &&
+              machine.cursor.dma_cursor.pending_mask == 2U &&
+              machine.cursor.dma_cursor.channel == 1U);
+        cancelled_size = (uint16_t)machine.dma_registers.channel[0][5] |
+                         ((uint16_t)machine.dma_registers.channel[0][6] << 8);
+        cancelled_address =
+            (uint16_t)machine.dma_registers.channel[0][2] |
+            ((uint16_t)machine.dma_registers.channel[0][3] << 8);
+        dma_bytes = machine.cursor.dma_bytes;
+        CHECK(cancelled_size > 0U && cancelled_size < 200U);
+        for (++horizon; horizon < 1250U; ++horizon) {
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, horizon, 1000U, 8U, &sequences, &report,
+                      &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+            if (!machine.cursor.hdma_active) {
+                break;
+            }
+        }
+        CHECK(horizon < 1250U && machine.cursor.dma_active &&
+              machine.cursor.hdma_data_bytes == 1U &&
+              machine.cursor.dma_bytes == dma_bytes);
+        CHECK(mipsnes2_machine_run_until(
+                  &machine, 1300U, 1000U, 8U, &sequences, &report,
+                  &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+        CHECK(!machine.cursor.dma_active && !machine.cursor.hdma_active);
+        CHECK(machine.dma_registers.channel[0][5] ==
+                  (uint8_t)cancelled_size &&
+              machine.dma_registers.channel[0][2] ==
+                  (uint8_t)cancelled_address &&
+              machine.dma_registers.channel[1][5] == 0U &&
+              machine.dma_registers.channel[1][2] == 1U);
+    }
     /* An injected early line request uses the same WRAM-refresh arbiter as
      * CPU and general DMA. No HDMA data effect leaks through the stall. */
     CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);

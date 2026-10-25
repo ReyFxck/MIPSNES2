@@ -167,7 +167,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Transfer edge cases
 - [ ] CPU interaction
 - [ ] Channel priority
-- [ ] DMA and HDMA overlap
+- [ ] [IN PROGRESS] DMA and HDMA overlap — same-channel cancellation implemented; electrical phases pending
 - [ ] Tests
 
 ## Phase 5 — PPU Foundation
