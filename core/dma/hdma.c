@@ -317,7 +317,15 @@ mipsnes2_hdma_cursor_result mipsnes2_hdma_cursor_commit(
             cursor->descriptor = read_value;
             channel[10] = read_value;
             if ((channel[0] & UINT8_C(0x40)) != 0U) {
-                cursor->phase = PHASE_INDIRECT_LOW;
+                if (read_value == 0U && !cursor->frame_begin &&
+                    (cursor->selected_mask >> (cursor->channel + 1U)) == 0U) {
+                    /* Final channel: zero descriptor supplies DAS low;
+                     * only the high byte is fetched from the table. */
+                    channel[5] = 0U;
+                    cursor->phase = PHASE_INDIRECT_HIGH;
+                } else {
+                    cursor->phase = PHASE_INDIRECT_LOW;
+                }
             } else {
                 finish_descriptor(cursor);
             }

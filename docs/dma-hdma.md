@@ -24,7 +24,7 @@ promotion.
 - [ ] DMA source/destination wrapping
 - [ ] [IN PROGRESS] HDMA initialization — V=0 request, table engine and VBlank deactivation; revision edges pending
 - [ ] [IN PROGRESS] HDMA scanline behavior — timed HBlank requests and line transfers; electrical phase pending
-- [ ] [IN PROGRESS] Indirect HDMA — timed table/pointer path; zero-descriptor edge pending
+- [ ] [IN PROGRESS] Indirect HDMA — timed table/pointer path and last-channel zero-descriptor shortening; frame-initialization/electrical edges pending
 - [ ] Transfer edge cases
 - [ ] CPU interaction
 - [ ] Channel priority
@@ -50,3 +50,5 @@ Frame/line scheduling and priority are in the
 Same-channel cancellation is scoped in the
 [DMA/HDMA overlap audit](dma-hdma-overlap-audit.md).
 VBlank deactivation is scoped in the [HDMA VBlank audit](hdma-vblank-audit.md).
+The final-channel zero-descriptor read is scoped in the
+[HDMA zero-descriptor audit](hdma-zero-descriptor-audit.md).

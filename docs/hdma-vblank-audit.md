@@ -31,7 +31,10 @@ range, with frame recurrence accounting for the NTSC short scanline.
 - [x] Eight mode-4 channels run past VBlank start. The pending shutdown lets
   one admitted slot finish and clears the remaining cursor without a stale
   snapshot error.
-- [ ] Host and PS2/PSP CI for the published revision.
+- [x] Revision `559eda5` passed
+  [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177443593),
+  [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177443514)
+  and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177443512).
 - [ ] Real-console behavior and exact electrical subphases.
 
 Fixtures use generated in-memory cartridge and WRAM data only. No source
@@ -44,4 +47,4 @@ LeakSanitizer cannot inspect the proc task directory in this execution
 environment. One generated `build/host/test-ppu-oam` binary had mode `0644` on
 a repeat run, causing `Permission denied`; rebuilding that target restored
 the full suite pass. The cause of the artifact mode is unconfirmed. Console
-CI and real-device behavior remain unverified at this point.
+Real-device behavior remains unverified.

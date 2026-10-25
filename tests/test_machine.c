@@ -780,7 +780,9 @@ int main(void)
               &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
     CHECK(vram[0] == UINT8_C(0xee) &&
           machine.hdma_state.terminated_mask == 1U &&
-          machine.dma_registers.channel[0][8] == 6U &&
+          machine.dma_registers.channel[0][8] == 5U &&
+          machine.dma_registers.channel[0][5] == 0U &&
+          machine.dma_registers.channel[0][6] == 0U &&
           machine.dma_registers.channel[0][9] == UINT8_C(0x10));
     /* A visible-line request pauses an in-flight general DMA between slots.
      * The unrelated general channel does not advance while HDMA owns the bus. */

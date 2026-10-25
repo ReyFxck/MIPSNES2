@@ -33,8 +33,8 @@ subphase timing uncertain. The current model completes an admitted CPU/DMA slot
 before HDMA, and commits a whole HDMA byte at its slot endpoint. It does not
 model electrical read/write subphases or post-HDMA CPU alignment.
 
-Same-channel general DMA/HDMA register collisions, exact HDMA behavior across
-VBlank start, revision-specific zero-descriptor indirect shortening, dynamic
+At this integration revision, same-channel general DMA/HDMA register collisions,
+HDMA behavior across VBlank start, zero-descriptor indirect shortening, dynamic
 `$2133` overscan changes and active-display PPU port restrictions remain open.
 The core has no game-specific path. No PS2, PSP or real-console runtime is
 claimed for this block. No source code from another emulator was used or

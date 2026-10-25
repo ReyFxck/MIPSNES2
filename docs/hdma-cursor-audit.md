@@ -32,7 +32,8 @@ additional clocks beyond that channel charge. This follows the HDMA section of
 which explicitly marks some phase details approximate. The cursor does not
 advance time, arbitrate CPU/general DMA, model electrical read/write subphases,
 or determine when a scanline request fires. Refresh must be handled by the
-timing bridge. The existing zero-descriptor indirect edge remains open.
+timing bridge. The zero-descriptor indirect edge was later scoped in the
+[HDMA zero-descriptor audit](hdma-zero-descriptor-audit.md).
 
 Only hardware documentation and independently published hardware research were
 consulted; no source code from another emulator was used or indexed.

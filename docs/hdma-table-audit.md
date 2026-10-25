@@ -33,10 +33,11 @@ pause the CPU at an operation boundary, give HDMA priority over general DMA and
 charge the documented overhead/read/data phases through the existing refresh
 arbiter.
 
-The less common zero-descriptor/last-active-channel indirect-address shortening
-is not implemented. The engine currently reads both indirect pointer bytes
-before terminating, which is deterministic but not claimed as exact for that
-hardware edge. Register mutation or reentry from callbacks is outside this API.
+At this foundation revision, the less common zero-descriptor/last-active-channel
+indirect-address shortening was not implemented. It was subsequently added to
+the shared cursor; see the
+[HDMA zero-descriptor audit](hdma-zero-descriptor-audit.md). Register mutation
+or reentry from callbacks is outside this API.
 
 ## Deterministic verification
 

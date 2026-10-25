@@ -163,7 +163,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] DMA source/destination wrapping
 - [ ] [IN PROGRESS] HDMA initialization — V=0 request and VBlank deactivation; revision edges pending
 - [ ] [IN PROGRESS] HDMA scanline behavior — visible-line request; exact subphases pending
-- [ ] [IN PROGRESS] Indirect HDMA — timed pointers; zero-descriptor edge pending
+- [ ] [IN PROGRESS] Indirect HDMA — timed pointers and last-channel zero-descriptor shortening; frame-initialization and electrical edges pending
 - [ ] Transfer edge cases
 - [ ] CPU interaction
 - [ ] Channel priority

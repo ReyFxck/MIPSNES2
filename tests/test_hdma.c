@@ -94,14 +94,16 @@ static int test_direct_indirect_and_line_counters(void)
     CHECK(mipsnes2_hdma_run_scanline(&state, 3U, table_read,
                                      transfer_byte, &f, &report));
     CHECK(report.channels_visited == 2U && report.data_bytes == 3U &&
-          report.table_bytes == 3U && report.active_mask == 1U);
+          report.table_bytes == 2U && report.active_mask == 1U);
     CHECK(f.a[0] == UINT32_C(0x7e1001) && f.b[0] == UINT32_C(0x2118));
     CHECK(f.a[1] == UINT32_C(0x7e1002) && f.b[1] == UINT32_C(0x2119));
     CHECK(f.a[2] == UINT32_C(0x7e1234) && f.b[2] == UINT32_C(0x2122) &&
           f.reverse[2]);
     CHECK(registers.channel[0][10] == UINT8_C(0x81));
-    CHECK(registers.channel[1][5] == UINT8_C(0xaa) &&
-          registers.channel[1][6] == UINT8_C(0xbb));
+    CHECK(registers.channel[1][5] == 0U &&
+          registers.channel[1][6] == UINT8_C(0xaa) &&
+          registers.channel[1][8] == 5U &&
+          registers.channel[1][9] == UINT8_C(0x20));
 
     /* Reloading a direct descriptor leaves A2A at its first data byte. */
     f.bank_7e[0x1005] = 3U;
@@ -368,7 +370,7 @@ static int test_resumable_cursor_operations(void)
         }
         CHECK(result == MIPSNES2_HDMA_CURSOR_READY);
     }
-    CHECK(line_clocks == 74U && zero_cost_descriptors == 2U &&
+    CHECK(line_clocks == 66U && zero_cost_descriptors == 2U &&
           f.transfer_count == 3U);
     return 0;
 }
@@ -406,6 +408,53 @@ static int test_vblank_deactivation(void)
     return 0;
 }
 
+static int test_zero_descriptor_indirect_last_channel(void)
+{
+    mipsnes2_dma_registers registers = {0};
+    mipsnes2_hdma_state state;
+    mipsnes2_hdma_report report;
+    fixture f;
+
+    (void)memset(&f, 0, sizeof(f));
+    mipsnes2_dma_registers_init(&registers);
+    mipsnes2_hdma_state_init(&state);
+    configure(registers.channel[0], UINT8_C(0x40), UINT8_C(0x18),
+              UINT16_C(0x1000), UINT8_C(0x7e));
+    configure(registers.channel[1], UINT8_C(0x40), UINT8_C(0x22),
+              UINT16_C(0x2000), UINT8_C(0x7e));
+    registers.channel[0][7] = UINT8_C(0x7e);
+    registers.channel[1][7] = UINT8_C(0x7e);
+    f.bank_7e[0x1000] = 1U;
+    f.bank_7e[0x1001] = 0U;
+    f.bank_7e[0x1002] = UINT8_C(0x30);
+    f.bank_7e[0x1003] = 0U;
+    f.bank_7e[0x1004] = UINT8_C(0xaa);
+    f.bank_7e[0x1005] = UINT8_C(0xbb);
+    f.bank_7e[0x2000] = 1U;
+    f.bank_7e[0x2001] = 0U;
+    f.bank_7e[0x2002] = UINT8_C(0x40);
+    f.bank_7e[0x2003] = 0U;
+    f.bank_7e[0x2004] = UINT8_C(0xcc);
+    f.bank_7e[0x2005] = UINT8_C(0xdd);
+    CHECK(mipsnes2_hdma_frame_begin(&state, &registers, 3U,
+                                    table_read, &f, &report));
+    CHECK(report.table_bytes == 6U && state.active_mask == 3U);
+    CHECK(mipsnes2_hdma_run_scanline(&state, 3U, table_read,
+                                     transfer_byte, &f, &report));
+    CHECK(report.table_bytes == 5U && report.data_bytes == 2U &&
+          state.active_mask == 0U && state.terminated_mask == 3U);
+    CHECK(registers.channel[0][5] == UINT8_C(0xaa) &&
+          registers.channel[0][6] == UINT8_C(0xbb) &&
+          registers.channel[0][8] == 6U);
+    CHECK(registers.channel[1][5] == 0U &&
+          registers.channel[1][6] == UINT8_C(0xcc) &&
+          registers.channel[1][8] == 5U);
+    CHECK(f.read_count == 11U &&
+          f.reads[9] == UINT32_C(0x7e2003) &&
+          f.reads[10] == UINT32_C(0x7e2004));
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_direct_indirect_and_line_counters() == 0);
@@ -414,6 +463,7 @@ int main(void)
     CHECK(test_invalid_arguments() == 0);
     CHECK(test_resumable_cursor_operations() == 0);
     CHECK(test_vblank_deactivation() == 0);
+    CHECK(test_zero_descriptor_indirect_last_channel() == 0);
     (void)puts("HDMA table and scanline engine: OK");
     return 0;
 }

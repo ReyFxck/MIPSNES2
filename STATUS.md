@@ -530,10 +530,22 @@ after `$420C` is enabled. It clears active/transfer masks without clearing
 cursor stops. Host fixtures cover NTSC and PAL VBlank starts, no same-frame
 restart, and an eight-channel line that overruns VBlank. See the
 [HDMA VBlank audit](docs/hdma-vblank-audit.md). CI and target runtime checks
-for this change remain pending.
+for this change: revision `559eda5` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177443593),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177443514) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177443512).
+Target runtime remains unverified.
 
-Next primary block: resolve indirect HDMA zero-descriptor and hardware-revision
-edges with independent evidence and deterministic fixtures. PS2 GS
+The indirect HDMA cursor now treats a zero descriptor on the final selected
+channel of a visible line as the low indirect-address byte, fetching only the
+high byte from the table. Earlier channels still fetch both bytes. Pure
+fixtures cover both channel positions and the eight-clock difference; a timed
+machine fixture checks the resulting table pointer.
+See the [zero-descriptor audit](docs/hdma-zero-descriptor-audit.md). Revision
+CI and real-console validation are pending.
+
+Next primary block: refine DMA/HDMA electrical bus phases and post-HDMA CPU
+alignment with deterministic boundary fixtures. PS2 GS
 emulator and physical-console checks remain separate.
 
 ## State and evidence rules
@@ -1761,7 +1773,7 @@ platform persistence remains incomplete.
 - [ ] DMA source/destination wrapping
 - [ ] [IN PROGRESS] HDMA initialization — frame request, table engine and scheduled VBlank deactivation implemented; revision edges pending
 - [ ] [IN PROGRESS] HDMA scanline behavior — HBlank request and timed line engine implemented; electrical phase pending
-- [ ] [IN PROGRESS] Indirect HDMA — timed pointer/table behavior implemented; zero-descriptor edge pending
+- [ ] [IN PROGRESS] Indirect HDMA — timed pointer/table behavior and last-channel zero-descriptor shortening implemented; frame-initialization and electrical edges pending
 - [ ] Transfer edge cases
 - [ ] CPU interaction
 - [ ] Channel priority
