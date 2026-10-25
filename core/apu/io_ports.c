@@ -69,6 +69,23 @@ bool mipsnes2_apu_io_ports_smp_write(mipsnes2_apu_io_ports *ports,
     return true;
 }
 
+bool mipsnes2_apu_io_ports_smp_clear_inputs(mipsnes2_apu_io_ports *ports,
+                                            bool ports_01, bool ports_23)
+{
+    if (ports == NULL || !ports->initialized) {
+        return false;
+    }
+    if (ports_01) {
+        ports->cpu_to_apu[0] = 0U;
+        ports->cpu_to_apu[1] = 0U;
+    }
+    if (ports_23) {
+        ports->cpu_to_apu[2] = 0U;
+        ports->cpu_to_apu[3] = 0U;
+    }
+    return true;
+}
+
 static uint8_t cpu_read8(void *context, mipsnes2_address address)
 {
     mipsnes2_apu_io_ports *ports = context;

@@ -532,6 +532,13 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     }
     mipsnes2_cpu_io_init(&machine->io, UINT8_C(2));
     mipsnes2_apu_io_ports_init(&machine->apu_ports);
+    if (machine->aram != NULL &&
+        !mipsnes2_smp_memory_init(&machine->smp_memory, machine->aram,
+                                 machine->aram_size, &machine->apu_ports,
+                                 machine->smp_ipl, machine->smp_ipl_size)) {
+        machine->ready = false;
+        return MIPSNES2_MACHINE_INVALID_ARGUMENT;
+    }
     mipsnes2_ppu_counters_init(&machine->counters, UINT8_C(3), 0U);
     machine->ppu_forced_blank = true;
     machine->ppu_brightness = 0U;
@@ -690,6 +697,15 @@ mipsnes2_machine_result mipsnes2_machine_init(
         ((config->oam == NULL && config->oam_size != 0U) ||
          (config->oam != NULL &&
           config->oam_size < MIPSNES2_PPU_OAM_SIZE)) ||
+        ((config->aram == NULL && config->aram_size != 0U) ||
+         (config->aram != NULL &&
+          config->aram_size < MIPSNES2_SMP_RAM_SIZE)) ||
+        ((config->smp_ipl == NULL && config->smp_ipl_size != 0U) ||
+         (config->smp_ipl != NULL &&
+          (config->aram == NULL ||
+           config->smp_ipl_size != MIPSNES2_SMP_IPL_SIZE))) ||
+        (config->aram != NULL &&
+         (config->apu.read8 != NULL || config->apu.write8 != NULL)) ||
         (config->standard != MIPSNES2_HV_STANDARD_NTSC &&
          config->standard != MIPSNES2_HV_STANDARD_PAL)) {
         return MIPSNES2_MACHINE_INVALID_ARGUMENT;
@@ -714,6 +730,10 @@ mipsnes2_machine_result mipsnes2_machine_init(
     machine->cgram_size = config->cgram_size;
     machine->oam = config->oam;
     machine->oam_size = config->oam_size;
+    machine->aram = config->aram;
+    machine->aram_size = config->aram_size;
+    machine->smp_ipl = config->smp_ipl;
+    machine->smp_ipl_size = config->smp_ipl_size;
     machine->standard = config->standard;
     machine->overscan = config->overscan;
     machine->ppu = config->ppu;

@@ -239,11 +239,11 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Multiply/divide
 - [ ] Sleep and stop
 - [ ] Instruction timing
-- [ ] RAM and IPL mapping
+- [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay and write-through tested; remaining MMIO, interpreter and hardware validation pending
 - [ ] IPL provenance decision
 - [ ] I/O registers
 - [ ] Timers
-- [ ] [IN PROGRESS] Communication ports — four directional latches each way and `$2140-$217F` CPU mirrors verified; S-SMP map/timing pending
+- [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` input-pair clear verified; cross-clock timing pending
 - [ ] Instruction tests
 - [ ] Timing regressions
 

@@ -61,6 +61,11 @@ the reference path has no target timing measurement.
 | Miscellaneous | TBD | TBD | |
 | Peak memory | TBD | TBD | |
 
+The PS2 ROM path now reserves 64 KiB additional static EE memory for ARAM.
+No target peak-memory measurement, sound workload or audio throughput result
+has been collected. The PSP build links the map but does not allocate an ARAM
+runtime buffer yet.
+
 ## Development environments
 
 Host: no emulation benchmark. PCSX2: not tested. PPSSPP: not tested.

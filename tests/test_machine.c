@@ -16,6 +16,8 @@ static uint8_t sram[8 * 1024];
 static uint8_t vram[MIPSNES2_PPU_VRAM_SIZE];
 static uint8_t cgram[MIPSNES2_PPU_CGRAM_SIZE];
 static uint8_t oam[MIPSNES2_PPU_OAM_SIZE];
+static uint8_t aram[MIPSNES2_SMP_RAM_SIZE];
+static uint8_t synthetic_ipl[MIPSNES2_SMP_IPL_SIZE];
 static mipsnes2_machine machine;
 static uint16_t captured_y[2];
 static uint16_t captured_color[2];
@@ -1272,6 +1274,57 @@ int main(void)
         CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
         CHECK(machine.apu_ports.cpu_to_apu[0] == 0U &&
               machine.apu_ports.apu_to_cpu[2] == 0U);
+    }
+    /* Optional S-SMP map borrows ARAM and synthetic IPL bytes. The CPU bus
+     * and S-SMP map meet only through the machine-owned directional mailbox. */
+    {
+        uint8_t value = 0U;
+
+        (void)memset(aram, UINT8_C(0x5a), sizeof(aram));
+        (void)memset(synthetic_ipl, UINT8_C(0x31), sizeof(synthetic_ipl));
+        config.aram = aram;
+        config.aram_size = sizeof(aram) - 1U;
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_INVALID_ARGUMENT);
+        config.aram_size = sizeof(aram);
+        config.smp_ipl = synthetic_ipl;
+        config.smp_ipl_size = sizeof(synthetic_ipl) - 1U;
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_INVALID_ARGUMENT);
+        config.smp_ipl_size = sizeof(synthetic_ipl);
+        config.apu = mipsnes2_apu_io_ports_make_cpu_interface(
+            &machine.apu_ports);
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_INVALID_ARGUMENT);
+        (void)memset(&config.apu, 0, sizeof(config.apu));
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_OK);
+        CHECK(machine.smp_memory.ipl_enabled);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x802177),
+                                UINT8_C(0xa4));
+        CHECK(mipsnes2_smp_memory_read(&machine.smp_memory,
+                                       UINT16_C(0x00f7), &value));
+        CHECK(value == UINT8_C(0xa4));
+        CHECK(mipsnes2_smp_memory_write(&machine.smp_memory,
+                                        UINT16_C(0x00f5), UINT8_C(0xc2)));
+        CHECK(mipsnes2_snes_bus_read(&machine.bus,
+                                     UINT32_C(0x002141)) == UINT8_C(0xc2));
+        CHECK(mipsnes2_smp_memory_read(&machine.smp_memory,
+                                       UINT16_C(0xffc0), &value));
+        CHECK(value == UINT8_C(0x31));
+        CHECK(mipsnes2_smp_memory_write(&machine.smp_memory,
+                                        UINT16_C(0xffc0), UINT8_C(0x7d)));
+        CHECK(mipsnes2_smp_memory_write(&machine.smp_memory,
+                                        UINT16_C(0x00f1), UINT8_C(0x20)));
+        CHECK(machine.apu_ports.cpu_to_apu[3] == 0U &&
+              machine.apu_ports.apu_to_cpu[1] == UINT8_C(0xc2));
+        CHECK(mipsnes2_smp_memory_read(&machine.smp_memory,
+                                       UINT16_C(0xffc0), &value));
+        CHECK(value == UINT8_C(0x7d));
+        CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+        CHECK(machine.smp_memory.ipl_enabled &&
+              aram[0xffc0] == UINT8_C(0x7d));
+        CHECK(machine.apu_ports.apu_to_cpu[1] == 0U);
     }
     (void)puts("machine integration: OK");
     return 0;

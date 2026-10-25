@@ -3,6 +3,7 @@
 #define MIPSNES2_MACHINE_H
 
 #include "core/apu/io_ports.h"
+#include "core/apu/spc700/memory.h"
 #include "core/cartridge/prepare.h"
 #include "core/ppu/cgram_ports.h"
 #include "core/ppu/color_math.h"
@@ -46,6 +47,10 @@ typedef struct {
     size_t cgram_size;
     uint8_t *oam;
     size_t oam_size;
+    uint8_t *aram;
+    size_t aram_size;
+    const uint8_t *smp_ipl;
+    size_t smp_ipl_size;
     mipsnes2_hv_standard standard;
     bool overscan;
     mipsnes2_bus_interface ppu;
@@ -56,7 +61,7 @@ typedef struct {
 } mipsnes2_machine_config;
 
 /* Stable address required: bus and CPU callbacks point into this object.
- * Image, WRAM, SRAM and optional PPU memory remain caller-owned for the entire
+ * Image, WRAM, SRAM and optional PPU/APU memory remain caller-owned for the entire
  * machine lifetime.
  * Initialize in place; do not copy or move an initialized machine.
  */
@@ -69,6 +74,7 @@ typedef struct {
     mipsnes2_interrupt_lines interrupts;
     mipsnes2_cpu_io io;
     mipsnes2_apu_io_ports apu_ports;
+    mipsnes2_smp_memory smp_memory;
     mipsnes2_ppu_counters counters;
     mipsnes2_ppu_vram_ports vram_ports;
     mipsnes2_ppu_cgram_ports cgram_ports;
@@ -103,6 +109,10 @@ typedef struct {
     size_t cgram_size;
     uint8_t *oam;
     size_t oam_size;
+    uint8_t *aram;
+    size_t aram_size;
+    const uint8_t *smp_ipl;
+    size_t smp_ipl_size;
     mipsnes2_hv_standard standard;
     bool overscan;
     bool ppu_forced_blank;
@@ -124,8 +134,8 @@ typedef struct {
  */
 mipsnes2_machine_result mipsnes2_machine_init(
     mipsnes2_machine *machine, const mipsnes2_machine_config *config);
-/* Power cycle the CPU, I/O, counters, PPU ports, clock and event queue.
- * Caller-owned WRAM/SRAM/VRAM/CGRAM/OAM retain bytes. Events are discarded.
+/* Power cycle the CPU, I/O, counters, PPU/APU ports, clock and event queue.
+ * Caller-owned WRAM/SRAM/VRAM/CGRAM/OAM/ARAM retain bytes. Events are discarded.
  * The timed RESET vector sequence is then performed by resume().
  */
 mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine);

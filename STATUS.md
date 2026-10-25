@@ -574,9 +574,22 @@ S-SMP clock domain exists yet. See the
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40200420504).
 No target runtime or audio output is claimed.
 
-Next primary block: add caller-owned S-SMP RAM and its bounded local memory-map
-foundation, connecting `$F4-$F7` to this mailbox without embedding unlicensed
-IPL bytes. Refining DMA/HDMA electrical bus phases and post-HDMA CPU alignment
+The S-SMP now has a bounded local map over caller-owned 64 KiB ARAM, connected
+to the machine's directional mailbox at `$F4-$F7`. `$F1` bit 7 selects a
+caller-supplied 64-byte IPL read overlay, while writes still reach underlying
+ARAM; bits 4/5 clear the S-SMP input-port pairs. `$F8/$F9` remain ordinary
+ARAM. Unsupported DSP, test and timer registers return failure instead of
+silently acting as RAM. PS2 reserves ARAM; PSP links the shared object without
+a runtime audio path. Synthetic host fixtures cover map boundaries, overlay
+switching, missing IPL, input clear, output independence and machine routing.
+`make test` and `make check` passed on host C99 `cc` (2026-10-25); pinned
+PS2/PSP cross-build CI awaits publication. See the
+[S-SMP map audit](docs/smp-memory-map-audit.md). No SPC700 instructions,
+S-DSP, sound samples or target-runtime results are claimed.
+
+Next primary block: implement the three S-SMP timers and their `$F1/$FA-$FF`
+register contract in the shared core, including deterministic counter-phase
+tests. Refining DMA/HDMA electrical bus phases and post-HDMA CPU alignment
 remains evidence-dependent. PS2 GS emulator and physical-console checks remain
 separate.
 
@@ -1872,11 +1885,11 @@ platform persistence remains incomplete.
 - [ ] Multiply/divide
 - [ ] Sleep and stop
 - [ ] Instruction timing
-- [ ] RAM and IPL mapping
+- [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM and optional IPL overlay verified; rest of S-SMP map/runtime pending
 - [ ] IPL provenance decision
 - [ ] I/O registers
 - [ ] Timers
-- [ ] [IN PROGRESS] Communication ports — four directional latches each way and CPU mirrors verified; S-SMP map/timing pending
+- [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
 - [ ] Instruction tests
 - [ ] Timing regressions
 
@@ -1915,7 +1928,7 @@ platform persistence remains incomplete.
 - [ ] Resampling policy
 - [ ] Underflow/overflow behavior
 - [ ] Host offline audio tests
-- [ ] [IN PROGRESS] Integrated APU regression tests — pure port and machine-route fixtures exist; executable S-SMP/DSP tests pending
+- [ ] [IN PROGRESS] Integrated APU regression tests — port, local memory-map and machine-route fixtures exist; executable S-SMP/DSP tests pending
 
 ## PS2 backend
 

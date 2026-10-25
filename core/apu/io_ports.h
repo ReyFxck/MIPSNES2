@@ -28,6 +28,9 @@ bool mipsnes2_apu_io_ports_smp_read(const mipsnes2_apu_io_ports *ports,
                                     unsigned port, uint8_t *value);
 bool mipsnes2_apu_io_ports_smp_write(mipsnes2_apu_io_ports *ports,
                                      unsigned port, uint8_t value);
+/* $F1 bits 4/5 clear only the S-CPU-to-S-SMP input latch pairs. */
+bool mipsnes2_apu_io_ports_smp_clear_inputs(mipsnes2_apu_io_ports *ports,
+                                            bool ports_01, bool ports_23);
 
 /* Adapter for the existing S-CPU bus route. */
 mipsnes2_bus_interface mipsnes2_apu_io_ports_make_cpu_interface(

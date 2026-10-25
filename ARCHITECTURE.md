@@ -20,13 +20,13 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
 | core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; optional reference video-line callback |
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
-| core/apu | S-CPU/S-SMP shared communication state | Four independent byte latches in each direction with CPU-side mirrors; cross-clock synchronization pending |
-| core/apu/spc700 | SPC700 execution/state | Directory only |
+| core/apu | S-CPU/S-SMP shared communication state | Four independent byte latches in each direction, CPU-side mirrors and S-SMP local-map handoff; cross-clock synchronization pending |
+| core/apu/spc700 | S-SMP address map and future SPC700 execution/state | Bounded ARAM, optional external IPL read overlay, communication ports and `$F1` port clear; no interpreter, timers or DSP route |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
-| core/machine | Stable instance composition and timed power-on/CPU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM, cartridge, CPU, bus, CPU-I/O, counters, H/V and scheduler |
+| core/machine | Stable instance composition and timed power-on/CPU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL, cartridge, CPU, bus, CPU-I/O, counters, H/V and scheduler |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path to bounded CPU-only machine run and single-frame GS submission; GS runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
@@ -36,7 +36,11 @@ There is a partial machine instance and an explicit-path PS2 ROM-file adapter,
 but no full ROM runner, complete renderer or SPC700/DSP. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
-optional VRAM/CGRAM/OAM bytes. `resume` advances one
+optional VRAM/CGRAM/OAM/ARAM bytes. An optional S-SMP map borrows 64 KiB ARAM
+and optional caller-provided 64-byte IPL; without the IPL, mapped high-page
+reads fail explicitly. PS2 reserves ARAM, while PSP merely compiles the same
+core. The S-SMP map and S-CPU bus meet through machine-owned directional
+ports; no S-SMP execution or clock domain exists. `resume` advances one
 timed RESET sequence or instruction to a caller-specified horizon; `run_until`
 also bounds completed sequences and retains a paused cursor. The instance
 has a stable address because its CPU and bus callbacks point into it; callers
