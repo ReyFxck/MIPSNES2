@@ -35,7 +35,7 @@ model electrical read/write subphases or post-HDMA CPU alignment.
 
 At this integration revision, same-channel general DMA/HDMA register collisions,
 HDMA behavior across VBlank start, zero-descriptor indirect shortening, dynamic
-`$2133` overscan changes and active-display PPU port restrictions remain open.
+`$2133` overscan changes and active-display PPU port restrictions remained open.
 The core has no game-specific path. No PS2, PSP or real-console runtime is
 claimed for this block. No source code from another emulator was used or
 indexed.
@@ -73,3 +73,7 @@ Same-channel general-DMA cancellation is covered separately in the
 [DMA/HDMA overlap audit](dma-hdma-overlap-audit.md).
 VBlank deactivation was added later and is covered in the
 [HDMA VBlank audit](hdma-vblank-audit.md).
+Frame-level dynamic overscan and a V=225..239 late-enable scheduling correction
+were added later and are covered in the
+[SETINI overscan audit](ppu-setini-overscan-audit.md). Exact late-line and
+electrical effects remain open.

@@ -256,14 +256,28 @@ int main(void)
     CHECK(machine.counters.open_bus2 == UINT8_C(0xfa));
     CHECK(machine.cgram_ports.address == 0U);
     config.standard = MIPSNES2_HV_STANDARD_PAL;
-    config.overscan = true;
+    config.overscan = false;
     CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002133), UINT8_C(0x04));
+    CHECK(machine.ppu_setini == UINT8_C(0x04) && machine.hv.overscan);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002102), UINT8_C(0x0f));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002103), 0U);
+    (void)mipsnes2_snes_bus_read(&machine.bus, UINT32_C(0x002138));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), UINT8_C(0x0f));
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x1f));
+    CHECK(mipsnes2_master_timing_run_until(
+              &machine.scheduler, &machine.hv, &machine.io,
+              (mipsnes2_master_clock)225U * 1364U + 40U,
+              300U, &master_report) == MIPSNES2_MASTER_TIMING_OK);
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x1f));
     oam_event = (mipsnes2_master_clock)240U * 1364U + 40U;
     CHECK(mipsnes2_master_timing_run_until(
               &machine.scheduler, &machine.hv, &machine.io,
               oam_event, 300U, &master_report) == MIPSNES2_MASTER_TIMING_OK);
     CHECK(machine.hv.v_counter == 240U && machine.hv.h_master_clock == 40U);
+    CHECK(machine.oam_ports.byte_address == UINT16_C(0x1e));
     oam_event = (mipsnes2_master_clock)(240U + 312U) * 1364U + 40U;
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002100), UINT8_C(0x8f));
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002102), UINT8_C(0x0f));
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002103), 0U);
     mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002104), UINT8_C(0x11));
@@ -1002,9 +1016,15 @@ int main(void)
 
             config.standard = standard == 0U
                 ? MIPSNES2_HV_STANDARD_NTSC : MIPSNES2_HV_STANDARD_PAL;
-            config.overscan = standard != 0U;
+            config.overscan = false;
             CHECK(mipsnes2_machine_init(&machine, &config) ==
                   MIPSNES2_MACHINE_OK);
+            if (standard != 0U) {
+                mipsnes2_snes_bus_write(&machine.bus,
+                                        UINT32_C(0x002133), UINT8_C(0x04));
+                CHECK(machine.ppu_setini == UINT8_C(0x04) &&
+                      machine.hv.overscan);
+            }
             wram[0x1000] = UINT8_C(0x80);
             wram[0x1001] = UINT8_C(0x24);
             wram[0x1002] = UINT8_C(0x80);
@@ -1039,6 +1059,50 @@ int main(void)
                   machine.bus.hdma_enable_mask == 1U &&
                   !machine.bus.hdma_line_pending);
         }
+    }
+    /* Enabling HDMA during the extra overscan lines still schedules the
+     * current frame's V=240 deactivation rather than skipping a frame. */
+    {
+        mipsnes2_master_clock enable_time =
+            UINT64_C(230) * MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+        mipsnes2_master_clock vblank_start =
+            UINT64_C(240) * MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+        uint8_t *state;
+
+        config.standard = MIPSNES2_HV_STANDARD_PAL;
+        config.overscan = false;
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_OK);
+        CHECK(machine.hdma_state.initialized &&
+              machine.hdma_state.registers == &machine.dma_registers);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002133),
+                                UINT8_C(0x04));
+        CHECK(mipsnes2_machine_run_until(
+                  &machine, enable_time, 100000U, 8U,
+                  &sequences, &report, &timing_result) ==
+              MIPSNES2_MACHINE_RUN_HORIZON);
+        state = machine.dma_registers.channel[0];
+        state[0] = 0U;
+        state[1] = UINT8_C(0x18);
+        state[4] = UINT8_C(0x7e);
+        state[8] = 0U;
+        state[9] = UINT8_C(0x10);
+        state[10] = UINT8_C(0x8f);
+        (void)memset(wram + 0x1000, UINT8_C(0x5a), 16U);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c), 1U);
+        machine.hdma_state.active_mask = 1U;
+        machine.hdma_state.transfer_mask = 1U;
+        CHECK(mipsnes2_master_timing_run_until(
+                  &machine.scheduler, &machine.hv, &machine.io,
+                  vblank_start - 1U, 32U, &master_report) ==
+              MIPSNES2_MASTER_TIMING_OK);
+        CHECK(machine.hdma_state.active_mask == 1U && machine.ready);
+        CHECK(mipsnes2_master_timing_run_until(
+                  &machine.scheduler, &machine.hv, &machine.io,
+                  vblank_start, 1U, &master_report) ==
+              MIPSNES2_MASTER_TIMING_OK);
+        CHECK(machine.hdma_state.active_mask == 0U &&
+              machine.hdma_state.transfer_mask == 0U && machine.ready);
     }
     /* Eight four-byte channels overrun the 252 clocks between the last
      * visible-line request and VBlank. VBlank waits for the admitted slot,
@@ -1128,7 +1192,7 @@ int main(void)
             mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c), 1U);
             CHECK(mipsnes2_master_timing_run_until(
                       &machine.scheduler, &machine.hv, &machine.io,
-                      next_frame + 23U, 0U, &master_report) ==
+                      next_frame + 23U, 1U, &master_report) ==
                   MIPSNES2_MASTER_TIMING_OK);
             CHECK(!machine.bus.hdma_frame_pending);
             CHECK(mipsnes2_master_timing_run_until(
@@ -1143,6 +1207,49 @@ int main(void)
                   MIPSNES2_MASTER_TIMING_OK);
             CHECK(machine.bus.hdma_line_pending);
         }
+    }
+    /* A SETINI overscan write after the normal VBlank boundary is retained
+     * without moving the active frame's boundary. It takes effect at the
+     * next frame start, including when no optional PPU memory is attached. */
+    {
+        mipsnes2_master_clock next_frame =
+            (mipsnes2_master_clock)MIPSNES2_HV_NTSC_SCANLINES *
+                MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS - 4U;
+        mipsnes2_master_clock normal_vblank =
+            UINT64_C(225) * MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+        mipsnes2_master_clock overscan_vblank =
+            UINT64_C(240) * MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+
+        config.standard = MIPSNES2_HV_STANDARD_NTSC;
+        config.overscan = false;
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_OK);
+        CHECK(mipsnes2_master_timing_run_until(
+                  &machine.scheduler, &machine.hv, &machine.io,
+                  normal_vblank + 100U, 0U, &master_report) ==
+              MIPSNES2_MASTER_TIMING_OK);
+        CHECK(machine.io.vblank && !machine.hv.overscan);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002133),
+                                UINT8_C(0x04));
+        CHECK(machine.ppu_setini == UINT8_C(0x04) &&
+              !machine.hv.overscan && machine.io.vblank);
+        CHECK(mipsnes2_master_timing_run_until(
+                  &machine.scheduler, &machine.hv, &machine.io,
+                  next_frame, 1U, &master_report) ==
+              MIPSNES2_MASTER_TIMING_OK);
+        CHECK(machine.hv.v_counter == 0U &&
+              machine.hv.h_master_clock == 0U && machine.hv.overscan &&
+              !machine.io.vblank);
+        CHECK(mipsnes2_master_timing_run_until(
+                  &machine.scheduler, &machine.hv, &machine.io,
+                  next_frame + normal_vblank, 0U, &master_report) ==
+              MIPSNES2_MASTER_TIMING_OK);
+        CHECK(!machine.io.vblank);
+        CHECK(mipsnes2_master_timing_run_until(
+                  &machine.scheduler, &machine.hv, &machine.io,
+                  next_frame + overscan_vblank, 0U, &master_report) ==
+              MIPSNES2_MASTER_TIMING_OK);
+        CHECK(machine.io.vblank);
     }
     (void)puts("machine integration: OK");
     return 0;

@@ -107,3 +107,9 @@ implemented. Pure sprite scanline selection exists separately, while its
 timing, priority rotation effects, DMA/HDMA,
 rendering and real-console behavior are also unverified. The OAM and PPU
 parent tasks remain incomplete.
+
+Runtime `$2133` bit 2 now selects the OAM VBlank reload line. The callback
+probes V=225, defers to V=240 for overscan and returns to V=225 for the next
+frame. A deterministic PAL fixture writes SETINI at V=0, proves that the OAM
+pointer does not reload at V=225/H=40, and proves that it does reload at
+V=240/H=40. See the [SETINI overscan audit](ppu-setini-overscan-audit.md).

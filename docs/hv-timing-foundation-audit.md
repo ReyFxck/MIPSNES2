@@ -36,8 +36,10 @@ This is not a PPU, renderer or complete Phase 4 timing implementation.
 - H is stored as a master-clock phase, not exposed as the latched `$213C` PPU-dot
   counter. Normal-line long-dot placement is not yet modeled; only the aggregate
   line length and events before those dots are used.
-- Overscan is fixed when the timing state is initialized. No SETINI register or
-  mid-frame mode change exists.
+- The original milestone fixed overscan at initialization. The later
+  [SETINI overscan block](ppu-setini-overscan-audit.md) connects `$2133` bit 2
+  to the machine at a documented frame-level cutoff; exact late-line effects
+  remain open.
 - H/V timer compare generation was absent from this milestone and was added by the
   later stable-register foundation documented in
   [H/V timer IRQ audit](hv-irq-foundation-audit.md). Exact within-instruction writes,

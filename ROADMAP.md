@@ -133,7 +133,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
 - [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
 - [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation plus scheduler wiring for all 256 opcode values, boundary IRQ/NMI/ABORT entry, write-qualified ABORT subset and explicit RESET; signal-level RESET, dummy cycles and electrical ABORT exceptions pending
-- [ ] PPU event integration
+- [ ] [IN PROGRESS] PPU event integration — SETINI overscan now moves shared VBlank, OAM reload and HDMA deactivation at a bounded frame-level cutoff; exact late-line behavior remains
 - [ ] SPC700 synchronization
 - [ ] DSP synchronization
 - [ ] DMA bus ownership
@@ -175,7 +175,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Phase 5 exit gate verified
 
 - [ ] PPU state ownership
-- [ ] Register reads/writes
+- [ ] [IN PROGRESS] Register reads/writes — shared machine-owned display, BG, window, color and SETINI write subsets exist; complete read/write/open-bus behavior remains
 - [ ] [IN PROGRESS] VRAM ports — read/write buffering and remap exist; access gates/mixed-port behavior pending
 - [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
 - [ ] [IN PROGRESS] OAM ports — CPU read/write, scheduled VBlank reload, first-line forced-blank release, `$2101` storage, sprite descriptor decode and priority rotation; display access windows pending
@@ -211,13 +211,13 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Offset-per-tile
 - [ ] Hires
 - [ ] Interlace
-- [ ] Overscan
-- [ ] Relevant latching behavior
+- [ ] [IN PROGRESS] Overscan — `$2133` bit 2 drives VBlank, OAM reload and HDMA deactivation before V=225; renderer sizing and exact late-line effects remain
+- [ ] [IN PROGRESS] Relevant latching behavior — late SETINI overscan writes latch for the next frame; other register latches and electrical timing remain
 - [ ] Relevant open-bus behavior
 - [ ] Scanline integration
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write sides host-verified; active-display and mixed-port behavior pending
 - [ ] [IN PROGRESS] Sprite limits and overflow flags — scheduled 32 OBJ/34 sliver selection and sticky `$213E` verified on host; hardware phase and pixels absent
-- [ ] Mid-frame register effects
+- [ ] [IN PROGRESS] Mid-frame register effects — bounded SETINI frame cutoff plus existing scanline-driven BG/window state; exact dot-level effects remain
 - [ ] PPU tests
 - [ ] Reference renderer integration
 

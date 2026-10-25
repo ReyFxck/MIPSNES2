@@ -106,6 +106,7 @@ typedef struct {
     bool ppu_forced_blank;
     bool hdma_events_scheduled;
     uint8_t ppu_brightness;
+    uint8_t ppu_setini;
     uint8_t ppu1_open_bus;
     uint8_t obj_overflow;
     uint8_t main_screen_enable;

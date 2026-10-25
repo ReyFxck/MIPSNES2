@@ -548,9 +548,22 @@ See the [zero-descriptor audit](docs/hdma-zero-descriptor-audit.md). Revision
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177771800).
 Real-console validation remains pending.
 
-Next primary block: refine DMA/HDMA electrical bus phases and post-HDMA CPU
-alignment with deterministic boundary fixtures. PS2 GS
-emulator and physical-console checks remain separate.
+The shared machine now owns `$2133` SETINI and connects bit 2 to its
+non-interlaced H/V state. Writes before V=225 select the current frame's
+V=225/V=240 VBlank boundary; later writes latch for V=0 of the next frame.
+OAM reload and HDMA deactivation probe V=225 and defer to V=240 when needed,
+including `$420C` enabled during the overscan-only lines. Host fixtures cover
+both boundaries, the next-frame latch and operation without optional PPU
+memory. Exact late-line behavior, interlace/pseudo-hires bits and continuous
+target display remain open. See the
+[SETINI overscan audit](docs/ppu-setini-overscan-audit.md). No target-runtime
+result is claimed before CI completes.
+
+Next primary block: establish the shared 5A22/APU communication-port mailbox
+and synchronization contract before the SPC700 interpreter, with deterministic
+CPU-side port tests. Refining DMA/HDMA electrical bus phases and post-HDMA CPU
+alignment remains evidence-dependent. PS2 GS emulator and physical-console
+checks remain separate.
 
 The existing bounded DMA cursor already keeps A1B fixed while incrementing,
 decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
