@@ -2,6 +2,7 @@
 #ifndef MIPSNES2_MACHINE_H
 #define MIPSNES2_MACHINE_H
 
+#include "core/apu/io_ports.h"
 #include "core/cartridge/prepare.h"
 #include "core/ppu/cgram_ports.h"
 #include "core/ppu/color_math.h"
@@ -67,6 +68,7 @@ typedef struct {
     mipsnes2_hv_timing hv;
     mipsnes2_interrupt_lines interrupts;
     mipsnes2_cpu_io io;
+    mipsnes2_apu_io_ports apu_ports;
     mipsnes2_ppu_counters counters;
     mipsnes2_ppu_vram_ports vram_ports;
     mipsnes2_ppu_cgram_ports cgram_ports;

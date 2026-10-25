@@ -1251,6 +1251,28 @@ int main(void)
               MIPSNES2_MASTER_TIMING_OK);
         CHECK(machine.io.vblank);
     }
+    /* With no external APU callback, the machine owns the directional
+     * $2140-$2143 mailbox and exposes its S-SMP side to the future core. */
+    {
+        uint8_t value = 0U;
+
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_OK);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x802174),
+                                UINT8_C(0xa6));
+        CHECK(mipsnes2_apu_io_ports_smp_read(&machine.apu_ports, 0U,
+                                             &value));
+        CHECK(value == UINT8_C(0xa6));
+        CHECK(mipsnes2_apu_io_ports_smp_write(&machine.apu_ports, 2U,
+                                              UINT8_C(0x5c)));
+        CHECK(mipsnes2_snes_bus_read(&machine.bus,
+                                     UINT32_C(0x002142)) == UINT8_C(0x5c));
+        CHECK(machine.apu_ports.cpu_to_apu[2] == 0U &&
+              machine.apu_ports.apu_to_cpu[0] == 0U);
+        CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+        CHECK(machine.apu_ports.cpu_to_apu[0] == 0U &&
+              machine.apu_ports.apu_to_cpu[2] == 0U);
+    }
     (void)puts("machine integration: OK");
     return 0;
 }

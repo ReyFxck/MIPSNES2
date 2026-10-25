@@ -91,6 +91,7 @@ independent tests or real-hardware observations before marking behavior verified
 
 ## SPC700, S-DSP and audio
 
+- [Nintendo SNES Development Manual, Book I](https://floating.muncher.se/bot/manual/book1_text.pdf), PPU register page 2-27-24, documents `$2140-$2143` as four communication addresses backed by different input and output registers, eight total. Consulted on 2026-10-25; no manual asset is committed.
 - [SNESdev Wiki: S-SMP](https://snes.nesdev.org/wiki/S-SMP) — audio CPU, RAM, IPL and timer overview.
 - [SNESdev Wiki: S-SMP register table](https://snes.nesdev.org/wiki/APU_register_table/SMP) — SPC700-side MMIO register map, including undocumented fields that require independent confirmation.
 - [SNESdev Wiki: S-DSP registers](https://snes.nesdev.org/wiki/S-DSP_registers) — register-oriented S-DSP starting point.

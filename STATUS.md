@@ -562,11 +562,20 @@ passed [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40199872417),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40199872450).
 No target-runtime result is claimed.
 
-Next primary block: establish the shared 5A22/APU communication-port mailbox
-and synchronization contract before the SPC700 interpreter, with deterministic
-CPU-side port tests. Refining DMA/HDMA electrical bus phases and post-HDMA CPU
-alignment remains evidence-dependent. PS2 GS emulator and physical-console
-checks remain separate.
+The shared core now owns an eight-latch S-CPU/S-SMP communication mailbox:
+four bytes in each direction. The CPU side maps `$2140-$217F` as four-address
+mirrors; the future S-SMP side uses port indices 0-3. Pure fixtures cover every
+direction, mirror, overwrite and invalid input, while the machine fixture covers
+default bus routing and power-on reset. Visibility is immediate because no
+S-SMP clock domain exists yet. See the
+[APU port audit](docs/apu-io-port-audit.md). Local host verification is pending
+the complete suite, and no target runtime is claimed.
+
+Next primary block: add caller-owned S-SMP RAM and its bounded local memory-map
+foundation, connecting `$F4-$F7` to this mailbox without embedding unlicensed
+IPL bytes. Refining DMA/HDMA electrical bus phases and post-HDMA CPU alignment
+remains evidence-dependent. PS2 GS emulator and physical-console checks remain
+separate.
 
 The existing bounded DMA cursor already keeps A1B fixed while incrementing,
 decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
@@ -1618,7 +1627,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] SRAM windows — base LoROM/HiROM power-of-two mappings exist; broader boards absent
 - [x] PPU MMIO routing — optional counter-register state with callback fallback; broader PPU registers remain unimplemented
 - [x] CPU I/O routing — callback route plus bus-owned `$420D`; CPU-I/O registers remain incomplete
-- [x] APU port routing — callback route only; APU ports remain unimplemented
+- [x] APU port routing — default machine-owned directional mailbox with explicit callback override
 - [x] DMA register routing — callback route in the original bus foundation; shared channel register routing was added later
 - [ ] Enhancement windows
 - [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
@@ -1864,7 +1873,7 @@ platform persistence remains incomplete.
 - [ ] IPL provenance decision
 - [ ] I/O registers
 - [ ] Timers
-- [ ] Communication ports
+- [ ] [IN PROGRESS] Communication ports — four directional latches each way and CPU mirrors verified; S-SMP map/timing pending
 - [ ] Instruction tests
 - [ ] Timing regressions
 
@@ -1894,7 +1903,7 @@ platform persistence remains incomplete.
 ## APU and audio
 
 - [ ] SPC700/DSP interconnect
-- [ ] CPU/APU port synchronization
+- [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
 - [ ] Timer integration
 - [ ] Sample generation pipeline
 - [ ] Deterministic sample buffering
@@ -1903,7 +1912,7 @@ platform persistence remains incomplete.
 - [ ] Resampling policy
 - [ ] Underflow/overflow behavior
 - [ ] Host offline audio tests
-- [ ] Integrated APU regression tests
+- [ ] [IN PROGRESS] Integrated APU regression tests — pure port and machine-route fixtures exist; executable S-SMP/DSP tests pending
 
 ## PS2 backend
 

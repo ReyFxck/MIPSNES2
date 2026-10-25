@@ -96,7 +96,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] SRAM windows — supported LoROM/HiROM/ExHiROM mappings verified
 - [x] PPU MMIO routing — optional counter-register state and callback fallback
 - [x] CPU I/O routing — callback route plus bus-owned `$420D`
-- [x] APU port routing — callback route only
+- [x] APU port routing — default machine-owned directional mailbox with explicit callback override
 - [x] DMA register routing — callback route only
 - [ ] Enhancement windows
 - [ ] [IN PROGRESS] Open bus behavior — deterministic latch only
@@ -243,7 +243,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] IPL provenance decision
 - [ ] I/O registers
 - [ ] Timers
-- [ ] Communication ports
+- [ ] [IN PROGRESS] Communication ports — four directional latches each way and `$2140-$217F` CPU mirrors verified; S-SMP map/timing pending
 - [ ] Instruction tests
 - [ ] Timing regressions
 
@@ -272,7 +272,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] DSP register side effects
 - [ ] Golden sample tests
 - [ ] SPC700/DSP interconnect
-- [ ] CPU/APU port synchronization
+- [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
 - [ ] Timer integration
 - [ ] Sample generation pipeline
 - [ ] Deterministic sample buffering
@@ -280,7 +280,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Resampling policy
 - [ ] Underflow/overflow behavior
 - [ ] Host offline audio tests
-- [ ] Integrated APU regression tests
+- [ ] [IN PROGRESS] Integrated APU regression tests — pure directional-port and machine-route fixtures exist; executable S-SMP/DSP tests pending
 
 ## Phase 9 — Base SNES Integration
 

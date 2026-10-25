@@ -531,6 +531,7 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
         return MIPSNES2_MACHINE_NOT_READY;
     }
     mipsnes2_cpu_io_init(&machine->io, UINT8_C(2));
+    mipsnes2_apu_io_ports_init(&machine->apu_ports);
     mipsnes2_ppu_counters_init(&machine->counters, UINT8_C(3), 0U);
     machine->ppu_forced_blank = true;
     machine->ppu_brightness = 0U;
@@ -604,7 +605,9 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     config.ppu.context = machine;
     config.ppu.read8 = machine_ppu_read;
     config.ppu.write8 = machine_ppu_write;
-    config.apu = machine->apu;
+    config.apu = machine->apu.read8 != NULL || machine->apu.write8 != NULL
+        ? machine->apu
+        : mipsnes2_apu_io_ports_make_cpu_interface(&machine->apu_ports);
     config.dma = machine->dma;
     config.dma_registers = &machine->dma_registers;
     config.hdma_state = &machine->hdma_state;
