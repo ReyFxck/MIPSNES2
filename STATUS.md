@@ -610,8 +610,24 @@ clock domain remain unverified. Revision `3a9329f` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40237174281).
 No audio or target-runtime result is claimed.
 
-Next primary block: establish caller-owned SPC700 programmer-visible register
-state plus the first bounded instruction-fetch/dispatch contract. Refining
+The caller-owned SPC700 execution foundation now represents A/X/Y/SP/PSW/PC and
+fetches opcodes through the bounded S-SMP map, including IPL overlay selection and
+16-bit PC wrap. Atomic dispatch implements `NOP` plus CLRP/SETP, CLRC/SETC, EI/DI,
+CLRV and NOTC; their 2/3-cycle costs advance the timer block exactly once. All
+other 247 byte values return an explicit unimplemented result without committing
+programmer-visible registers or S-SMP time. Fixtures cover all 256 dispatch values,
+every implemented PSW transition, mapped-fetch failure, cycle-total overflow, IPL
+fetch and instruction/timer coupling. Exact per-cycle bus traffic, reset values,
+interrupt behavior, operands and the remaining instructions are not claimed. See
+the [SPC700 execution audit](docs/spc700-execution-foundation-audit.md). The complete
+host suite passed after restoring the executable bit on the known local generated-
+test artifact `test-cpu-io`; the focused ASan/UBSan fixture passed with leak checking
+disabled because LeakSanitizer cannot inspect `/proc` in this environment. GCC
+`-fanalyzer` passed. Clang, PS2SDK, `psp-config` and target runtime are unavailable
+locally; pinned target cross-builds await publication.
+
+Next primary block: implement SPC700 immediate/register `MOV` forms and their
+N/Z behavior on the bounded execution contract. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
@@ -1811,12 +1827,12 @@ platform persistence remains incomplete.
 
 ## SPC700
 
-- [ ] Register state
-- [ ] Instruction fetch
-- [ ] Opcode dispatch
+- [x] Register state — caller-owned A/X/Y/SP/PSW/PC with no invented reset values
+- [x] Instruction fetch — bounded S-SMP-map fetch, IPL overlay and 16-bit PC wrap verified
+- [ ] [IN PROGRESS] Opcode dispatch — nine one-byte implied/PSW opcodes execute; 247 values fail explicitly
 - [ ] Addressing modes
 - [ ] Load/store
-- [ ] Arithmetic and flags
+- [ ] [IN PROGRESS] Arithmetic and flags — eight PSW-control operations verified; arithmetic absent
 - [ ] Decimal adjust
 - [ ] Logic and shifts
 - [ ] Branches and calls
@@ -1824,14 +1840,14 @@ platform persistence remains incomplete.
 - [ ] Bit operations
 - [ ] Multiply/divide
 - [ ] Sleep and stop
-- [ ] Instruction timing
+- [ ] [IN PROGRESS] Instruction timing — implemented 2/3-cycle costs feed timers atomically; bus phases absent
 - [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM and optional IPL overlay verified; rest of S-SMP map/runtime pending
 - [ ] IPL provenance decision
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
-- [ ] Instruction tests
-- [ ] Timing regressions
+- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values and implemented PSW transitions covered
+- [ ] [IN PROGRESS] Timing regressions — initial instruction/timer coupling and overflow cases covered
 
 ## DSP
 

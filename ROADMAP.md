@@ -225,12 +225,12 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [ ] Phase 7 exit gate verified
 
-- [ ] Register state
-- [ ] Instruction fetch
-- [ ] Opcode dispatch
+- [x] Register state — caller-owned A/X/Y/SP/PSW/PC
+- [x] Instruction fetch — bounded S-SMP map, IPL overlay and PC wrap
+- [ ] [IN PROGRESS] Opcode dispatch — `NOP` and eight PSW-control opcodes implemented
 - [ ] Addressing modes
 - [ ] Load/store
-- [ ] Arithmetic and flags
+- [ ] [IN PROGRESS] Arithmetic and flags — PSW-control subset only
 - [ ] Decimal adjust
 - [ ] Logic and shifts
 - [ ] Branches and calls
@@ -238,14 +238,14 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Bit operations
 - [ ] Multiply/divide
 - [ ] Sleep and stop
-- [ ] Instruction timing
+- [ ] [IN PROGRESS] Instruction timing — atomic 2/3-cycle subset advances timers
 - [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay and write-through tested; remaining MMIO, interpreter and hardware validation pending
 - [ ] IPL provenance decision
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` input-pair clear verified; cross-clock timing pending
-- [ ] Instruction tests
-- [ ] Timing regressions
+- [ ] [IN PROGRESS] Instruction tests — 256-value dispatch coverage plus initial semantics
+- [ ] [IN PROGRESS] Timing regressions — initial instruction/timer coupling verified
 
 ## Phase 8 — DSP / Audio
 

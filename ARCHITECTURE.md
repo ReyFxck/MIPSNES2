@@ -21,7 +21,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; optional reference video-line callback |
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP shared communication state | Four independent byte latches in each direction, CPU-side mirrors and S-SMP local-map handoff; cross-clock synchronization pending |
-| core/apu/spc700 | S-SMP address map, timers and future SPC700 execution/state | Bounded ARAM, optional external IPL read overlay, communication ports and three-stage `$F1/$FA-$FF` timers with explicit cycle advancement; no interpreter, DSP route or synchronized clock domain |
+| core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | Caller-owned registers, bounded atomic fetch/dispatch for the first implied instructions, ARAM/IPL, communication ports and three-stage timers; no complete interpreter, DSP route or synchronized clock domain |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
@@ -43,7 +43,11 @@ core. The S-SMP map and S-CPU bus meet through machine-owned directional
 ports. The map also owns three caller-advanced timers: timer 0/1 observe a
 shared 128-cycle stage-1 edge and timer 2 each 16-cycle subdivision; `$F1`
 enable edges, `$FA-$FC` targets and `$FD-$FF` read-clear outputs are routed.
-No S-SMP execution, S-DSP-relative phase or synchronized clock domain exists.
+The caller-owned SPC700 foundation can fetch through this map and atomically execute
+`NOP` plus the eight one-byte PSW-control instructions. Successful instruction costs
+advance the timer block in S-SMP cycles; rejected opcodes are recorded without
+committing programmer-visible state or time. There is no complete S-SMP interpreter,
+S-DSP-relative phase or synchronized clock domain.
 `resume` advances one
 timed RESET sequence or instruction to a caller-specified horizon; `run_until`
 also bounds completed sequences and retains a paused cursor. The instance
@@ -650,5 +654,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   four-bit read-clear outputs behind `$F1/$FA-$FF`. Advancement is explicitly
   denominated in S-SMP cycles; real power-on values, DSP-relative phase,
   TEST-register effects and S-CPU/S-SMP synchronization remain open.
+- 2026-10-25: Caller-owned SPC700 state now exposes A/X/Y/SP/PSW/PC, bounded
+  mapped opcode fetch and atomic dispatch. `NOP`, CLRP/SETP, CLRC/SETC, EI/DI,
+  CLRV and NOTC are implemented with documented costs feeding the timer block;
+  the other 247 opcode values fail explicitly without architectural commit.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
