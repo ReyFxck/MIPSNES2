@@ -28,7 +28,10 @@ remain unverified. No platform or game-specific branch was introduced.
   74-clock model when its last selected channel terminates indirectly.
 - [x] Timed machine fixture retains the data transfer and observes the
   one-byte-shorter A2A after the zero descriptor.
-- [ ] Host and PS2/PSP CI for the published revision.
+- [x] Revision `073b867` passed
+  [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177771815),
+  [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177771794)
+  and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177771800).
 - [ ] Real-console comparison and frame-initialization edge behavior.
 
 All fixtures use generated in-memory data. No source code from another
@@ -37,4 +40,4 @@ emulator was used or indexed.
 On 2026-10-25, the full C99 `cc` host suite, `-O3` suite, ASan/UBSan suite
 with leak detection disabled, GCC `-fanalyzer` host build and repository
 checker passed. Leak detection is unavailable in this execution environment.
-Console CI and physical target runtime are not yet verified for this revision.
+Physical target runtime remains unverified.

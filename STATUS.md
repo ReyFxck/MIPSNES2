@@ -542,7 +542,11 @@ high byte from the table. Earlier channels still fetch both bytes. Pure
 fixtures cover both channel positions and the eight-clock difference; a timed
 machine fixture checks the resulting table pointer.
 See the [zero-descriptor audit](docs/hdma-zero-descriptor-audit.md). Revision
-CI and real-console validation are pending.
+`073b867` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177771815),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177771794) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40177771800).
+Real-console validation remains pending.
 
 Next primary block: refine DMA/HDMA electrical bus phases and post-HDMA CPU
 alignment with deterministic boundary fixtures. PS2 GS
