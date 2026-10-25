@@ -624,7 +624,11 @@ host suite passed after restoring the executable bit on the known local generate
 test artifact `test-cpu-io`; the focused ASan/UBSan fixture passed with leak checking
 disabled because LeakSanitizer cannot inspect `/proc` in this environment. GCC
 `-fanalyzer` passed. Clang, PS2SDK, `psp-config` and target runtime are unavailable
-locally; pinned target cross-builds await publication.
+locally. Revision `e0313ab` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40238640280),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40238640404) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40238640364).
+No target-runtime result is claimed.
 
 Next primary block: implement SPC700 immediate/register `MOV` forms and their
 N/Z behavior on the bounded execution contract. Refining
