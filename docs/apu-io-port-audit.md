@@ -37,6 +37,12 @@ their executable bit twice; rebuilding the affected target advanced the suite,
 so this is recorded as an environment artifact rather than a clean full-suite
 sanitizer pass. Pinned target CI is pending publication.
 
+Implementation revision `64e8f24` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40200420524),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40200420538) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40200420504).
+No console, emulator or audio runtime was executed for this block.
+
 ## Deliberate limits
 
 This is logical mailbox state only. There is no SPC700 interpreter, S-SMP RAM,

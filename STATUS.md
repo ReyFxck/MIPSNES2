@@ -568,8 +568,11 @@ mirrors; the future S-SMP side uses port indices 0-3. Pure fixtures cover every
 direction, mirror, overwrite and invalid input, while the machine fixture covers
 default bus routing and power-on reset. Visibility is immediate because no
 S-SMP clock domain exists yet. See the
-[APU port audit](docs/apu-io-port-audit.md). Local host verification is pending
-the complete suite, and no target runtime is claimed.
+[APU port audit](docs/apu-io-port-audit.md). Revision `64e8f24` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40200420524),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40200420538) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40200420504).
+No target runtime or audio output is claimed.
 
 Next primary block: add caller-owned S-SMP RAM and its bounded local memory-map
 foundation, connecting `$F4-$F7` to this mailbox without embedding unlicensed
