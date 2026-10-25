@@ -71,3 +71,5 @@ object lists are corrected, and the repository checker now guards host/target
 core-object parity. Revision `8a0b915` passed all three CI workflows.
 Same-channel general-DMA cancellation is covered separately in the
 [DMA/HDMA overlap audit](dma-hdma-overlap-audit.md).
+VBlank deactivation was added later and is covered in the
+[HDMA VBlank audit](hdma-vblank-audit.md).

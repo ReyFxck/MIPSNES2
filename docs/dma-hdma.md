@@ -2,7 +2,7 @@
 
 ## Scope and current state
 
-SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. The shared core models eight channel register banks and both general DMA and HDMA operation cursors. The resumable CPU bridge services `$420B` and `$420C`, pauses CPU operations for general DMA and visible-line HDMA, advances scheduler/H/V time and shares WRAM refresh stalls. Electrical phases, same-channel overlap and VBlank edges remain pending.
+SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. The shared core models eight channel register banks and both general DMA and HDMA operation cursors. The resumable CPU bridge services `$420B` and `$420C`, pauses CPU operations for general DMA and visible-line HDMA, advances scheduler/H/V time and shares WRAM refresh stalls. Same-channel cancellation and scheduled VBlank deactivation are integrated; electrical phases and hardware-revision edges remain pending.
 
 ## Design direction
 
@@ -22,7 +22,7 @@ promotion.
 - [ ] [IN PROGRESS] DMA transfer modes — timed general DMA and direct/indirect HDMA; electrical phases pending
 - [ ] [IN PROGRESS] DMA timing — slots/setup/resynchronization, HDMA priority and shared refresh stalls; electrical phases pending
 - [ ] DMA source/destination wrapping
-- [ ] [IN PROGRESS] HDMA initialization — V=0 request and table engine; VBlank and revision edges pending
+- [ ] [IN PROGRESS] HDMA initialization — V=0 request, table engine and VBlank deactivation; revision edges pending
 - [ ] [IN PROGRESS] HDMA scanline behavior — timed HBlank requests and line transfers; electrical phase pending
 - [ ] [IN PROGRESS] Indirect HDMA — timed table/pointer path; zero-descriptor edge pending
 - [ ] Transfer edge cases
@@ -49,3 +49,4 @@ Frame/line scheduling and priority are in the
 [timed HDMA audit](hdma-timed-audit.md).
 Same-channel cancellation is scoped in the
 [DMA/HDMA overlap audit](dma-hdma-overlap-audit.md).
+VBlank deactivation is scoped in the [HDMA VBlank audit](hdma-vblank-audit.md).

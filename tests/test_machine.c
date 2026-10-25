@@ -982,6 +982,116 @@ int main(void)
               &machine, 650U, 1000U, 8U, &sequences, &report,
               &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
     CHECK(vram[0] == UINT8_C(0xd4));
+    /* Every active HDMA channel drops at the exact VBlank start, without
+     * clearing $420C. The next frame may initialize it again. */
+    {
+        unsigned standard;
+
+        config.vram = NULL;
+        config.vram_size = 0U;
+        config.cgram = NULL;
+        config.cgram_size = 0U;
+        config.oam = NULL;
+        config.oam_size = 0U;
+        config.video_line = NULL;
+        config.video_context = NULL;
+        for (standard = 0U; standard < 2U; ++standard) {
+            mipsnes2_master_clock vblank_start;
+
+            config.standard = standard == 0U
+                ? MIPSNES2_HV_STANDARD_NTSC : MIPSNES2_HV_STANDARD_PAL;
+            config.overscan = standard != 0U;
+            CHECK(mipsnes2_machine_init(&machine, &config) ==
+                  MIPSNES2_MACHINE_OK);
+            wram[0x1000] = UINT8_C(0x80);
+            wram[0x1001] = UINT8_C(0x24);
+            wram[0x1002] = UINT8_C(0x80);
+            wram[0x1003] = UINT8_C(0x25);
+            machine.dma_registers.channel[0][0] = 0U;
+            machine.dma_registers.channel[0][1] = UINT8_C(0x18);
+            machine.dma_registers.channel[0][2] = 0U;
+            machine.dma_registers.channel[0][3] = UINT8_C(0x10);
+            machine.dma_registers.channel[0][4] = UINT8_C(0x7e);
+            mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c), 1U);
+            vblank_start =
+                (mipsnes2_master_clock)mipsnes2_hv_vblank_start_line(
+                    &machine.hv) * MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, vblank_start - 1U, 100000U, 8U,
+                      &sequences, &report, &timing_result) ==
+                  MIPSNES2_MACHINE_RUN_HORIZON);
+            CHECK(machine.hdma_state.active_mask == 1U &&
+                  machine.bus.hdma_enable_mask == 1U);
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, vblank_start, 1000U, 0U,
+                      &sequences, &report, &timing_result) ==
+                  MIPSNES2_MACHINE_RUN_TIMING_ERROR);
+            CHECK(timing_result == MIPSNES2_CPU_TIMING_SCHEDULER_ERROR &&
+                  machine.hdma_state.active_mask == 1U);
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, vblank_start, 1000U, 8U,
+                      &sequences, &report, &timing_result) ==
+                  MIPSNES2_MACHINE_RUN_HORIZON);
+            CHECK(machine.hdma_state.active_mask == 0U &&
+                  machine.hdma_state.transfer_mask == 0U &&
+                  machine.bus.hdma_enable_mask == 1U &&
+                  !machine.bus.hdma_line_pending);
+        }
+    }
+    /* Eight four-byte channels overrun the 252 clocks between the last
+     * visible-line request and VBlank. VBlank waits for the admitted slot,
+     * then stops the rest of that HDMA line without stale snapshots. */
+    {
+        mipsnes2_master_clock vblank_start =
+            225U * MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+        mipsnes2_master_clock horizon;
+        unsigned channel;
+
+        config.standard = MIPSNES2_HV_STANDARD_NTSC;
+        config.overscan = false;
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_OK);
+        (void)memset(wram + 0x1000, 0xff, 0x8000);
+        for (channel = 0U; channel < 8U; ++channel) {
+            uint8_t *state = machine.dma_registers.channel[channel];
+            uint16_t table = (uint16_t)(0x1000U + channel * 0x1000U);
+
+            state[0] = 4U;
+            state[1] = UINT8_C(0x18);
+            state[2] = (uint8_t)table;
+            state[3] = (uint8_t)(table >> 8);
+            state[4] = UINT8_C(0x7e);
+        }
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c),
+                                UINT8_C(0xff));
+        CHECK(mipsnes2_machine_run_until(
+                  &machine, vblank_start - 1U, 100000U, 8U,
+                  &sequences, &report, &timing_result) ==
+              MIPSNES2_MACHINE_RUN_HORIZON);
+        CHECK(machine.cursor.hdma_active &&
+              machine.hdma_state.active_mask == UINT8_C(0xff));
+        CHECK(mipsnes2_machine_run_until(
+                  &machine, vblank_start, 1000U, 8U,
+                  &sequences, &report, &timing_result) ==
+              MIPSNES2_MACHINE_RUN_HORIZON);
+        CHECK(machine.cursor.hdma_active &&
+              machine.bus.hdma_vblank_pending);
+        for (horizon = vblank_start + 1U;
+             horizon < vblank_start + 50U; ++horizon) {
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, horizon, 1000U, 8U,
+                      &sequences, &report, &timing_result) ==
+                  MIPSNES2_MACHINE_RUN_HORIZON);
+            if (!machine.cursor.hdma_active) {
+                break;
+            }
+        }
+        CHECK(horizon < vblank_start + 50U &&
+              machine.hdma_state.active_mask == 0U &&
+              machine.hdma_state.transfer_mask == 0U &&
+              !machine.bus.hdma_vblank_pending &&
+              machine.bus.hdma_enable_mask == UINT8_C(0xff));
+    }
     /* Enabling in VBlank schedules initialization in the next frame for
      * both scanline standards, including NTSC's short current frame. */
     {

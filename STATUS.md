@@ -499,8 +499,9 @@ advances its operation cursor through shared H/V and WRAM refresh, and commits
 table/data effects at endpoints. Host fixtures cover real VRAM port writes,
 repeated horizons, event-budget retry, DMA preemption on distinct channels,
 refresh, A-bus exclusions and NTSC/PAL next-frame events. See the
-[timed HDMA audit](docs/hdma-timed-audit.md). Same-channel register collisions,
-exact VBlank deactivation and electrical phases remain open. Revision `e18fe55`
+[timed HDMA audit](docs/hdma-timed-audit.md). At revision `e18fe55`,
+same-channel register collisions, VBlank deactivation and electrical phases
+remained open. That revision
 passed [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176249767),
 but [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176249749)
 and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176249757)
@@ -517,11 +518,22 @@ operation at a DMA slot boundary. An interrupted channel retains its remaining
 DAS count, while unrelated channels continue after HDMA. Pure cursor and timed
 machine fixtures cover active/future cancellation, incomplete count retention
 and a surviving channel. See the
-[DMA/HDMA overlap audit](docs/dma-hdma-overlap-audit.md). Target CI for this
-change and real-console behavior remain unverified.
+[DMA/HDMA overlap audit](docs/dma-hdma-overlap-audit.md). Revision `0d1d64b`
+passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176937420),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176937429) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176937440).
+Real-console behavior remains unverified.
 
-Next primary block: implement and test explicit VBlank HDMA deactivation
-policy. PS2 GS
+The machine now schedules HDMA deactivation at H=0 of the first VBlank line
+after `$420C` is enabled. It clears active/transfer masks without clearing
+`$420C`; if an HDMA slot is already running, that slot finishes before the
+cursor stops. Host fixtures cover NTSC and PAL VBlank starts, no same-frame
+restart, and an eight-channel line that overruns VBlank. See the
+[HDMA VBlank audit](docs/hdma-vblank-audit.md). CI and target runtime checks
+for this change remain pending.
+
+Next primary block: resolve indirect HDMA zero-descriptor and hardware-revision
+edges with independent evidence and deterministic fixtures. PS2 GS
 emulator and physical-console checks remain separate.
 
 ## State and evidence rules
@@ -1238,7 +1250,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STP
 - [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
-- [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET, WRAM refresh and HDMA priority; signal-level RESET, exact dummy/internal sequencing and same-channel overlap are pending
+- [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET, WRAM refresh and HDMA priority; signal-level RESET, exact dummy/internal sequencing and electrical overlap phases are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
 - [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, boundary IRQ/NMI/ABORT entry, RESET vector reads and opt-in scheduler/5A22 cursor wiring exist; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
@@ -1572,7 +1584,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
 - [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` exist; remaining SNES register effects absent
-- [ ] [IN PROGRESS] Access timing — meaningful cursor accesses use 5A22 6/8/12 clocks, internal operations use 6 clocks and H/V-aware CPU/DMA/HDMA phases include shared WRAM refresh stalls; dummy traffic and same-channel arbitration remain open
+- [ ] [IN PROGRESS] Access timing — meaningful cursor accesses use 5A22 6/8/12 clocks, internal operations use 6 clocks and H/V-aware CPU/DMA/HDMA phases include shared WRAM refresh stalls; dummy traffic and electrical arbitration remain open
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO, base LoROM/HiROM and Mode 25/35 ExHiROM boundaries verified; padded/ExLoROM/enhancement maps absent
 - [ ] Page/block mapping benchmark
 
@@ -1743,11 +1755,11 @@ platform persistence remains incomplete.
 
 ## DMA / HDMA
 
-- [ ] [IN PROGRESS] DMA registers — channel banks, `$420B` start and `$420C` timed HDMA enable integrated; same-channel overlap pending
+- [ ] [IN PROGRESS] DMA registers — channel banks, `$420B` start and `$420C` timed HDMA enable integrated; electrical overlap pending
 - [ ] [IN PROGRESS] DMA transfer modes — timed general DMA and direct/indirect HDMA; electrical edge cases pending
 - [ ] [IN PROGRESS] DMA timing — grace cycle, slots, setup, CPU resynchronization, HDMA priority and shared WRAM refresh; electrical phases pending
 - [ ] DMA source/destination wrapping
-- [ ] [IN PROGRESS] HDMA initialization — frame request and table engine implemented; VBlank edge pending
+- [ ] [IN PROGRESS] HDMA initialization — frame request, table engine and scheduled VBlank deactivation implemented; revision edges pending
 - [ ] [IN PROGRESS] HDMA scanline behavior — HBlank request and timed line engine implemented; electrical phase pending
 - [ ] [IN PROGRESS] Indirect HDMA — timed pointer/table behavior implemented; zero-descriptor edge pending
 - [ ] Transfer edge cases

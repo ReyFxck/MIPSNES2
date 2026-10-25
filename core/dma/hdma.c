@@ -186,6 +186,16 @@ void mipsnes2_hdma_cursor_init(mipsnes2_hdma_cursor *cursor)
     }
 }
 
+bool mipsnes2_hdma_state_deactivate(mipsnes2_hdma_state *state)
+{
+    if (state == NULL || !state->initialized) {
+        return false;
+    }
+    state->active_mask = 0U;
+    state->transfer_mask = 0U;
+    return true;
+}
+
 mipsnes2_hdma_cursor_result mipsnes2_hdma_cursor_begin_frame(
     mipsnes2_hdma_cursor *cursor, mipsnes2_hdma_state *state,
     mipsnes2_dma_registers *registers, uint8_t enable_mask)

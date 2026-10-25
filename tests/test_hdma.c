@@ -373,6 +373,39 @@ static int test_resumable_cursor_operations(void)
     return 0;
 }
 
+static int test_vblank_deactivation(void)
+{
+    mipsnes2_dma_registers registers = {0};
+    mipsnes2_hdma_state state;
+    mipsnes2_hdma_report report;
+    fixture f;
+
+    (void)memset(&f, 0, sizeof(f));
+    mipsnes2_dma_registers_init(&registers);
+    mipsnes2_hdma_state_init(&state);
+    CHECK(!mipsnes2_hdma_state_deactivate(NULL));
+    CHECK(!mipsnes2_hdma_state_deactivate(&state));
+    configure(registers.channel[0], 0U, UINT8_C(0x18),
+              UINT16_C(0x1000), UINT8_C(0x7e));
+    f.bank_7e[0x1000] = UINT8_C(0x80);
+    CHECK(mipsnes2_hdma_frame_begin(&state, &registers, 1U,
+                                    table_read, &f, &report));
+    CHECK(state.active_mask == 1U && state.transfer_mask == 1U &&
+          registers.channel[0][10] == UINT8_C(0x80));
+    CHECK(mipsnes2_hdma_state_deactivate(&state));
+    CHECK(state.active_mask == 0U && state.transfer_mask == 0U &&
+          state.known_mask == 1U && state.terminated_mask == 0U &&
+          registers.channel[0][10] == UINT8_C(0x80));
+    CHECK(mipsnes2_hdma_run_scanline(&state, 1U, table_read,
+                                     transfer_byte, &f, &report));
+    CHECK(report.active_mask == 0U && report.data_bytes == 0U &&
+          f.transfer_count == 0U);
+    CHECK(mipsnes2_hdma_frame_begin(&state, &registers, 1U,
+                                    table_read, &f, &report));
+    CHECK(state.active_mask == 1U);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_direct_indirect_and_line_counters() == 0);
@@ -380,6 +413,7 @@ int main(void)
     CHECK(test_all_transfer_modes() == 0);
     CHECK(test_invalid_arguments() == 0);
     CHECK(test_resumable_cursor_operations() == 0);
+    CHECK(test_vblank_deactivation() == 0);
     (void)puts("HDMA table and scanline engine: OK");
     return 0;
 }

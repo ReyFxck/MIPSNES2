@@ -844,6 +844,14 @@ static mipsnes2_cpu_timing_result resume_hdma(
             state->hdma_operation.master_clocks;
         state->hdma_phase_pending = false;
         state->hdma_active = cursor_result != MIPSNES2_HDMA_CURSOR_COMPLETE;
+        if (bus->hdma_vblank_pending) {
+            if (!mipsnes2_hdma_state_deactivate(bus->hdma_state)) {
+                return MIPSNES2_CPU_TIMING_STALE_STATE;
+            }
+            mipsnes2_hdma_cursor_init(&state->hdma_cursor);
+            bus->hdma_vblank_pending = false;
+            state->hdma_active = false;
+        }
     }
     return MIPSNES2_CPU_TIMING_OK;
 }

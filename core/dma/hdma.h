@@ -69,6 +69,8 @@ typedef struct {
 } mipsnes2_hdma_cursor;
 
 void mipsnes2_hdma_state_init(mipsnes2_hdma_state *state);
+/* VBlank ends current-frame HDMA without changing $420C or table registers. */
+bool mipsnes2_hdma_state_deactivate(mipsnes2_hdma_state *state);
 void mipsnes2_hdma_cursor_init(mipsnes2_hdma_cursor *cursor);
 
 /* Operation-granular form used by the scheduler. OVERHEAD operations have no

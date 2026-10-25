@@ -28,7 +28,10 @@ a byte and register behavior under sub-byte overlap are not established.
   one-byte DMA on channel 1 before a visible-line HDMA request on channel 0.
   At HDMA admission, channel 0 is removed with nonzero DAS, channel 1 remains,
   HDMA completes one data byte, and channel 1 later reaches zero DAS.
-- [ ] Cross-build CI for this revision.
+- [x] Revision `0d1d64b` passed
+  [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176937420),
+  [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176937429)
+  and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176937440).
 - [ ] Real PS2 and PSP execution; no device result is claimed.
 
 The timed fixture uses a generated in-memory cartridge, WRAM and VRAM; it

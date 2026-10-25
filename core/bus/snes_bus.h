@@ -65,6 +65,7 @@ typedef struct {
     uint8_t hdma_enable_mask;
     bool hdma_frame_pending;
     bool hdma_line_pending;
+    bool hdma_vblank_pending;
     bool fastrom_enabled;
     bool timing_overflow;
 } mipsnes2_snes_bus;
