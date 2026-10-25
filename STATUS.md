@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 31512)
+Total output lines: 2291
+
 # STATUS — canonical project state
 
 Project foundation plus a 256-opcode 65C816, partial real SNES logical bus, base
@@ -601,7 +604,11 @@ the previously observed local non-executable generated-test artifact at
 `test-hv-timing`; force-rebuilding that target passed, followed by clean
 sanitized timer, memory-map and machine fixtures. Real power-on values, exact
 DSP-relative phase, TEST effects, register-edge races and a synchronized S-SMP
-clock domain remain unverified. No audio or target-runtime result is claimed.
+clock domain remain unverified. Revision `3a9329f` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40237174159),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40237174284) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40237174281).
+No audio or target-runtime result is claimed.
 
 Next primary block: establish caller-owned SPC700 programmer-visible register
 state plus the first bounded instruction-fetch/dispatch contract. Refining
@@ -962,89 +969,7 @@ verified for Host GCC/Clang plus pinned PS2/PSP cross-builds, and all downloaded
 artifact archives and internal checksums were inspected.
 
 The memory read-modify-write and shift/rotate milestone on 2026-10-16 adds all
-thirty-six ASL/LSR/ROL/ROR accumulator/memory, memory INC/DEC, TSB/TRB and STZ
-opcodes. Host regressions cover both M widths, C/N/Z isolation, TSB/TRB overlap
-semantics, B and unrelated-state preservation, Direct Page bank/DL rules, absolute
-and indexed 24-bit carry, 16-bit memory access, exact aggregate cycles and missing
-write-bus diagnostics. W65C816 bus-cycle dummy writes and lock signaling remain
-outside the current instruction-level timing contract. Local evidence is in
-docs/65c816-memory-rmw-shifts-audit.md. GitHub Host GCC/Clang and pinned PS2/PSP
-cross-build workflows passed for implementation head
-`7649664d488687436daeac1a41969cd8af402610`; artifact metadata/digests were inspected,
-but archive download inspection was blocked by repeated HTTP 502 responses.
-
-The stack push/pull and subroutine-control milestone on 2026-10-17 adds 25 verified
-opcodes and brings the reference interpreter to 248 dispatch entries. Deterministic
-host regressions cover every stack/status/register push and pull, PEA/PEI/PER, every
-direct/long/indirect JMP/JSR form, JSL, RTS and RTL in emulation and native modes.
-They verify M/X-selected 8/16-bit widths, byte order, flags, PC/PBR and return-address
-rules, ordinary `01xx` stack wrapping versus WDC's linear multi-byte exceptions,
-Direct Page pointer wrapping and DL timing, aggregate cycles, meaningful JSL/JSR
-`(absolute,X)` callback order/count and missing-write-bus stops before operand fetch.
-Local GCC debug/release and ASan+UBSan tests pass; local PS2SDK/PSPSDK are unavailable,
-so GitHub's pinned cross-build workflows are the platform build gate. GitHub Host
-GCC/Clang plus pinned PS2/PSP workflows passed for implementation head
-`182c31f40a536b99044a389fade89633c2ab4014`. Exact local and CI evidence, initial
-resolved documentation-order failures and limitations are recorded in
-docs/65c816-stack-control-audit.md. No console runtime or hardware result is claimed.
-
-The final opcode-dispatch milestone on 2026-10-17 adds BRK, COP, RTI, WDM, MVP,
-MVN, WAI and STP, bringing the reference interpreter to all 256 opcode values. It
-also adds caller-driven IRQ/NMI inputs required to test wait and return behavior.
-Host regressions verify emulation/native vectors and stack layouts, signature-byte
-PC behavior, flags, meaningful bus order/count, aggregate cycles, native/8-bit-index
-block moves, WAI wake rules, NMI priority and STP reset-only release. This does not
-complete ABORT, signal-level RESET/bus cycles, Ricoh 5A22 timing or scheduler
-integration. GitHub Host plus pinned PS2/PSP workflows passed for implementation
-commit `74890c559b428643c787fda71358d2065bcd030f`. Exact evidence is in
-docs/65c816-complete-opcodes-audit.md.
-
-The scheduler foundation milestone on 2026-10-17 adds caller-owned 64-bit master-
-clock time, a bounded deterministic event table, explicit priority/insertion tie
-ordering, cancellation, event horizons and exact rational conversion. A separately
-sourced Ricoh 5A22 classifier identifies 6/8/12-master-clock logical-address access
-classes and FastROM-capable windows. Host GCC debug/release and ASan+UBSan tests pass,
-including repeated traces, long chunked-ratio equivalence, timing boundaries and
-scheduled IRQ/NMI delivery to WAI. The CPU still lacks per-bus-cycle timing, refresh
-stalls and arbitration, so the broad timing/event-horizon tasks remain in progress.
-GitHub Host GCC/Clang plus sanitizers and pinned PS2/PSP cross-build workflows passed
-for implementation commit `e1dc763ad81601bdcfbc44885eee08b2f770dd0d`.
-Exact local/CI evidence and limitations are in docs/scheduler-foundation-audit.md.
-
-The partial SNES bus/timing milestone on 2026-10-17 adds caller-owned 128 KiB WRAM,
-low-bank mirrors, WRAM ports, subsystem callback routes, `$420D` FastROM state and
-address-dependent clocks for meaningful CPU accesses. An atomic timing bridge
-advances the scheduler and exposes mismatch/overflow errors. Host tests cover map
-boundaries, port side effects, FastROM, mixed-speed instructions and NMI delivery.
-Exact dummy/internal cycle placement, WRAM refresh, DMA/HDMA arbitration, cartridge
-board coverage and mid-instruction event pausing remain incomplete. GitHub Host
-GCC/Clang plus sanitizers and pinned PS2/PSP cross-build workflows passed for implementation
-commit `161aeb647fabce2b2e7ff7667d06b95204829daa`. Exact local/CI evidence and limits
-are in docs/snes-bus-timing-audit.md. No console runtime or performance result is
-claimed.
-
-The base-cartridge milestone on 2026-10-17 adds explicit caller-owned LoROM/HiROM
-ROM/SRAM views, standard base windows, deterministic power-of-two mirrors and a slot
-response contract that preserves the bus latch for undecoded reads. Synthetic host
-tests cover map boundaries, SRAM aliases, ROM write protection, invalid configuration
-and reset/NOP fetch through cartridge, bus, CPU and scheduler. Automatic mapper
-selection, file loading, irregular/multi-chip boards, Ex mappings, persistence and
-enhancement hardware remain incomplete. GitHub Host GCC/Clang plus sanitizers and
-pinned PS2/PSP cross-build workflows passed for implementation commit
-`f5be6dec1b4fc9ebdf96564fb1736c6fcdcad032`. Exact evidence and limitations are in
-docs/cartridge-foundation-audit.md. No commercial ROM, console runtime, compatibility
-or performance result is claimed.
-
-The cartridge image-analysis milestone on 2026-10-18 adds immutable views over clean
-or 512-byte-prefixed payloads and caller-selected LoROM/HiROM internal-header parsing.
-It extracts raw standard fields, safely decodes declared sizes, classifies only base
-map modes and checks the checksum/complement relationship. Synthetic tests cover all
-prefix policies, malformed sizes, candidate bounds, fields and hostile exponents.
-Automatic candidate selection, extended headers, full checksum calculation and
-hardware resolution remain incomplete. GitHub Host GCC/Clang plus sanitizers and
-pinned PS2/PSP cross-build workflows passed for implementation commit
-`add0e83ae5c5aee1680794ea420314cac3aa2b57`. Exact evidence and limitations are in
-docs/cartridge-header-analysis-audit.md. No commercial ROM or runtime result is claimed.
+thirty-six ASL/LSR/ROL/R…1512 tokens truncated…it.md. No commercial ROM or runtime result is claimed.
 
 The checksum/base-selection milestone on 2026-10-18 adds normalized whole-payload
 checksums, unambiguous smaller-tail mirroring and conservative base LoROM/HiROM
