@@ -210,6 +210,9 @@ static void write_system_area(mipsnes2_snes_bus *bus,
         }
         if (offset == UINT16_C(0x420c) && bus->dma_registers != NULL) {
             bus->hdma_enable_mask = value;
+            if (bus->hdma_enable_changed != NULL) {
+                bus->hdma_enable_changed(bus->hdma_enable_context, value);
+            }
             return;
         }
         if (offset == UINT16_C(0x420d)) {
@@ -264,6 +267,9 @@ mipsnes2_snes_bus_result mipsnes2_snes_bus_init(
     bus->hv_timing = config->hv_timing;
     bus->dma = config->dma;
     bus->dma_registers = config->dma_registers;
+    bus->hdma_state = config->hdma_state;
+    bus->hdma_enable_changed = config->hdma_enable_changed;
+    bus->hdma_enable_context = config->hdma_enable_context;
     bus->cartridge = config->cartridge;
     bus->open_value = config->initial_open_value;
     return MIPSNES2_SNES_BUS_OK;
@@ -290,6 +296,29 @@ static bool dma_a_blocked(mipsnes2_address address)
         ((offset >= UINT16_C(0x2100) && offset <= UINT16_C(0x21ff)) ||
          offset == UINT16_C(0x420b) || offset == UINT16_C(0x420c) ||
          (offset >= UINT16_C(0x4300) && offset <= UINT16_C(0x437f)));
+}
+
+uint8_t mipsnes2_snes_bus_dma_read_a(mipsnes2_snes_bus *bus,
+                                    mipsnes2_address a_address)
+{
+    uint32_t index;
+    uint8_t value;
+
+    if (bus == NULL || bus->wram == NULL) {
+        return 0U;
+    }
+    a_address = mipsnes2_address24(a_address);
+    if (dma_a_blocked(a_address)) {
+        value = bus->open_value;
+    } else if (wram_index(a_address, &index)) {
+        value = bus->wram[index];
+    } else if (is_system_bank((uint8_t)(a_address >> 16))) {
+        value = read_system_area(bus, a_address, (uint16_t)a_address);
+    } else {
+        value = cartridge_read(bus, a_address);
+    }
+    bus->open_value = value;
+    return value;
 }
 
 void mipsnes2_snes_bus_dma_byte(mipsnes2_snes_bus *bus,

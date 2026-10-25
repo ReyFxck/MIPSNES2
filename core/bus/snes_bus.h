@@ -9,7 +9,7 @@
 #include "core/bus/cpu_io.h"
 #include "core/bus/interface.h"
 #include "core/cartridge/interface.h"
-#include "core/dma/registers.h"
+#include "core/dma/hdma.h"
 #include "core/ppu/counters.h"
 
 enum {
@@ -21,6 +21,8 @@ typedef enum {
     MIPSNES2_SNES_BUS_INVALID_ARGUMENT,
     MIPSNES2_SNES_BUS_TIMING_OVERFLOW
 } mipsnes2_snes_bus_result;
+
+typedef void (*mipsnes2_hdma_enable_callback)(void *context, uint8_t mask);
 
 typedef struct {
     uint8_t *wram;
@@ -34,6 +36,9 @@ typedef struct {
     const mipsnes2_hv_timing *hv_timing;
     mipsnes2_bus_interface dma;
     mipsnes2_dma_registers *dma_registers;
+    mipsnes2_hdma_state *hdma_state;
+    mipsnes2_hdma_enable_callback hdma_enable_changed;
+    void *hdma_enable_context;
     mipsnes2_cartridge_interface cartridge;
 } mipsnes2_snes_bus_config;
 
@@ -47,6 +52,9 @@ typedef struct {
     const mipsnes2_hv_timing *hv_timing;
     mipsnes2_bus_interface dma;
     mipsnes2_dma_registers *dma_registers;
+    mipsnes2_hdma_state *hdma_state;
+    mipsnes2_hdma_enable_callback hdma_enable_changed;
+    void *hdma_enable_context;
     mipsnes2_cartridge_interface cartridge;
     uint32_t wram_port_address;
     uint64_t access_count;
@@ -55,6 +63,8 @@ typedef struct {
     uint8_t dma_request_mask;
     uint8_t dma_grace_cycles;
     uint8_t hdma_enable_mask;
+    bool hdma_frame_pending;
+    bool hdma_line_pending;
     bool fastrom_enabled;
     bool timing_overflow;
 } mipsnes2_snes_bus;
@@ -85,5 +95,8 @@ bool mipsnes2_snes_bus_sync_hv_latch(mipsnes2_snes_bus *bus);
  * are charged. The timing owner must charge one eight-master-clock slot. */
 void mipsnes2_snes_bus_dma_byte(mipsnes2_snes_bus *bus,
     mipsnes2_address a_address, mipsnes2_address b_address, bool b_to_a);
+/* Untimed HDMA table fetch under the same A-bus exclusion rules as DMA. */
+uint8_t mipsnes2_snes_bus_dma_read_a(mipsnes2_snes_bus *bus,
+                                    mipsnes2_address a_address);
 
 #endif

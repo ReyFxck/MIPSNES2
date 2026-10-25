@@ -106,8 +106,11 @@ static mipsnes2_hdma_cursor_result settle(mipsnes2_hdma_cursor *cursor)
             if (cursor->frame_begin) {
                 channel[8] = channel[2];
                 channel[9] = channel[3];
+                ++cursor->report.channels_visited;
+                cursor->phase = PHASE_DESCRIPTOR;
+            } else {
+                cursor->phase = PHASE_CHANNEL;
             }
-            cursor->phase = PHASE_CHANNEL;
             continue;
         }
         channel = cursor->registers->channel[cursor->channel];
@@ -155,7 +158,8 @@ static mipsnes2_hdma_cursor_result settle(mipsnes2_hdma_cursor *cursor)
             prepare_operation(
                 cursor, MIPSNES2_HDMA_OPERATION_TABLE_READ,
                 ((mipsnes2_address)channel[4] << 16) | word(channel, 8U),
-                0U, 8U, false);
+                0U, (uint8_t)(cursor->phase == PHASE_DESCRIPTOR &&
+                               !cursor->frame_begin ? 0U : 8U), false);
             continue;
         }
         return MIPSNES2_HDMA_CURSOR_INVALID_ARGUMENT;
@@ -271,9 +275,7 @@ mipsnes2_hdma_cursor_result mipsnes2_hdma_cursor_commit(
             cursor->phase = PHASE_SELECT;
         } else {
             ++cursor->report.channels_visited;
-            if (cursor->frame_begin) {
-                cursor->phase = PHASE_DESCRIPTOR;
-            } else if ((cursor->state->transfer_mask &
+            if ((cursor->state->transfer_mask &
                  (uint8_t)(1U << cursor->channel)) != 0U) {
                 cursor->byte_index = 0U;
                 cursor->byte_count = transfer_bytes(channel[0]);

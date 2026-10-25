@@ -83,6 +83,7 @@ typedef struct {
     mipsnes2_ppu_mode0_color_line sub_color_line;
     mipsnes2_ppu_window_mask windows;
     mipsnes2_dma_registers dma_registers;
+    mipsnes2_hdma_state hdma_state;
     uint8_t window_hidden[256];
     uint8_t sub_window_hidden[256];
     uint8_t color_window_inside[256];
@@ -103,6 +104,7 @@ typedef struct {
     mipsnes2_hv_standard standard;
     bool overscan;
     bool ppu_forced_blank;
+    bool hdma_events_scheduled;
     uint8_t ppu_brightness;
     uint8_t ppu1_open_bus;
     uint8_t obj_overflow;

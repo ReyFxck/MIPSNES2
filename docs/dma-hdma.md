@@ -2,7 +2,7 @@
 
 ## Scope and current state
 
-SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. The shared core models eight channel register banks, all general-purpose mode/address sequences and an operation-granular but untimed HDMA table/scanline engine. The resumable CPU bridge services `$420B`, pauses the CPU, advances scheduler/H/V time and shares WRAM refresh stalls with CPU operations. `$420C` is routed, but timed HDMA arbitration remains pending.
+SNES DMA and HDMA are emulated bus masters. PS2 host DMA transfers data around the target machine. These are completely different layers; speeding up a host copy does not emulate SNES transfer timing. The shared core models eight channel register banks and both general DMA and HDMA operation cursors. The resumable CPU bridge services `$420B` and `$420C`, pauses CPU operations for general DMA and visible-line HDMA, advances scheduler/H/V time and shares WRAM refresh stalls. Electrical phases, same-channel overlap and VBlank edges remain pending.
 
 ## Design direction
 
@@ -18,13 +18,13 @@ Planning checklist; [STATUS.md](../STATUS.md) is canonical. Register and
 transfer-mode foundations are partial; document implementation evidence before
 promotion.
 
-- [ ] [IN PROGRESS] DMA registers — channel bytes, `$420B` start and `$420C` enable mask; timed HDMA requests pending
-- [ ] [IN PROGRESS] DMA transfer modes — timed general DMA plus pure direct/indirect HDMA paths; timed HDMA/electrical phases pending
-- [ ] [IN PROGRESS] DMA timing — slots/setup/resynchronization and shared refresh stalls; HDMA/electrical phases pending
+- [ ] [IN PROGRESS] DMA registers — channel bytes, `$420B` start and `$420C` enable mask; same-channel arbitration pending
+- [ ] [IN PROGRESS] DMA transfer modes — timed general DMA and direct/indirect HDMA; electrical phases pending
+- [ ] [IN PROGRESS] DMA timing — slots/setup/resynchronization, HDMA priority and shared refresh stalls; electrical phases pending
 - [ ] DMA source/destination wrapping
-- [ ] [IN PROGRESS] HDMA initialization — pure table engine; V=0 scheduler trigger pending
-- [ ] [IN PROGRESS] HDMA scanline behavior — pure line counters/transfers; HBlank arbitration pending
-- [ ] [IN PROGRESS] Indirect HDMA — table/pointer path implemented; timed edge cases pending
+- [ ] [IN PROGRESS] HDMA initialization — V=0 request and table engine; VBlank and revision edges pending
+- [ ] [IN PROGRESS] HDMA scanline behavior — timed HBlank requests and line transfers; electrical phase pending
+- [ ] [IN PROGRESS] Indirect HDMA — timed table/pointer path; zero-descriptor edge pending
 - [ ] Transfer edge cases
 - [ ] CPU interaction
 - [ ] Channel priority
@@ -45,3 +45,5 @@ in the [machine DMA audit](dma-machine-audit.md), with refresh follow-up in the
 [WRAM refresh audit](wram-refresh-audit.md) and logical HDMA state in the
 [HDMA table audit](hdma-table-audit.md). The resumable operation contract and
 approximate per-slot costs are in the [HDMA cursor audit](hdma-cursor-audit.md).
+Frame/line scheduling and priority are in the
+[timed HDMA audit](hdma-timed-audit.md).

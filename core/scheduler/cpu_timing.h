@@ -9,6 +9,7 @@
 #include "core/bus/snes_bus.h"
 #include "core/cpu/65c816/cpu.h"
 #include "core/dma/transfer.h"
+#include "core/dma/hdma.h"
 #include "core/scheduler/hv_timing.h"
 #include "core/scheduler/interrupt_lines.h"
 #include "core/scheduler/scheduler.h"
@@ -45,9 +46,12 @@ typedef struct {
     uint64_t processor_cycles;
     uint64_t bus_accesses;
     uint64_t internal_cycles;
-    uint64_t master_clocks; /* committed CPU, DMA and WRAM-refresh clocks */
+    uint64_t master_clocks; /* committed CPU, DMA, HDMA and refresh clocks */
     uint64_t dma_master_clocks;
     uint64_t dma_bytes;
+    uint64_t hdma_master_clocks;
+    uint64_t hdma_table_bytes;
+    uint64_t hdma_data_bytes;
     uint64_t refresh_master_clocks;
     mipsnes2_master_clock target_time;
     size_t events_dispatched;
@@ -72,6 +76,8 @@ typedef struct {
     mipsnes2_cpu pending_cpu_snapshot;
     mipsnes2_cpu abort_cpu_checkpoint;
     mipsnes2_dma_cursor dma_cursor;
+    mipsnes2_hdma_cursor hdma_cursor;
+    mipsnes2_hdma_operation hdma_operation;
     mipsnes2_dma_registers dma_register_snapshot;
     mipsnes2_cpu *bound_cpu;
     mipsnes2_snes_bus *bound_bus;
@@ -89,9 +95,13 @@ typedef struct {
     mipsnes2_master_clock operation_end_time;
     mipsnes2_master_clock dma_start_time;
     mipsnes2_master_clock dma_end_time;
+    mipsnes2_master_clock hdma_end_time;
     mipsnes2_master_clock refresh_stall_end_time;
     uint64_t dma_master_clocks;
     uint64_t dma_bytes;
+    uint64_t hdma_master_clocks;
+    uint64_t hdma_table_bytes;
+    uint64_t hdma_data_bytes;
     uint64_t refresh_master_clocks;
     size_t events_dispatched;
     mipsnes2_cpu_result cpu_result;
@@ -109,6 +119,8 @@ typedef struct {
     bool operation_pending;
     bool dma_active;
     bool dma_phase_pending;
+    bool hdma_active;
+    bool hdma_phase_pending;
     bool refresh_stall_active;
     bool reset_requested;
     bool reset_sequence;

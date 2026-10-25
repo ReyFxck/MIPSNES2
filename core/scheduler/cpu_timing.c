@@ -88,6 +88,9 @@ static void fill_resumable_report(
     report->target_time = scheduler->now;
     report->dma_master_clocks = state->dma_master_clocks;
     report->dma_bytes = state->dma_bytes;
+    report->hdma_master_clocks = state->hdma_master_clocks;
+    report->hdma_table_bytes = state->hdma_table_bytes;
+    report->hdma_data_bytes = state->hdma_data_bytes;
     report->refresh_master_clocks = state->refresh_master_clocks;
 
     if (!state->reset_sequence &&
@@ -102,7 +105,8 @@ static void fill_resumable_report(
     if (bus->master_clocks >= state->bus_clocks_before) {
         report->master_clocks =
             bus->master_clocks - state->bus_clocks_before +
-            state->dma_master_clocks + state->refresh_master_clocks;
+            state->dma_master_clocks + state->hdma_master_clocks +
+            state->refresh_master_clocks;
     }
     if (!state->reset_sequence &&
         report->processor_cycles >= report->bus_accesses) {
@@ -142,6 +146,31 @@ static mipsnes2_cpu_timing_result add_dispatched_events(
     }
     state->events_dispatched += dispatched;
     return MIPSNES2_CPU_TIMING_OK;
+}
+
+static bool committed_clocks_fit(const mipsnes2_cpu_timing_state *state,
+                                 const mipsnes2_snes_bus *bus,
+                                 uint64_t extra)
+{
+    uint64_t total;
+
+    if (bus->master_clocks < state->bus_clocks_before) {
+        return false;
+    }
+    total = bus->master_clocks - state->bus_clocks_before;
+    if (total > UINT64_MAX - state->dma_master_clocks) {
+        return false;
+    }
+    total += state->dma_master_clocks;
+    if (total > UINT64_MAX - state->hdma_master_clocks) {
+        return false;
+    }
+    total += state->hdma_master_clocks;
+    if (total > UINT64_MAX - state->refresh_master_clocks) {
+        return false;
+    }
+    total += state->refresh_master_clocks;
+    return total <= UINT64_MAX - extra;
 }
 
 static mipsnes2_cpu_timing_result run_resumable_until(
@@ -305,14 +334,9 @@ static mipsnes2_cpu_timing_result run_phase_with_refresh(
         }
         {
             uint64_t delay = refresh_end - scheduler->now;
-            uint64_t bus_delta = bus->master_clocks -
-                                 state->bus_clocks_before;
-
             if (*phase_end > UINT64_MAX - delay ||
                 state->refresh_master_clocks > UINT64_MAX - delay ||
-                bus_delta > UINT64_MAX - state->dma_master_clocks ||
-                bus_delta + state->dma_master_clocks >
-                    UINT64_MAX - state->refresh_master_clocks - delay) {
+                !committed_clocks_fit(state, bus, delay)) {
                 return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
             }
             *phase_end += delay;
@@ -441,7 +465,8 @@ static mipsnes2_cpu_timing_result prepare_pending_operation(
         return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
     }
     if (bus->master_clocks > UINT64_MAX - clocks ||
-        scheduler->now > UINT64_MAX - clocks) {
+        scheduler->now > UINT64_MAX - clocks ||
+        !committed_clocks_fit(state, bus, clocks)) {
         return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
     }
 
@@ -633,6 +658,11 @@ static void bind_resumable_state(
     state->dma_phase_pending = false;
     state->dma_master_clocks = 0U;
     state->dma_bytes = 0U;
+    state->hdma_master_clocks = 0U;
+    state->hdma_table_bytes = 0U;
+    state->hdma_data_bytes = 0U;
+    state->hdma_active = false;
+    state->hdma_phase_pending = false;
     state->refresh_master_clocks = 0U;
     state->refresh_phase_clocks = 0U;
     state->refresh_stall_active = false;
@@ -676,6 +706,130 @@ static void dma_byte(void *context, mipsnes2_address a_address,
     mipsnes2_snes_bus_dma_byte(context, a_address, b_address, b_to_a);
 }
 
+static bool hdma_requested(const mipsnes2_snes_bus *bus)
+{
+    return bus->hdma_state != NULL &&
+           (bus->hdma_frame_pending || bus->hdma_line_pending);
+}
+
+static mipsnes2_cpu_timing_result resume_hdma(
+    mipsnes2_cpu *cpu, mipsnes2_snes_bus *bus,
+    mipsnes2_scheduler *scheduler, mipsnes2_hv_timing *hv_timing,
+    mipsnes2_interrupt_lines *interrupt_lines,
+    mipsnes2_cpu_timing_state *state, mipsnes2_master_clock horizon,
+    size_t *event_budget, mipsnes2_cpu_timing_report *report)
+{
+    if (!state->hdma_active) {
+        mipsnes2_hdma_cursor_result start;
+
+        if (!hdma_requested(bus) || bus->dma_registers == NULL) {
+            return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+        }
+        if (bus->hdma_frame_pending) {
+            bus->hdma_frame_pending = false;
+            start = mipsnes2_hdma_cursor_begin_frame(
+                &state->hdma_cursor, bus->hdma_state, bus->dma_registers,
+                bus->hdma_enable_mask);
+        } else {
+            bus->hdma_line_pending = false;
+            start = mipsnes2_hdma_cursor_begin_scanline(
+                &state->hdma_cursor, bus->hdma_state,
+                bus->hdma_enable_mask);
+        }
+        if (start == MIPSNES2_HDMA_CURSOR_COMPLETE) {
+            return MIPSNES2_CPU_TIMING_OK;
+        }
+        if (start != MIPSNES2_HDMA_CURSOR_READY) {
+            return MIPSNES2_CPU_TIMING_STALE_STATE;
+        }
+        state->hdma_active = true;
+    }
+    while (state->hdma_active) {
+        mipsnes2_hdma_cursor_result cursor_result;
+        mipsnes2_cpu_timing_result result;
+
+        if (!state->hdma_phase_pending) {
+            cursor_result = mipsnes2_hdma_cursor_peek(
+                &state->hdma_cursor, &state->hdma_operation);
+            if (cursor_result != MIPSNES2_HDMA_CURSOR_READY) {
+                return MIPSNES2_CPU_TIMING_STALE_STATE;
+            }
+            if (scheduler->now > UINT64_MAX -
+                                      state->hdma_operation.master_clocks ||
+                !committed_clocks_fit(
+                    state, bus, state->hdma_operation.master_clocks)) {
+                return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+            }
+            state->hdma_end_time = scheduler->now +
+                                   state->hdma_operation.master_clocks;
+            (void)memcpy(&state->pending_cpu_snapshot, cpu, sizeof(*cpu));
+            state->pending_bus_accesses = bus->access_count;
+            state->pending_bus_clocks = bus->master_clocks;
+            state->pending_fastrom_enabled = bus->fastrom_enabled;
+            state->hdma_phase_pending = true;
+        }
+        if (memcmp(cpu, &state->pending_cpu_snapshot, sizeof(*cpu)) != 0 ||
+            bus->access_count != state->pending_bus_accesses ||
+            bus->master_clocks != state->pending_bus_clocks ||
+            bus->fastrom_enabled != state->pending_fastrom_enabled ||
+            memcmp(bus->dma_registers,
+                   &state->hdma_cursor.register_snapshot,
+                   sizeof(*bus->dma_registers)) != 0 ||
+            memcmp(bus->hdma_state, &state->hdma_cursor.state_snapshot,
+                   sizeof(*bus->hdma_state)) != 0) {
+            return MIPSNES2_CPU_TIMING_STALE_STATE;
+        }
+        result = run_phase_with_refresh(
+            cpu, bus, scheduler, hv_timing, interrupt_lines, state,
+            &state->hdma_end_time, horizon, event_budget, report);
+        if (result != MIPSNES2_CPU_TIMING_OK) {
+            return result;
+        }
+        if (scheduler->now < state->hdma_end_time) {
+            return MIPSNES2_CPU_TIMING_HORIZON_REACHED;
+        }
+        if (memcmp(cpu, &state->pending_cpu_snapshot, sizeof(*cpu)) != 0 ||
+            bus->access_count != state->pending_bus_accesses ||
+            bus->master_clocks != state->pending_bus_clocks ||
+            bus->fastrom_enabled != state->pending_fastrom_enabled ||
+            memcmp(bus->dma_registers,
+                   &state->hdma_cursor.register_snapshot,
+                   sizeof(*bus->dma_registers)) != 0 ||
+            memcmp(bus->hdma_state, &state->hdma_cursor.state_snapshot,
+                   sizeof(*bus->hdma_state)) != 0) {
+            return MIPSNES2_CPU_TIMING_STALE_STATE;
+        }
+        {
+            uint8_t value = 0U;
+
+            if (state->hdma_operation.kind ==
+                MIPSNES2_HDMA_OPERATION_TABLE_READ) {
+                value = mipsnes2_snes_bus_dma_read_a(
+                    bus, state->hdma_operation.a_address);
+                ++state->hdma_table_bytes;
+            } else if (state->hdma_operation.kind ==
+                       MIPSNES2_HDMA_OPERATION_TRANSFER) {
+                mipsnes2_snes_bus_dma_byte(
+                    bus, state->hdma_operation.a_address,
+                    state->hdma_operation.b_address,
+                    state->hdma_operation.b_to_a);
+                ++state->hdma_data_bytes;
+            }
+            cursor_result = mipsnes2_hdma_cursor_commit(
+                &state->hdma_cursor, &state->hdma_operation, value);
+        }
+        if (cursor_result != MIPSNES2_HDMA_CURSOR_READY &&
+            cursor_result != MIPSNES2_HDMA_CURSOR_COMPLETE) {
+            return MIPSNES2_CPU_TIMING_STALE_STATE;
+        }
+        state->hdma_master_clocks +=
+            state->hdma_operation.master_clocks;
+        state->hdma_phase_pending = false;
+        state->hdma_active = cursor_result != MIPSNES2_HDMA_CURSOR_COMPLETE;
+    }
+    return MIPSNES2_CPU_TIMING_OK;
+}
+
 static mipsnes2_cpu_timing_result resume_dma(
     mipsnes2_cpu *cpu, mipsnes2_snes_bus *bus,
     mipsnes2_scheduler *scheduler, mipsnes2_hv_timing *hv_timing,
@@ -689,6 +843,16 @@ static mipsnes2_cpu_timing_result resume_dma(
         if (!state->dma_phase_pending) {
             uint8_t clocks = 8U;
 
+            if (state->hdma_active || hdma_requested(bus)) {
+                result = resume_hdma(cpu, bus, scheduler, hv_timing,
+                                     interrupt_lines, state, horizon,
+                                     event_budget, report);
+                if (result != MIPSNES2_CPU_TIMING_OK) {
+                    return result;
+                }
+                continue;
+            }
+
             if (state->dma_phase == DMA_INIT) {
                 clocks = (uint8_t)(8U - (scheduler->now & 7U) + 8U);
             } else if (state->dma_phase == DMA_TAIL) {
@@ -698,8 +862,7 @@ static mipsnes2_cpu_timing_result resume_dma(
             }
             if (scheduler->now > UINT64_MAX - clocks ||
                 state->dma_master_clocks > UINT64_MAX - clocks ||
-                bus->master_clocks - state->bus_clocks_before >
-                    UINT64_MAX - state->dma_master_clocks - clocks) {
+                !committed_clocks_fit(state, bus, clocks)) {
                 return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
             }
             state->dma_end_time = scheduler->now + clocks;
@@ -828,6 +991,17 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
     for (;;) {
         mipsnes2_cpu_cycle_result cycle_result;
         mipsnes2_cpu_operation operation;
+
+        if (!state->operation_pending && !state->dma_active &&
+            (state->hdma_active || hdma_requested(bus))) {
+            result = resume_hdma(cpu, bus, scheduler, hv_timing,
+                                 interrupt_lines, state, requested_horizon,
+                                 &remaining_budget, report);
+            if (result != MIPSNES2_CPU_TIMING_OK) {
+                fill_resumable_report(state, cpu, bus, scheduler, report);
+                return result;
+            }
+        }
 
         if (state->dma_active) {
             result = resume_dma(cpu, bus, scheduler, hv_timing,

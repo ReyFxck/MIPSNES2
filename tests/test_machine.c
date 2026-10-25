@@ -685,6 +685,273 @@ int main(void)
     CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
     CHECK(machine.bus.dma_request_mask == 0U &&
           machine.bus.hdma_enable_mask == 0U && !machine.cursor.dma_active);
+    /* Timed HDMA fetches a WRAM table and updates the real VRAM ports once at
+     * each committed slot endpoint, including repeated horizon retries. */
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    (void)memset(vram, 0, sizeof(vram));
+    wram[0x1000] = 1U;
+    wram[0x1001] = UINT8_C(0xa5);
+    wram[0x1002] = UINT8_C(0x6b);
+    wram[0x1003] = 0U;
+    machine.dma_registers.channel[0][0] = 1U;
+    machine.dma_registers.channel[0][1] = UINT8_C(0x18);
+    machine.dma_registers.channel[0][2] = 0U;
+    machine.dma_registers.channel[0][3] = UINT8_C(0x10);
+    machine.dma_registers.channel[0][4] = UINT8_C(0x7e);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002115),
+                            UINT8_C(0x80));
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002116), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002117), 0U);
+    CHECK(!machine.hdma_events_scheduled);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c), 1U);
+    CHECK(machine.hdma_events_scheduled);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, 100U, 1000U, 8U, &sequences, &report,
+              &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(machine.hdma_state.active_mask == 1U &&
+          machine.dma_registers.channel[0][8] == 1U &&
+          machine.dma_registers.channel[0][9] == UINT8_C(0x10) &&
+          vram[0] == 0U);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, MIPSNES2_HV_HBLANK_START_CLOCK + 16U,
+              1000U, 8U, &sequences, &report, &timing_result) ==
+          MIPSNES2_MACHINE_RUN_HORIZON);
+    {
+        mipsnes2_master_clock horizon;
+        mipsnes2_master_clock byte_end;
+
+        for (horizon = MIPSNES2_HV_HBLANK_START_CLOCK + 17U;
+             horizon < MIPSNES2_HV_HBLANK_START_CLOCK + 110U;
+             ++horizon) {
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, horizon, 1000U, 8U, &sequences, &report,
+                      &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+            if (machine.cursor.hdma_phase_pending &&
+                machine.cursor.hdma_operation.kind ==
+                    MIPSNES2_HDMA_OPERATION_TRANSFER) {
+                break;
+            }
+        }
+        CHECK(horizon < MIPSNES2_HV_HBLANK_START_CLOCK + 110U);
+        byte_end = machine.cursor.hdma_end_time;
+        CHECK(machine.scheduler.now < byte_end && vram[0] == 0U);
+        CHECK(mipsnes2_machine_run_until(
+                  &machine, byte_end - 1U, 1000U, 8U, &sequences, &report,
+                  &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+        CHECK(vram[0] == 0U);
+        CHECK(mipsnes2_machine_run_until(
+                  &machine, byte_end - 1U, 1000U, 8U, &sequences, &report,
+                  &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+        CHECK(vram[0] == 0U);
+        CHECK(mipsnes2_machine_run_until(
+                  &machine, byte_end, 1000U, 8U, &sequences, &report,
+                  &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+        CHECK(vram[0] == UINT8_C(0xa5));
+    }
+    CHECK(mipsnes2_machine_run_until(
+              &machine, 1300U, 1000U, 8U, &sequences, &report,
+              &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(vram[0] == UINT8_C(0xa5) && vram[1] == UINT8_C(0x6b) &&
+          machine.hdma_state.terminated_mask == 1U &&
+          machine.dma_registers.channel[0][8] == 4U);
+    /* Indirect HDMA follows its separately loaded data-bank pointer through
+     * the timed machine route before the next table descriptor terminates. */
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    (void)memset(vram, 0, sizeof(vram));
+    wram[0x1000] = 1U;
+    wram[0x1001] = 0U;
+    wram[0x1002] = UINT8_C(0x20);
+    wram[0x1003] = 0U;
+    wram[0x1004] = 0U;
+    wram[0x1005] = 0U;
+    wram[0x2000] = UINT8_C(0xee);
+    machine.dma_registers.channel[0][0] = UINT8_C(0x40);
+    machine.dma_registers.channel[0][1] = UINT8_C(0x18);
+    machine.dma_registers.channel[0][2] = 0U;
+    machine.dma_registers.channel[0][3] = UINT8_C(0x10);
+    machine.dma_registers.channel[0][4] = UINT8_C(0x7e);
+    machine.dma_registers.channel[0][7] = UINT8_C(0x7e);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002115), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002116), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002117), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c), 1U);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, 1300U, 1000U, 8U, &sequences, &report,
+              &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(vram[0] == UINT8_C(0xee) &&
+          machine.hdma_state.terminated_mask == 1U &&
+          machine.dma_registers.channel[0][8] == 6U &&
+          machine.dma_registers.channel[0][9] == UINT8_C(0x10));
+    /* A visible-line request pauses an in-flight general DMA between slots.
+     * The unrelated general channel does not advance while HDMA owns the bus. */
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    (void)memset(vram, 0, sizeof(vram));
+    (void)memset(wram + 0x2000, 0, 200U);
+    wram[0x1000] = 1U;
+    wram[0x1001] = UINT8_C(0xc7);
+    wram[0x1002] = 0U;
+    machine.dma_registers.channel[0][0] = 0U;
+    machine.dma_registers.channel[0][1] = UINT8_C(0x18);
+    machine.dma_registers.channel[0][2] = 0U;
+    machine.dma_registers.channel[0][3] = UINT8_C(0x10);
+    machine.dma_registers.channel[0][4] = UINT8_C(0x7e);
+    machine.dma_registers.channel[1][0] = 0U;
+    machine.dma_registers.channel[1][1] = UINT8_C(0x22);
+    machine.dma_registers.channel[1][2] = 0U;
+    machine.dma_registers.channel[1][3] = UINT8_C(0x20);
+    machine.dma_registers.channel[1][4] = UINT8_C(0x7e);
+    machine.dma_registers.channel[1][5] = 200U;
+    machine.dma_registers.channel[1][6] = 0U;
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002115), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002116), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002117), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c), 1U);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, 1000U, 1000U, 8U, &sequences, &report,
+              &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(mipsnes2_machine_resume(&machine, UINT64_MAX, 8U, &report) ==
+          MIPSNES2_CPU_TIMING_OK);
+    CHECK(machine.scheduler.now < MIPSNES2_HV_HBLANK_START_CLOCK);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420b), 2U);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, MIPSNES2_HV_HBLANK_START_CLOCK + 16U,
+              1000U, 8U, &sequences, &report, &timing_result) ==
+          MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(machine.cursor.dma_active);
+    {
+        mipsnes2_master_clock horizon;
+        uint32_t paused_remaining;
+
+        for (horizon = MIPSNES2_HV_HBLANK_START_CLOCK + 17U;
+             horizon < MIPSNES2_HV_HBLANK_START_CLOCK + 80U;
+             ++horizon) {
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, horizon, 1000U, 8U, &sequences, &report,
+                      &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+            if (machine.cursor.hdma_active) {
+                break;
+            }
+        }
+        CHECK(horizon < MIPSNES2_HV_HBLANK_START_CLOCK + 80U &&
+              machine.cursor.dma_active && machine.cursor.hdma_active);
+        paused_remaining = machine.cursor.dma_cursor.remaining;
+        for (++horizon; horizon < MIPSNES2_HV_HBLANK_START_CLOCK + 120U;
+             ++horizon) {
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, horizon, 1000U, 8U, &sequences, &report,
+                      &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+            CHECK(machine.cursor.dma_cursor.remaining == paused_remaining);
+            if (!machine.cursor.hdma_active) {
+                break;
+            }
+        }
+        CHECK(!machine.cursor.hdma_active &&
+              vram[0] == UINT8_C(0xc7));
+    }
+    /* An injected early line request uses the same WRAM-refresh arbiter as
+     * CPU and general DMA. No HDMA data effect leaks through the stall. */
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    (void)memset(vram, 0, sizeof(vram));
+    wram[0x1000] = 1U;
+    wram[0x1001] = UINT8_C(0xd4);
+    wram[0x1002] = 0U;
+    machine.dma_registers.channel[0][0] = 0U;
+    machine.dma_registers.channel[0][1] = UINT8_C(0x18);
+    machine.dma_registers.channel[0][2] = 0U;
+    machine.dma_registers.channel[0][3] = UINT8_C(0x10);
+    machine.dma_registers.channel[0][4] = UINT8_C(0x7e);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002115), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002116), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002117), 0U);
+    mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c), 1U);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, 100U, 1000U, 0U, &sequences, &report,
+              &timing_result) == MIPSNES2_MACHINE_RUN_TIMING_ERROR);
+    CHECK(timing_result == MIPSNES2_CPU_TIMING_SCHEDULER_ERROR &&
+          machine.hdma_state.active_mask == 0U);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, 520U, 1000U, 8U, &sequences, &report,
+              &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(machine.hdma_state.active_mask == 1U);
+    machine.bus.hdma_line_pending = true;
+    {
+        mipsnes2_master_clock horizon;
+        mipsnes2_master_clock stall_end;
+
+        for (horizon = 521U; horizon < 580U; ++horizon) {
+            CHECK(mipsnes2_machine_run_until(
+                      &machine, horizon, 1000U, 8U, &sequences, &report,
+                      &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+            if (machine.cursor.refresh_stall_active) {
+                break;
+            }
+        }
+        CHECK(horizon < 580U && machine.cursor.hdma_active);
+        stall_end = machine.cursor.refresh_stall_end_time;
+        CHECK(stall_end > machine.scheduler.now && vram[0] == 0U);
+        CHECK(mipsnes2_machine_run_until(
+                  &machine, stall_end - 1U, 1000U, 8U, &sequences,
+                  &report, &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+        CHECK(report.refresh_master_clocks == 0U && vram[0] == 0U);
+        CHECK(mipsnes2_machine_run_until(
+                  &machine, stall_end, 1000U, 8U, &sequences,
+                  &report, &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+        CHECK(report.refresh_master_clocks == 40U && vram[0] == 0U);
+    }
+    CHECK(mipsnes2_machine_run_until(
+              &machine, 650U, 1000U, 8U, &sequences, &report,
+              &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(vram[0] == UINT8_C(0xd4));
+    /* Enabling in VBlank schedules initialization in the next frame for
+     * both scanline standards, including NTSC's short current frame. */
+    {
+        unsigned standard;
+
+        config.vram = NULL;
+        config.vram_size = 0U;
+        config.cgram = NULL;
+        config.cgram_size = 0U;
+        config.oam = NULL;
+        config.oam_size = 0U;
+        config.video_line = NULL;
+        config.video_context = NULL;
+        config.overscan = false;
+        for (standard = 0U; standard < 2U; ++standard) {
+            mipsnes2_master_clock next_frame =
+                (standard == 0U ? MIPSNES2_HV_NTSC_SCANLINES
+                                : MIPSNES2_HV_PAL_SCANLINES) *
+                MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS -
+                (standard == 0U ? 4U : 0U);
+            mipsnes2_master_clock vblank_time =
+                225U * MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS + 100U;
+
+            config.standard = standard == 0U
+                ? MIPSNES2_HV_STANDARD_NTSC : MIPSNES2_HV_STANDARD_PAL;
+            CHECK(mipsnes2_machine_init(&machine, &config) ==
+                  MIPSNES2_MACHINE_OK);
+            CHECK(mipsnes2_master_timing_run_until(
+                      &machine.scheduler, &machine.hv, &machine.io,
+                      vblank_time, 0U, &master_report) ==
+                  MIPSNES2_MASTER_TIMING_OK);
+            mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x00420c), 1U);
+            CHECK(mipsnes2_master_timing_run_until(
+                      &machine.scheduler, &machine.hv, &machine.io,
+                      next_frame + 23U, 0U, &master_report) ==
+                  MIPSNES2_MASTER_TIMING_OK);
+            CHECK(!machine.bus.hdma_frame_pending);
+            CHECK(mipsnes2_master_timing_run_until(
+                      &machine.scheduler, &machine.hv, &machine.io,
+                      next_frame + 24U, 1U, &master_report) ==
+                  MIPSNES2_MASTER_TIMING_OK);
+            CHECK(machine.bus.hdma_frame_pending &&
+                  !machine.bus.hdma_line_pending);
+            CHECK(mipsnes2_master_timing_run_until(
+                      &machine.scheduler, &machine.hv, &machine.io,
+                      next_frame + 1112U, 1U, &master_report) ==
+                  MIPSNES2_MASTER_TIMING_OK);
+            CHECK(machine.bus.hdma_line_pending);
+        }
+    }
     (void)puts("machine integration: OK");
     return 0;
 }

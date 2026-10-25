@@ -6,6 +6,8 @@
 #include <string.h>
 
 enum { MIPSNES2_OAM_RELOAD_H_CLOCK = 40 };
+enum { MIPSNES2_HDMA_FRAME_H_CLOCK = 24,
+       MIPSNES2_HDMA_LINE_H_CLOCK = 1112 };
 
 static mipsnes2_master_clock machine_frame_clocks(const mipsnes2_machine *machine)
 {
@@ -18,6 +20,111 @@ static mipsnes2_master_clock machine_frame_clocks(const mipsnes2_machine *machin
                   MIPSNES2_HV_NTSC_SHORT_SCANLINE_CLOCKS;
     }
     return clocks;
+}
+
+/* Request ownership only. Device effects run after the current CPU/DMA slot. */
+static void machine_hdma_frame(void *context,
+                               mipsnes2_master_clock timestamp,
+                               mipsnes2_scheduler_token token)
+{
+    mipsnes2_machine *machine = context;
+    mipsnes2_master_clock delay = machine_frame_clocks(machine);
+
+    (void)token;
+    machine->bus.hdma_frame_pending = true;
+    if (timestamp > UINT64_MAX - delay ||
+        mipsnes2_scheduler_schedule(&machine->scheduler, timestamp + delay,
+                                    0U, machine_hdma_frame, machine, NULL) !=
+            MIPSNES2_SCHEDULER_OK) {
+        machine->ready = false;
+    }
+}
+
+static void machine_hdma_line(void *context,
+                              mipsnes2_master_clock timestamp,
+                              mipsnes2_scheduler_token token)
+{
+    mipsnes2_machine *machine = context;
+    uint16_t line = machine->hv.v_counter;
+    uint16_t vblank = mipsnes2_hv_vblank_start_line(&machine->hv);
+    mipsnes2_master_clock delay = line + 1U < vblank
+        ? MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS
+        : machine_frame_clocks(machine) -
+              (mipsnes2_master_clock)line *
+                  MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+
+    (void)token;
+    if ((machine->bus.hdma_enable_mask &
+         (uint8_t)~machine->hdma_state.terminated_mask) != 0U) {
+        machine->bus.hdma_line_pending = true;
+    }
+    if (timestamp > UINT64_MAX - delay ||
+        mipsnes2_scheduler_schedule(&machine->scheduler, timestamp + delay,
+                                    0U, machine_hdma_line, machine, NULL) !=
+            MIPSNES2_SCHEDULER_OK) {
+        machine->ready = false;
+    }
+}
+
+/* Start recurring HDMA events only after software enables a channel. A late
+ * enable first uses caller-programmed A2A/NLTR; frame reload waits for V=0. */
+static void machine_hdma_enable_changed(void *context, uint8_t mask)
+{
+    mipsnes2_machine *machine = context;
+    const mipsnes2_hv_timing *hv = &machine->hv;
+    bool frame_field = hv->field;
+    mipsnes2_master_clock frame_clocks;
+    mipsnes2_master_clock position;
+    mipsnes2_master_clock frame_delay;
+    mipsnes2_master_clock line_delay;
+    mipsnes2_master_clock now = machine->scheduler.now;
+    uint16_t vblank = mipsnes2_hv_vblank_start_line(hv);
+
+    if (mask == 0U || machine->hdma_events_scheduled) {
+        return;
+    }
+    if (hv->v_counter == 0U &&
+        hv->h_master_clock < MIPSNES2_HV_HBLANK_END_CLOCK) {
+        frame_field = !frame_field;
+    }
+    frame_clocks = (mipsnes2_master_clock)mipsnes2_hv_frame_scanlines(hv) *
+                   MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+    if (machine->standard == MIPSNES2_HV_STANDARD_NTSC && frame_field) {
+        frame_clocks -= 4U;
+    }
+    position = (mipsnes2_master_clock)hv->v_counter *
+               MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS + hv->h_master_clock;
+    if (machine->standard == MIPSNES2_HV_STANDARD_NTSC && frame_field &&
+        hv->v_counter > 240U) {
+        position -= 4U;
+    }
+    frame_delay = hv->v_counter == 0U &&
+                  hv->h_master_clock < MIPSNES2_HDMA_FRAME_H_CLOCK
+        ? (mipsnes2_master_clock)(MIPSNES2_HDMA_FRAME_H_CLOCK -
+                                   hv->h_master_clock)
+        : frame_clocks - position + MIPSNES2_HDMA_FRAME_H_CLOCK;
+    if (hv->v_counter < vblank &&
+        hv->h_master_clock < MIPSNES2_HDMA_LINE_H_CLOCK) {
+        line_delay = MIPSNES2_HDMA_LINE_H_CLOCK - hv->h_master_clock;
+    } else if (hv->v_counter + 1U < vblank) {
+        line_delay = MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS -
+                     hv->h_master_clock + MIPSNES2_HDMA_LINE_H_CLOCK;
+    } else {
+        line_delay = frame_clocks - position +
+                     MIPSNES2_HDMA_LINE_H_CLOCK;
+    }
+    if (now > UINT64_MAX - frame_delay ||
+        now > UINT64_MAX - line_delay ||
+        mipsnes2_scheduler_schedule(&machine->scheduler, now + frame_delay,
+                                    0U, machine_hdma_frame, machine, NULL) !=
+            MIPSNES2_SCHEDULER_OK ||
+        mipsnes2_scheduler_schedule(&machine->scheduler, now + line_delay,
+                                    0U, machine_hdma_line, machine, NULL) !=
+            MIPSNES2_SCHEDULER_OK) {
+        machine->ready = false;
+        return;
+    }
+    machine->hdma_events_scheduled = true;
 }
 
 /* The range is prepared for the next visible line at this HBlank boundary.
@@ -314,6 +421,7 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
 mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
 {
     mipsnes2_snes_bus_config config;
+    mipsnes2_hdma_cursor hdma_seed;
 
     if (machine == NULL || !machine->ready) {
         return MIPSNES2_MACHINE_NOT_READY;
@@ -328,6 +436,15 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     (void)memset(&machine->obj_pixels, 0, sizeof(machine->obj_pixels));
     mipsnes2_ppu_bg_registers_init(&machine->bg_registers);
     mipsnes2_dma_registers_init(&machine->dma_registers);
+    mipsnes2_hdma_state_init(&machine->hdma_state);
+    mipsnes2_hdma_cursor_init(&hdma_seed);
+    if (mipsnes2_hdma_cursor_begin_frame(
+            &hdma_seed, &machine->hdma_state,
+            &machine->dma_registers, 0U) != MIPSNES2_HDMA_CURSOR_COMPLETE) {
+        machine->ready = false;
+        return MIPSNES2_MACHINE_TIMING_ERROR;
+    }
+    machine->hdma_events_scheduled = false;
     mipsnes2_ppu_window_mask_init(&machine->windows);
     (void)memset(machine->window_hidden, 0, sizeof(machine->window_hidden));
     (void)memset(machine->sub_window_hidden, 0,
@@ -390,6 +507,9 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     config.apu = machine->apu;
     config.dma = machine->dma;
     config.dma_registers = &machine->dma_registers;
+    config.hdma_state = &machine->hdma_state;
+    config.hdma_enable_changed = machine_hdma_enable_changed;
+    config.hdma_enable_context = machine;
     config.cartridge = mipsnes2_cartridge_make_interface(&machine->cartridge);
     if (mipsnes2_snes_bus_init(&machine->bus, &config) != MIPSNES2_SNES_BUS_OK) {
         machine->ready = false;

@@ -485,12 +485,27 @@ order/cost, stable peeks, stale-state rejection and pointer commit boundaries;
 the full C99 `cc` host suite and repository checker pass (2026-10-25). The
 cursor itself remains untimed: scheduler requests, refresh, CPU/DMA arbitration
 and horizon retries are the next block. See the
-[HDMA cursor audit](docs/hdma-cursor-audit.md). PS2/PSP CI and target runtime
-checks are pending for this revision.
+[HDMA cursor audit](docs/hdma-cursor-audit.md). Revision `71d3232` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40175220242),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40175220257) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40175220251).
+Subsequent reference review corrected an eight-clock-per-channel overcount in
+frame initialization and removed an extra line-descriptor charge; the corrected
+timing is covered in the following block.
 
-Next primary block: integrate HDMA frame/visible-line requests into the resumable
-scheduler, including priority over general DMA, shared refresh stalls and exact-once
-horizon retries. PS2 GS emulator and physical-console checks remain separate.
+The machine now schedules HDMA frame and visible-line requests after `$420C`
+is enabled. The resumable bridge gives HDMA priority between general DMA slots,
+advances its operation cursor through shared H/V and WRAM refresh, and commits
+table/data effects at endpoints. Host fixtures cover real VRAM port writes,
+repeated horizons, event-budget retry, DMA preemption on distinct channels,
+refresh, A-bus exclusions and NTSC/PAL next-frame events. See the
+[timed HDMA audit](docs/hdma-timed-audit.md). Same-channel register collisions,
+exact VBlank deactivation and electrical phases remain open. PS2/PSP/host CI
+for this integration and target runtime checks are pending.
+
+Next primary block: resolve same-channel DMA/HDMA register collisions with
+deterministic overlap fixtures and explicit VBlank deactivation policy. PS2 GS
+emulator and physical-console checks remain separate.
 
 ## State and evidence rules
 
@@ -1206,7 +1221,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STP
 - [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
-- [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET and shared WRAM refresh stalls; signal-level RESET, exact dummy/internal sequencing and HDMA arbitration are pending
+- [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET, WRAM refresh and HDMA priority; signal-level RESET, exact dummy/internal sequencing and same-channel overlap are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
 - [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, boundary IRQ/NMI/ABORT entry, RESET vector reads and opt-in scheduler/5A22 cursor wiring exist; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
@@ -1540,7 +1555,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
 - [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` exist; remaining SNES register effects absent
-- [ ] [IN PROGRESS] Access timing — meaningful cursor accesses use 5A22 6/8/12 clocks, internal operations use 6 clocks and H/V-aware CPU/general-DMA phases include shared WRAM refresh stalls; dummy traffic and HDMA arbitration are absent
+- [ ] [IN PROGRESS] Access timing — meaningful cursor accesses use 5A22 6/8/12 clocks, internal operations use 6 clocks and H/V-aware CPU/DMA/HDMA phases include shared WRAM refresh stalls; dummy traffic and same-channel arbitration remain open
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO, base LoROM/HiROM and Mode 25/35 ExHiROM boundaries verified; padded/ExLoROM/enhancement maps absent
 - [ ] Page/block mapping benchmark
 
@@ -1711,13 +1726,13 @@ platform persistence remains incomplete.
 
 ## DMA / HDMA
 
-- [ ] [IN PROGRESS] DMA registers — channel banks, `$420B` start and `$420C` HDMA enable mask integrated; timed HDMA requests pending
-- [ ] [IN PROGRESS] DMA transfer modes — timed general DMA path plus pure direct/indirect HDMA engine; timed HDMA/electrical edge cases pending
-- [ ] [IN PROGRESS] DMA timing — grace cycle, slots, setup, CPU resynchronization and shared WRAM refresh stalls; HDMA/electrical phases pending
+- [ ] [IN PROGRESS] DMA registers — channel banks, `$420B` start and `$420C` timed HDMA enable integrated; same-channel overlap pending
+- [ ] [IN PROGRESS] DMA transfer modes — timed general DMA and direct/indirect HDMA; electrical edge cases pending
+- [ ] [IN PROGRESS] DMA timing — grace cycle, slots, setup, CPU resynchronization, HDMA priority and shared WRAM refresh; electrical phases pending
 - [ ] DMA source/destination wrapping
-- [ ] [IN PROGRESS] HDMA initialization — pure table engine implemented; frame scheduler trigger pending
-- [ ] [IN PROGRESS] HDMA scanline behavior — pure line engine implemented; HBlank timing pending
-- [ ] [IN PROGRESS] Indirect HDMA — pointer/table behavior implemented; timed edge cases pending
+- [ ] [IN PROGRESS] HDMA initialization — frame request and table engine implemented; VBlank edge pending
+- [ ] [IN PROGRESS] HDMA scanline behavior — HBlank request and timed line engine implemented; electrical phase pending
+- [ ] [IN PROGRESS] Indirect HDMA — timed pointer/table behavior implemented; zero-descriptor edge pending
 - [ ] Transfer edge cases
 - [ ] CPU interaction
 - [ ] Channel priority

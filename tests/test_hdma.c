@@ -259,18 +259,17 @@ static int test_resumable_cursor_operations(void)
     mipsnes2_hdma_operation repeat;
     mipsnes2_hdma_report report;
     fixture f;
-    static const uint8_t frame_costs[] = {18U, 8U, 8U, 8U,
-                                          8U, 8U, 8U};
+    static const uint8_t frame_costs[] = {18U, 8U, 8U, 8U, 8U};
     static const mipsnes2_hdma_operation_kind frame_kinds[] = {
         MIPSNES2_HDMA_OPERATION_OVERHEAD,
-        MIPSNES2_HDMA_OPERATION_OVERHEAD,
         MIPSNES2_HDMA_OPERATION_TABLE_READ,
-        MIPSNES2_HDMA_OPERATION_OVERHEAD,
         MIPSNES2_HDMA_OPERATION_TABLE_READ,
         MIPSNES2_HDMA_OPERATION_TABLE_READ,
         MIPSNES2_HDMA_OPERATION_TABLE_READ
     };
     unsigned index;
+    unsigned line_clocks = 18U + 8U + 8U;
+    unsigned zero_cost_descriptors = 0U;
 
     (void)memset(&f, 0, sizeof(f));
     mipsnes2_dma_registers_init(&registers);
@@ -289,7 +288,7 @@ static int test_resumable_cursor_operations(void)
           MIPSNES2_HDMA_CURSOR_READY);
     CHECK(mipsnes2_hdma_cursor_begin_scanline(&cursor, &state, 3U) ==
           MIPSNES2_HDMA_CURSOR_INVALID_ARGUMENT);
-    for (index = 0U; index < 7U; ++index) {
+    for (index = 0U; index < 5U; ++index) {
         uint8_t value = 0U;
 
         CHECK(mipsnes2_hdma_cursor_peek(&cursor, &operation) ==
@@ -314,7 +313,7 @@ static int test_resumable_cursor_operations(void)
             CHECK((uint16_t)(channel[8] | channel[9] << 8) == old_pointer);
         }
         CHECK(mipsnes2_hdma_cursor_commit(&cursor, &operation, value) ==
-              (index == 6U ? MIPSNES2_HDMA_CURSOR_COMPLETE
+              (index == 4U ? MIPSNES2_HDMA_CURSOR_COMPLETE
                            : MIPSNES2_HDMA_CURSOR_READY));
     }
     CHECK(mipsnes2_hdma_cursor_report(&cursor, &report));
@@ -347,6 +346,30 @@ static int test_resumable_cursor_operations(void)
     CHECK(mipsnes2_hdma_cursor_commit(&cursor, &operation, 0U) ==
           MIPSNES2_HDMA_CURSOR_READY);
     CHECK(f.transfer_count == 1U && registers.channel[0][8] == 2U);
+    for (;;) {
+        uint8_t value = 0U;
+        mipsnes2_hdma_cursor_result result;
+
+        CHECK(mipsnes2_hdma_cursor_peek(&cursor, &operation) ==
+              MIPSNES2_HDMA_CURSOR_READY);
+        line_clocks += operation.master_clocks;
+        if (operation.kind == MIPSNES2_HDMA_OPERATION_TABLE_READ) {
+            if (operation.master_clocks == 0U) {
+                ++zero_cost_descriptors;
+            }
+            value = table_read(&f, operation.a_address);
+        } else if (operation.kind == MIPSNES2_HDMA_OPERATION_TRANSFER) {
+            transfer_byte(&f, operation.a_address, operation.b_address,
+                          operation.b_to_a);
+        }
+        result = mipsnes2_hdma_cursor_commit(&cursor, &operation, value);
+        if (result == MIPSNES2_HDMA_CURSOR_COMPLETE) {
+            break;
+        }
+        CHECK(result == MIPSNES2_HDMA_CURSOR_READY);
+    }
+    CHECK(line_clocks == 74U && zero_cost_descriptors == 2U &&
+          f.transfer_count == 3U);
     return 0;
 }
 

@@ -348,6 +348,31 @@ static int test_wram_refresh_cpu_and_dma(void)
     return 0;
 }
 
+static int test_hdma_table_a_bus_policy(void)
+{
+    uint64_t accesses;
+    uint64_t clocks;
+
+    CHECK(setup() == 0);
+    f.wram[0x1234] = UINT8_C(0x5a);
+    f.bus.open_value = UINT8_C(0x77);
+    accesses = f.bus.access_count;
+    clocks = f.bus.master_clocks;
+    CHECK(mipsnes2_snes_bus_dma_read_a(&f.bus, UINT32_C(0x7e1234)) ==
+          UINT8_C(0x5a));
+    CHECK(f.bus.open_value == UINT8_C(0x5a));
+    CHECK(mipsnes2_snes_bus_dma_read_a(&f.bus, UINT32_C(0x004300)) ==
+          UINT8_C(0x5a));
+    CHECK(mipsnes2_snes_bus_dma_read_a(&f.bus, UINT32_C(0x002118)) ==
+          UINT8_C(0x5a));
+    CHECK(mipsnes2_snes_bus_dma_read_a(&f.bus, UINT32_C(0x808000)) ==
+          UINT8_C(0x12));
+    CHECK(f.bus.open_value == UINT8_C(0x12) &&
+          f.bus.access_count == accesses &&
+          f.bus.master_clocks == clocks);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_horizons() == 0);
@@ -355,6 +380,7 @@ int main(void)
     CHECK(test_clock_classes_and_channels() == 0);
     CHECK(test_interrupt_and_overflow() == 0);
     CHECK(test_wram_refresh_cpu_and_dma() == 0);
+    CHECK(test_hdma_table_a_bus_policy() == 0);
     (void)puts("DMA bus and resumable CPU stall: OK");
     return 0;
 }
