@@ -473,6 +473,11 @@ bank/port wrapping and zero termination. Deterministic tests cover those logical
 effects. This layer is intentionally untimed; see the
 [HDMA table audit](docs/hdma-table-audit.md).
 
+Revision `dc56eb9` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151827396),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151827359) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151827425).
+
 Next primary block: integrate HDMA frame/visible-line requests into the resumable
 scheduler, including priority over general DMA, shared refresh stalls and exact-once
 horizon retries. PS2 GS emulator and physical-console checks remain separate.

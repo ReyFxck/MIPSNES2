@@ -61,3 +61,8 @@ This foundation is complete when the pure engine and `$420C` routing pass the
 host suite and PS2/PSP/host CI. The parent HDMA timing milestone remains open
 until scheduler arbitration, horizon-resumable phase timing and general-DMA
 overlap have deterministic coverage.
+
+Published revision `dc56eb9` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151827396),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151827359) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151827425).
