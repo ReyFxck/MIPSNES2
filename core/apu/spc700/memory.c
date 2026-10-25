@@ -20,6 +20,7 @@ bool mipsnes2_smp_memory_init(mipsnes2_smp_memory *memory,
     memory->ram = ram;
     memory->ports = ports;
     memory->ipl = ipl;
+    mipsnes2_smp_timers_init(&memory->timers);
     return mipsnes2_smp_memory_reset(memory);
 }
 
@@ -31,6 +32,7 @@ bool mipsnes2_smp_memory_reset(mipsnes2_smp_memory *memory)
         return false;
     }
     memory->ipl_enabled = true;
+    mipsnes2_smp_timers_init(&memory->timers);
     memory->initialized = true;
     return true;
 }
@@ -46,6 +48,15 @@ bool mipsnes2_smp_memory_read(mipsnes2_smp_memory *memory,
         if (address >= UINT16_C(0x00f4) && address <= UINT16_C(0x00f7)) {
             return mipsnes2_apu_io_ports_smp_read(
                 memory->ports, address - UINT16_C(0x00f4), value);
+        }
+        if (address >= UINT16_C(0x00fa) &&
+            address <= UINT16_C(0x00fc)) {
+            *value = 0U;
+            return true;
+        }
+        if (address >= UINT16_C(0x00fd)) {
+            return mipsnes2_smp_timers_read_output(
+                &memory->timers, address - UINT16_C(0x00fd), value);
         }
         if (address != UINT16_C(0x00f8) &&
             address != UINT16_C(0x00f9)) {
@@ -72,12 +83,11 @@ bool mipsnes2_smp_memory_write(mipsnes2_smp_memory *memory,
     }
     if (address >= UINT16_C(0x00f0) && address <= UINT16_C(0x00ff)) {
         if (address == UINT16_C(0x00f1)) {
-            /* Timer-enable bits await the timer block. Reject these writes
-             * atomically instead of claiming functioning timers. */
-            if ((value & UINT8_C(0x07)) != 0U ||
-                !mipsnes2_apu_io_ports_smp_clear_inputs(
+            if (!mipsnes2_apu_io_ports_smp_clear_inputs(
                     memory->ports, (value & UINT8_C(0x10)) != 0U,
-                    (value & UINT8_C(0x20)) != 0U)) {
+                    (value & UINT8_C(0x20)) != 0U) ||
+                !mipsnes2_smp_timers_set_enabled(
+                    &memory->timers, value & UINT8_C(0x07))) {
                 return false;
             }
             memory->ipl_enabled = (value & UINT8_C(0x80)) != 0U;
@@ -87,6 +97,14 @@ bool mipsnes2_smp_memory_write(mipsnes2_smp_memory *memory,
                     memory->ports, address - UINT16_C(0x00f4), value)) {
                 return false;
             }
+        } else if (address >= UINT16_C(0x00fa) &&
+                   address <= UINT16_C(0x00fc)) {
+            if (!mipsnes2_smp_timers_write_target(
+                    &memory->timers, address - UINT16_C(0x00fa), value)) {
+                return false;
+            }
+        } else if (address >= UINT16_C(0x00fd)) {
+            /* Hardware ignores writes to the output counters. */
         } else if (address != UINT16_C(0x00f8) &&
                    address != UINT16_C(0x00f9)) {
             return false;
@@ -94,4 +112,13 @@ bool mipsnes2_smp_memory_write(mipsnes2_smp_memory *memory,
     }
     memory->ram[address] = value;
     return true;
+}
+
+bool mipsnes2_smp_memory_advance(mipsnes2_smp_memory *memory,
+                                 uint64_t smp_cycles)
+{
+    if (memory == NULL || !memory->initialized) {
+        return false;
+    }
+    return mipsnes2_smp_timers_advance(&memory->timers, smp_cycles);
 }

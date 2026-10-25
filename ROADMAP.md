@@ -241,8 +241,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Instruction timing
 - [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay and write-through tested; remaining MMIO, interpreter and hardware validation pending
 - [ ] IPL provenance decision
-- [ ] I/O registers
-- [ ] Timers
+- [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
+- [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` input-pair clear verified; cross-clock timing pending
 - [ ] Instruction tests
 - [ ] Timing regressions

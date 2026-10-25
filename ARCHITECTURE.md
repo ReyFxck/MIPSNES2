@@ -21,7 +21,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; optional reference video-line callback |
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP shared communication state | Four independent byte latches in each direction, CPU-side mirrors and S-SMP local-map handoff; cross-clock synchronization pending |
-| core/apu/spc700 | S-SMP address map and future SPC700 execution/state | Bounded ARAM, optional external IPL read overlay, communication ports and `$F1` port clear; no interpreter, timers or DSP route |
+| core/apu/spc700 | S-SMP address map, timers and future SPC700 execution/state | Bounded ARAM, optional external IPL read overlay, communication ports and three-stage `$F1/$FA-$FF` timers with explicit cycle advancement; no interpreter, DSP route or synchronized clock domain |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
@@ -40,7 +40,11 @@ optional VRAM/CGRAM/OAM/ARAM bytes. An optional S-SMP map borrows 64 KiB ARAM
 and optional caller-provided 64-byte IPL; without the IPL, mapped high-page
 reads fail explicitly. PS2 reserves ARAM, while PSP merely compiles the same
 core. The S-SMP map and S-CPU bus meet through machine-owned directional
-ports; no S-SMP execution or clock domain exists. `resume` advances one
+ports. The map also owns three caller-advanced timers: timer 0/1 observe a
+shared 128-cycle stage-1 edge and timer 2 each 16-cycle subdivision; `$F1`
+enable edges, `$FA-$FC` targets and `$FD-$FF` read-clear outputs are routed.
+No S-SMP execution, S-DSP-relative phase or synchronized clock domain exists.
+`resume` advances one
 timed RESET sequence or instruction to a caller-specified horizon; `run_until`
 also bounds completed sequences and retains a paused cursor. The instance
 has a stable address because its CPU and bus callbacks point into it; callers
@@ -641,5 +645,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   and commits the CPU/bus effect once at the endpoint. RESET has an explicit
   zero-processor-cycle mode; legacy atomic entry points keep their semantics.
   Electrical/dummy phases, refresh, arbitration and mid-instruction ABORT remain open.
+- 2026-10-25: The shared S-SMP timer block models the free-running common
+  prescaler, 128/16-cycle edges, target divisors, 0-to-1 enable clear and
+  four-bit read-clear outputs behind `$F1/$FA-$FF`. Advancement is explicitly
+  denominated in S-SMP cycles; real power-on values, DSP-relative phase,
+  TEST-register effects and S-CPU/S-SMP synchronization remain open.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

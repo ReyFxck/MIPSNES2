@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include "core/apu/io_ports.h"
+#include "core/apu/spc700/timers.h"
 
 enum {
     MIPSNES2_SMP_RAM_SIZE = 65536,
@@ -20,6 +21,7 @@ typedef struct {
     uint8_t *ram;
     const uint8_t *ipl;
     mipsnes2_apu_io_ports *ports;
+    mipsnes2_smp_timers timers;
     bool ipl_enabled;
     bool initialized;
 } mipsnes2_smp_memory;
@@ -37,5 +39,8 @@ bool mipsnes2_smp_memory_read(mipsnes2_smp_memory *memory,
                               uint16_t address, uint8_t *value);
 bool mipsnes2_smp_memory_write(mipsnes2_smp_memory *memory,
                                uint16_t address, uint8_t value);
+/* Explicit S-SMP-clock handoff until an instruction engine owns cycle time. */
+bool mipsnes2_smp_memory_advance(mipsnes2_smp_memory *memory,
+                                 uint64_t smp_cycles);
 
 #endif

@@ -2,6 +2,10 @@
 
 Date: 2026-10-25
 
+The original boundary below predates the timer block. `$F1/$FA-$FF` are now
+implemented as described by the later [S-SMP timer audit](smp-timer-audit.md);
+TEST and DSP registers remain unsupported.
+
 ## Implemented boundary
 
 `core/apu/spc700/memory.[ch]` borrows a 64 KiB ARAM buffer, the existing

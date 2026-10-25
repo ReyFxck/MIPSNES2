@@ -3,8 +3,9 @@
 ## Scope and current state
 
 APU integration owns SPC700/DSP coordination, timers, CPU communication and generation
-of final emulated samples. Platform code owns delivery buffers and device APIs. No
-audio pipeline exists.
+of final emulated samples. Platform code owns delivery buffers and device APIs. The
+logical S-SMP timer block exists, but there is no coordinated APU clock or audio
+pipeline.
 
 ## Design direction
 

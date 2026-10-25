@@ -108,8 +108,34 @@ int main(void)
     CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00f9), &value));
     CHECK(value == UINT8_C(0x68));
 
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00fa),
+                                    UINT8_C(2)));
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00fb),
+                                    UINT8_C(1)));
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00fc),
+                                    UINT8_C(3)));
+    CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00fa), &value));
+    CHECK(value == 0U);
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f1),
+                                    UINT8_C(0x87)));
+    CHECK(mipsnes2_smp_memory_advance(&memory, 128U));
+    CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00fd), &value));
+    CHECK(value == 0U);
+    CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00fe), &value));
+    CHECK(value == 1U);
+    CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00ff), &value));
+    CHECK(value == 2U);
+    CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00ff), &value));
+    CHECK(value == 0U);
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00ff),
+                                    UINT8_C(0xff)));
+    CHECK(ram[0xff] == UINT8_C(0xff));
+    CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00ff), &value));
+    CHECK(value == 0U);
+    CHECK(!mipsnes2_smp_memory_advance(NULL, 1U));
+
     for (i = 0xf0U; i <= 0xffU; ++i) {
-        if (i == 0xf1U || (i >= 0xf4U && i <= 0xf9U)) {
+        if (i == 0xf1U || (i >= 0xf4U && i <= 0xffU)) {
             continue;
         }
         value = UINT8_C(0xee);
@@ -120,9 +146,9 @@ int main(void)
         CHECK(ram[i] == UINT8_C(0xa5));
     }
     CHECK(!mipsnes2_smp_memory_read(&memory, UINT16_C(0x00f1), &value));
-    CHECK(!mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f1),
-                                     UINT8_C(0x11)));
-    CHECK(memory.ipl_enabled && ram[0xf1] == UINT8_C(0xa0));
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f1),
+                                    UINT8_C(0x11)));
+    CHECK(!memory.ipl_enabled && ram[0xf1] == UINT8_C(0x11));
     CHECK(!mipsnes2_smp_memory_read(&memory, 0U, NULL));
     CHECK(!mipsnes2_smp_memory_read(NULL, 0U, &value));
     CHECK(!mipsnes2_smp_memory_write(NULL, 0U, 0U));

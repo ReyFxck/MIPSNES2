@@ -578,7 +578,7 @@ The S-SMP now has a bounded local map over caller-owned 64 KiB ARAM, connected
 to the machine's directional mailbox at `$F4-$F7`. `$F1` bit 7 selects a
 caller-supplied 64-byte IPL read overlay, while writes still reach underlying
 ARAM; bits 4/5 clear the S-SMP input-port pairs. `$F8/$F9` remain ordinary
-ARAM. Unsupported DSP, test and timer registers return failure instead of
+ARAM. Unsupported DSP and test registers return failure instead of
 silently acting as RAM. PS2 reserves ARAM; PSP links the shared object without
 a runtime audio path. Synthetic host fixtures cover map boundaries, overlay
 switching, missing IPL, input clear, output independence and machine routing.
@@ -587,11 +587,26 @@ PS2/PSP cross-build CI awaits publication. See the
 [S-SMP map audit](docs/smp-memory-map-audit.md). No SPC700 instructions,
 S-DSP, sound samples or target-runtime results are claimed.
 
-Next primary block: implement the three S-SMP timers and their `$F1/$FA-$FF`
-register contract in the shared core, including deterministic counter-phase
-tests. Refining DMA/HDMA electrical bus phases and post-HDMA CPU alignment
-remains evidence-dependent. PS2 GS emulator and physical-console checks remain
-separate.
+The shared S-SMP now owns three-stage timers behind `$F1/$FA-$FF`. Timer 0/1
+share each 128-cycle first-stage edge, timer 2 observes each 16-cycle edge and
+the common prescaler remains free-running while disabled. Rising enables clear
+stages 2/3 without resetting phase; targets accept live changes, zero means 256,
+and four-bit outputs clear on read. The memory-map wrapper accepts explicit
+S-SMP-cycle advancement. Pure fixtures cover boundaries, enable phase retention,
+target wrap, output wrap and one-shot/chunked equivalence; map and machine tests
+cover register routing and power-cycle reset. Host C99 verification is recorded
+in the [timer audit](docs/smp-timer-audit.md). `make clean && make -j2 test`
+passed with host C99 `cc` on 2026-10-25. An ASan/UBSan full-suite attempt hit
+the previously observed local non-executable generated-test artifact at
+`test-hv-timing`; force-rebuilding that target passed, followed by clean
+sanitized timer, memory-map and machine fixtures. Real power-on values, exact
+DSP-relative phase, TEST effects, register-edge races and a synchronized S-SMP
+clock domain remain unverified. No audio or target-runtime result is claimed.
+
+Next primary block: establish caller-owned SPC700 programmer-visible register
+state plus the first bounded instruction-fetch/dispatch contract. Refining
+DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
+evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
 The existing bounded DMA cursor already keeps A1B fixed while incrementing,
 decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
@@ -1887,8 +1902,8 @@ platform persistence remains incomplete.
 - [ ] Instruction timing
 - [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM and optional IPL overlay verified; rest of S-SMP map/runtime pending
 - [ ] IPL provenance decision
-- [ ] I/O registers
-- [ ] Timers
+- [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
+- [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
 - [ ] Instruction tests
 - [ ] Timing regressions
