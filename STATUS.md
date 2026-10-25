@@ -436,6 +436,16 @@ passed [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40132743907),
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40132743906)
 and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40132743939).
 
+A broad source and verification review found no reproducible correctness,
+memory-safety or undefined-behavior defect in the current bounded core/backend
+scope. GCC 13.3 `-fanalyzer`, an `-O3 -DNDEBUG -fstrict-aliasing` full suite and
+ASan/UBSan passed locally. A new deterministic differential test now executes all
+256 opcode values from four valid states through both CPU entry points and compares
+architectural state, cycle totals and exact ordered bus traces: 1,024/1,024 cases
+pass. This is internal consistency evidence rather than hardware conformance, and no
+target runtime was exercised. See the
+[2026-10-24 code review](docs/code-review-2026-10-24.md).
+
 Next primary block: implement shared WRAM refresh stalls for CPU and general
 DMA, preserving event horizons and exact-once bus effects. PS2 GS emulator
 and physical-console checks remain separate pending validation.

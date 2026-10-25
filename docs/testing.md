@@ -98,8 +98,13 @@ stack wrapping and linear multi-byte exceptions;
 8/16-bit M behavior; emulation invariants; program-bank PC wrap; 24-bit linear store
 crossing; flag commit position; subroutine and interrupt stack order; boundary
 `ABORT`/`NMI`/`IRQ` priority; logical addresses; access order/count; and interrupt
-arrival between boundary peek/commit. It does not claim that reset, dummy cycles,
-mid-instruction `ABORT` or the scheduler bridge are resumable.
+arrival between boundary peek/commit. It does not claim signal-level reset, exact
+dummy-cycle placement or complete mid-instruction `ABORT` recovery.
+`test-cpu-differential` drives every opcode through both the aggregate instruction
+API and the resumable cursor from four deterministic valid states. Its 1,024 cases
+compare architectural state, result, cycle count and the exact ordered bus trace.
+This guards consistency between the two core entry points; their shared helpers mean
+it is not independent hardware-conformance evidence.
 The scheduler regression executable covers absolute master-clock events, deterministic
 timestamp/priority/insertion ordering, cancellation, capacity, callback insertion,
 dispatch budgets, reentrant-run rejection, event horizons, exact rational conversion,
