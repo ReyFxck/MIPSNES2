@@ -556,8 +556,11 @@ including `$420C` enabled during the overscan-only lines. Host fixtures cover
 both boundaries, the next-frame latch and operation without optional PPU
 memory. Exact late-line behavior, interlace/pseudo-hires bits and continuous
 target display remain open. See the
-[SETINI overscan audit](docs/ppu-setini-overscan-audit.md). No target-runtime
-result is claimed before CI completes.
+[SETINI overscan audit](docs/ppu-setini-overscan-audit.md). Revision `a0a553a`
+passed [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40199872417),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40199872441) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40199872450).
+No target-runtime result is claimed.
 
 Next primary block: establish the shared 5A22/APU communication-port mailbox
 and synchronization contract before the SPC700 interpreter, with deterministic

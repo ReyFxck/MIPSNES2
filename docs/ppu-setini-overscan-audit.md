@@ -46,7 +46,11 @@ runtime or hardware-timing validation.
 Local verification on 2026-10-25 passed the default C99 `make test` suite,
 an `-O3 -DNDEBUG -fstrict-aliasing` suite, an ASan/UBSan suite with leak
 detection disabled, the repository checker and a GCC `-fanalyzer` build.
-Pinned target CI is pending publication of the implementation revision.
+Implementation revision `a0a553a` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40199872417),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40199872441) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40199872450).
+No console or emulator runtime was executed for this block.
 
 ## Deliberate limits
 
