@@ -21,13 +21,13 @@ promotion.
 - [ ] [IN PROGRESS] DMA registers — channel bytes, `$420B` start and `$420C` enable mask; same-channel arbitration pending
 - [ ] [IN PROGRESS] DMA transfer modes — timed general DMA and direct/indirect HDMA; electrical phases pending
 - [ ] [IN PROGRESS] DMA timing — slots/setup/resynchronization, HDMA priority and shared refresh stalls; electrical phases pending
-- [ ] DMA source/destination wrapping
+- [x] DMA source/destination wrapping — A1T wraps within fixed A1B; BBAD offsets wrap in `$21xx`
 - [ ] [IN PROGRESS] HDMA initialization — V=0 request, table engine and VBlank deactivation; revision edges pending
 - [ ] [IN PROGRESS] HDMA scanline behavior — timed HBlank requests and line transfers; electrical phase pending
 - [ ] [IN PROGRESS] Indirect HDMA — timed table/pointer path and last-channel zero-descriptor shortening; frame-initialization/electrical edges pending
 - [ ] Transfer edge cases
 - [ ] CPU interaction
-- [ ] Channel priority
+- [x] Channel priority — lowest selected channel first
 - [ ] [IN PROGRESS] DMA and HDMA overlap — same-channel cancellation at slot boundaries; electrical phase pending
 - [ ] Tests
 

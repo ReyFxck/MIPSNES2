@@ -160,13 +160,13 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] DMA registers — channel banks and DMA/HDMA enable paths; electrical overlap pending
 - [ ] [IN PROGRESS] DMA transfer modes — timed general DMA and HDMA machine paths; electrical edges pending
 - [ ] [IN PROGRESS] DMA timing — general DMA slots/resynchronization, HDMA priority and shared refresh; electrical edges pending
-- [ ] DMA source/destination wrapping
+- [x] DMA source/destination wrapping — fixed-bank A1T and `$21xx` BBAD wrapping verified
 - [ ] [IN PROGRESS] HDMA initialization — V=0 request and VBlank deactivation; revision edges pending
 - [ ] [IN PROGRESS] HDMA scanline behavior — visible-line request; exact subphases pending
 - [ ] [IN PROGRESS] Indirect HDMA — timed pointers and last-channel zero-descriptor shortening; frame-initialization and electrical edges pending
 - [ ] Transfer edge cases
 - [ ] CPU interaction
-- [ ] Channel priority
+- [x] Channel priority — lowest selected channel first verified for DMA and HDMA
 - [ ] [IN PROGRESS] DMA and HDMA overlap — same-channel cancellation implemented; electrical phases pending
 - [ ] Tests
 

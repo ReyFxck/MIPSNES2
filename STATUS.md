@@ -552,6 +552,14 @@ Next primary block: refine DMA/HDMA electrical bus phases and post-HDMA CPU
 alignment with deterministic boundary fixtures. PS2 GS
 emulator and physical-console checks remain separate.
 
+The existing bounded DMA cursor already keeps A1B fixed while incrementing,
+decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
+wraps BBAD plus mode offsets within `$21xx`. Its synthetic fixture also proves
+lowest-channel-first ordering across pauses. These two previously open status
+items are therefore closed against the published `7fc0d79` PS2/PSP/host CI
+evidence in the [bounded-transfer audit](docs/dma-bounded-transfer-audit.md);
+no new behavior or target-runtime claim is introduced by this audit correction.
+
 ## State and evidence rules
 
 - [ ] Not implemented or not verified
@@ -1774,13 +1782,13 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] DMA registers — channel banks, `$420B` start and `$420C` timed HDMA enable integrated; electrical overlap pending
 - [ ] [IN PROGRESS] DMA transfer modes — timed general DMA and direct/indirect HDMA; electrical edge cases pending
 - [ ] [IN PROGRESS] DMA timing — grace cycle, slots, setup, CPU resynchronization, HDMA priority and shared WRAM refresh; electrical phases pending
-- [ ] DMA source/destination wrapping
+- [x] DMA source/destination wrapping — A1T wraps within fixed A1B; BBAD mode offsets wrap within `$21xx`
 - [ ] [IN PROGRESS] HDMA initialization — frame request, table engine and scheduled VBlank deactivation implemented; revision edges pending
 - [ ] [IN PROGRESS] HDMA scanline behavior — HBlank request and timed line engine implemented; electrical phase pending
 - [ ] [IN PROGRESS] Indirect HDMA — timed pointer/table behavior and last-channel zero-descriptor shortening implemented; frame-initialization and electrical edges pending
 - [ ] Transfer edge cases
 - [ ] CPU interaction
-- [ ] Channel priority
+- [x] Channel priority — lowest selected DMA/HDMA channel first with deterministic multi-channel fixtures
 - [ ] [IN PROGRESS] DMA and HDMA overlap — same-channel cancellation at admitted slot boundaries implemented; electrical phases pending
 - [ ] Tests
 
