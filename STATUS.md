@@ -445,6 +445,10 @@ architectural state, cycle totals and exact ordered bus traces: 1,024/1,024 case
 pass. This is internal consistency evidence rather than hardware conformance, and no
 target runtime was exercised. See the
 [2026-10-24 code review](docs/code-review-2026-10-24.md).
+Revision `f9dc49f` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40150351323),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40150351293) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40150351308).
 
 Next primary block: implement shared WRAM refresh stalls for CPU and general
 DMA, preserving event horizons and exact-once bus effects. PS2 GS emulator

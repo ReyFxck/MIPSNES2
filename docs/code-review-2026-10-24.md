@@ -40,9 +40,12 @@ not independent proof of W65C816 hardware behavior.
 
 Leak detection was disabled because LeakSanitizer cannot inspect the managed
 runtime's process tasks. Clang and the console SDKs were not available locally.
-PS2, PSP and host cross-checks for the published revision are delegated to the
-pinned GitHub workflows. No emulator or physical-console runtime execution was
-performed in this review.
+PS2, PSP and host cross-checks used the pinned GitHub workflows. Published revision
+[`f9dc49fd45246e10f1cf35d07df38fa964912256`](https://github.com/ReyFxck/MIPSNES2/commit/f9dc49fd45246e10f1cf35d07df38fa964912256)
+passed [PS2 CI run 40150351323](https://github.com/ReyFxck/MIPSNES2/actions/runs/40150351323),
+[PSP CI run 40150351293](https://github.com/ReyFxck/MIPSNES2/actions/runs/40150351293)
+and [Host CI run 40150351308](https://github.com/ReyFxck/MIPSNES2/actions/runs/40150351308).
+No emulator or physical-console runtime execution was performed in this review.
 
 ## Reviewed boundaries and remaining risk
 
