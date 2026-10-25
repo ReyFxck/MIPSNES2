@@ -65,3 +65,8 @@ with leak detection disabled, repository checker and GCC `-fanalyzer` build
 passed. One local generated `test-ppu-bg4-scanline` file had mode `0644` and
 stopped a repeat suite run; rebuilding that executable restored the full pass.
 The cause of that artifact mode is unconfirmed.
+The first published integration revision `e18fe55` passed host CI but failed
+the PS2 and PSP link steps because their Makefiles lacked `hdma.o`. The target
+object lists are corrected, and the repository checker now guards host/target
+core-object parity. The corrected target runs must pass before this block is
+marked complete.

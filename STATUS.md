@@ -500,8 +500,13 @@ table/data effects at endpoints. Host fixtures cover real VRAM port writes,
 repeated horizons, event-budget retry, DMA preemption on distinct channels,
 refresh, A-bus exclusions and NTSC/PAL next-frame events. See the
 [timed HDMA audit](docs/hdma-timed-audit.md). Same-channel register collisions,
-exact VBlank deactivation and electrical phases remain open. PS2/PSP/host CI
-for this integration and target runtime checks are pending.
+exact VBlank deactivation and electrical phases remain open. Revision `e18fe55`
+passed [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176249767),
+but [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176249749)
+and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40176249757)
+failed at link because their object lists omitted `hdma.o`. Both Makefiles now
+include it, and the repository checker compares target core objects with the
+host list. New cross-build CI and target runtime checks remain pending.
 
 Next primary block: resolve same-channel DMA/HDMA register collisions with
 deterministic overlap fixtures and explicit VBlank deactivation policy. PS2 GS

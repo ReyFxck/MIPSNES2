@@ -120,6 +120,27 @@ for path in (ROOT / "core").rglob("*"):
             errors.append(str(path.relative_to(ROOT)) + ": platform dependency " + header)
     if re.search(r"#\s*(ifdef|if defined).*\b(PS2|PSP)\b", content):
         errors.append(str(path.relative_to(ROOT)) + ": platform conditional in core")
+
+def declared_objects(path, name):
+    content = path.read_text()
+    declaration = re.search(
+        rf"(?m)^{name}\s*=\s*((?:[^\n]*\\\n)*[^\n]*)", content)
+    if declaration is None:
+        errors.append(str(path.relative_to(ROOT)) + ": missing " + name)
+        return set()
+    return set(re.findall(r"\b[\w]+\.o\b", declaration.group(1)))
+
+
+core_objects = declared_objects(ROOT / "Makefile", "CORE_OBJS")
+for target, variable in (("ps2", "EE_OBJS"), ("psp", "OBJS")):
+    makefile = ROOT / "platform" / target / "Makefile"
+    target_objects = declared_objects(makefile, variable)
+    for missing in sorted(core_objects - target_objects):
+        errors.append(f"platform/{target}/Makefile: missing core object {missing}")
+    content = makefile.read_text()
+    for obj in sorted(core_objects):
+        if re.search(rf"(?m)^{re.escape(obj)}\s*:", content) is None:
+            errors.append(f"platform/{target}/Makefile: missing rule for {obj}")
 for path in (ROOT / ".github/workflows").glob("*.yml"):
     content = path.read_text()
     if "continue-on-error: true" in content or "pull_request_target:" in content:
