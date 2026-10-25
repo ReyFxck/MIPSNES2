@@ -642,8 +642,12 @@ now execute and 238 fail explicitly. See the
 [SPC700 MOV audit](docs/spc700-mov-foundation-audit.md). `make clean && make -j2
 test` passed with host C99 `cc`; the focused ASan/UBSan fixture passed with leak
 checking disabled for this environment, and GCC `-fanalyzer` passed. Clang,
-PS2SDK, `psp-config` and target runtime are unavailable locally; pinned target
-cross-builds await publication.
+PS2SDK, `psp-config` and target runtime are unavailable locally. Revision
+`9d2930f` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40239618720),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40239618753) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40239618714).
+No target-runtime result is claimed.
 
 Next primary block: add SPC700 direct-page address formation and the first
 direct-page register `MOV` load/store forms. Refining
