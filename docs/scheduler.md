@@ -170,7 +170,8 @@ uncommitted, and resumes without duplicating already executed callbacks or CPU
 effects. A callback already dispatched before budget exhaustion cannot be rolled
 back. Callbacks must not mutate CPU/cursor/FastROM/bus counters during an in-flight
 operation; stale descriptors/counters are rejected before its commit. Active-cursor
-cancellation/checkpoint recovery is not implemented. This is not a DMA arbiter.
+cancellation/checkpoint recovery is not implemented. The same resumable path now
+arbitrates CPU-triggered general DMA and WRAM refresh; HDMA remains absent.
 The timing-state ABORT pulse is a narrow exception: after opcode fetch it latches
 without mutating the active CPU descriptor. A pending write blocks at its original
 timed endpoint; a future write blocks before admission until the caller qualifies
@@ -215,8 +216,7 @@ SNES-specific memory-speed decoder. No emulator implementation was used.
 Still required before total instruction timing is valid:
 
 - every opcode's program/data/dummy/internal cycle sequence;
-- WRAM refresh stalls;
-- DMA/HDMA bus ownership;
+- HDMA bus ownership and overlap with general DMA/refresh;
 - interrupt sampling at hardware-observable boundaries;
 - PPU, SPC700/DSP and enhancement clock domains.
 
@@ -230,6 +230,8 @@ boundaries, identical replay traces and scheduled IRQ/NMI delivery to a waiting 
 FastROM transitions, slow/mixed-speed instructions, atomic compatibility, per-clock
 resume, event at/inside an operation endpoint, event-budget retry before a write,
 RESET vector timing, overflow/stale rejection and boundary IRQ/NMI priority.
+`tests/test_dma_timing.c` covers shared CPU/general-DMA refresh stalls, H=538/H=534
+alignment, the NTSC short line, horizon resume and distinct clock accounting.
 `tests/test_hv_timing.c` covers non-interlaced NTSC/PAL line and frame geometry,
 HBlank/VBlank boundaries, delayed NMI assertion, overscan, field/short-line behavior,
 overflow handling, every valid HTIME value, V/HV match positions, short/final-line

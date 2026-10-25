@@ -144,9 +144,11 @@ post-step timer delivery, TIMEUP acknowledgement without erasing cartridge IRQ,
 source deassertion, NMI delivery and simultaneous NMI/IRQ priority at the next atomic
 CPU boundary. They also verify CPU-bus/internal-cycle math progress, completion-read
 ordering, timing-overflow transactionality and an executed multiply sequence. These
-fixtures validate meaningful-access
-timing, not missing dummy cycles, mid-instruction pause/resume, WRAM refresh, complete
-SNES interrupt generation or complete cartridge mapping.
+fixtures validate meaningful-access timing, but do not cover missing dummy cycles,
+complete SNES interrupt generation or complete cartridge mapping. The DMA timing
+fixture separately verifies resumable WRAM refresh pauses for CPU and general DMA,
+normal-line H=538/H=534 alignment, NTSC short-line phase retention, horizon
+boundaries, exact-once byte effects and separate CPU/DMA/refresh clock totals.
 The PPU-counter executable enumerates every master-clock position on normal and NTSC
 short lines, verifies all valid H/V capture values, independent low/high selectors,
 PPU2 open bits, WRIO gating and field/region/version composition. Bus integration

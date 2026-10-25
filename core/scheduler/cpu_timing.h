@@ -45,9 +45,10 @@ typedef struct {
     uint64_t processor_cycles;
     uint64_t bus_accesses;
     uint64_t internal_cycles;
-    uint64_t master_clocks; /* committed CPU clocks plus DMA stall clocks */
+    uint64_t master_clocks; /* committed CPU, DMA and WRAM-refresh clocks */
     uint64_t dma_master_clocks;
     uint64_t dma_bytes;
+    uint64_t refresh_master_clocks;
     mipsnes2_master_clock target_time;
     size_t events_dispatched;
 } mipsnes2_cpu_timing_report;
@@ -61,6 +62,7 @@ typedef struct {
  * after the operation endpoint has been reached. General-purpose DMA may
  * suspend admission of the next CPU operation after one request grace cycle;
  * DMA phases use the same scheduler horizons and commit bytes at endpoints.
+ * With an H/V domain, CPU and DMA phases also pause for shared WRAM refresh.
  * The fields are private to
  * cpu_timing.c; initialize them with mipsnes2_cpu_timing_state_init().
  */
@@ -87,14 +89,17 @@ typedef struct {
     mipsnes2_master_clock operation_end_time;
     mipsnes2_master_clock dma_start_time;
     mipsnes2_master_clock dma_end_time;
+    mipsnes2_master_clock refresh_stall_end_time;
     uint64_t dma_master_clocks;
     uint64_t dma_bytes;
+    uint64_t refresh_master_clocks;
     size_t events_dispatched;
     mipsnes2_cpu_result cpu_result;
     uint8_t operation_master_clocks;
     uint8_t dma_phase;
     uint8_t dma_phase_clocks;
     uint8_t dma_cpu_clocks;
+    uint8_t refresh_phase_clocks;
     uint8_t abort_status_at_pulse;
     mipsnes2_cpu_abort_write_disposition abort_write_disposition;
     bool pending_fastrom_enabled;
@@ -104,6 +109,7 @@ typedef struct {
     bool operation_pending;
     bool dma_active;
     bool dma_phase_pending;
+    bool refresh_stall_active;
     bool reset_requested;
     bool reset_sequence;
     bool abort_opcode_fetched;

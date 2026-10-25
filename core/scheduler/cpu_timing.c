@@ -88,6 +88,7 @@ static void fill_resumable_report(
     report->target_time = scheduler->now;
     report->dma_master_clocks = state->dma_master_clocks;
     report->dma_bytes = state->dma_bytes;
+    report->refresh_master_clocks = state->refresh_master_clocks;
 
     if (!state->reset_sequence &&
         cpu->instruction_cycles >= state->processor_cycles_before) {
@@ -101,7 +102,7 @@ static void fill_resumable_report(
     if (bus->master_clocks >= state->bus_clocks_before) {
         report->master_clocks =
             bus->master_clocks - state->bus_clocks_before +
-            state->dma_master_clocks;
+            state->dma_master_clocks + state->refresh_master_clocks;
     }
     if (!state->reset_sequence &&
         report->processor_cycles >= report->bus_accesses) {
@@ -172,6 +173,154 @@ static mipsnes2_cpu_timing_result run_resumable_until(
         return add_result;
     }
     return result;
+}
+
+enum {
+    WRAM_REFRESH_NOMINAL_H_CLOCK = 536,
+    WRAM_REFRESH_ALIGNMENT_PHASE = 2,
+    WRAM_REFRESH_MASTER_CLOCKS = 40
+};
+
+static mipsnes2_cpu_timing_result refresh_for_line(
+    mipsnes2_master_clock line_start,
+    mipsnes2_master_clock *refresh_start,
+    mipsnes2_master_clock *refresh_end)
+{
+    mipsnes2_master_clock nominal;
+    mipsnes2_master_clock lower;
+    mipsnes2_master_clock upper;
+    mipsnes2_master_clock remainder;
+
+    if (line_start > UINT64_MAX - WRAM_REFRESH_NOMINAL_H_CLOCK) {
+        return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+    }
+    nominal = line_start + WRAM_REFRESH_NOMINAL_H_CLOCK;
+    remainder = (nominal - WRAM_REFRESH_ALIGNMENT_PHASE) & UINT64_C(7);
+    lower = nominal - remainder;
+    if (lower > UINT64_MAX - 8U) {
+        return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+    }
+    upper = lower + 8U;
+    *refresh_start = nominal - lower <= upper - nominal ? lower : upper;
+    if (*refresh_start > UINT64_MAX - WRAM_REFRESH_MASTER_CLOCKS) {
+        return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+    }
+    *refresh_end = *refresh_start + WRAM_REFRESH_MASTER_CLOCKS;
+    return MIPSNES2_CPU_TIMING_OK;
+}
+
+/* Refresh begins near H=536, with successive starts retaining the initial
+ * absolute modulo-eight phase. Normal 1364-clock lines therefore alternate
+ * H=538/H=534; a 1360-clock short line retains the current phase. */
+static mipsnes2_cpu_timing_result next_refresh_window(
+    const mipsnes2_hv_timing *hv_timing,
+    mipsnes2_master_clock now,
+    mipsnes2_master_clock *refresh_start,
+    mipsnes2_master_clock *refresh_end)
+{
+    mipsnes2_master_clock line_start;
+    uint16_t line_clocks;
+    mipsnes2_cpu_timing_result result;
+
+    if (hv_timing == NULL || refresh_start == NULL || refresh_end == NULL ||
+        now != hv_timing->elapsed_master_clocks ||
+        now < hv_timing->h_master_clock) {
+        return MIPSNES2_CPU_TIMING_DOMAIN_MISMATCH;
+    }
+    line_start = now - hv_timing->h_master_clock;
+    result = refresh_for_line(line_start, refresh_start, refresh_end);
+    if (result != MIPSNES2_CPU_TIMING_OK || now < *refresh_end) {
+        return result;
+    }
+    line_clocks = mipsnes2_hv_scanline_master_clocks(hv_timing);
+    if (line_clocks == 0U || line_start > UINT64_MAX - line_clocks) {
+        return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+    }
+    return refresh_for_line(line_start + line_clocks,
+                            refresh_start, refresh_end);
+}
+
+static mipsnes2_cpu_timing_result run_phase_with_refresh(
+    mipsnes2_cpu *cpu,
+    mipsnes2_snes_bus *bus,
+    mipsnes2_scheduler *scheduler,
+    mipsnes2_hv_timing *hv_timing,
+    mipsnes2_interrupt_lines *interrupt_lines,
+    mipsnes2_cpu_timing_state *state,
+    mipsnes2_master_clock *phase_end,
+    mipsnes2_master_clock horizon,
+    size_t *remaining_budget,
+    mipsnes2_cpu_timing_report *report)
+{
+    for (;;) {
+        mipsnes2_master_clock target;
+        mipsnes2_master_clock refresh_start;
+        mipsnes2_master_clock refresh_end;
+        mipsnes2_cpu_timing_result result;
+
+        if (hv_timing == NULL) {
+            target = *phase_end < horizon ? *phase_end : horizon;
+            return run_resumable_until(
+                cpu, bus, scheduler, NULL, interrupt_lines, state,
+                target, remaining_budget, report);
+        }
+        if (state->refresh_stall_active) {
+            target = state->refresh_stall_end_time < horizon
+                         ? state->refresh_stall_end_time : horizon;
+            result = run_resumable_until(
+                cpu, bus, scheduler, hv_timing, interrupt_lines, state,
+                target, remaining_budget, report);
+            if (result != MIPSNES2_CPU_TIMING_OK) {
+                return result;
+            }
+            if (scheduler->now < state->refresh_stall_end_time) {
+                return MIPSNES2_CPU_TIMING_OK;
+            }
+            state->refresh_master_clocks += state->refresh_phase_clocks;
+            state->refresh_phase_clocks = 0U;
+            state->refresh_stall_active = false;
+            continue;
+        }
+
+        result = next_refresh_window(
+            hv_timing, scheduler->now, &refresh_start, &refresh_end);
+        if (result != MIPSNES2_CPU_TIMING_OK) {
+            return result;
+        }
+        if (refresh_start >= *phase_end) {
+            target = *phase_end < horizon ? *phase_end : horizon;
+            return run_resumable_until(
+                cpu, bus, scheduler, hv_timing, interrupt_lines, state,
+                target, remaining_budget, report);
+        }
+        if (scheduler->now < refresh_start) {
+            target = refresh_start < horizon ? refresh_start : horizon;
+            result = run_resumable_until(
+                cpu, bus, scheduler, hv_timing, interrupt_lines, state,
+                target, remaining_budget, report);
+            if (result != MIPSNES2_CPU_TIMING_OK ||
+                scheduler->now < refresh_start) {
+                return result;
+            }
+        }
+        {
+            uint64_t delay = refresh_end - scheduler->now;
+            uint64_t bus_delta = bus->master_clocks -
+                                 state->bus_clocks_before;
+
+            if (*phase_end > UINT64_MAX - delay ||
+                state->refresh_master_clocks > UINT64_MAX - delay ||
+                bus_delta > UINT64_MAX - state->dma_master_clocks ||
+                bus_delta + state->dma_master_clocks >
+                    UINT64_MAX - state->refresh_master_clocks - delay) {
+                return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+            }
+            *phase_end += delay;
+            state->refresh_stall_end_time = refresh_end;
+            state->refresh_phase_clocks = (uint8_t)delay;
+            state->refresh_stall_active = true;
+        }
+    }
 }
 
 static bool resumable_context_matches(
@@ -484,6 +633,9 @@ static void bind_resumable_state(
     state->dma_phase_pending = false;
     state->dma_master_clocks = 0U;
     state->dma_bytes = 0U;
+    state->refresh_master_clocks = 0U;
+    state->refresh_phase_clocks = 0U;
+    state->refresh_stall_active = false;
     state->reset_sequence = state->reset_requested;
     state->reset_requested = false;
     state->abort_opcode_fetched = false;
@@ -533,7 +685,6 @@ static mipsnes2_cpu_timing_result resume_dma(
 {
     while (state->dma_active) {
         mipsnes2_cpu_timing_result result;
-        mipsnes2_master_clock target;
 
         if (!state->dma_phase_pending) {
             uint8_t clocks = 8U;
@@ -570,9 +721,9 @@ static mipsnes2_cpu_timing_result resume_dma(
                    sizeof(*bus->dma_registers)) != 0) {
             return MIPSNES2_CPU_TIMING_STALE_STATE;
         }
-        target = state->dma_end_time < horizon ? state->dma_end_time : horizon;
-        result = run_resumable_until(cpu, bus, scheduler, hv_timing,
-            interrupt_lines, state, target, event_budget, report);
+        result = run_phase_with_refresh(
+            cpu, bus, scheduler, hv_timing, interrupt_lines, state,
+            &state->dma_end_time, horizon, event_budget, report);
         if (result != MIPSNES2_CPU_TIMING_OK) {
             return result;
         }
@@ -689,19 +840,15 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
         }
 
         if (state->operation_pending) {
-            mipsnes2_master_clock target;
-
             result = validate_pending_operation(cpu, bus, scheduler, state);
             if (result != MIPSNES2_CPU_TIMING_OK) {
                 fill_resumable_report(state, cpu, bus, scheduler, report);
                 return result;
             }
-            target = state->operation_end_time < requested_horizon
-                         ? state->operation_end_time
-                         : requested_horizon;
-            result = run_resumable_until(
+            result = run_phase_with_refresh(
                 cpu, bus, scheduler, hv_timing, interrupt_lines, state,
-                target, &remaining_budget, report);
+                &state->operation_end_time, requested_horizon,
+                &remaining_budget, report);
             if (result != MIPSNES2_CPU_TIMING_OK) {
                 fill_resumable_report(state, cpu, bus, scheduler, report);
                 return result;

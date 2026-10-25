@@ -120,10 +120,11 @@ Every SNES-bus read/write updates access counters and charges the 5A22 6/8/12-ma
 clock class selected by its normalized address and current FastROM state. This is
 real per-meaningful-access accounting, but not complete CPU bus sequencing: the
 interpreter does not yet emit all dummy accesses, internal-cycle positions or MLB.
-WRAM refresh and DMA/HDMA bus ownership also remain unimplemented.
+The H/V-aware resumable bridge now pauses CPU and general DMA phases for WRAM
+refresh. HDMA ownership and electrical bus phases remain unimplemented.
 
-Bus callbacks must remain free of scheduler dispatch while the interpreter is
-instruction-atomic. The rejected synchronous clock-sink design could leave partial
+Bus callbacks must remain free of scheduler dispatch while an operation is in
+flight. The rejected synchronous clock-sink design could leave partial
 CPU/device state after an event-budget failure. Per-access advancement requires a
 resumable CPU cycle contract first; see the
 [access-timing post-mortem](cpu-access-timing-postmortem.md).
@@ -177,8 +178,9 @@ cartridge mapping or cycle-level event placement.
 The full bus must add broader cartridge boards, unofficial ExLoROM only if justified,
 implemented peripheral registers,
 enhancement windows, accurate read/write side effects and open-bus domains; expose
-every relevant CPU dummy/internal cycle; add WRAM refresh and DMA/HDMA arbitration;
-and benchmark page/block layouts on real PS2 and PSP. See [STATUS.md](../STATUS.md).
+every relevant CPU dummy/internal cycle; add HDMA arbitration and refresh/HDMA
+overlap; and benchmark page/block layouts on real PS2 and PSP. See
+[STATUS.md](../STATUS.md).
 
 ## Sources
 

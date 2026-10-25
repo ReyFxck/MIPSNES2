@@ -40,14 +40,17 @@ The eight-clock byte's read/write subphase is not established by the
 reference. **The implementation commits both effects at the slot endpoint**
 and puts whole-transfer setup before the first channel. This is an explicit
 reference approximation, not a verified electrical phase model. WRAM refresh
-pauses, HDMA priority/overlap, special `$4000-$41FF` behavior, DMA/arithmetic
+pauses were pending at this implementation revision. The later
+[WRAM refresh milestone](wram-refresh-audit.md) adds shared CPU/general-DMA
+stalls. HDMA priority/overlap, special `$4000-$41FF` behavior, DMA/arithmetic
 overlap and exact post-DMA interrupt latency remain pending. Interrupt edges
 are retained during the pause and delivered using the existing CPU sequence
 boundary policy. The legacy atomic CPU helper does not service DMA; use the
 resumable machine path. No real PS2/PSP or Android emulator run is claimed.
 
-`report.master_clocks` includes committed CPU clocks and DMA stall clocks;
-`dma_master_clocks` and `dma_bytes` expose the DMA contribution. Bus access
+`report.master_clocks` includes committed CPU, DMA and completed refresh clocks;
+`dma_master_clocks`, `dma_bytes` and `refresh_master_clocks` expose their separate
+contributions. Bus access
 and processor-cycle counters remain CPU-only. As with pending CPU operations,
 a partly elapsed DMA phase has not yet been charged to the report.
 
@@ -60,7 +63,8 @@ a partly elapsed DMA phase has not yet been charged to the report.
 - [x] Blocked A-bus I/O, mirrored WRAM conflict and legal ROM-to-WRAM-port side effects.
 - [x] Interrupt retention, stale CPU rejection and timestamp-overflow preflight.
 - [x] A machine fixture transfers twelve bytes to the actual VRAM, OAM and CGRAM port implementations.
-- [ ] WRAM refresh and HDMA arbitration verification.
+- [x] Subsequent shared WRAM refresh verification for CPU and general DMA.
+- [ ] HDMA arbitration verification.
 - [ ] Sub-byte electrical phase and real-console validation.
 
 Completion of this foundation requires these synthetic tests plus host and

@@ -258,12 +258,103 @@ static int test_interrupt_and_overflow(void)
     CHECK(f.writes == 0U && f.bus.access_count == 0U);
     return 0;
 }
+
+static int move_domain_to(uint64_t target)
+{
+    CHECK(mipsnes2_hv_timing_advance(&f.hv, &f.io, target) ==
+          MIPSNES2_HV_OK);
+    f.scheduler.now = target;
+    return 0;
+}
+
+static int test_wram_refresh_cpu_and_dma(void)
+{
+    mipsnes2_cpu_timing_report report;
+
+    /* The first CPU read ends at H=538. The following internal operation starts
+     * on the refresh boundary and cannot commit until the 40-clock stall ends. */
+    CHECK(setup() == 0);
+    f.wram[0] = UINT8_C(0xea);
+    CHECK(move_domain_to(530U) == 0);
+    CHECK(resume(537U, 0U, &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(f.cpu.pc == 0U && report.refresh_master_clocks == 0U);
+    CHECK(resume(538U, 0U, &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(f.cpu.pc == 1U && f.state.refresh_stall_active);
+    CHECK(mipsnes2_scheduler_schedule(&f.scheduler, 550U, 0U, observe,
+                                      &f, NULL) == MIPSNES2_SCHEDULER_OK);
+    CHECK(resume(550U, 0U, &report) == MIPSNES2_CPU_TIMING_SCHEDULER_ERROR);
+    CHECK(f.scheduler.now == 538U && f.events == 0U &&
+          f.state.refresh_stall_active);
+    CHECK(resume(550U, 1U, &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(f.scheduler.now == 550U && f.events == 1U &&
+          f.state.refresh_stall_active);
+    CHECK(resume(577U, 0U, &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(report.refresh_master_clocks == 0U && f.cpu.instruction_cycles == 1U);
+    CHECK(resume(578U, 0U, &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(report.refresh_master_clocks == 40U &&
+          !f.state.refresh_stall_active);
+    CHECK(resume(584U, 0U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.refresh_master_clocks == 40U &&
+          report.master_clocks == 54U && report.processor_cycles == 2U);
+    CHECK(f.scheduler.now == 584U && f.hv.h_master_clock == 584U);
+
+    /* The next normal scanline keeps the absolute modulo-eight phase, placing
+     * refresh at H=534 instead of H=538. */
+    CHECK(setup() == 0);
+    f.wram[0] = UINT8_C(0xea);
+    CHECK(move_domain_to(1890U) == 0);
+    CHECK(resume(UINT64_MAX, 0U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.refresh_master_clocks == 40U &&
+          report.master_clocks == 54U);
+    CHECK(f.scheduler.now == 1944U && f.hv.v_counter == 1U &&
+          f.hv.h_master_clock == 580U);
+
+    /* The NTSC short scanline is a multiple of eight clocks, so the absolute
+     * refresh phase and H=538 position are retained on the following line. */
+    CHECK(setup() == 0);
+    f.wram[0] = UINT8_C(0xea);
+    CHECK(move_domain_to(UINT64_C(327890)) == 0); /* line 240, H=530 */
+    CHECK(f.hv.v_counter == 240U && f.hv.field);
+    CHECK(resume(UINT64_MAX, 0U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.refresh_master_clocks == 40U &&
+          f.scheduler.now == UINT64_C(327944));
+    CHECK(setup() == 0);
+    f.wram[0] = UINT8_C(0xea);
+    CHECK(move_domain_to(UINT64_C(329250)) == 0); /* line 241, H=530 */
+    CHECK(f.hv.v_counter == 241U && f.hv.h_master_clock == 530U);
+    CHECK(resume(UINT64_MAX, 0U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(report.refresh_master_clocks == 40U &&
+          f.scheduler.now == UINT64_C(329304));
+
+    /* The same arbiter extends a DMA setup phase without committing its byte
+     * early. DMA's own clocks remain separate from the refresh report. */
+    CHECK(setup() == 0);
+    f.wram[0] = UINT8_C(0xea);
+    f.registers.channel[0][5] = 1U;
+    f.bus.dma_request_mask = 1U;
+    f.bus.dma_grace_cycles = 0U;
+    CHECK(move_domain_to(530U) == 0);
+    CHECK(resume(577U, 0U, &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(f.writes == 0U && report.dma_bytes == 0U &&
+          report.refresh_master_clocks == 0U);
+    CHECK(resume(578U, 0U, &report) == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(f.writes == 0U && report.refresh_master_clocks == 40U);
+    CHECK(resume(UINT64_MAX, 0U, &report) == MIPSNES2_CPU_TIMING_OK);
+    CHECK(f.writes == 1U && f.values[0] == UINT8_C(0x12));
+    CHECK(report.dma_bytes == 1U && report.dma_master_clocks == 32U &&
+          report.refresh_master_clocks == 40U &&
+          report.master_clocks == 86U);
+    CHECK(f.scheduler.now == 616U && f.hv.h_master_clock == 616U);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_horizons() == 0);
     CHECK(test_bus_policy() == 0);
     CHECK(test_clock_classes_and_channels() == 0);
     CHECK(test_interrupt_and_overflow() == 0);
+    CHECK(test_wram_refresh_cpu_and_dma() == 0);
     (void)puts("DMA bus and resumable CPU stall: OK");
     return 0;
 }

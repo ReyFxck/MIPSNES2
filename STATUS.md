@@ -450,8 +450,18 @@ Revision `f9dc49f` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40150351293) and
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40150351308).
 
-Next primary block: implement shared WRAM refresh stalls for CPU and general
-DMA, preserving event horizons and exact-once bus effects. PS2 GS emulator
+The H/V-aware resumable bridge now stalls both CPU operations and general DMA
+phases for the measured 40-master-clock WRAM refresh window. The first refresh
+starts at H=538; absolute modulo-eight alignment produces H=538/H=534 on normal
+lines and retains phase across the 1360-clock NTSC short line. Pending effects
+remain exact-once across horizons, with completed refresh clocks reported
+separately from CPU and DMA. Deterministic fixtures cover CPU and DMA crossings,
+four boundary horizons, normal-line alternation and the NTSC short line. See the
+[WRAM refresh audit](docs/wram-refresh-audit.md). Target runtime validation remains
+pending.
+
+Next primary block: implement HDMA initialization and per-scanline arbitration,
+preserving the shared refresh and general-DMA ownership rules. PS2 GS emulator
 and physical-console checks remain separate pending validation.
 
 ## State and evidence rules
@@ -1168,7 +1178,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] STP
 - [x] Bank wrapping — program fetch/relative branches are bank-local; data/indexing is linear; Direct pointers remain in bank zero
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
-- [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET; signal-level RESET, exact dummy/internal sequencing, refresh and arbitration are pending
+- [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET and shared WRAM refresh stalls; signal-level RESET, exact dummy/internal sequencing and HDMA arbitration are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
 - [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
 - [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, boundary IRQ/NMI/ABORT entry, RESET vector reads and opt-in scheduler/5A22 cursor wiring exist; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
@@ -1502,7 +1512,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Open bus behavior — deterministic single-latch fallback only; hardware domains unverified
 - [ ] [IN PROGRESS] Read side effects — `$2180` auto-increment exists; remaining SNES register effects absent
 - [ ] [IN PROGRESS] Write side effects — WRAM ports and `$420D` exist; remaining SNES register effects absent
-- [ ] [IN PROGRESS] Access timing — meaningful cursor accesses use 5A22 6/8/12 clocks and internal operations use 6 clocks in the resumable bridge; dummy traffic, refresh and arbitration are absent
+- [ ] [IN PROGRESS] Access timing — meaningful cursor accesses use 5A22 6/8/12 clocks, internal operations use 6 clocks and H/V-aware CPU/general-DMA phases include shared WRAM refresh stalls; dummy traffic and HDMA arbitration are absent
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO, base LoROM/HiROM and Mode 25/35 ExHiROM boundaries verified; padded/ExLoROM/enhancement maps absent
 - [ ] Page/block mapping benchmark
 
@@ -1675,7 +1685,7 @@ platform persistence remains incomplete.
 
 - [ ] [IN PROGRESS] DMA registers — channel banks and `$420B` start integrated; `$420C` HDMA effects absent
 - [ ] [IN PROGRESS] DMA transfer modes — timed machine byte path for all eight; HDMA and electrical edge cases pending
-- [ ] [IN PROGRESS] DMA timing — grace cycle, slots, setup and CPU resynchronization; refresh/HDMA/electrical phases pending
+- [ ] [IN PROGRESS] DMA timing — grace cycle, slots, setup, CPU resynchronization and shared WRAM refresh stalls; HDMA/electrical phases pending
 - [ ] DMA source/destination wrapping
 - [ ] HDMA initialization
 - [ ] HDMA scanline behavior
