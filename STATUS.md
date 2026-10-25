@@ -460,6 +460,11 @@ four boundary horizons, normal-line alternation and the NTSC short line. See the
 [WRAM refresh audit](docs/wram-refresh-audit.md). Target runtime validation remains
 pending.
 
+Revision `0a3dc11` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151173570),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151173536) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151173541).
+
 Next primary block: implement HDMA initialization and per-scanline arbitration,
 preserving the shared refresh and general-DMA ownership rules. PS2 GS emulator
 and physical-console checks remain separate pending validation.

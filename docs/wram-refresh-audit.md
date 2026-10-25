@@ -50,6 +50,12 @@ source was consulted or copied.
 - [x] A general DMA setup crossing H=538 performs no early byte effect, then
   completes with distinct DMA and refresh clock totals.
 - [x] Default host, optimized and sanitizer suites pass.
+- [x] GCC static analysis passes with `-fanalyzer`.
+
+Published revision `0a3dc11` passed
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151173570),
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151173536) and
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40151173541).
 
 ## Honest boundary
 
