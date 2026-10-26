@@ -227,9 +227,9 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC
 - [x] Instruction fetch — bounded S-SMP map, IPL overlay and PC wrap
-- [ ] [IN PROGRESS] Opcode dispatch — forty implied/PSW/register/direct-page/absolute MOV opcodes implemented
-- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, indexed-direct-page, absolute and absolute-indexed subsets only
-- [ ] [IN PROGRESS] Load/store — immediate/register, direct-page, absolute and indexed A/X/Y MOV subset only
+- [ ] [IN PROGRESS] Opcode dispatch — fifty implied/PSW/register/direct-page/absolute/indirect MOV opcodes implemented
+- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, indexed, register-indirect and direct-indirect subsets
+- [ ] [IN PROGRESS] Load/store — byte register/memory MOV subset, including direct-page memory transfers; MOVW remains
 - [ ] [IN PROGRESS] Arithmetic and flags — PSW-control subset only
 - [ ] Decimal adjust
 - [ ] Logic and shifts
@@ -238,13 +238,13 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Bit operations
 - [ ] Multiply/divide
 - [ ] Sleep and stop
-- [ ] [IN PROGRESS] Instruction timing — atomic 2/3/4/5/6-cycle subset advances timers
+- [ ] [IN PROGRESS] Instruction timing — atomic 2/3/4/5/6/7-cycle subset advances timers
 - [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay and write-through tested; remaining MMIO, interpreter and hardware validation pending
 - [ ] IPL provenance decision
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` input-pair clear verified; cross-clock timing pending
-- [ ] [IN PROGRESS] Instruction tests — 256-value dispatch, PSW and register/immediate/direct-page/absolute/indexed MOV coverage
+- [ ] [IN PROGRESS] Instruction tests — 256-value dispatch, PSW and byte MOV addressing coverage
 - [ ] [IN PROGRESS] Timing regressions — instruction/timer, overflow and missing-operand coverage
 
 ## Phase 8 — DSP / Audio

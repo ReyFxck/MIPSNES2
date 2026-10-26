@@ -31,12 +31,17 @@ static int supported_opcode(uint8_t opcode)
     case UINT8_C(0x7d):
     case UINT8_C(0x80):
     case UINT8_C(0x8d):
+    case UINT8_C(0x8f):
     case UINT8_C(0x9d):
     case UINT8_C(0xa0):
+    case UINT8_C(0xaf):
     case UINT8_C(0xbd):
+    case UINT8_C(0xbf):
     case UINT8_C(0xc0):
     case UINT8_C(0xc4):
     case UINT8_C(0xc5):
+    case UINT8_C(0xc6):
+    case UINT8_C(0xc7):
     case UINT8_C(0xc9):
     case UINT8_C(0xcb):
     case UINT8_C(0xcc):
@@ -44,6 +49,7 @@ static int supported_opcode(uint8_t opcode)
     case UINT8_C(0xd4):
     case UINT8_C(0xd5):
     case UINT8_C(0xd6):
+    case UINT8_C(0xd7):
     case UINT8_C(0xd8):
     case UINT8_C(0xd9):
     case UINT8_C(0xdb):
@@ -51,6 +57,8 @@ static int supported_opcode(uint8_t opcode)
     case UINT8_C(0xe0):
     case UINT8_C(0xe4):
     case UINT8_C(0xe5):
+    case UINT8_C(0xe6):
+    case UINT8_C(0xe7):
     case UINT8_C(0xe8):
     case UINT8_C(0xe9):
     case UINT8_C(0xeb):
@@ -59,8 +67,10 @@ static int supported_opcode(uint8_t opcode)
     case UINT8_C(0xf4):
     case UINT8_C(0xf5):
     case UINT8_C(0xf6):
+    case UINT8_C(0xf7):
     case UINT8_C(0xf8):
     case UINT8_C(0xf9):
+    case UINT8_C(0xfa):
     case UINT8_C(0xfb):
     case UINT8_C(0xfd):
         return 1;
@@ -352,6 +362,51 @@ int main(void)
                 CHECK(cpu.instruction_cycles == UINT64_C(4));
             }
         }
+    }
+
+    /* Memory-to-memory MOV encodes source before destination, selects both
+     * direct-page addresses with P and preserves the complete CPU state. */
+    for (page_index = 0U; page_index < 2U; ++page_index) {
+        uint16_t page = (uint16_t)(page_index * UINT16_C(0x0100));
+
+        initial.pc = UINT16_C(0x2740);
+        initial.a = UINT8_C(0x12);
+        initial.x = UINT8_C(0x34);
+        initial.y = UINT8_C(0x56);
+        initial.sp = UINT8_C(0x78);
+        initial.psw = page_index == 0U ? UINT8_C(0x5f) : UINT8_C(0x7f);
+
+        ram[initial.pc] = UINT8_C(0x8f);
+        ram[initial.pc + UINT16_C(1)] = UINT8_C(0x80);
+        ram[initial.pc + UINT16_C(2)] = UINT8_C(0x22);
+        ram[page | UINT16_C(0x0022)] = UINT8_C(0xcc);
+        CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+        CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+        CHECK(ram[page | UINT16_C(0x0022)] == UINT8_C(0x80));
+        CHECK(cpu.registers.pc == UINT16_C(0x2743) &&
+              cpu.registers.a == initial.a &&
+              cpu.registers.x == initial.x &&
+              cpu.registers.y == initial.y &&
+              cpu.registers.sp == initial.sp &&
+              cpu.registers.psw == initial.psw &&
+              cpu.instruction_cycles == UINT64_C(5));
+
+        ram[initial.pc] = UINT8_C(0xfa);
+        ram[initial.pc + UINT16_C(1)] = UINT8_C(0x20);
+        ram[initial.pc + UINT16_C(2)] = UINT8_C(0x21);
+        ram[page | UINT16_C(0x0020)] = UINT8_C(0xa5);
+        ram[page | UINT16_C(0x0021)] = UINT8_C(0xcc);
+        CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+        CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+        CHECK(ram[page | UINT16_C(0x0020)] == UINT8_C(0xa5) &&
+              ram[page | UINT16_C(0x0021)] == UINT8_C(0xa5));
+        CHECK(cpu.registers.pc == UINT16_C(0x2743) &&
+              cpu.registers.a == initial.a &&
+              cpu.registers.x == initial.x &&
+              cpu.registers.y == initial.y &&
+              cpu.registers.sp == initial.sp &&
+              cpu.registers.psw == initial.psw &&
+              cpu.instruction_cycles == UINT64_C(5));
     }
 
     /* Indexed direct-page loads wrap the 8-bit offset before selecting page
@@ -670,6 +725,150 @@ int main(void)
         }
     }
 
+    /* Register-indirect loads/stores use X as a P-selected direct-page
+     * address. The post-increment forms access the old X and wrap afterward. */
+    {
+        static const uint8_t values[] = {
+            UINT8_C(0x00), UINT8_C(0x7f), UINT8_C(0x80)
+        };
+
+        initial.pc = UINT16_C(0x2810);
+        initial.y = UINT8_C(0x56);
+        initial.sp = UINT8_C(0x78);
+        for (page_index = 0U; page_index < 2U; ++page_index) {
+            uint16_t page = (uint16_t)(page_index * UINT16_C(0x0100));
+            uint8_t post_x = page_index == 0U
+                ? UINT8_C(0xef) : UINT8_C(0xff);
+            uint8_t incremented_x = page_index == 0U
+                ? UINT8_C(0xf0) : UINT8_C(0x00);
+
+            initial.psw = page_index == 0U
+                ? UINT8_C(0xdf) : UINT8_C(0xff);
+            initial.x = UINT8_C(0x22);
+            for (value_index = 0U;
+                 value_index < sizeof(values) / sizeof(values[0]);
+                 ++value_index) {
+                ram[initial.pc] = UINT8_C(0xe6);
+                ram[page | UINT16_C(0x0022)] = values[value_index];
+                CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+                CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+                expected_psw = (uint8_t)(
+                    initial.psw &
+                    (uint8_t)~(MIPSNES2_SPC700_FLAG_N |
+                               MIPSNES2_SPC700_FLAG_Z));
+                if (values[value_index] == 0U) {
+                    expected_psw |= MIPSNES2_SPC700_FLAG_Z;
+                } else if ((values[value_index] & UINT8_C(0x80)) != 0U) {
+                    expected_psw |= MIPSNES2_SPC700_FLAG_N;
+                }
+                CHECK(cpu.registers.a == values[value_index] &&
+                      cpu.registers.x == UINT8_C(0x22));
+                CHECK(cpu.registers.pc == UINT16_C(0x2811) &&
+                      cpu.registers.psw == expected_psw &&
+                      cpu.instruction_cycles == UINT64_C(3));
+            }
+
+            initial.a = UINT8_C(0x5a);
+            ram[initial.pc] = UINT8_C(0xc6);
+            ram[page | UINT16_C(0x0022)] = UINT8_C(0xcc);
+            CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+            CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+            CHECK(ram[page | UINT16_C(0x0022)] == UINT8_C(0x5a));
+            CHECK(cpu.registers.x == UINT8_C(0x22) &&
+                  cpu.registers.psw == initial.psw &&
+                  cpu.instruction_cycles == UINT64_C(4));
+
+            initial.x = post_x;
+            ram[initial.pc] = UINT8_C(0xbf);
+            ram[page | post_x] = UINT8_C(0x80);
+            CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+            CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+            CHECK(cpu.registers.a == UINT8_C(0x80) &&
+                  cpu.registers.x == incremented_x);
+            CHECK(cpu.registers.psw ==
+                  (uint8_t)((initial.psw &
+                             (uint8_t)~MIPSNES2_SPC700_FLAG_Z) |
+                            MIPSNES2_SPC700_FLAG_N));
+            CHECK(cpu.instruction_cycles == UINT64_C(4));
+
+            initial.a = UINT8_C(0x3c);
+            ram[initial.pc] = UINT8_C(0xaf);
+            ram[page | post_x] = UINT8_C(0xcc);
+            CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+            CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+            CHECK(ram[page | post_x] == UINT8_C(0x3c));
+            CHECK(cpu.registers.x == incremented_x &&
+                  cpu.registers.psw == initial.psw &&
+                  cpu.instruction_cycles == UINT64_C(4));
+        }
+    }
+
+    /* Direct-indirect forms wrap pointer-byte selection within the chosen
+     * direct page; only [dp]+Y indexes the resolved 16-bit target. */
+    for (page_index = 0U; page_index < 2U; ++page_index) {
+        uint16_t page = (uint16_t)(page_index * UINT16_C(0x0100));
+        uint8_t pointer_offset = page_index == 0U
+            ? UINT8_C(0x40) : UINT8_C(0xff);
+
+        initial.pc = UINT16_C(0x2840);
+        initial.a = UINT8_C(0x11);
+        initial.x = UINT8_C(0x20);
+        initial.y = UINT8_C(0x20);
+        initial.sp = UINT8_C(0x78);
+        initial.psw = page_index == 0U ? UINT8_C(0x5d) : UINT8_C(0x7d);
+
+        /* F0+X wraps to pointer offset 10. */
+        ram[initial.pc] = UINT8_C(0xe7);
+        ram[initial.pc + UINT16_C(1)] = UINT8_C(0xf0);
+        ram[page | UINT16_C(0x0010)] = UINT8_C(0x56);
+        ram[page | UINT16_C(0x0011)] = UINT8_C(0x34);
+        ram[UINT16_C(0x3456)] = UINT8_C(0x80);
+        CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+        CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+        CHECK(cpu.registers.a == UINT8_C(0x80));
+        CHECK(cpu.registers.psw ==
+              (uint8_t)((initial.psw &
+                         (uint8_t)~MIPSNES2_SPC700_FLAG_Z) |
+                        MIPSNES2_SPC700_FLAG_N));
+        CHECK(cpu.registers.pc == UINT16_C(0x2842) &&
+              cpu.instruction_cycles == UINT64_C(6));
+
+        initial.a = UINT8_C(0xa5);
+        ram[initial.pc] = UINT8_C(0xc7);
+        ram[UINT16_C(0x3456)] = UINT8_C(0xcc);
+        CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+        CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+        CHECK(ram[UINT16_C(0x3456)] == UINT8_C(0xa5));
+        CHECK(cpu.registers.psw == initial.psw &&
+              cpu.instruction_cycles == UINT64_C(7));
+
+        /* The pointer high byte wraps from FF to 00 in the same direct page;
+         * adding Y then wraps the resolved 16-bit target. */
+        initial.a = UINT8_C(0x11);
+        ram[initial.pc] = UINT8_C(0xf7);
+        ram[initial.pc + UINT16_C(1)] = pointer_offset;
+        ram[page | pointer_offset] = UINT8_C(0xf0);
+        ram[page | (uint8_t)(pointer_offset + 1U)] = UINT8_C(0xff);
+        ram[UINT16_C(0x0010)] = UINT8_C(0x00);
+        CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+        CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+        CHECK(cpu.registers.a == UINT8_C(0x00));
+        CHECK(cpu.registers.psw ==
+              (uint8_t)((initial.psw &
+                         (uint8_t)~MIPSNES2_SPC700_FLAG_N) |
+                        MIPSNES2_SPC700_FLAG_Z));
+        CHECK(cpu.instruction_cycles == UINT64_C(6));
+
+        initial.a = UINT8_C(0x69);
+        ram[initial.pc] = UINT8_C(0xd7);
+        ram[UINT16_C(0x0010)] = UINT8_C(0xcc);
+        CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+        CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+        CHECK(ram[UINT16_C(0x0010)] == UINT8_C(0x69));
+        CHECK(cpu.registers.psw == initial.psw &&
+              cpu.instruction_cycles == UINT64_C(7));
+    }
+
     /* Page-zero direct addressing reaches the existing S-SMP MMIO map. */
     initial.pc = UINT16_C(0x2800);
     initial.a = UINT8_C(0x11);
@@ -694,11 +893,39 @@ int main(void)
                                          &observed));
     CHECK(observed == UINT8_C(0x5a));
 
+    ram[initial.pc] = UINT8_C(0xfa);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0xf4);
+    ram[initial.pc + UINT16_C(2)] = UINT8_C(0x40);
+    ram[UINT16_C(0x0040)] = UINT8_C(0xcc);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(ram[UINT16_C(0x0040)] == UINT8_C(0x80));
+
+    ram[initial.pc] = UINT8_C(0x8f);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0x69);
+    ram[initial.pc + UINT16_C(2)] = UINT8_C(0xf4);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(mipsnes2_apu_io_ports_cpu_read(&ports, UINT16_C(0x2140),
+                                         &observed));
+    CHECK(observed == UINT8_C(0x69));
+
+    ram[initial.pc] = UINT8_C(0xfa);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0x41);
+    ram[initial.pc + UINT16_C(2)] = UINT8_C(0xf4);
+    ram[UINT16_C(0x0041)] = UINT8_C(0x5a);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(mipsnes2_apu_io_ports_cpu_read(&ports, UINT16_C(0x2140),
+                                         &observed));
+    CHECK(observed == UINT8_C(0x5a));
+
     /* With P set, the same operand reaches page-1 ARAM, not page-zero MMIO. */
     initial.a = UINT8_C(0x11);
     initial.psw = MIPSNES2_SPC700_FLAG_P;
     ram[UINT16_C(0x01f4)] = UINT8_C(0x7f);
     ram[initial.pc] = UINT8_C(0xe4);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0xf4);
     CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
     CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
     CHECK(cpu.registers.a == UINT8_C(0x7f) &&
@@ -831,6 +1058,66 @@ int main(void)
                                          &observed));
     CHECK(observed == UINT8_C(0x96));
 
+    /* Register- and direct-indirect targets use the same mapped-memory path:
+     * page-zero F4 is a port, while P-selected page one remains ARAM. */
+    initial.pc = UINT16_C(0x28f0);
+    initial.a = UINT8_C(0x11);
+    initial.x = UINT8_C(0xf4);
+    initial.y = UINT8_C(0x04);
+    initial.psw = UINT8_C(0x00);
+    CHECK(mipsnes2_apu_io_ports_cpu_write(&ports, UINT16_C(0x2140),
+                                          UINT8_C(0x80)));
+    ram[initial.pc] = UINT8_C(0xe6);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.a == UINT8_C(0x80) &&
+          cpu.registers.psw == MIPSNES2_SPC700_FLAG_N);
+
+    initial.a = UINT8_C(0x4b);
+    ram[initial.pc] = UINT8_C(0xc6);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(mipsnes2_apu_io_ports_cpu_read(&ports, UINT16_C(0x2140),
+                                         &observed));
+    CHECK(observed == UINT8_C(0x4b));
+
+    initial.a = UINT8_C(0x11);
+    initial.x = UINT8_C(0x10);
+    ram[initial.pc] = UINT8_C(0xe7);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0x10);
+    ram[UINT16_C(0x0020)] = UINT8_C(0xf4);
+    ram[UINT16_C(0x0021)] = UINT8_C(0x00);
+    CHECK(mipsnes2_apu_io_ports_cpu_write(&ports, UINT16_C(0x2140),
+                                          UINT8_C(0x7f)));
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.a == UINT8_C(0x7f));
+
+    initial.a = UINT8_C(0xa6);
+    ram[initial.pc] = UINT8_C(0xd7);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0x30);
+    ram[UINT16_C(0x0030)] = UINT8_C(0xf0);
+    ram[UINT16_C(0x0031)] = UINT8_C(0x00);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(mipsnes2_apu_io_ports_cpu_read(&ports, UINT16_C(0x2140),
+                                         &observed));
+    CHECK(observed == UINT8_C(0xa6));
+
+    initial.a = UINT8_C(0x11);
+    initial.x = UINT8_C(0xf4);
+    initial.psw = MIPSNES2_SPC700_FLAG_P;
+    ram[UINT16_C(0x01f4)] = UINT8_C(0x00);
+    ram[initial.pc] = UINT8_C(0xe6);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    CHECK(cpu.registers.a == UINT8_C(0x00) &&
+          cpu.registers.psw ==
+              (MIPSNES2_SPC700_FLAG_P | MIPSNES2_SPC700_FLAG_Z));
+    CHECK(mipsnes2_apu_io_ports_cpu_read(&ports, UINT16_C(0x2140),
+                                         &observed));
+    CHECK(observed == UINT8_C(0xa6));
+
     /* An unimplemented page-zero MMIO target rejects either direction before
      * CPU/time commit. A rejected store does not alter its ARAM backing byte. */
     initial.pc = UINT16_C(0x2900);
@@ -852,6 +1139,107 @@ int main(void)
           MIPSNES2_SPC700_MEMORY_UNAVAILABLE);
     CHECK(same_registers(&cpu.registers, &before));
     CHECK(cpu.instruction_cycles == 0U && ram[0x00f0] == UINT8_C(0xcc));
+
+    /* Memory-to-memory forms reject unavailable sources or destinations
+     * without register, time or destination backing-byte commit. */
+    initial.pc = UINT16_C(0x2920);
+    initial.psw = UINT8_C(0x00);
+    ram[initial.pc] = UINT8_C(0x8f);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0x5a);
+    ram[initial.pc + UINT16_C(2)] = UINT8_C(0xf0);
+    ram[UINT16_C(0x00f0)] = UINT8_C(0xcc);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) ==
+          MIPSNES2_SPC700_MEMORY_UNAVAILABLE);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.instruction_cycles == 0U &&
+          ram[UINT16_C(0x00f0)] == UINT8_C(0xcc));
+
+    ram[initial.pc] = UINT8_C(0xfa);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0xf0);
+    ram[initial.pc + UINT16_C(2)] = UINT8_C(0x40);
+    ram[UINT16_C(0x0040)] = UINT8_C(0xcc);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) ==
+          MIPSNES2_SPC700_MEMORY_UNAVAILABLE);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.instruction_cycles == 0U &&
+          ram[UINT16_C(0x0040)] == UINT8_C(0xcc));
+
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0x40);
+    ram[initial.pc + UINT16_C(2)] = UINT8_C(0xf0);
+    ram[UINT16_C(0x0040)] = UINT8_C(0xa5);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) ==
+          MIPSNES2_SPC700_MEMORY_UNAVAILABLE);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.instruction_cycles == 0U &&
+          ram[UINT16_C(0x00f0)] == UINT8_C(0xcc));
+
+    /* Register-indirect failure commits neither the post-increment nor time. */
+    {
+        static const uint8_t unavailable[] = {
+            UINT8_C(0xe6), UINT8_C(0xbf),
+            UINT8_C(0xc6), UINT8_C(0xaf)
+        };
+
+        initial.pc = UINT16_C(0x2940);
+        initial.a = UINT8_C(0x5a);
+        initial.x = UINT8_C(0xf0);
+        initial.psw = UINT8_C(0x00);
+        ram[UINT16_C(0x00f0)] = UINT8_C(0xcc);
+        for (i = 0U; i < sizeof(unavailable) / sizeof(unavailable[0]); ++i) {
+            ram[initial.pc] = unavailable[i];
+            CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+            before = cpu.registers;
+            CHECK(mipsnes2_spc700_step(&cpu) ==
+                  MIPSNES2_SPC700_MEMORY_UNAVAILABLE);
+            CHECK(same_registers(&cpu.registers, &before));
+            CHECK(cpu.instruction_cycles == 0U &&
+                  ram[UINT16_C(0x00f0)] == UINT8_C(0xcc));
+        }
+    }
+
+    /* Direct-indirect pointer and target failures are visible only through
+     * fetched-opcode diagnostics; registers, time and target bytes stay put. */
+    initial.pc = UINT16_C(0x2960);
+    initial.a = UINT8_C(0x5a);
+    initial.x = UINT8_C(0x00);
+    initial.y = UINT8_C(0x00);
+    initial.psw = UINT8_C(0x00);
+    ram[initial.pc] = UINT8_C(0xe7);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0xef);
+    ram[UINT16_C(0x00ef)] = UINT8_C(0x34);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) ==
+          MIPSNES2_SPC700_MEMORY_UNAVAILABLE);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.instruction_cycles == 0U);
+
+    ram[initial.pc] = UINT8_C(0xf7);
+    ram[initial.pc + UINT16_C(1)] = UINT8_C(0x40);
+    ram[UINT16_C(0x0040)] = UINT8_C(0xf0);
+    ram[UINT16_C(0x0041)] = UINT8_C(0x00);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) ==
+          MIPSNES2_SPC700_MEMORY_UNAVAILABLE);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.instruction_cycles == 0U);
+
+    ram[initial.pc] = UINT8_C(0xd7);
+    ram[UINT16_C(0x00f0)] = UINT8_C(0xcc);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) ==
+          MIPSNES2_SPC700_MEMORY_UNAVAILABLE);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.instruction_cycles == 0U &&
+          ram[UINT16_C(0x00f0)] == UINT8_C(0xcc));
 
     /* Indexed addressing reaches the same unavailable MMIO byte only after
      * wrapping the direct-page sum; either direction remains atomic. */
@@ -1085,6 +1473,34 @@ int main(void)
     CHECK(memory.timers.output[2] == UINT8_C(1));
     CHECK(cpu.registers.a == UINT8_C(3));
 
+    /* Four auto-increment register-indirect transfers contribute exactly
+     * sixteen cycles and leave X advanced by four successful accesses. */
+    CHECK(mipsnes2_smp_memory_reset(&memory));
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00fc),
+                                    UINT8_C(1)));
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f1),
+                                    UINT8_C(0x84)));
+    initial.pc = UINT16_C(0x3240);
+    initial.a = UINT8_C(0x5a);
+    initial.x = UINT8_C(0x40);
+    initial.psw = UINT8_C(0x00);
+    ram[UINT16_C(0x3240)] = UINT8_C(0xaf);
+    ram[UINT16_C(0x3241)] = UINT8_C(0xbf);
+    ram[UINT16_C(0x3242)] = UINT8_C(0xaf);
+    ram[UINT16_C(0x3243)] = UINT8_C(0xbf);
+    ram[UINT16_C(0x0041)] = UINT8_C(0x7f);
+    ram[UINT16_C(0x0043)] = UINT8_C(0x80);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    for (i = 0U; i < 4U; ++i) {
+        CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_OK);
+    }
+    CHECK(cpu.instruction_cycles == UINT64_C(16));
+    CHECK(memory.timers.output[2] == UINT8_C(1));
+    CHECK(cpu.registers.x == UINT8_C(0x44) &&
+          cpu.registers.a == UINT8_C(0x80));
+    CHECK(ram[UINT16_C(0x0040)] == UINT8_C(0x5a) &&
+          ram[UINT16_C(0x0042)] == UINT8_C(0x7f));
+
     /* Overflow and unavailable mapped bytes fail before architectural commit. */
     CHECK(mipsnes2_smp_memory_reset(&memory));
     initial.pc = UINT16_C(0x3000);
@@ -1161,6 +1577,54 @@ int main(void)
     CHECK(cpu.instruction_cycles == UINT64_MAX - UINT64_C(5));
     CHECK(ram[UINT16_C(0x0010)] == UINT8_C(0xcc));
 
+    /* Memory-to-memory overflow is rejected before operand or destination. */
+    initial.pc = UINT16_C(0x3000);
+    initial.psw = MIPSNES2_SPC700_FLAG_P;
+    ram[UINT16_C(0x3000)] = UINT8_C(0x8f);
+    ram[UINT16_C(0x3001)] = UINT8_C(0x5a);
+    ram[UINT16_C(0x3002)] = UINT8_C(0x40);
+    ram[UINT16_C(0x0140)] = UINT8_C(0xcc);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    cpu.instruction_cycles = UINT64_MAX - UINT64_C(4);
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_CYCLE_OVERFLOW);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.instruction_cycles == UINT64_MAX - UINT64_C(4));
+    CHECK(ram[UINT16_C(0x0140)] == UINT8_C(0xcc));
+
+    /* Register-indirect overflow is rejected before access or X increment. */
+    initial.pc = UINT16_C(0x3000);
+    initial.psw = MIPSNES2_SPC700_FLAG_P;
+    initial.a = UINT8_C(0x5a);
+    initial.x = UINT8_C(0xff);
+    ram[UINT16_C(0x3000)] = UINT8_C(0xaf);
+    ram[UINT16_C(0x01ff)] = UINT8_C(0xcc);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    cpu.instruction_cycles = UINT64_MAX - UINT64_C(3);
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_CYCLE_OVERFLOW);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.instruction_cycles == UINT64_MAX - UINT64_C(3));
+    CHECK(ram[UINT16_C(0x01ff)] == UINT8_C(0xcc));
+
+    /* Direct-indirect overflow is rejected before pointer or target access. */
+    initial.pc = UINT16_C(0x3000);
+    initial.psw = UINT8_C(0x00);
+    initial.a = UINT8_C(0xa5);
+    initial.x = UINT8_C(0x10);
+    ram[UINT16_C(0x3000)] = UINT8_C(0xc7);
+    ram[UINT16_C(0x3001)] = UINT8_C(0x20);
+    ram[UINT16_C(0x0030)] = UINT8_C(0x56);
+    ram[UINT16_C(0x0031)] = UINT8_C(0x34);
+    ram[UINT16_C(0x3456)] = UINT8_C(0xcc);
+    CHECK(mipsnes2_spc700_init(&cpu, &memory, &initial));
+    cpu.instruction_cycles = UINT64_MAX - UINT64_C(6);
+    before = cpu.registers;
+    CHECK(mipsnes2_spc700_step(&cpu) == MIPSNES2_SPC700_CYCLE_OVERFLOW);
+    CHECK(same_registers(&cpu.registers, &before));
+    CHECK(cpu.instruction_cycles == UINT64_MAX - UINT64_C(6));
+    CHECK(ram[UINT16_C(0x3456)] == UINT8_C(0xcc));
+
     /* Overflow is rejected before an immediate operand or register commit. */
     initial.pc = UINT16_C(0x3000);
     ram[0x3000] = UINT8_C(0xe8);
@@ -1207,6 +1671,6 @@ int main(void)
     CHECK(cpu.has_fetched_opcode && cpu.last_opcode == UINT8_C(0xe5));
     CHECK(cpu.instruction_cycles == 0U);
 
-    (void)puts("SPC700 register/immediate/direct/absolute MOV addressing: OK");
+    (void)puts("SPC700 register/immediate/direct/absolute/indirect MOV addressing: OK");
     return 0;
 }

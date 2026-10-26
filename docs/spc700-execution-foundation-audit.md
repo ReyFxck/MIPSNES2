@@ -59,4 +59,5 @@ Later MOV milestones are recorded separately in the
 [direct-page MOV audit](spc700-direct-page-mov-audit.md) and
 [indexed-direct-page MOV audit](spc700-indexed-direct-page-mov-audit.md) and
 [absolute MOV audit](spc700-absolute-mov-audit.md) and
-[absolute-indexed MOV audit](spc700-absolute-indexed-mov-audit.md).
+[absolute-indexed MOV audit](spc700-absolute-indexed-mov-audit.md) and
+[indirect and memory MOV audit](spc700-indirect-and-memory-mov-audit.md).

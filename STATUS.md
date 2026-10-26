@@ -719,8 +719,24 @@ and target runtime are unavailable locally. Revision `78834cc` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40384352129).
 No target-runtime or audio result is claimed.
 
-Next primary block: add the four register-indirect `(X)`/`(X)+` A-register
-`MOV` forms. Refining
+The dispatcher now also implements the four `(X)`/`(X)+` register-indirect A
+transfers, the four `[dp+X]`/`[dp]+Y` direct-indirect A transfers, `MOV dp,#imm`
+and `MOV dp,dp`. Register-indirect access uses the old X before a successful
+post-increment; pointer-byte selection wraps in the PSW.P-selected direct page,
+while Y indexes the resolved 16-bit pointer with 16-bit wrap. Pointer bytes and
+targets traverse the mapped S-SMP path. The two memory-transfer encodings fetch
+source before destination. Loads into A derive N/Z; all stores and memory transfers
+preserve PSW. Fixtures cover both direct pages, pointer and target wrap, operand
+order, `$F4` MMIO versus `$01F4` ARAM, unavailable sources/pointers/targets,
+post-increment rollback, timer delivery and overflow before access. Fifty opcodes
+now execute and 206 fail explicitly. See the
+[SPC700 indirect and memory MOV audit](docs/spc700-indirect-and-memory-mov-audit.md).
+A clean `make clean && make -j2 test`, focused ASan/UBSan with leak checking
+disabled, repository checks and GCC `-fanalyzer` pass locally. Clang, PS2SDK,
+`psp-config` and target runtime are unavailable locally. Target CI evidence will
+be recorded after publication. No target-runtime or audio result is claimed.
+
+Next primary block: implement the two 16-bit `MOVW` forms. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
@@ -1922,9 +1938,9 @@ platform persistence remains incomplete.
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC with no invented reset values
 - [x] Instruction fetch — bounded S-SMP-map fetch, IPL overlay and 16-bit PC wrap verified
-- [ ] [IN PROGRESS] Opcode dispatch — forty implied/PSW/register/direct-page/absolute MOV opcodes execute; 216 values fail explicitly
-- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, absolute and indexed forms verified; register/direct-indirect forms absent
-- [ ] [IN PROGRESS] Load/store — A/X/Y immediate/register, direct-page, absolute and indexed MOV subset verified
+- [ ] [IN PROGRESS] Opcode dispatch — fifty implied/PSW/register/direct-page/absolute/indirect MOV opcodes execute; 206 values fail explicitly
+- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, absolute, indexed, register-indirect and direct-indirect forms verified
+- [ ] [IN PROGRESS] Load/store — byte register/memory MOV subset verified; MOVW remains absent
 - [ ] [IN PROGRESS] Arithmetic and flags — eight PSW-control operations verified; arithmetic absent
 - [ ] Decimal adjust
 - [ ] Logic and shifts
@@ -1933,13 +1949,13 @@ platform persistence remains incomplete.
 - [ ] Bit operations
 - [ ] Multiply/divide
 - [ ] Sleep and stop
-- [ ] [IN PROGRESS] Instruction timing — implemented 2/3/4/5/6-cycle costs feed timers atomically; bus phases absent
+- [ ] [IN PROGRESS] Instruction timing — implemented 2/3/4/5/6/7-cycle costs feed timers atomically; bus phases absent
 - [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM and optional IPL overlay verified; rest of S-SMP map/runtime pending
 - [ ] IPL provenance decision
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
-- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values, PSW controls and register/immediate/direct-page/absolute/indexed MOV covered
+- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values, PSW controls and byte MOV addressing covered
 - [ ] [IN PROGRESS] Timing regressions — instruction/timer coupling, overflow and unavailable operand/target cases covered
 
 ## DSP

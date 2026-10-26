@@ -45,10 +45,10 @@ recorded in `STATUS.md`.
 ## Open limits
 
 Register-indirect, auto-increment, direct-indirect, direct-to-direct and
-immediate-to-direct MOV forms remain absent. Exact bus phases and destination dummy
+immediate-to-direct MOV forms are recorded in the subsequent audit. Exact bus phases and destination dummy
 reads are not represented by the current instruction-atomic contract.
 Reset/interrupt entry, SLEEP/STOP, DSP access and the synchronized S-CPU/S-SMP clock
 domain also remain absent. No target-runtime or audio result is claimed.
 
-Next primary milestone: add the four register-indirect `(X)` and `(X)+` A-register
-MOV forms, including post-increment and MMIO behavior.
+Next milestone: the
+[indirect and memory MOV audit](spc700-indirect-and-memory-mov-audit.md).
