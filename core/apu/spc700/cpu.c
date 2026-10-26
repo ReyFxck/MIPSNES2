@@ -45,7 +45,12 @@ static uint8_t opcode_cycles(uint8_t opcode)
     case UINT8_C(0xd4): /* MOV dp+X,A */
     case UINT8_C(0xd9): /* MOV dp+Y,X */
     case UINT8_C(0xdb): /* MOV dp+X,Y */
+    case UINT8_C(0xf5): /* MOV A,!abs+X */
+    case UINT8_C(0xf6): /* MOV A,!abs+Y */
         return UINT8_C(5);
+    case UINT8_C(0xd5): /* MOV !abs+X,A */
+    case UINT8_C(0xd6): /* MOV !abs+Y,A */
+        return UINT8_C(6);
     default:
         return 0U;
     }
@@ -57,9 +62,13 @@ static bool opcode_has_word_operand(uint8_t opcode)
     case UINT8_C(0xc5): /* MOV !abs,A */
     case UINT8_C(0xc9): /* MOV !abs,X */
     case UINT8_C(0xcc): /* MOV !abs,Y */
+    case UINT8_C(0xd5): /* MOV !abs+X,A */
+    case UINT8_C(0xd6): /* MOV !abs+Y,A */
     case UINT8_C(0xe5): /* MOV A,!abs */
     case UINT8_C(0xe9): /* MOV X,!abs */
     case UINT8_C(0xec): /* MOV Y,!abs */
+    case UINT8_C(0xf5): /* MOV A,!abs+X */
+    case UINT8_C(0xf6): /* MOV A,!abs+Y */
         return true;
     default:
         return false;
@@ -102,6 +111,11 @@ static uint16_t indexed_direct_page_address(uint8_t psw, uint8_t offset,
                                             uint8_t index)
 {
     return direct_page_address(psw, (uint8_t)(offset + index));
+}
+
+static uint16_t indexed_absolute_address(uint16_t address, uint8_t index)
+{
+    return (uint16_t)(address + index);
 }
 
 static void set_negative_zero(uint8_t *psw, uint8_t value)
@@ -190,7 +204,21 @@ mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
             (uint16_t)((uint16_t)absolute_high << 8U) | operand);
     }
 
-    if (opcode == UINT8_C(0xe5) || opcode == UINT8_C(0xe9) ||
+    if (opcode == UINT8_C(0xf5)) {
+        if (!mipsnes2_smp_memory_read(
+                cpu->memory,
+                indexed_absolute_address(absolute_address, next.x),
+                &memory_value)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+    } else if (opcode == UINT8_C(0xf6)) {
+        if (!mipsnes2_smp_memory_read(
+                cpu->memory,
+                indexed_absolute_address(absolute_address, next.y),
+                &memory_value)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+    } else if (opcode == UINT8_C(0xe5) || opcode == UINT8_C(0xe9) ||
         opcode == UINT8_C(0xec)) {
         if (!mipsnes2_smp_memory_read(cpu->memory, absolute_address,
                                       &memory_value)) {
@@ -303,6 +331,22 @@ mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
             return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
         }
         break;
+    case UINT8_C(0xd5): /* MOV !abs+X,A */
+        if (!mipsnes2_smp_memory_write(
+                cpu->memory,
+                indexed_absolute_address(absolute_address, next.x),
+                next.a)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+        break;
+    case UINT8_C(0xd6): /* MOV !abs+Y,A */
+        if (!mipsnes2_smp_memory_write(
+                cpu->memory,
+                indexed_absolute_address(absolute_address, next.y),
+                next.a)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+        break;
     case UINT8_C(0xd8): /* MOV dp,X */
         if (!mipsnes2_smp_memory_write(
                 cpu->memory, direct_page_address(next.psw, operand),
@@ -362,6 +406,11 @@ mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
         next.psw ^= MIPSNES2_SPC700_FLAG_C;
         break;
     case UINT8_C(0xf4): /* MOV A,dp+X */
+        next.a = memory_value;
+        set_negative_zero(&next.psw, next.a);
+        break;
+    case UINT8_C(0xf5): /* MOV A,!abs+X */
+    case UINT8_C(0xf6): /* MOV A,!abs+Y */
         next.a = memory_value;
         set_negative_zero(&next.psw, next.a);
         break;

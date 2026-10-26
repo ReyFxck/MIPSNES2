@@ -701,7 +701,23 @@ are unavailable locally. Revision `5904258` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40359053485).
 No target-runtime or audio result is claimed.
 
-Next primary block: add the four absolute-indexed A-register `MOV` forms. Refining
+The dispatcher now also implements `MOV A,!abs+X`, `MOV A,!abs+Y`,
+`MOV !abs+X,A` and `MOV !abs+Y,A`. The selected 8-bit index is added to the
+full little-endian 16-bit operand with 16-bit wrap; PSW.P remains irrelevant and
+the resulting target still traverses the S-SMP map. Loads derive N/Z and cost five
+cycles; stores preserve PSW and cost six. Fixtures cover X/Y selection, both P
+states, forced `$FFFF` wrap, all load sign classes, indexed `$00F4` MMIO versus
+`$01F4` ARAM, unavailable indexed `$00F0`, a mixed 5+5+6-cycle timer edge and
+overflow before wrapped store mutation. Forty opcodes now execute and 216 fail
+explicitly. See the
+[SPC700 absolute-indexed MOV audit](docs/spc700-absolute-indexed-mov-audit.md).
+A clean `make -j2 test`, focused ASan/UBSan with leak checking disabled,
+repository checks and GCC `-fanalyzer` pass locally. Clang, PS2SDK, `psp-config`
+and target runtime are unavailable locally. Target CI is pending. No target-runtime
+or audio result is claimed.
+
+Next primary block: add the four register-indirect `(X)`/`(X)+` A-register
+`MOV` forms. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
@@ -1903,9 +1919,9 @@ platform persistence remains incomplete.
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC with no invented reset values
 - [x] Instruction fetch — bounded S-SMP-map fetch, IPL overlay and 16-bit PC wrap verified
-- [ ] [IN PROGRESS] Opcode dispatch — thirty-six implied/PSW/register/direct-page/absolute MOV opcodes execute; 220 values fail explicitly
-- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, indexed-direct-page and absolute forms verified; indexed-absolute/indirect forms absent
-- [ ] [IN PROGRESS] Load/store — A/X/Y immediate/register, direct-page, indexed-direct-page and absolute MOV subset verified
+- [ ] [IN PROGRESS] Opcode dispatch — forty implied/PSW/register/direct-page/absolute MOV opcodes execute; 216 values fail explicitly
+- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, absolute and indexed forms verified; register/direct-indirect forms absent
+- [ ] [IN PROGRESS] Load/store — A/X/Y immediate/register, direct-page, absolute and indexed MOV subset verified
 - [ ] [IN PROGRESS] Arithmetic and flags — eight PSW-control operations verified; arithmetic absent
 - [ ] Decimal adjust
 - [ ] Logic and shifts
@@ -1914,13 +1930,13 @@ platform persistence remains incomplete.
 - [ ] Bit operations
 - [ ] Multiply/divide
 - [ ] Sleep and stop
-- [ ] [IN PROGRESS] Instruction timing — implemented 2/3/4/5-cycle costs feed timers atomically; bus phases absent
+- [ ] [IN PROGRESS] Instruction timing — implemented 2/3/4/5/6-cycle costs feed timers atomically; bus phases absent
 - [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM and optional IPL overlay verified; rest of S-SMP map/runtime pending
 - [ ] IPL provenance decision
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
-- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values, PSW controls and register/immediate/direct-page/indexed/absolute MOV covered
+- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values, PSW controls and register/immediate/direct-page/absolute/indexed MOV covered
 - [ ] [IN PROGRESS] Timing regressions — instruction/timer coupling, overflow and unavailable operand/target cases covered
 
 ## DSP
