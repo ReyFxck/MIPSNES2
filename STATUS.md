@@ -677,7 +677,10 @@ Thirty opcodes now execute and 226 fail explicitly. See the
 The complete host suite, focused ASan/UBSan with leak checking disabled, repository
 checks and GCC `-fanalyzer` pass locally; the known generated-test executable-bit
 issue required restoring that permission after the clean build. Clang, PS2SDK,
-`psp-config` and target runtime are unavailable locally. Target CI is pending.
+`psp-config` and target runtime are unavailable locally. Revision `0eb06ad` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40354741746),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40354741671) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40354741893).
 No target-runtime or audio result is claimed.
 
 Next primary block: add absolute A/X/Y `MOV` load/store forms. Refining
