@@ -60,4 +60,6 @@ Later MOV milestones are recorded separately in the
 [indexed-direct-page MOV audit](spc700-indexed-direct-page-mov-audit.md) and
 [absolute MOV audit](spc700-absolute-mov-audit.md) and
 [absolute-indexed MOV audit](spc700-absolute-indexed-mov-audit.md) and
-[indirect and memory MOV audit](spc700-indirect-and-memory-mov-audit.md).
+[indirect and memory MOV audit](spc700-indirect-and-memory-mov-audit.md). The
+[100-opcode ALU audit](spc700-100-opcode-alu-audit.md) records the later
+arithmetic, logic, shift and byte increment/decrement families.

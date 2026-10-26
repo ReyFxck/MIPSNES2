@@ -20,8 +20,49 @@ static int same_registers(const mipsnes2_spc700_registers *left,
            left->sp == right->sp && left->psw == right->psw;
 }
 
+static int extended_opcode(uint8_t opcode)
+{
+    uint8_t group = opcode & UINT8_C(0xe0);
+    uint8_t mode = opcode & UINT8_C(0x1f);
+
+    if (group <= UINT8_C(0xa0) &&
+        (mode == UINT8_C(0x04) || mode == UINT8_C(0x05) ||
+         mode == UINT8_C(0x06) || mode == UINT8_C(0x07) ||
+         mode == UINT8_C(0x08) || mode == UINT8_C(0x09) ||
+         mode == UINT8_C(0x14) || mode == UINT8_C(0x15) ||
+         mode == UINT8_C(0x16) || mode == UINT8_C(0x17) ||
+         mode == UINT8_C(0x18) || mode == UINT8_C(0x19))) {
+        return 1;
+    }
+    if ((opcode & UINT8_C(0x80)) == 0U &&
+        (mode == UINT8_C(0x0b) || mode == UINT8_C(0x0c) ||
+         mode == UINT8_C(0x1b) || mode == UINT8_C(0x1c))) {
+        return 1;
+    }
+    switch (opcode) {
+    case UINT8_C(0x1d):
+    case UINT8_C(0x3d):
+    case UINT8_C(0x8b):
+    case UINT8_C(0x8c):
+    case UINT8_C(0x9b):
+    case UINT8_C(0x9c):
+    case UINT8_C(0xab):
+    case UINT8_C(0xac):
+    case UINT8_C(0xbb):
+    case UINT8_C(0xbc):
+    case UINT8_C(0xdc):
+    case UINT8_C(0xfc):
+        return 1;
+    default:
+        return 0;
+    }
+}
+
 static int supported_opcode(uint8_t opcode)
 {
+    if (extended_opcode(opcode)) {
+        return 1;
+    }
     switch (opcode) {
     case UINT8_C(0x00):
     case UINT8_C(0x20):

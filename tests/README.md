@@ -20,6 +20,12 @@ operands/targets, cycle overflow and
 instruction-to-timer advancement. It does not claim a complete interpreter or
 per-cycle bus sequencing.
 
+`test-spc700-alu` verifies the exact 100-opcode OR/AND/EOR/CMP/ADC/SBC,
+ASL/ROL/LSR/ROR and byte INC/DEC block across every documented addressing form.
+It includes 54 accumulator and 18 direct-memory ALU cases, all 28 shift/INC/DEC
+forms, exact lengths/cycles, P-selected mapped memory, MMIO failure/rollback,
+timer coupling and all 262,144 byte ADC/SBC operand/carry combinations.
+
 The CPU suite includes boundary-visible ABORT vectors, native/emulation stack layouts,
 priority, WAI restart-address behavior and invalid-bus diagnostics. It does not claim
 physical mid-instruction ABORT sampling or rollback.

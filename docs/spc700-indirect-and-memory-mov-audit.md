@@ -58,4 +58,4 @@ bit operations, reset/interrupt entry, SLEEP/STOP, DSP access and a synchronized
 S-CPU/S-SMP clock domain. Exact electrical bus phases and destination dummy reads
 are not represented.
 
-Next primary milestone: implement and verify the two 16-bit `MOVW` forms.
+Next milestone: the [100-opcode ALU audit](spc700-100-opcode-alu-audit.md).

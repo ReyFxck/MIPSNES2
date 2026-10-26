@@ -739,7 +739,24 @@ disabled, repository checks and GCC `-fanalyzer` pass locally. Clang, PS2SDK,
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40402460686).
 No target-runtime or audio result is claimed.
 
-Next primary block: implement the two 16-bit `MOVW` forms. Refining
+One 100-opcode SPC700 block now implements all nine accumulator addressing forms
+and all three direct-memory forms of `OR`, `AND`, `EOR`, `CMP`, `ADC` and `SBC`;
+all accumulator/direct/absolute/direct+X `ASL`, `ROL`, `LSR` and `ROR` forms;
+and A/X/Y/direct/absolute/direct+X byte `INC`/`DEC`. Shared helpers centralize
+mapped addressing, 8-bit wrap and N/Z/C/H/V rules. Tests independently count the
+100 new bytes, cover all 54 accumulator and 18 memory ALU forms plus all 28
+shift/INC/DEC forms, and exhaust all 262,144 ADC/SBC byte/carry combinations.
+They also cover MMIO versus page-one ARAM, unavailable mapped accesses, overflow
+before mutation and timer delivery. The dispatcher now executes 150 opcodes and
+rejects the remaining 106 explicitly. See the
+[SPC700 100-opcode ALU audit](docs/spc700-100-opcode-alu-audit.md).
+A clean `make clean && make -j2 test`, focused ASan/UBSan, repository checks and
+GCC `-fanalyzer` pass locally. Clang, PS2SDK, `psp-config` and target runtime are
+unavailable locally. Target CI evidence will be recorded after publication. No
+target-runtime or audio result is claimed.
+
+Next primary block: implement the 16-bit MOVW/arithmetic family, followed by
+branches and stack/control flow. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
@@ -1941,12 +1958,12 @@ platform persistence remains incomplete.
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC with no invented reset values
 - [x] Instruction fetch — bounded S-SMP-map fetch, IPL overlay and 16-bit PC wrap verified
-- [ ] [IN PROGRESS] Opcode dispatch — fifty implied/PSW/register/direct-page/absolute/indirect MOV opcodes execute; 206 values fail explicitly
+- [ ] [IN PROGRESS] Opcode dispatch — 150 PSW/MOV/ALU/shift/increment/decrement opcodes execute; 106 values fail explicitly
 - [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, absolute, indexed, register-indirect and direct-indirect forms verified
 - [ ] [IN PROGRESS] Load/store — byte register/memory MOV subset verified; MOVW remains absent
-- [ ] [IN PROGRESS] Arithmetic and flags — eight PSW-control operations verified; arithmetic absent
+- [ ] [IN PROGRESS] Arithmetic and flags — byte CMP/ADC/SBC and INC/DEC verified; word/decimal/multiply/divide remain
 - [ ] Decimal adjust
-- [ ] Logic and shifts
+- [x] Byte logic and shifts — OR/AND/EOR plus ASL/ROL/LSR/ROR addressing families verified
 - [ ] Branches and calls
 - [ ] Stack behavior
 - [ ] Bit operations
@@ -1958,7 +1975,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
-- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values, PSW controls and byte MOV addressing covered
+- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values, PSW/MOV/ALU/shift/INC/DEC matrices and exhaustive byte ADC/SBC covered
 - [ ] [IN PROGRESS] Timing regressions — instruction/timer coupling, overflow and unavailable operand/target cases covered
 
 ## DSP

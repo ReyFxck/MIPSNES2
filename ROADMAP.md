@@ -227,12 +227,12 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC
 - [x] Instruction fetch — bounded S-SMP map, IPL overlay and PC wrap
-- [ ] [IN PROGRESS] Opcode dispatch — fifty implied/PSW/register/direct-page/absolute/indirect MOV opcodes implemented
+- [ ] [IN PROGRESS] Opcode dispatch — 150 PSW/MOV/ALU/shift/increment/decrement opcodes implemented
 - [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, indexed, register-indirect and direct-indirect subsets
 - [ ] [IN PROGRESS] Load/store — byte register/memory MOV subset, including direct-page memory transfers; MOVW remains
-- [ ] [IN PROGRESS] Arithmetic and flags — PSW-control subset only
+- [ ] [IN PROGRESS] Arithmetic and flags — byte CMP/ADC/SBC and INC/DEC families implemented; word/decimal/multiply/divide remain
 - [ ] Decimal adjust
-- [ ] Logic and shifts
+- [x] Byte logic and shifts — OR/AND/EOR plus ASL/ROL/LSR/ROR addressing families
 - [ ] Branches and calls
 - [ ] Stack behavior
 - [ ] Bit operations
@@ -244,7 +244,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` input-pair clear verified; cross-clock timing pending
-- [ ] [IN PROGRESS] Instruction tests — 256-value dispatch, PSW and byte MOV addressing coverage
+- [ ] [IN PROGRESS] Instruction tests — 256-value dispatch, PSW/MOV/ALU/shift/INC/DEC matrices and exhaustive byte ADC/SBC coverage
 - [ ] [IN PROGRESS] Timing regressions — instruction/timer, overflow and missing-operand coverage
 
 ## Phase 8 — DSP / Audio
