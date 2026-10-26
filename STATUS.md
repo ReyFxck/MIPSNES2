@@ -733,8 +733,11 @@ now execute and 206 fail explicitly. See the
 [SPC700 indirect and memory MOV audit](docs/spc700-indirect-and-memory-mov-audit.md).
 A clean `make clean && make -j2 test`, focused ASan/UBSan with leak checking
 disabled, repository checks and GCC `-fanalyzer` pass locally. Clang, PS2SDK,
-`psp-config` and target runtime are unavailable locally. Target CI evidence will
-be recorded after publication. No target-runtime or audio result is claimed.
+`psp-config` and target runtime are unavailable locally. Revision `eae39f4` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40402460451),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40402460452) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40402460686).
+No target-runtime or audio result is claimed.
 
 Next primary block: implement the two 16-bit `MOVW` forms. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
