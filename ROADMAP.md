@@ -227,9 +227,9 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC
 - [x] Instruction fetch — bounded S-SMP map, IPL overlay and PC wrap
-- [ ] [IN PROGRESS] Opcode dispatch — eighteen implied/PSW/register-MOV opcodes implemented
-- [ ] [IN PROGRESS] Addressing modes — immediate/register subset only
-- [ ] [IN PROGRESS] Load/store — immediate A/X/Y loads and register transfers only
+- [ ] [IN PROGRESS] Opcode dispatch — twenty-four implied/PSW/register/direct-page MOV opcodes implemented
+- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate and direct-page subsets only
+- [ ] [IN PROGRESS] Load/store — immediate/register and direct-page A/X/Y MOV subset only
 - [ ] [IN PROGRESS] Arithmetic and flags — PSW-control subset only
 - [ ] Decimal adjust
 - [ ] Logic and shifts
@@ -238,7 +238,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Bit operations
 - [ ] Multiply/divide
 - [ ] Sleep and stop
-- [ ] [IN PROGRESS] Instruction timing — atomic 2/3-cycle subset advances timers
+- [ ] [IN PROGRESS] Instruction timing — atomic 2/3/4-cycle subset advances timers
 - [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay and write-through tested; remaining MMIO, interpreter and hardware validation pending
 - [ ] IPL provenance decision
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain

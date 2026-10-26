@@ -649,8 +649,20 @@ PS2SDK, `psp-config` and target runtime are unavailable locally. Revision
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40239618714).
 No target-runtime result is claimed.
 
-Next primary block: add SPC700 direct-page address formation and the first
-direct-page register `MOV` load/store forms. Refining
+The dispatcher now also implements `MOV A/X/Y,dp` and `MOV dp,A/X/Y`. PSW.P
+selects page `$00xx` or `$01xx`, and each access uses the S-SMP map so page-zero
+MMIO is not bypassed. Loads derive N/Z and cost three cycles; stores preserve PSW
+and cost four. Fixtures cover both pages, all three registers, zero/positive/
+negative loads, `$F4` communication-port routing versus `$01F4` ARAM, unavailable
+`$F0` accesses and overflow before store mutation. Twenty-four opcodes now execute
+and 232 fail explicitly. See the
+[SPC700 direct-page MOV audit](docs/spc700-direct-page-mov-audit.md). A clean
+`make -j2 test` passed with host C99 `cc`; focused ASan/UBSan with leak checking
+disabled and GCC `-fanalyzer` also passed. Clang, PS2SDK, `psp-config` and target
+runtime are unavailable locally; pinned target cross-builds await publication.
+
+Next primary block: add indexed direct-page A/X/Y `MOV` load/store forms with
+eight-bit index wrap inside the P-selected page. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
@@ -1852,9 +1864,9 @@ platform persistence remains incomplete.
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC with no invented reset values
 - [x] Instruction fetch — bounded S-SMP-map fetch, IPL overlay and 16-bit PC wrap verified
-- [ ] [IN PROGRESS] Opcode dispatch — eighteen implied/PSW/register-MOV opcodes execute; 238 values fail explicitly
-- [ ] [IN PROGRESS] Addressing modes — immediate and implied/register forms verified; memory addressing absent
-- [ ] [IN PROGRESS] Load/store — A/X/Y immediate loads and six register transfers verified
+- [ ] [IN PROGRESS] Opcode dispatch — twenty-four implied/PSW/register/direct-page MOV opcodes execute; 232 values fail explicitly
+- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate and direct-page forms verified; indexed/indirect/absolute forms absent
+- [ ] [IN PROGRESS] Load/store — A/X/Y immediate/register and direct-page MOV subset verified
 - [ ] [IN PROGRESS] Arithmetic and flags — eight PSW-control operations verified; arithmetic absent
 - [ ] Decimal adjust
 - [ ] Logic and shifts
@@ -1863,14 +1875,14 @@ platform persistence remains incomplete.
 - [ ] Bit operations
 - [ ] Multiply/divide
 - [ ] Sleep and stop
-- [ ] [IN PROGRESS] Instruction timing — implemented 2/3-cycle costs feed timers atomically; bus phases absent
+- [ ] [IN PROGRESS] Instruction timing — implemented 2/3/4-cycle costs feed timers atomically; bus phases absent
 - [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM and optional IPL overlay verified; rest of S-SMP map/runtime pending
 - [ ] IPL provenance decision
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
-- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values, PSW controls and register/immediate MOV covered
-- [ ] [IN PROGRESS] Timing regressions — instruction/timer coupling, overflow and missing-operand cases covered
+- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values, PSW controls and register/immediate/direct-page MOV covered
+- [ ] [IN PROGRESS] Timing regressions — instruction/timer coupling, overflow and unavailable operand/target cases covered
 
 ## DSP
 

@@ -54,5 +54,6 @@ loads/stores, arithmetic, branches, stack, interrupts, SLEEP/STOP, reset sequenc
 DSP access and S-CPU/S-SMP scheduling remain absent. Real PS2/PSP runtime behavior
 and physical SNES edge timing are not claimed.
 
-The immediate/register MOV milestone is recorded separately in the
-[SPC700 MOV audit](spc700-mov-foundation-audit.md).
+Later MOV milestones are recorded separately in the
+[register/immediate MOV audit](spc700-mov-foundation-audit.md) and
+[direct-page MOV audit](spc700-direct-page-mov-audit.md).
