@@ -752,8 +752,11 @@ rejects the remaining 106 explicitly. See the
 [SPC700 100-opcode ALU audit](docs/spc700-100-opcode-alu-audit.md).
 A clean `make clean && make -j2 test`, focused ASan/UBSan, repository checks and
 GCC `-fanalyzer` pass locally. Clang, PS2SDK, `psp-config` and target runtime are
-unavailable locally. Target CI evidence will be recorded after publication. No
-target-runtime or audio result is claimed.
+unavailable locally. Revision `696ca39` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40405331355),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40405331234) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40405331400).
+No target-runtime or audio result is claimed.
 
 Next primary block: implement the 16-bit MOVW/arithmetic family, followed by
 branches and stack/control flow. Refining
