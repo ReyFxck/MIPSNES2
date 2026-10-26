@@ -44,10 +44,10 @@ GCC `-fanalyzer` and target CI evidence are recorded in `STATUS.md`.
 
 ## Open limits
 
-Indexed direct-page, indirect, absolute, direct-to-direct and immediate-to-direct
-MOV forms remain absent. Exact bus phases, dummy reads, reset/interrupt entry,
+Indirect, absolute, direct-to-direct and immediate-to-direct MOV forms remain
+absent. Exact bus phases, dummy reads, reset/interrupt entry,
 SLEEP/STOP, DSP access and the S-CPU/S-SMP scheduler domain remain absent. No
 target-runtime or audio result is claimed.
 
-Next primary milestone: add indexed direct-page A/X/Y MOV load/store forms,
-including eight-bit index wrap within the P-selected page.
+The subsequent indexed-direct-page milestone is recorded in the
+[indexed-direct-page MOV audit](spc700-indexed-direct-page-mov-audit.md).

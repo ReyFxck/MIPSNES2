@@ -42,9 +42,9 @@ remains unimplemented or unverified; document implementation evidence before pro
 
 ## Research and decisions
 
-Only twenty-four SPC700 implied/PSW/register/immediate/direct-page MOV instructions
-are implemented; indexed, indirect and absolute addressing plus S-DSP semantics do
-not exist. RFAuds2 is transport infrastructure only
+Only thirty SPC700 implied/PSW/register/immediate/direct-page MOV instructions
+are implemented, including the indexed direct-page A/X/Y forms; indirect and
+absolute addressing plus S-DSP semantics do not exist. RFAuds2 is transport infrastructure only
 and must never become a core dependency or SNES timing source. The inspected candidate
 was RFAuds2 `0.1.0-alpha.1` at revision
 `f82e0967104fc96f37259e1abc124341eef6a76c`; an eventual dependency still requires an
