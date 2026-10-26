@@ -32,16 +32,37 @@ static uint8_t opcode_cycles(uint8_t opcode)
     case UINT8_C(0xc4): /* MOV dp,A */
     case UINT8_C(0xcb): /* MOV dp,Y */
     case UINT8_C(0xd8): /* MOV dp,X */
+    case UINT8_C(0xe5): /* MOV A,!abs */
+    case UINT8_C(0xe9): /* MOV X,!abs */
+    case UINT8_C(0xec): /* MOV Y,!abs */
     case UINT8_C(0xf4): /* MOV A,dp+X */
     case UINT8_C(0xf9): /* MOV X,dp+Y */
     case UINT8_C(0xfb): /* MOV Y,dp+X */
         return UINT8_C(4);
+    case UINT8_C(0xc5): /* MOV !abs,A */
+    case UINT8_C(0xc9): /* MOV !abs,X */
+    case UINT8_C(0xcc): /* MOV !abs,Y */
     case UINT8_C(0xd4): /* MOV dp+X,A */
     case UINT8_C(0xd9): /* MOV dp+Y,X */
     case UINT8_C(0xdb): /* MOV dp+X,Y */
         return UINT8_C(5);
     default:
         return 0U;
+    }
+}
+
+static bool opcode_has_word_operand(uint8_t opcode)
+{
+    switch (opcode) {
+    case UINT8_C(0xc5): /* MOV !abs,A */
+    case UINT8_C(0xc9): /* MOV !abs,X */
+    case UINT8_C(0xcc): /* MOV !abs,Y */
+    case UINT8_C(0xe5): /* MOV A,!abs */
+    case UINT8_C(0xe9): /* MOV X,!abs */
+    case UINT8_C(0xec): /* MOV Y,!abs */
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -117,8 +138,10 @@ mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
 {
     mipsnes2_spc700_registers next;
     uint16_t opcode_address;
+    uint16_t absolute_address = 0U;
     uint8_t opcode;
     uint8_t operand = 0U;
+    uint8_t absolute_high = 0U;
     uint8_t memory_value = 0U;
     uint8_t cycles;
 
@@ -153,9 +176,27 @@ mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
             return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
         }
         next.pc = (uint16_t)(next.pc + UINT16_C(1));
+    } else if (opcode_has_word_operand(opcode)) {
+        if (!mipsnes2_smp_memory_read(cpu->memory, next.pc, &operand)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+        next.pc = (uint16_t)(next.pc + UINT16_C(1));
+        if (!mipsnes2_smp_memory_read(cpu->memory, next.pc,
+                                      &absolute_high)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+        next.pc = (uint16_t)(next.pc + UINT16_C(1));
+        absolute_address = (uint16_t)(
+            (uint16_t)((uint16_t)absolute_high << 8U) | operand);
     }
 
-    if (opcode == UINT8_C(0xe4) || opcode == UINT8_C(0xeb) ||
+    if (opcode == UINT8_C(0xe5) || opcode == UINT8_C(0xe9) ||
+        opcode == UINT8_C(0xec)) {
+        if (!mipsnes2_smp_memory_read(cpu->memory, absolute_address,
+                                      &memory_value)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+    } else if (opcode == UINT8_C(0xe4) || opcode == UINT8_C(0xeb) ||
         opcode == UINT8_C(0xf8)) {
         if (!mipsnes2_smp_memory_read(
                 cpu->memory, direct_page_address(next.psw, operand),
@@ -225,10 +266,28 @@ mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
             return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
         }
         break;
+    case UINT8_C(0xc5): /* MOV !abs,A */
+        if (!mipsnes2_smp_memory_write(
+                cpu->memory, absolute_address, next.a)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+        break;
+    case UINT8_C(0xc9): /* MOV !abs,X */
+        if (!mipsnes2_smp_memory_write(
+                cpu->memory, absolute_address, next.x)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+        break;
     case UINT8_C(0xcb): /* MOV dp,Y */
         if (!mipsnes2_smp_memory_write(
                 cpu->memory, direct_page_address(next.psw, operand),
                 next.y)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+        break;
+    case UINT8_C(0xcc): /* MOV !abs,Y */
+        if (!mipsnes2_smp_memory_write(
+                cpu->memory, absolute_address, next.y)) {
             return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
         }
         break;
@@ -279,11 +338,23 @@ mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
         next.a = memory_value;
         set_negative_zero(&next.psw, next.a);
         break;
+    case UINT8_C(0xe5): /* MOV A,!abs */
+        next.a = memory_value;
+        set_negative_zero(&next.psw, next.a);
+        break;
     case UINT8_C(0xe8): /* MOV A,#imm */
         next.a = operand;
         set_negative_zero(&next.psw, next.a);
         break;
+    case UINT8_C(0xe9): /* MOV X,!abs */
+        next.x = memory_value;
+        set_negative_zero(&next.psw, next.x);
+        break;
     case UINT8_C(0xeb): /* MOV Y,dp */
+        next.y = memory_value;
+        set_negative_zero(&next.psw, next.y);
+        break;
+    case UINT8_C(0xec): /* MOV Y,!abs */
         next.y = memory_value;
         set_negative_zero(&next.psw, next.y);
         break;

@@ -21,7 +21,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; optional reference video-line callback |
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP shared communication state | Four independent byte latches in each direction, CPU-side mirrors and S-SMP local-map handoff; cross-clock synchronization pending |
-| core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | Caller-owned registers, bounded atomic fetch/dispatch for implied/PSW plus register, immediate, direct-page and indexed-direct-page MOV instructions, ARAM/IPL, communication ports and three-stage timers; no complete interpreter, DSP route or synchronized clock domain |
+| core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | Caller-owned registers, bounded atomic fetch/dispatch for implied/PSW plus register, immediate, direct-page, indexed-direct-page and absolute MOV instructions, ARAM/IPL, communication ports and three-stage timers; no complete interpreter, DSP route or synchronized clock domain |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
@@ -46,7 +46,7 @@ enable edges, `$FA-$FC` targets and `$FD-$FF` read-clear outputs are routed.
 The caller-owned SPC700 foundation can fetch through this map and atomically execute
 `NOP`, eight one-byte PSW-control instructions, three immediate-register MOVs, six
 register-transfer MOVs, six direct-page register loads/stores and six indexed
-direct-page variants. The direct-page helper selects `$0000-$00FF` or
+direct-page variants, plus six absolute register loads/stores. The direct-page helper selects `$0000-$00FF` or
 `$0100-$01FF` from PSW.P; indexed forms wrap the operand-plus-index sum to eight
 bits before selecting that page. All accesses route through the existing S-SMP map,
 including MMIO. Successful instruction costs advance the
@@ -673,5 +673,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   and X through Y plus the matching stores. The direct-page sum wraps to eight
   bits inside the P-selected page, mapped MMIO remains visible, and documented
   4/5-cycle costs feed timers. Indirect and absolute MOV addressing remains open.
+- 2026-10-26: SPC700 absolute MOV dispatch now covers A/X/Y loads and stores,
+  with little-endian 16-bit operands, independent PC wrap, mapped-MMIO routing,
+  load-only N/Z effects and documented 4/5-cycle costs. Indexed-absolute and
+  indirect MOV addressing remains open.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

@@ -44,11 +44,11 @@ sanitizer, static-analysis and target-CI evidence are recorded in `STATUS.md`.
 
 ## Open limits
 
-Absolute, indirect, direct-to-direct and immediate-to-direct MOV forms remain
-absent. Exact bus phases and destination dummy reads are not represented by the
+Indexed-absolute, indirect, direct-to-direct and immediate-to-direct MOV forms
+remain absent. Exact bus phases and destination dummy reads are not represented by the
 current instruction-atomic contract. Reset/interrupt entry, SLEEP/STOP, DSP access
 and the synchronized S-CPU/S-SMP clock domain also remain absent. No target-runtime
 or audio result is claimed.
 
-Next primary milestone: add absolute A/X/Y MOV load/store forms while preserving
-mapped-access failure and cycle-overflow atomicity.
+The subsequent absolute milestone is recorded in the
+[absolute MOV audit](spc700-absolute-mov-audit.md).

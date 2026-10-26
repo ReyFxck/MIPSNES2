@@ -13,8 +13,9 @@ See [testing policy](../docs/testing.md). No external test ROM is committed yet.
 
 `test-spc700-cpu` exercises caller-owned SPC700 registers, mapped opcode fetch,
 IPL selection, PC/operand wrap, all 256 dispatch byte values, the initial PSW and
-register/immediate/direct-page/indexed-direct-page MOV instructions, PSW.P page
-selection, eight-bit indexed wrap, N/Z transitions, mapped MMIO, unavailable
+register/immediate/direct-page/indexed-direct-page/absolute MOV instructions,
+PSW.P page selection, eight-bit indexed wrap, little-endian absolute operands,
+16-bit operand wrap, N/Z transitions, mapped MMIO, unavailable
 operands/targets, cycle overflow and
 instruction-to-timer advancement. It does not claim a complete interpreter or
 per-cycle bus sequencing.
