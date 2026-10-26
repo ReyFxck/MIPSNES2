@@ -713,8 +713,11 @@ explicitly. See the
 [SPC700 absolute-indexed MOV audit](docs/spc700-absolute-indexed-mov-audit.md).
 A clean `make -j2 test`, focused ASan/UBSan with leak checking disabled,
 repository checks and GCC `-fanalyzer` pass locally. Clang, PS2SDK, `psp-config`
-and target runtime are unavailable locally. Target CI is pending. No target-runtime
-or audio result is claimed.
+and target runtime are unavailable locally. Revision `78834cc` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40384352069),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40384352180) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40384352129).
+No target-runtime or audio result is claimed.
 
 Next primary block: add the four register-indirect `(X)`/`(X)+` A-register
 `MOV` forms. Refining
