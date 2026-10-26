@@ -659,7 +659,11 @@ and 232 fail explicitly. See the
 [SPC700 direct-page MOV audit](docs/spc700-direct-page-mov-audit.md). A clean
 `make -j2 test` passed with host C99 `cc`; focused ASan/UBSan with leak checking
 disabled and GCC `-fanalyzer` also passed. Clang, PS2SDK, `psp-config` and target
-runtime are unavailable locally; pinned target cross-builds await publication.
+runtime are unavailable locally. Revision `444eb36` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40351899529),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40351899482) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40351899443).
+No target-runtime result is claimed.
 
 Next primary block: add indexed direct-page A/X/Y `MOV` load/store forms with
 eight-bit index wrap inside the P-selected page. Refining
