@@ -695,8 +695,11 @@ delivery and overflow before store mutation. Thirty-six opcodes now execute and
 [SPC700 absolute MOV audit](docs/spc700-absolute-mov-audit.md). A clean
 `make -j2 test`, focused ASan/UBSan with leak checking disabled, repository checks
 and GCC `-fanalyzer` pass locally. Clang, PS2SDK, `psp-config` and target runtime
-are unavailable locally. Target CI is pending. No target-runtime or audio result
-is claimed.
+are unavailable locally. Revision `5904258` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40359053492),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40359053494) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40359053485).
+No target-runtime or audio result is claimed.
 
 Next primary block: add the four absolute-indexed A-register `MOV` forms. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
