@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "core/apu/dsp/dsp.h"
 #include "core/apu/io_ports.h"
 #include "core/apu/spc700/timers.h"
 
@@ -21,6 +22,7 @@ typedef struct {
     uint8_t *ram;
     const uint8_t *ipl;
     mipsnes2_apu_io_ports *ports;
+    mipsnes2_dsp *dsp;
     mipsnes2_smp_timers timers;
     bool ipl_enabled;
     bool initialized;
@@ -30,6 +32,9 @@ bool mipsnes2_smp_memory_init(mipsnes2_smp_memory *memory,
                               uint8_t *ram, size_t ram_size,
                               mipsnes2_apu_io_ports *ports,
                               const uint8_t *ipl, size_t ipl_size);
+/* Attaches the optional machine-owned S-DSP register endpoint. */
+bool mipsnes2_smp_memory_attach_dsp(mipsnes2_smp_memory *memory,
+                                    mipsnes2_dsp *dsp);
 /* Resets the register map, retaining the caller's ARAM and optional IPL. */
 bool mipsnes2_smp_memory_reset(mipsnes2_smp_memory *memory);
 

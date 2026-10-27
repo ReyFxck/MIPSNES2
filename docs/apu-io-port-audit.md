@@ -45,8 +45,10 @@ No console, emulator or audio runtime was executed for this block.
 
 ## Deliberate limits
 
-This is logical mailbox state only. There is no SPC700 interpreter, S-SMP RAM,
-IPL, timer, DSP, audio sample generation or clock-domain scheduler. A write is
+This historical block introduced logical mailbox state only. SPC700, S-SMP RAM,
+IPL, timers and the initial DSP/clock layer were added later; see the
+[APU clock/DSP register audit](apu-clock-dsp-register-audit.md). There is still no
+audio sample generation. A write is
 visible immediately to the opposite-side API; real asynchronous sampling and
 same-time race ordering remain part of the later CPU/APU synchronization task.
 Initial hardware latch values are not claimed, and external-callback machines

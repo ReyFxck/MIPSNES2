@@ -147,7 +147,8 @@ discard the operation; the next call resumes the remaining clocks.
 `mipsnes2_clock_ratio` converts source-domain ticks by an exact positive rational
 `numerator / denominator`. It reduces the ratio and carries the division remainder
 between calls. Chunked and one-shot conversion therefore produce identical totals
-without floating point. PPU, SPC700 and DSP ratios are not assigned yet.
+without floating point. The APU now applies it to nominal 1.024 MHz S-SMP time
+against regional SNES master clocks; PPU subdivision remains separate.
 
 ## Ricoh 5A22 access classes
 
@@ -270,8 +271,8 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [x] Event tie ordering
 - [x] CPU event horizon — caller-owned in-flight operation state advances through events, pauses on requested horizons/errors and commits exactly once
 - [ ] PPU event integration
-- [ ] SPC700 synchronization
-- [ ] DSP synchronization
+- [ ] [IN PROGRESS] SPC700 synchronization — rational machine-time budget and atomic instruction admission integrated; exact bus phases/races pending
+- [ ] [IN PROGRESS] DSP synchronization — common S-SMP cycle domain and 32-cycle event cadence integrated; pipeline phases pending
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay

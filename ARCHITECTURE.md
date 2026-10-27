@@ -20,48 +20,44 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/cartridge | Validated metadata, mappings, SRAM data | Base LoROM/HiROM and Mode 25/35 ExHiROM, registration/header analysis, checksum and conservative selection |
 | core/ppu | State/registers, rendering and timing, not presentation | Non-interlaced H/V counters, 64 KiB buffered VRAM ports, 512-byte CGRAM ports, 544-byte OAM ports, OBJ line, four Mode 0 or three Mode 1 BG lines and priority mixers, scheduled overflow state and 4bpp tile decode; optional reference video-line callback |
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
-| core/apu | S-CPU/S-SMP shared communication state | Four independent byte latches in each direction, CPU-side mirrors and S-SMP local-map handoff; cross-clock synchronization pending |
-| core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | Caller-owned registers, bounded instruction-atomic fetch/dispatch for all 256 opcodes, ARAM/IPL, communication ports and three-stage timers; no exact bus phases, interrupt entry, DSP route or synchronized clock domain |
-| core/apu/dsp | Emulated SNES DSP and sample generation | Directory only |
+| core/apu | S-CPU/S-SMP communication and timing | Directional ports plus nominal rational master-to-S-SMP clock bridge; electrical race order and oscillator drift pending |
+| core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | All 256 opcodes, ARAM/IPL, ports, `$F2/$F3` DSP route and three-stage timers under the APU clock; exact bus phases and interrupt/reset entry pending |
+| core/apu/dsp | Emulated SNES DSP and sample generation | 128-byte register/address foundation, initial `FLG`/`ENDX` effects and 32-cycle sample-event cadence; voices and PCM absent |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
-| core/machine | Stable instance composition and timed power-on/CPU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL, cartridge, CPU, bus, CPU-I/O, counters, H/V and scheduler |
+| core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path to bounded CPU-only machine run and single-frame GS submission; GS runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
 Directories without source contain an explicit scope README, not stub functions.
 There is a partial machine instance and an explicit-path PS2 ROM-file adapter,
-but no full ROM runner, complete renderer or SPC700/DSP. `mipsnes2_machine_init` validates an image and constructs the
+but no full ROM runner, complete renderer or PCM-producing S-DSP. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
 optional VRAM/CGRAM/OAM/ARAM bytes. An optional S-SMP map borrows 64 KiB ARAM
 and optional caller-provided 64-byte IPL; without the IPL, mapped high-page
 reads fail explicitly. PS2 reserves ARAM, while PSP merely compiles the same
 core. The S-SMP map and S-CPU bus meet through machine-owned directional
-ports. The map also owns three caller-advanced timers: timer 0/1 observe a
+ports. The map also owns three APU-clock-driven timers, with an explicit unit-test
+advance API: timer 0/1 observe a
 shared 128-cycle stage-1 edge and timer 2 each 16-cycle subdivision; `$F1`
 enable edges, `$FA-$FC` targets and `$FD-$FF` read-clear outputs are routed.
-The caller-owned SPC700 foundation can fetch through this map and atomically execute
-`NOP`, eight one-byte PSW-control instructions, three immediate-register MOVs, six
-register-transfer MOVs, six direct-page register loads/stores and six indexed
-direct-page variants, plus six absolute register loads/stores and four
-absolute-indexed A forms, four register-indirect A forms, four direct-indirect A
-forms and two direct-page memory transfers. The direct-page helper selects `$0000-$00FF` or
-`$0100-$01FF` from PSW.P; indexed forms wrap the operand-plus-index sum to eight
-bits before selecting that page, while absolute indexing wraps in the full 16-bit
-space. All accesses route through the existing S-SMP map,
-including MMIO. Successful instruction costs advance the
-timer block in S-SMP cycles; rejected opcodes or unavailable operands/targets do not
-commit programmer-visible state or time. There is no complete S-SMP interpreter,
-S-DSP-relative phase or synchronized clock domain.
-The same atomic dispatcher now covers every accumulator and direct-memory form of
-`OR`, `AND`, `EOR`, `CMP`, `ADC` and `SBC`, all accumulator/direct/absolute/
-direct-indexed `ASL`, `ROL`, `LSR` and `ROR` forms, and the byte A/X/Y/direct/
-absolute/direct-indexed `INC` and `DEC` forms. Shared helpers keep addressing,
-N/Z/C/H/V behavior and 2-6-cycle costs consistent; word arithmetic, bit operations,
-control flow and stack execution remain open.
+The caller-owned SPC700 foundation fetches through this map and atomically executes
+all 256 opcode values. Direct-page, pointer, stack and absolute wrapping remain
+inside the S-SMP address domain and all mapped accesses retain MMIO side effects.
+The APU bridge converts absolute machine master time to nominal 1.024 MHz S-SMP
+cycles with a carried rational remainder. It conservatively admits whole atomic
+instructions, advances timers and S-DSP cadence, and keeps running devices while
+SLEEP/STOP halt instruction execution. Machine configuration can copy an explicit
+SPC700 register seed; undocumented reset registers are not fabricated.
+
+The first S-DSP layer exposes `$F2/$F3`, a 128-byte register file, bit-7 write
+inhibition, `ENDX` clear, internal `FLG` reset state and a 32-S-SMP-cycle sample
+event. It has no voice, BRR, envelope, echo, mixer or PCM semantics. Exact
+instruction bus phases, within-DSP-loop register visibility, mailbox races and
+physical oscillator drift remain open.
 `resume` advances one
 timed RESET sequence or instruction to a caller-specified horizon; `run_until`
 also bounds completed sequences and retains a paused cursor. The instance
@@ -703,5 +699,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   bit, multiply/divide, decimal-adjust and wait-state families. Aggregate 2-12-cycle
   costs and taken deltas feed timers; exact bus phases, interrupt entry and
   synchronized S-SMP/S-DSP execution remain open.
+- 2026-10-27: a nominal rational master-to-S-SMP bridge now advances SPC700,
+  timers and S-DSP sample cadence from machine time. `$F2/$F3` reach a 128-byte
+  S-DSP register foundation with bit-7 write inhibition, `ENDX` clear and internal
+  `FLG` reset state. Voices, PCM and exact cross-clock/bus phase behavior remain.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

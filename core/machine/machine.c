@@ -532,12 +532,29 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     }
     mipsnes2_cpu_io_init(&machine->io, UINT8_C(2));
     mipsnes2_apu_io_ports_init(&machine->apu_ports);
+    mipsnes2_dsp_init(&machine->dsp);
+    machine->smp_cpu = (mipsnes2_spc700){0};
+    machine->apu_timing = (mipsnes2_apu_timing){0};
+    machine->apu_report = (mipsnes2_apu_timing_report){0};
     if (machine->aram != NULL &&
         !mipsnes2_smp_memory_init(&machine->smp_memory, machine->aram,
                                  machine->aram_size, &machine->apu_ports,
                                  machine->smp_ipl, machine->smp_ipl_size)) {
         machine->ready = false;
         return MIPSNES2_MACHINE_INVALID_ARGUMENT;
+    }
+    if (machine->aram != NULL &&
+        (!mipsnes2_smp_memory_attach_dsp(&machine->smp_memory,
+                                         &machine->dsp) ||
+         (machine->smp_cpu_enabled &&
+          !mipsnes2_spc700_init(&machine->smp_cpu, &machine->smp_memory,
+                                &machine->smp_initial_registers)) ||
+         !mipsnes2_apu_timing_init(
+             &machine->apu_timing, machine->standard,
+             machine->smp_cpu_enabled ? &machine->smp_cpu : NULL,
+             &machine->smp_memory, &machine->dsp))) {
+        machine->ready = false;
+        return MIPSNES2_MACHINE_TIMING_ERROR;
     }
     mipsnes2_ppu_counters_init(&machine->counters, UINT8_C(3), 0U);
     machine->ppu_forced_blank = true;
@@ -704,6 +721,7 @@ mipsnes2_machine_result mipsnes2_machine_init(
          (config->smp_ipl != NULL &&
           (config->aram == NULL ||
            config->smp_ipl_size != MIPSNES2_SMP_IPL_SIZE))) ||
+        (config->smp_initial_registers != NULL && config->aram == NULL) ||
         (config->aram != NULL &&
          (config->apu.read8 != NULL || config->apu.write8 != NULL)) ||
         (config->standard != MIPSNES2_HV_STANDARD_NTSC &&
@@ -734,6 +752,10 @@ mipsnes2_machine_result mipsnes2_machine_init(
     machine->aram_size = config->aram_size;
     machine->smp_ipl = config->smp_ipl;
     machine->smp_ipl_size = config->smp_ipl_size;
+    machine->smp_cpu_enabled = config->smp_initial_registers != NULL;
+    if (machine->smp_cpu_enabled) {
+        machine->smp_initial_registers = *config->smp_initial_registers;
+    }
     machine->standard = config->standard;
     machine->overscan = config->overscan;
     machine->ppu = config->ppu;
@@ -749,12 +771,22 @@ mipsnes2_cpu_timing_result mipsnes2_machine_resume(
     mipsnes2_machine *machine, mipsnes2_master_clock horizon,
     size_t event_budget, mipsnes2_cpu_timing_report *report)
 {
+    mipsnes2_cpu_timing_result result;
+
     if (machine == NULL || !machine->ready || report == NULL) {
         return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
     }
-    return mipsnes2_cpu_timed_resume_hv_interrupts(
+    result = mipsnes2_cpu_timed_resume_hv_interrupts(
         &machine->cpu, &machine->bus, &machine->scheduler, &machine->hv,
         &machine->interrupts, &machine->cursor, horizon, event_budget, report);
+    if (machine->apu_timing.initialized &&
+        mipsnes2_apu_timing_run_until(
+            &machine->apu_timing, machine->scheduler.now, 0U,
+            &machine->apu_report) != MIPSNES2_APU_TIMING_OK) {
+        machine->ready = false;
+        return MIPSNES2_CPU_TIMING_APU_ERROR;
+    }
+    return result;
 }
 
 mipsnes2_machine_run_result mipsnes2_machine_run_until(

@@ -20,6 +20,12 @@ operands/targets, cycle overflow and
 instruction-to-timer advancement. It does not claim a complete interpreter or
 per-cycle bus sequencing.
 
+`test-dsp` verifies the first 128-byte S-DSP register/address boundary, inhibited
+writes, `ENDX` clear, internal `FLG` state and the 32-S-SMP-cycle sample-event
+cadence. `test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
+chunked equivalence, atomic SPC700 admission and credit, timer coordination,
+SLEEP continuation and overflow handling. These sample events are not PCM output.
+
 `test-spc700-alu` verifies the exact 100-opcode OR/AND/EOR/CMP/ADC/SBC,
 ASL/ROL/LSR/ROR and byte INC/DEC block across every documented addressing form.
 It includes 54 accumulator and 18 direct-memory ALU cases, all 28 shift/INC/DEC
@@ -31,7 +37,8 @@ all 256 base dispatch paths and verifies bit, branch, call/return, stack, word,
 compare, multiply/divide, decimal-adjust and wait-state behavior. It exhausts all
 65,536 MUL inputs, every X/Y pair with six A samples for DIV, all A/H/C decimal
 adjust inputs and cycle-overflow boundaries. This completes opcode semantics, not
-per-cycle bus sequencing, interrupt entry, DSP or audio integration.
+per-cycle bus sequencing, interrupt entry or audio synthesis. The later APU bridge
+reuses the atomic dispatcher under a deterministic clock.
 
 The CPU suite includes boundary-visible ABORT vectors, native/emulation stack layouts,
 priority, WAI restart-address behavior and invalid-bus diagnostics. It does not claim

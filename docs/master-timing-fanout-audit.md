@@ -46,7 +46,9 @@ This is not exact CPU/subsystem arbitration:
   absent;
 - interlace, exact timer-register write windows, repeated reprogrammed matches and
   TIMEUP's narrow read-at-match exception remain absent;
-- PPU, SPC700, DSP and enhancement clock domains are not integrated;
+- This historical audit did not integrate PPU, SPC700, DSP or enhancement clock
+  domains. SPC700/timer/DSP cadence was added later in the
+  [APU clock/DSP register audit](apu-clock-dsp-register-audit.md); exact phases remain.
 - long regional soak tests and timestamp renormalization remain future work.
 
 No limit above is hidden by a completion claim.

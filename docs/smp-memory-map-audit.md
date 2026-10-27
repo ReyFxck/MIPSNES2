@@ -2,9 +2,10 @@
 
 Date: 2026-10-25
 
-The original boundary below predates the timer block. `$F1/$FA-$FF` are now
-implemented as described by the later [S-SMP timer audit](smp-timer-audit.md);
-TEST and DSP registers remain unsupported.
+The original boundary below predates the timer and DSP blocks. `$F1/$FA-$FF` are
+implemented as described by the later [S-SMP timer audit](smp-timer-audit.md), and
+`$F2/$F3` by the [APU clock/DSP register audit](apu-clock-dsp-register-audit.md).
+TEST remains unsupported.
 
 ## Implemented boundary
 
@@ -21,9 +22,9 @@ S-SMP reads `$F4-$F7` see the S-CPU-to-S-SMP latches; writes update the
 opposite latches. A write to `$F1` with bit 4 or 5 clears the corresponding
 pair of incoming latches without altering outgoing latches. `$F8/$F9` are
 ordinary ARAM. Handled `$F1/$F4-$F7` writes also update underlying ARAM, while
-reads retain their register meaning. `$F0/$F2/$F3/$FA-$FF` are rejected in
-both directions. Reads of `$F1` are likewise rejected. `$F1` writes with any
-timer-enable bit set are atomically rejected until the timer block exists.
+reads retain their register meaning. The current tree routes `$F2/$F3` to an
+attached S-DSP register state and `$FA-$FF` to timers. `$F0` is rejected in both
+directions and reads of `$F1` remain rejected.
 
 The shared machine accepts optional ARAM/IPL buffers and rejects inconsistent
 sizes or an external APU callback together with internal ARAM, avoiding a
@@ -44,8 +45,9 @@ PCSX2, ARMSX2, PPSSPP or NetherSX2 run was performed for this block.
 
 This audit originally introduced a strict partial map without an instruction
 engine. The current tree now has register state, timers and an instruction-atomic
-256-opcode SPC700 engine, but still cannot run a complete APU: there is no DSP,
-audio sample path, interrupt entry or synchronized S-SMP clock domain. Input clear
+256-opcode SPC700 engine, nominal synchronized clock and initial DSP register layer,
+but still cannot run a complete audio pipeline: there are no voices, PCM samples or
+interrupt/reset entry. Input clear
 is immediate in this API, whereas the
 sound manual describes a next-cycle clear and undefined results when an
 S-CPU write races it. Those electrical details remain unverified here.

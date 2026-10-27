@@ -3,6 +3,7 @@
 #define MIPSNES2_MACHINE_H
 
 #include "core/apu/io_ports.h"
+#include "core/apu/timing.h"
 #include "core/apu/spc700/memory.h"
 #include "core/cartridge/prepare.h"
 #include "core/ppu/cgram_ports.h"
@@ -51,6 +52,9 @@ typedef struct {
     size_t aram_size;
     const uint8_t *smp_ipl;
     size_t smp_ipl_size;
+    /* Optional explicit SPC700 reset seed. Hardware A/X/Y/SP/PSW reset values
+     * are not invented when this is absent. */
+    const mipsnes2_spc700_registers *smp_initial_registers;
     mipsnes2_hv_standard standard;
     bool overscan;
     mipsnes2_bus_interface ppu;
@@ -74,7 +78,11 @@ typedef struct {
     mipsnes2_interrupt_lines interrupts;
     mipsnes2_cpu_io io;
     mipsnes2_apu_io_ports apu_ports;
+    mipsnes2_dsp dsp;
     mipsnes2_smp_memory smp_memory;
+    mipsnes2_spc700 smp_cpu;
+    mipsnes2_apu_timing apu_timing;
+    mipsnes2_apu_timing_report apu_report;
     mipsnes2_ppu_counters counters;
     mipsnes2_ppu_vram_ports vram_ports;
     mipsnes2_ppu_cgram_ports cgram_ports;
@@ -113,10 +121,12 @@ typedef struct {
     size_t aram_size;
     const uint8_t *smp_ipl;
     size_t smp_ipl_size;
+    mipsnes2_spc700_registers smp_initial_registers;
     mipsnes2_hv_standard standard;
     bool overscan;
     bool ppu_forced_blank;
     bool hdma_events_scheduled;
+    bool smp_cpu_enabled;
     uint8_t ppu_brightness;
     uint8_t ppu_setini;
     uint8_t ppu1_open_bus;
@@ -141,7 +151,8 @@ mipsnes2_machine_result mipsnes2_machine_init(
 mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine);
 /* One RESET sequence or CPU instruction, resumable at an absolute horizon.
  * HORIZON_REACHED and event budget exhaustion preserve the active cursor.
- * Inspect report->cpu_result after OK for WAI/STP or other CPU status.
+ * The APU clock catches up to the shared scheduler time before return. Inspect
+ * report->cpu_result after OK for WAI/STP or other CPU status.
  */
 mipsnes2_cpu_timing_result mipsnes2_machine_resume(
     mipsnes2_machine *machine, mipsnes2_master_clock horizon,
@@ -155,10 +166,10 @@ typedef enum {
     MIPSNES2_MACHINE_RUN_INVALID_ARGUMENT
 } mipsnes2_machine_run_result;
 
-/* Bounded CPU-only execution: report holds the final sequence or paused
+/* Bounded machine execution: report holds the final sequence or paused
  * operation, and sequences counts only fully completed RESET/instructions.
  * A horizon return retains the operation cursor for the next call. Callers
- * must arrange missing device events, renderer and audio separately.
+ * S-DSP sample synthesis and platform audio output remain separate work.
  */
 mipsnes2_machine_run_result mipsnes2_machine_run_until(
     mipsnes2_machine *machine, mipsnes2_master_clock horizon,

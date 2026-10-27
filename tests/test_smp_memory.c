@@ -15,6 +15,7 @@ static uint8_t synthetic_ipl[MIPSNES2_SMP_IPL_SIZE];
 int main(void)
 {
     mipsnes2_apu_io_ports ports;
+    mipsnes2_dsp dsp;
     mipsnes2_smp_memory memory;
     uint8_t value = UINT8_C(0xee);
     unsigned i;
@@ -39,6 +40,25 @@ int main(void)
     CHECK(mipsnes2_smp_memory_init(&memory, ram, sizeof(ram), &ports,
                                    synthetic_ipl, sizeof(synthetic_ipl)));
     CHECK(memory.ipl_enabled && ram[0] == UINT8_C(0xa5));
+    CHECK(!mipsnes2_smp_memory_read(&memory, UINT16_C(0x00f2), &value));
+    CHECK(!mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f3), 0U));
+    mipsnes2_dsp_init(&dsp);
+    CHECK(mipsnes2_smp_memory_attach_dsp(&memory, &dsp));
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f2),
+                                    UINT8_C(0x2c)));
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f3),
+                                    UINT8_C(0x6d)));
+    CHECK(ram[0xf2] == UINT8_C(0x2c) && ram[0xf3] == UINT8_C(0x6d));
+    CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00f2), &value));
+    CHECK(value == UINT8_C(0x2c));
+    CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00f3), &value));
+    CHECK(value == UINT8_C(0x6d));
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f2),
+                                    UINT8_C(0xac)));
+    CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f3),
+                                    UINT8_C(0x11)));
+    CHECK(mipsnes2_smp_memory_read(&memory, UINT16_C(0x00f3), &value));
+    CHECK(value == UINT8_C(0x6d));
 
     CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x0000), 0U));
     CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00ef), 1U));
@@ -135,7 +155,7 @@ int main(void)
     CHECK(!mipsnes2_smp_memory_advance(NULL, 1U));
 
     for (i = 0xf0U; i <= 0xffU; ++i) {
-        if (i == 0xf1U || (i >= 0xf4U && i <= 0xffU)) {
+        if ((i >= 0xf1U && i <= 0xf9U) || i >= 0xfaU) {
             continue;
         }
         value = UINT8_C(0xee);

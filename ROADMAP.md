@@ -134,8 +134,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
 - [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation plus scheduler wiring for all 256 opcode values, boundary IRQ/NMI/ABORT entry, write-qualified ABORT subset and explicit RESET; signal-level RESET, dummy cycles and electrical ABORT exceptions pending
 - [ ] [IN PROGRESS] PPU event integration — SETINI overscan now moves shared VBlank, OAM reload and HDMA deactivation at a bounded frame-level cutoff; exact late-line behavior remains
-- [ ] SPC700 synchronization
-- [ ] DSP synchronization
+- [ ] [IN PROGRESS] SPC700 synchronization — nominal rational budget and atomic admission integrated; exact phases/races pending
+- [ ] [IN PROGRESS] DSP synchronization — common cycle domain and sample-event cadence integrated; pipeline phases pending
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
@@ -152,7 +152,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Programmable I/O-port foundation — `$4201/$4213`, wired-AND external levels and bit-7 falling-edge handoff verified
 - [x] Non-interlaced H/V counter-register foundation — dot projection, read selectors and deterministic WRIO bus adapter verified
 - [ ] Exact counter capture latency and held-low/repeated-latch hardware validation
-- [ ] SPC700 timer coordination
+- [x] SPC700 timer coordination — integrated APU clock advances timer stages
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing, atomic compatibility and resumable operation-boundary delivery tests exist; exact electrical cases pending
 - [x] 5A22 CPU-I/O register/latch foundation
 - [x] Non-interlaced NTSC/PAL H/V timing foundation
@@ -239,10 +239,10 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Multiply/divide
 - [x] Sleep and stop
 - [ ] [IN PROGRESS] Instruction timing — documented aggregate 2-12-cycle costs and taken-branch deltas advance timers atomically; exact bus phases remain
-- [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay and write-through tested; remaining MMIO, interpreter and hardware validation pending
+- [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay, write-through and DSP route tested; TEST/reset policy and hardware validation pending
 - [ ] IPL provenance decision
-- [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
-- [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
+- [ ] [IN PROGRESS] I/O registers — `$F1-$FF` timer/port/DSP routes exist except `$F0` TEST and `$F1` read behavior
+- [ ] [IN PROGRESS] Timers — three-stage counters run from machine-derived S-SMP cycles; electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` input-pair clear verified; cross-clock timing pending
 - [x] Instruction tests — every opcode, family matrices and exhaustive byte ADC/SBC, MUL/DIV and decimal-adjust coverage
 - [ ] [IN PROGRESS] Timing regressions — aggregate instruction/timer, taken-branch, overflow and missing-operand coverage; per-cycle phases remain
@@ -251,7 +251,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [ ] Phase 8 exit gate verified
 
-- [ ] Register state
+- [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
 - [ ] Eight voice state
 - [ ] BRR decode
 - [ ] BRR loop/end behavior
@@ -268,19 +268,19 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] FIR filter
 - [ ] Feedback
 - [ ] Clamping and signed arithmetic
-- [ ] Sample timing
-- [ ] DSP register side effects
+- [ ] [IN PROGRESS] Sample timing — one deterministic event per 32 S-SMP cycles; pipeline/sample values pending
+- [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
 - [ ] Golden sample tests
-- [ ] SPC700/DSP interconnect
+- [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3` and common S-SMP time exist; voice/polling semantics pending
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
-- [ ] Timer integration
+- [x] Timer integration — machine APU clock advances S-SMP timers
 - [ ] Sample generation pipeline
 - [ ] Deterministic sample buffering
 - [ ] Output sample format contract
 - [ ] Resampling policy
 - [ ] Underflow/overflow behavior
 - [ ] Host offline audio tests
-- [ ] [IN PROGRESS] Integrated APU regression tests — pure directional-port and machine-route fixtures exist; executable S-SMP/DSP tests pending
+- [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP and machine fixtures exist; PCM vectors pending
 
 ## Phase 9 — Base SNES Integration
 

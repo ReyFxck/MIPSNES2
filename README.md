@@ -56,9 +56,11 @@ No-match and ambiguous images are rejected instead of guessed. PS2 has an
 explicit-path ROM adapter and a bounded CPU-only run; there is no file picker,
 unofficial ExLoROM, padded/board-specific irregular mapping or enhancement hardware.
 Only PPU counter registers, VRAM ports, CGRAM ports and OAM ports exist; there is no renderer or active-display access model.
-The caller-owned SPC700 foundation covers all 256 opcode values atomically, but
-there is no synchronized S-SMP/S-DSP audio system, ROM runner, compatibility or
-performance claim.
+The caller-owned SPC700 foundation covers all 256 opcode values atomically and a
+nominal rational APU clock now advances it, the three S-SMP timers and a first
+S-DSP register/sample-cadence foundation from machine master time. `$F2/$F3`,
+128 register bytes and one event per 32 S-SMP cycles are testable; voices, BRR,
+mixing, PCM output, a full ROM runner, compatibility and performance remain.
 
 Current milestone: Phase 4 — Ricoh 5A22 interrupt/timer foundation.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and

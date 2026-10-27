@@ -3,7 +3,7 @@ ifeq ($(strip $(PS2SDK)),)
 $(error PS2SDK is unset; see docs/ps2.md)
 endif
 EE_BIN = mipsnes2-ps2.elf
-EE_OBJS = main.o diagnostic_suite.o rom_file.o video_frame.o gs_present.o log.o bus.o cpu_io.o apu_io_ports.o smp_timers.o smp_memory.o spc700_cpu.o dma_registers.o dma_transfer.o hdma.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg4_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_mode1_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
+EE_OBJS = main.o diagnostic_suite.o rom_file.o video_frame.o gs_present.o log.o bus.o cpu_io.o apu_io_ports.o dsp.o smp_timers.o smp_memory.o spc700_cpu.o apu_timing.o dma_registers.o dma_transfer.o hdma.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg4_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_mode1_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
 	cartridge_prepare.o machine.o
@@ -32,6 +32,9 @@ cpu_io.o: ../../core/bus/cpu_io.c ../../core/bus/cpu_io.h
 apu_io_ports.o: ../../core/apu/io_ports.c ../../core/apu/io_ports.h ../../core/bus/interface.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
+dsp.o: ../../core/apu/dsp/dsp.c ../../core/apu/dsp/dsp.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
 smp_timers.o: ../../core/apu/spc700/timers.c ../../core/apu/spc700/timers.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
@@ -39,6 +42,9 @@ smp_memory.o: ../../core/apu/spc700/memory.c ../../core/apu/spc700/memory.h ../.
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 spc700_cpu.o: ../../core/apu/spc700/cpu.c ../../core/apu/spc700/cpu.h ../../core/apu/spc700/memory.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+apu_timing.o: ../../core/apu/timing.c ../../core/apu/timing.h ../../core/apu/dsp/dsp.h ../../core/apu/spc700/cpu.h ../../core/scheduler/scheduler.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 dma_registers.o: ../../core/dma/registers.c ../../core/dma/registers.h

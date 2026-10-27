@@ -1279,6 +1279,8 @@ int main(void)
      * and S-SMP map meet only through the machine-owned directional mailbox. */
     {
         uint8_t value = 0U;
+        mipsnes2_spc700_registers smp_registers = {0};
+        unsigned apu_attempts;
 
         (void)memset(aram, UINT8_C(0x5a), sizeof(aram));
         (void)memset(synthetic_ipl, UINT8_C(0x31), sizeof(synthetic_ipl));
@@ -1335,6 +1337,37 @@ int main(void)
               machine.smp_memory.timers.enabled_mask == 0U &&
               machine.smp_memory.timers.stage1_phase == 0U);
         CHECK(machine.apu_ports.apu_to_cpu[1] == 0U);
+
+        /* An explicit caller seed starts the SPC700 on the synthetic IPL.
+         * The machine's normal 5A22 resume also catches the APU clock up. */
+        synthetic_ipl[0] = UINT8_C(0xe8); /* MOV A,#$0c */
+        synthetic_ipl[1] = UINT8_C(0x0c);
+        synthetic_ipl[2] = UINT8_C(0xc4); /* MOV $F2,A */
+        synthetic_ipl[3] = UINT8_C(0xf2);
+        synthetic_ipl[4] = UINT8_C(0xe8); /* MOV A,#$44 */
+        synthetic_ipl[5] = UINT8_C(0x44);
+        synthetic_ipl[6] = UINT8_C(0xc4); /* MOV $F3,A */
+        synthetic_ipl[7] = UINT8_C(0xf3);
+        synthetic_ipl[8] = UINT8_C(0xef); /* SLEEP */
+        smp_registers.pc = UINT16_C(0xffc0);
+        config.smp_initial_registers = &smp_registers;
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_OK);
+        smp_registers.pc = 0U; /* Configuration was copied, not borrowed. */
+        CHECK(mipsnes2_machine_resume(&machine, UINT64_MAX, 0U, &report) ==
+              MIPSNES2_CPU_TIMING_OK);
+        for (apu_attempts = 0U;
+             apu_attempts < 64U &&
+             machine.smp_cpu.wait_state == MIPSNES2_SPC700_RUNNING;
+             ++apu_attempts) {
+            CHECK(mipsnes2_machine_resume(
+                      &machine, UINT64_MAX, 0U, &report) ==
+                  MIPSNES2_CPU_TIMING_OK);
+        }
+        CHECK(machine.apu_timing.master_clocks == machine.scheduler.now);
+        CHECK(machine.smp_cpu.wait_state == MIPSNES2_SPC700_SLEEPING);
+        CHECK(machine.dsp.registers[UINT8_C(0x0c)] == UINT8_C(0x44));
+        CHECK(machine.smp_memory.dsp == &machine.dsp);
     }
     (void)puts("machine integration: OK");
     return 0;

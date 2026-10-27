@@ -776,8 +776,22 @@ unavailable locally. Revision `e55ff3e` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40438359436).
 No target-runtime or audio result is claimed.
 
-Next primary block: connect SPC700 execution to a deterministic S-SMP clock domain,
-then begin the independently verified S-DSP path. Refining
+The deterministic APU clock and first S-DSP register block now convert regional
+master clocks to nominal 1.024 MHz S-SMP cycles with carried rational remainder.
+The machine advances the complete atomic SPC700, timers and one S-DSP sample event
+per 32 cycles; `$F2/$F3` route a 128-byte register shadow with bit-7 write
+inhibition, `ENDX` clear and internal `FLG` reset/write state. Explicit SPC700
+initial registers are copied rather than inventing undocumented reset values.
+Host tests cover full-second and irregular chunk equivalence, instruction credit,
+SLEEP, timer/DSP cadence and a synthetic IPL program writing the DSP through machine
+resume. See the [APU clock/DSP register audit](docs/apu-clock-dsp-register-audit.md).
+Voice state, BRR, envelopes, mixing, echo/FIR, PCM output, exact DSP polling,
+cross-clock races and physical oscillator drift remain unimplemented. Local clean
+tests, sanitizers, repository checks and static analysis pass; cross-build CI is
+pending publication. No target-runtime or audio-output result is claimed.
+
+Next primary block: implement independently verified S-DSP voice/key-on state and
+the first BRR/sample pipeline slice. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
@@ -1842,8 +1856,8 @@ platform persistence remains incomplete.
 - [x] CPU event horizon — caller-owned in-flight operation state pauses at requested horizons or event-budget failures and resumes without restarting or duplicating the CPU/bus effect
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment, transactional H/V slices and provisional same-time ordering verified
 - [ ] PPU event integration
-- [ ] SPC700 synchronization
-- [ ] DSP synchronization
+- [ ] [IN PROGRESS] SPC700 synchronization — nominal rational budget and atomic admission integrated; exact phases/races pending
+- [ ] [IN PROGRESS] DSP synchronization — common cycle domain and sample-event cadence integrated; pipeline phases pending
 - [ ] DMA bus ownership
 - [ ] Enhancement scheduling
 - [x] Determinism tests — identical scheduler replay traces verified
@@ -1859,7 +1873,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Interrupt ordering — CPU NMI-over-IRQ priority and source aggregation verified; simultaneous subsystem timing pending
 - [ ] [IN PROGRESS] CPU math register timing — 8/16-cycle completion and result semantics verified; busy collisions and exact internal-cycle placement pending
 - [ ] [IN PROGRESS] Automatic joypad polling timing — 4224-clock window and result commit verified with a fixed deterministic start; hardware phase variation, busy-time partial data and manual-port contention pending
-- [ ] SPC700 timer coordination
+- [x] SPC700 timer coordination — integrated APU clock advances timer stages
 - [ ] [IN PROGRESS] Interrupt and timer integration tests — register/latch, bus/H/V timing, atomic compatibility and resumable operation-boundary input fixtures exist; exact electrical cases pending
 
 ### Verified CPU-I/O foundation subset
@@ -1991,17 +2005,17 @@ platform persistence remains incomplete.
 - [x] Multiply/divide
 - [x] Sleep and stop
 - [ ] [IN PROGRESS] Instruction timing — documented aggregate 2-12-cycle costs and taken-branch deltas feed timers atomically; exact bus phases absent
-- [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM and optional IPL overlay verified; rest of S-SMP map/runtime pending
+- [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM, optional IPL overlay and DSP route verified; TEST/reset policy pending
 - [ ] IPL provenance decision
-- [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
-- [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
+- [ ] [IN PROGRESS] I/O registers — `$F1-$FF` timer/port/DSP routes exist except `$F0` TEST and `$F1` read behavior
+- [ ] [IN PROGRESS] Timers — three-stage counters run from machine-derived S-SMP cycles; electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
 - [x] Instruction tests — every opcode, family matrices and exhaustive byte ADC/SBC, MUL/DIV and decimal-adjust coverage
 - [ ] [IN PROGRESS] Timing regressions — aggregate costs, timer coupling, taken branches, overflow and unavailable operand/target cases covered; per-cycle phases remain
 
 ## DSP
 
-- [ ] Register state
+- [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
 - [ ] Eight voice state
 - [ ] BRR decode
 - [ ] BRR loop/end behavior
@@ -2018,15 +2032,15 @@ platform persistence remains incomplete.
 - [ ] FIR filter
 - [ ] Feedback
 - [ ] Clamping and signed arithmetic
-- [ ] Sample timing
-- [ ] DSP register side effects
+- [ ] [IN PROGRESS] Sample timing — one deterministic event per 32 S-SMP cycles; pipeline/sample values pending
+- [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
 - [ ] Golden sample tests
 
 ## APU and audio
 
-- [ ] SPC700/DSP interconnect
+- [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3` and common S-SMP time exist; voice/polling semantics pending
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
-- [ ] Timer integration
+- [x] Timer integration — machine APU clock advances S-SMP timers
 - [ ] Sample generation pipeline
 - [ ] Deterministic sample buffering
 - [ ] Output sample format contract
@@ -2034,7 +2048,7 @@ platform persistence remains incomplete.
 - [ ] Resampling policy
 - [ ] Underflow/overflow behavior
 - [ ] Host offline audio tests
-- [ ] [IN PROGRESS] Integrated APU regression tests — port, local memory-map and machine-route fixtures exist; executable S-SMP/DSP tests pending
+- [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP and machine fixtures exist; PCM vectors pending
 
 ## PS2 backend
 

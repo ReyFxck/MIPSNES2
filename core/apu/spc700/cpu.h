@@ -51,9 +51,12 @@ typedef struct {
     mipsnes2_smp_memory *memory;
     uint64_t instruction_cycles;
     uint16_t last_opcode_address;
+    uint16_t prepared_opcode_address;
     uint8_t last_opcode;
+    uint8_t prepared_opcode;
     mipsnes2_spc700_wait_state wait_state;
     bool has_fetched_opcode;
+    bool opcode_prepared;
     bool initialized;
 } mipsnes2_spc700;
 
@@ -69,5 +72,14 @@ bool mipsnes2_spc700_init(mipsnes2_spc700 *cpu,
  * STOP commit their documented three cycles and then return HALTED on later
  * calls until the caller reinitializes the CPU. */
 mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu);
+
+/* Fetches and caches the next opcode, returning a conservative complete-
+ * instruction cycle requirement. This lets an external clock domain admit an
+ * atomic instruction without reading side-effectful MMIO twice. */
+mipsnes2_spc700_result mipsnes2_spc700_prepare_step(
+    mipsnes2_spc700 *cpu, uint8_t *maximum_cycles);
+
+/* Executes one instruction but leaves S-SMP timer/DSP time to the caller. */
+mipsnes2_spc700_result mipsnes2_spc700_step_clocked(mipsnes2_spc700 *cpu);
 
 #endif

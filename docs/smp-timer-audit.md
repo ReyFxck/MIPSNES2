@@ -22,7 +22,9 @@ return and clear only stage 3; writes do not affect timer state. As with other
 handled S-SMP MMIO, writes still reach the underlying ARAM byte.
 
 `mipsnes2_smp_memory_advance` is an explicit handoff denominated in S-SMP
-cycles. It does not infer time from the S-CPU, a host clock or an audio device.
+cycles. The integrated machine now calls it through the nominal rational APU
+clock; standalone tests may still advance it directly. Host/audio-device time never
+drives it.
 The implementation computes whole prescaler edges arithmetically and accepts a
 64-bit cycle delta without iterating once per cycle.
 
@@ -44,8 +46,9 @@ results must come from pinned CI and no target runtime was exercised.
 
 ## Deliberate limits
 
-There is no SPC700 interpreter or S-SMP/S-DSP scheduler, so callers must advance
-the timers explicitly. The deterministic reset value and zero phase are not a
+The original audit predates the later SPC700 interpreter and APU clock bridge; see
+the [APU clock/DSP register audit](apu-clock-dsp-register-audit.md). The
+deterministic reset value and zero phase are not a
 claim about analog power-on state or the measured phase relative to S-DSP echo
 writes. `$F0` TEST effects, exact MMIO-cycle placement, target-write races,
 read-clear versus increment races and S-CPU/S-SMP synchronization remain open.

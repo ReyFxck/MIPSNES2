@@ -20,8 +20,20 @@ bool mipsnes2_smp_memory_init(mipsnes2_smp_memory *memory,
     memory->ram = ram;
     memory->ports = ports;
     memory->ipl = ipl;
+    memory->dsp = NULL;
     mipsnes2_smp_timers_init(&memory->timers);
     return mipsnes2_smp_memory_reset(memory);
+}
+
+bool mipsnes2_smp_memory_attach_dsp(mipsnes2_smp_memory *memory,
+                                    mipsnes2_dsp *dsp)
+{
+    if (memory == NULL || !memory->initialized || dsp == NULL ||
+        !dsp->initialized) {
+        return false;
+    }
+    memory->dsp = dsp;
+    return true;
 }
 
 bool mipsnes2_smp_memory_reset(mipsnes2_smp_memory *memory)
@@ -45,6 +57,14 @@ bool mipsnes2_smp_memory_read(mipsnes2_smp_memory *memory,
         return false;
     }
     if (address >= UINT16_C(0x00f0) && address <= UINT16_C(0x00ff)) {
+        if (address == UINT16_C(0x00f2)) {
+            return memory->dsp != NULL &&
+                   mipsnes2_dsp_read_address(memory->dsp, value);
+        }
+        if (address == UINT16_C(0x00f3)) {
+            return memory->dsp != NULL &&
+                   mipsnes2_dsp_read_data(memory->dsp, value);
+        }
         if (address >= UINT16_C(0x00f4) && address <= UINT16_C(0x00f7)) {
             return mipsnes2_apu_io_ports_smp_read(
                 memory->ports, address - UINT16_C(0x00f4), value);
@@ -91,6 +111,16 @@ bool mipsnes2_smp_memory_write(mipsnes2_smp_memory *memory,
                 return false;
             }
             memory->ipl_enabled = (value & UINT8_C(0x80)) != 0U;
+        } else if (address == UINT16_C(0x00f2)) {
+            if (memory->dsp == NULL ||
+                !mipsnes2_dsp_write_address(memory->dsp, value)) {
+                return false;
+            }
+        } else if (address == UINT16_C(0x00f3)) {
+            if (memory->dsp == NULL ||
+                !mipsnes2_dsp_write_data(memory->dsp, value)) {
+                return false;
+            }
         } else if (address >= UINT16_C(0x00f4) &&
                    address <= UINT16_C(0x00f7)) {
             if (!mipsnes2_apu_io_ports_smp_write(

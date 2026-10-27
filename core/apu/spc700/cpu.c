@@ -1059,7 +1059,8 @@ bool mipsnes2_spc700_init(mipsnes2_spc700 *cpu,
     return true;
 }
 
-mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
+static mipsnes2_spc700_result spc700_step_internal(
+    mipsnes2_spc700 *cpu, bool advance_timers)
 {
     mipsnes2_spc700_registers next;
     uint16_t opcode_address;
@@ -1091,9 +1092,14 @@ mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
     }
 
     opcode_address = cpu->registers.pc;
-    if (!mipsnes2_smp_memory_read(cpu->memory, opcode_address, &opcode)) {
+    if (cpu->opcode_prepared &&
+        cpu->prepared_opcode_address == opcode_address) {
+        opcode = cpu->prepared_opcode;
+    } else if (!mipsnes2_smp_memory_read(cpu->memory, opcode_address,
+                                         &opcode)) {
         return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
     }
+    cpu->opcode_prepared = false;
     cpu->last_opcode_address = opcode_address;
     cpu->last_opcode = opcode;
     cpu->has_fetched_opcode = true;
@@ -1466,7 +1472,8 @@ mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
     }
 
 commit_instruction:
-    if (!mipsnes2_smp_memory_advance(cpu->memory, cycles)) {
+    if (advance_timers &&
+        !mipsnes2_smp_memory_advance(cpu->memory, cycles)) {
         return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
     }
 
@@ -1474,4 +1481,53 @@ commit_instruction:
     cpu->wait_state = next_wait_state;
     cpu->instruction_cycles += cycles;
     return MIPSNES2_SPC700_OK;
+}
+
+mipsnes2_spc700_result mipsnes2_spc700_prepare_step(
+    mipsnes2_spc700 *cpu, uint8_t *maximum_cycles)
+{
+    uint8_t opcode;
+
+    if (cpu == NULL || maximum_cycles == NULL) {
+        return MIPSNES2_SPC700_INVALID_ARGUMENT;
+    }
+    if (!cpu->initialized || cpu->memory == NULL ||
+        !cpu->memory->initialized) {
+        return MIPSNES2_SPC700_NOT_READY;
+    }
+    if (cpu->wait_state != MIPSNES2_SPC700_RUNNING) {
+        return MIPSNES2_SPC700_HALTED;
+    }
+    if (cpu->opcode_prepared &&
+        cpu->prepared_opcode_address == cpu->registers.pc) {
+        opcode = cpu->prepared_opcode;
+    } else {
+        cpu->opcode_prepared = false;
+        if (!mipsnes2_smp_memory_read(cpu->memory, cpu->registers.pc,
+                                      &opcode)) {
+            return MIPSNES2_SPC700_MEMORY_UNAVAILABLE;
+        }
+        cpu->prepared_opcode_address = cpu->registers.pc;
+        cpu->prepared_opcode = opcode;
+        cpu->opcode_prepared = true;
+        cpu->last_opcode_address = cpu->registers.pc;
+        cpu->last_opcode = opcode;
+        cpu->has_fetched_opcode = true;
+    }
+    *maximum_cycles = (uint8_t)(opcode_cycles(opcode) +
+        (is_conditional_branch_opcode(opcode) ? 2U : 0U));
+    if (cpu->instruction_cycles > UINT64_MAX - *maximum_cycles) {
+        return MIPSNES2_SPC700_CYCLE_OVERFLOW;
+    }
+    return MIPSNES2_SPC700_OK;
+}
+
+mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu)
+{
+    return spc700_step_internal(cpu, true);
+}
+
+mipsnes2_spc700_result mipsnes2_spc700_step_clocked(mipsnes2_spc700 *cpu)
+{
+    return spc700_step_internal(cpu, false);
 }
