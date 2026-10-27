@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: miami-bakasu-susfs
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -25,8 +29,8 @@ jobs:
       - name: Install build dependencies
         run: |
           set -euxo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          timeout 180 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 update
+          timeout 300 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 install -y --no-install-recommends \
             bc bison flex libssl-dev make git zip unzip cpio rsync \
             python3 python-is-python3 libelf-dev dwarves device-tree-compiler \
             gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu curl xz-utils zstd lz4
