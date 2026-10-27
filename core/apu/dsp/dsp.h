@@ -25,6 +25,7 @@ enum {
     MIPSNES2_DSP_VOICE_REGISTER_GAIN = 0x07,
     MIPSNES2_DSP_VOICE_REGISTER_ENVX = 0x08,
     MIPSNES2_DSP_VOICE_REGISTER_OUTX = 0x09,
+    MIPSNES2_DSP_REGISTER_NON = 0x3d,
     MIPSNES2_DSP_REGISTER_KON = 0x4c,
     MIPSNES2_DSP_REGISTER_KOFF = 0x5c,
     MIPSNES2_DSP_REGISTER_DIR = 0x5d,
@@ -100,6 +101,7 @@ typedef struct {
     uint8_t pending_key_on;
     uint8_t sample_phase;
     uint16_t envelope_counter;
+    uint16_t noise_lfsr;
     uint64_t smp_cycles;
     uint64_t sample_count;
     bool initialized;
@@ -125,6 +127,11 @@ bool mipsnes2_dsp_brr_decode_block(const uint8_t *encoded,
 bool mipsnes2_dsp_voice_interpolation_input(
     const mipsnes2_dsp *dsp, size_t voice_index,
     mipsnes2_dsp_interpolation_input *input);
+
+/* Return the shared signed-15 noise source when NON selects it for this voice.
+ * This is a pre-envelope input, not a mixed or output PCM sample. */
+bool mipsnes2_dsp_voice_noise_input(const mipsnes2_dsp *dsp,
+                                    size_t voice_index, int16_t *sample);
 
 /* Advance the S-DSP's fixed one-sample-per-32-S-SMP-cycle cadence. */
 bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles);

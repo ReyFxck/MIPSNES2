@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 31512)
-Total output lines: 2291
-
 # STATUS — canonical project state
 
 Project foundation plus a 256-opcode 65C816, partial real SNES logical bus, base
@@ -843,6 +840,17 @@ checks and GCC `-fanalyzer` pass locally. Revision `c6465ae` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40529929606).
 No target-runtime or audio-output result is claimed. See the
 [S-DSP envelope audit](docs/sdsp-envelope-audit.md).
+
+The next state-only slice adds the single shared 15-bit noise LFSR with its
+documented `$4000` seed and feedback recurrence. `FLG.NCK` uses all 32 existing
+counter rates and offsets, including rate-zero hold, while `NON` selects the
+signed pre-envelope source per voice. BRR decoding, pitch progression and
+end/loop behavior continue behind that selection. Idle bulk advancement applies
+the linear recurrence logarithmically and is checked against one million scalar
+steps plus irregular chunks. This still produces no sample: source/envelope
+multiplication, volumes and mixing remain absent. A clean host suite, focused
+ASan/UBSan, repository checks and GCC `-fanalyzer` pass locally. See the
+[S-DSP noise audit](docs/sdsp-noise-audit.md).
 
 Next primary block: establish independently sourced Gaussian coefficients and
 signed rounding before connecting interpolation output to the envelope; the
@@ -2079,7 +2087,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] ADSR — 11-bit attack/decay/sustain state and shared rate/offset counter exist; exact microphases and sample multiplication remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct and four timed modes plus release progression exist; exact microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
-- [ ] Noise generator
+- [ ] [IN PROGRESS] Noise generator — shared 15-bit LFSR, all `FLG.NCK` rates and per-voice `NON` input selection exist; exact microphase/output integration remains
 - [ ] Pitch modulation
 - [ ] Voice volumes
 - [ ] Main volumes

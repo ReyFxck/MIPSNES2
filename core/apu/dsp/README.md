@@ -11,13 +11,15 @@ streams BRR in four-sample groups through a physical twelve-sample ring, advance
 an unmodulated 14-bit pitch counter, follows end/loop blocks and exposes the four
 samples plus fractional position needed by the future Gaussian interpolator. An
 11-bit envelope now follows the shared 32-rate counter through ADSR, Direct GAIN,
-the four timed GAIN modes and release, updating `ENVX` deterministically.
+the four timed GAIN modes and release, updating `ENVX` deterministically. The same
+counter clocks a shared 15-bit noise LFSR from `FLG.NCK`; `NON` exposes its
+signed pre-envelope input per voice without stopping BRR transport.
 
 This is not audio synthesis. Gaussian coefficients/output, envelope multiplication,
-noise, pitch modulation, echo/FIR, mixing, PCM samples and platform output remain
-absent.
+pitch modulation, echo/FIR, mixing, PCM samples and platform output remain absent.
 See the [APU clock/DSP register audit](../../../docs/apu-clock-dsp-register-audit.md)
 and [voice/BRR audit](../../../docs/sdsp-voice-brr-foundation-audit.md)
 and [BRR stream/pitch audit](../../../docs/sdsp-brr-stream-pitch-audit.md)
 and [envelope audit](../../../docs/sdsp-envelope-audit.md)
+and [noise audit](../../../docs/sdsp-noise-audit.md)
 and [canonical status](../../../STATUS.md).

@@ -725,5 +725,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   rates and phase offsets. Eleven-bit voice state covers ADSR, Direct GAIN, four
   timed GAIN curves, key-off/reset/end release and `ENVX`; interpolation output,
   envelope multiplication, mixing and PCM remain separate.
+- 2026-10-27: the same counter now clocks a shared 15-bit noise LFSR from
+  `FLG.NCK`; `NON` exposes that signed source per voice while BRR transport keeps
+  running. Logarithmic bulk advancement is equivalent to scalar recurrence;
+  output multiplication, mixing and exact DSP microphases remain separate.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

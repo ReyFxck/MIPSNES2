@@ -9,8 +9,10 @@ cadence, eight voice-control records and a pure BRR block decoder now exist.
 Per-voice BRR traversal decodes four samples at a time into a twelve-sample ring,
 advances the raw 14-bit pitch and exposes a four-point interpolation input. It
 also advances an 11-bit ADSR/GAIN envelope from the shared rate counter and writes
-`ENVX`. It does not yet apply Gaussian coefficients, multiply an interpolated
-sample by the envelope or produce PCM.
+`ENVX`. That counter also clocks a shared 15-bit noise LFSR at `FLG.NCK`; `NON`
+selects its signed pre-envelope input per voice while BRR transport continues. It
+does not yet apply Gaussian coefficients, multiply a source sample by the
+envelope or produce PCM.
 
 ## Design direction
 
@@ -34,7 +36,7 @@ implementation evidence before promotion.
 - [ ] [IN PROGRESS] ADSR — 11-bit attack/decay/sustain state and shared rate/offset counter exist; exact per-voice microphases and sample multiplication remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct, linear/exp decrease, linear/bent increase and release progression exist; exact per-voice microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
-- [ ] Noise generator
+- [ ] [IN PROGRESS] Noise generator — reset seed, 15-bit recurrence, all counter rates and per-voice `NON` inspection exist; exact microphase/output integration remains
 - [ ] Pitch modulation
 - [ ] Voice volumes
 - [ ] Main volumes
@@ -54,6 +56,8 @@ The implemented subset is documented in the
 recorded in the [BRR stream/pitch audit](sdsp-brr-stream-pitch-audit.md).
 ADSR/GAIN progression is recorded in the
 [envelope audit](sdsp-envelope-audit.md).
+Shared noise state and selection are recorded in the
+[noise audit](sdsp-noise-audit.md).
 Register writes currently
 become visible at register or sample-event granularity; exact within-32-cycle-loop
 phases are not modeled. The readable

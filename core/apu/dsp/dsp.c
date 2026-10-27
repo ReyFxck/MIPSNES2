@@ -126,6 +126,92 @@ static bool envelope_counter_event(const mipsnes2_dsp *dsp, uint8_t rate)
             envelope_counter_offsets[rate]) % period == 0U;
 }
 
+static uint64_t counter_event_count(uint16_t counter, uint64_t samples,
+                                    uint8_t rate)
+{
+    uint16_t period = envelope_counter_rates[rate];
+    uint16_t first;
+
+    if (period == 0U || samples == 0U) {
+        return 0U;
+    }
+    first = (uint16_t)(((uint32_t)counter +
+                        envelope_counter_offsets[rate]) % period);
+    if (first == 0U) {
+        first = period;
+    }
+    if (samples < first) {
+        return 0U;
+    }
+    return UINT64_C(1) +
+           (samples - (uint64_t)first) / (uint64_t)period;
+}
+
+static uint16_t step_noise_lfsr(uint16_t value)
+{
+    uint16_t feedback = (uint16_t)(
+        ((value ^ (value >> 1U)) & UINT16_C(1)) << 14U);
+
+    return (uint16_t)((value >> 1U) | feedback);
+}
+
+static uint16_t apply_noise_transform(const uint16_t transform[15],
+                                      uint16_t value)
+{
+    uint16_t result = 0U;
+    unsigned int bit;
+
+    for (bit = 0U; bit < 15U; ++bit) {
+        if ((value & (uint16_t)(UINT16_C(1) << bit)) != 0U) {
+            result ^= transform[bit];
+        }
+    }
+    return result;
+}
+
+static void advance_noise_lfsr(mipsnes2_dsp *dsp, uint64_t events)
+{
+    uint16_t transform[15];
+    uint16_t squared[15];
+    uint16_t value = dsp->noise_lfsr;
+    unsigned int bit;
+
+    if (events <= UINT64_C(64)) {
+        while (events != 0U) {
+            value = step_noise_lfsr(value);
+            --events;
+        }
+        dsp->noise_lfsr = value;
+        return;
+    }
+    for (bit = 0U; bit < 15U; ++bit) {
+        transform[bit] = step_noise_lfsr(
+            (uint16_t)(UINT16_C(1) << bit));
+    }
+    while (events != 0U) {
+        if ((events & UINT64_C(1)) != 0U) {
+            value = apply_noise_transform(transform, value);
+        }
+        for (bit = 0U; bit < 15U; ++bit) {
+            squared[bit] = apply_noise_transform(
+                transform, transform[bit]);
+        }
+        (void)memcpy(transform, squared, sizeof(transform));
+        events >>= 1U;
+    }
+    dsp->noise_lfsr = value;
+}
+
+static void advance_global_state(mipsnes2_dsp *dsp, uint64_t samples)
+{
+    uint8_t rate = dsp->internal_flags & UINT8_C(0x1f);
+    uint64_t noise_events = counter_event_count(
+        dsp->envelope_counter, samples, rate);
+
+    advance_envelope_counter(dsp, samples);
+    advance_noise_lfsr(dsp, noise_events);
+}
+
 static uint16_t clamp_envelope(int32_t value)
 {
     if (value < 0) {
@@ -383,7 +469,7 @@ static void service_sample_event(mipsnes2_dsp *dsp)
     unsigned int index;
     bool poll_keys = (dsp->sample_count & UINT64_C(1)) == 0U;
 
-    advance_envelope_counter(dsp, 1U);
+    advance_global_state(dsp, 1U);
     for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
         mipsnes2_dsp_voice *voice = &dsp->voices[index];
         bool update_envelope = false;
@@ -463,6 +549,7 @@ void mipsnes2_dsp_init(mipsnes2_dsp *dsp)
          * readable register shadow, whose electrical reset value is not
          * claimed by this foundation. */
         dsp->internal_flags = UINT8_C(0xe0);
+        dsp->noise_lfsr = UINT16_C(0x4000);
         for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
             dsp->voices[index].envelope_state =
                 MIPSNES2_DSP_ENVELOPE_RELEASE;
@@ -598,6 +685,24 @@ bool mipsnes2_dsp_voice_interpolation_input(
     return true;
 }
 
+bool mipsnes2_dsp_voice_noise_input(const mipsnes2_dsp *dsp,
+                                    size_t voice_index, int16_t *sample)
+{
+    uint16_t value;
+
+    if (dsp == NULL || !dsp->initialized ||
+        voice_index >= MIPSNES2_DSP_VOICE_COUNT || sample == NULL ||
+        (dsp->registers[MIPSNES2_DSP_REGISTER_NON] &
+         (uint8_t)(UINT8_C(1) << voice_index)) == 0U) {
+        return false;
+    }
+    value = dsp->noise_lfsr;
+    *sample = (int16_t)((value & UINT16_C(0x4000)) != 0U
+                            ? (int32_t)value - INT32_C(0x8000)
+                            : (int32_t)value);
+    return true;
+}
+
 bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles)
 {
     uint64_t samples;
@@ -623,7 +728,7 @@ bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles)
         ++dsp->sample_count;
         --samples;
     }
-    advance_envelope_counter(dsp, samples);
+    advance_global_state(dsp, samples);
     dsp->sample_count += samples;
     return true;
 }

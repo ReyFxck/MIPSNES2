@@ -260,7 +260,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] ADSR — 11-bit attack/decay/sustain state and shared rate/offset counter exist; exact microphases and sample multiplication remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct and four timed modes plus release progression exist; exact microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
-- [ ] Noise generator
+- [ ] [IN PROGRESS] Noise generator — shared 15-bit LFSR, all `FLG.NCK` rates and per-voice `NON` selection exist; exact microphase/output integration remains
 - [ ] Pitch modulation
 - [ ] Voice volumes
 - [ ] Main volumes
