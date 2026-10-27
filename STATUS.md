@@ -787,8 +787,12 @@ SLEEP, timer/DSP cadence and a synthetic IPL program writing the DSP through mac
 resume. See the [APU clock/DSP register audit](docs/apu-clock-dsp-register-audit.md).
 Voice state, BRR, envelopes, mixing, echo/FIR, PCM output, exact DSP polling,
 cross-clock races and physical oscillator drift remain unimplemented. Local clean
-tests, sanitizers, repository checks and static analysis pass; cross-build CI is
-pending publication. No target-runtime or audio-output result is claimed.
+tests, sanitizers, repository checks and static analysis pass. Revision
+`1bec5ce` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40440467920),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40440468813) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40440468028).
+No target-runtime or audio-output result is claimed.
 
 Next primary block: implement independently verified S-DSP voice/key-on state and
 the first BRR/sample pipeline slice. Refining
