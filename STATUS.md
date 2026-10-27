@@ -804,7 +804,12 @@ cover directory lookup, key overwrite/poll/reset behavior, chunk equivalence and
 decoder edge arithmetic. See the
 [S-DSP voice/BRR audit](docs/sdsp-voice-brr-foundation-audit.md). This is not PCM:
 voice BRR streaming, pitch, interpolation, envelopes, mixing, echo and device
-output remain unimplemented.
+output remain unimplemented. Revision `883700f` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40523847314),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40523847307) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40523847306).
+Local host tests, focused ASan/UBSan, repository checks and GCC `-fanalyzer` also
+pass; no target-runtime or audio-output result is claimed.
 
 Next primary block: connect per-voice BRR stream/ring state, pitch progression and
 the interpolation input path. Refining
