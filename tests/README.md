@@ -26,10 +26,14 @@ key polling/source-directory state and exact standalone BRR shift/filter/clamp
 vectors. It also checks three-group key-on preload, twelve-sample ring rotation,
 14-bit pitch/fraction progression, end/loop traversal, live loop-directory refresh,
 release/reset decode continuation, ARAM address wrap and one-shot/chunked stream
-equivalence. `test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
+equivalence. Envelope fixtures cover the global rate/offset phase, five-event
+key-on hold, fast ADSR attack, decay/sustain transitions, Direct GAIN, all four
+timed GAIN curves, saturating release, reset zeroing and `ENVX` updates.
+`test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
 chunked equivalence, atomic SPC700 admission and credit, timer coordination,
 SLEEP continuation and overflow handling. The four-point API is only the input to
-future Gaussian interpolation; these events are not PCM output.
+future Gaussian interpolation, and envelope values are not yet multiplied into
+samples; these events are not PCM output.
 
 `test-spc700-alu` verifies the exact 100-opcode OR/AND/EOR/CMP/ADC/SBC,
 ASL/ROL/LSR/ROR and byte INC/DEC block across every documented addressing form.

@@ -4,6 +4,25 @@
 #include <limits.h>
 #include <string.h>
 
+enum {
+    DSP_ENVELOPE_COUNTER_PERIOD = 0x7800,
+    DSP_ENVELOPE_MAX = 0x07ff
+};
+
+static const uint16_t envelope_counter_rates[32] = {
+    0U, 2048U, 1536U, 1280U, 1024U, 768U, 640U, 512U,
+    384U, 320U, 256U, 192U, 160U, 128U, 96U, 80U,
+    64U, 48U, 40U, 32U, 24U, 20U, 16U, 12U,
+    10U, 8U, 6U, 5U, 4U, 3U, 2U, 1U
+};
+
+static const uint16_t envelope_counter_offsets[32] = {
+    0U, 0U, 1040U, 536U, 0U, 1040U, 536U, 0U,
+    1040U, 536U, 0U, 1040U, 536U, 0U, 1040U, 536U,
+    0U, 1040U, 536U, 0U, 1040U, 536U, 0U, 1040U,
+    536U, 0U, 1040U, 536U, 0U, 1040U, 0U, 0U
+};
+
 static int32_t arithmetic_shift_right(int32_t value, unsigned int amount)
 {
     uint32_t magnitude;
@@ -88,6 +107,128 @@ static uint16_t voice_pitch(const mipsnes2_dsp *dsp, unsigned int index)
            UINT16_C(0x3fff);
 }
 
+static void advance_envelope_counter(mipsnes2_dsp *dsp, uint64_t samples)
+{
+    uint16_t delta = (uint16_t)(
+        samples % (uint64_t)DSP_ENVELOPE_COUNTER_PERIOD);
+
+    dsp->envelope_counter = (uint16_t)(
+        (dsp->envelope_counter + DSP_ENVELOPE_COUNTER_PERIOD - delta) %
+        DSP_ENVELOPE_COUNTER_PERIOD);
+}
+
+static bool envelope_counter_event(const mipsnes2_dsp *dsp, uint8_t rate)
+{
+    uint16_t period = envelope_counter_rates[rate];
+
+    return period != 0U &&
+           ((uint32_t)dsp->envelope_counter +
+            envelope_counter_offsets[rate]) % period == 0U;
+}
+
+static uint16_t clamp_envelope(int32_t value)
+{
+    if (value < 0) {
+        return 0U;
+    }
+    if (value > DSP_ENVELOPE_MAX) {
+        return DSP_ENVELOPE_MAX;
+    }
+    return (uint16_t)value;
+}
+
+static void update_envelope_register(mipsnes2_dsp *dsp,
+                                     unsigned int index)
+{
+    mipsnes2_dsp_voice *voice = &dsp->voices[index];
+    uint8_t base = (uint8_t)(index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE);
+
+    dsp->registers[base + MIPSNES2_DSP_VOICE_REGISTER_ENVX] =
+        (uint8_t)(voice->envelope >> 4U);
+}
+
+static void release_envelope(mipsnes2_dsp *dsp, unsigned int index,
+                             bool clear)
+{
+    mipsnes2_dsp_voice *voice = &dsp->voices[index];
+
+    voice->envelope_state = MIPSNES2_DSP_ENVELOPE_RELEASE;
+    if (clear) {
+        voice->envelope = 0U;
+        voice->envelope_calculation = 0;
+        update_envelope_register(dsp, index);
+    }
+}
+
+static void update_voice_envelope(mipsnes2_dsp *dsp, unsigned int index)
+{
+    mipsnes2_dsp_voice *voice = &dsp->voices[index];
+    uint8_t base = (uint8_t)(index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE);
+    uint8_t adsr1 = dsp->registers[
+        base + MIPSNES2_DSP_VOICE_REGISTER_ADSR1];
+    uint8_t adsr2 = dsp->registers[
+        base + MIPSNES2_DSP_VOICE_REGISTER_ADSR2];
+    uint8_t gain = dsp->registers[
+        base + MIPSNES2_DSP_VOICE_REGISTER_GAIN];
+    int32_t next = voice->envelope;
+    uint8_t rate = 31U;
+    bool direct = false;
+
+    if (voice->envelope_state == MIPSNES2_DSP_ENVELOPE_RELEASE) {
+        next -= INT32_C(8);
+    } else if ((adsr1 & UINT8_C(0x80)) == 0U) {
+        if ((gain & UINT8_C(0x80)) == 0U) {
+            next = (int32_t)(gain & UINT8_C(0x7f)) << 4U;
+            direct = true;
+        } else {
+            uint8_t mode = (gain >> 5U) & UINT8_C(3);
+
+            rate = gain & UINT8_C(0x1f);
+            if (mode == 0U) {
+                next -= INT32_C(32);
+            } else if (mode == 1U) {
+                next -= arithmetic_shift_right(next - INT32_C(1), 8U) +
+                        INT32_C(1);
+            } else if (mode == 2U) {
+                next += INT32_C(32);
+            } else {
+                next += voice->envelope_calculation < INT32_C(0x600)
+                            ? INT32_C(32) : INT32_C(8);
+            }
+        }
+    } else if (voice->envelope_state == MIPSNES2_DSP_ENVELOPE_ATTACK) {
+        uint8_t attack = adsr1 & UINT8_C(0x0f);
+
+        rate = (uint8_t)((attack << 1U) | UINT8_C(1));
+        next += attack == UINT8_C(0x0f) ? INT32_C(1024)
+                                                : INT32_C(32);
+    } else {
+        if (voice->envelope_state == MIPSNES2_DSP_ENVELOPE_DECAY) {
+            rate = (uint8_t)(UINT8_C(16) +
+                             (((adsr1 >> 4U) & UINT8_C(7)) << 1U));
+        } else {
+            rate = adsr2 & UINT8_C(0x1f);
+        }
+        next -= arithmetic_shift_right(next - INT32_C(1), 8U) +
+                INT32_C(1);
+    }
+
+    if (direct ||
+        voice->envelope_state == MIPSNES2_DSP_ENVELOPE_RELEASE ||
+        envelope_counter_event(dsp, rate)) {
+        voice->envelope = clamp_envelope(next);
+    }
+    if (voice->envelope_state == MIPSNES2_DSP_ENVELOPE_DECAY &&
+        ((uint32_t)next >> 8U) == (uint32_t)(adsr2 >> 5U)) {
+        voice->envelope_state = MIPSNES2_DSP_ENVELOPE_SUSTAIN;
+    } else if (voice->envelope_state == MIPSNES2_DSP_ENVELOPE_ATTACK &&
+               (next < 0 || next > DSP_ENVELOPE_MAX)) {
+        voice->envelope_state = MIPSNES2_DSP_ENVELOPE_DECAY;
+    }
+    voice->envelope_calculation = next;
+    update_envelope_register(dsp, index);
+}
+
 static void refresh_loop_address(mipsnes2_dsp *dsp, unsigned int index)
 {
     mipsnes2_dsp_voice *voice = &dsp->voices[index];
@@ -118,6 +259,7 @@ static void decode_voice_brr_group(mipsnes2_dsp *dsp, unsigned int index)
         voice->brr_header = dsp->ram[voice->brr_address];
         if ((voice->brr_header & UINT8_C(3)) == UINT8_C(1)) {
             voice->state = MIPSNES2_DSP_VOICE_RELEASE;
+            release_envelope(dsp, index, true);
         }
     }
     shift = voice->brr_header >> 4U;
@@ -187,6 +329,9 @@ static void begin_key_on(mipsnes2_dsp *dsp, unsigned int index)
     voice->interpolation_index = 0U;
     voice->pitch = voice_pitch(dsp, index);
     voice->decoded_groups = 0U;
+    voice->envelope = 0U;
+    voice->envelope_calculation = 0;
+    voice->envelope_state = MIPSNES2_DSP_ENVELOPE_ATTACK;
     voice->brr_group_index = 0U;
     voice->brr_header = 0U;
     voice->ring_offset = 0U;
@@ -216,6 +361,9 @@ static bool event_work_pending(const mipsnes2_dsp *dsp)
         uint8_t bit = (uint8_t)(UINT8_C(1) << index);
 
         if (voice->key_on_delay != 0U ||
+            voice->state == MIPSNES2_DSP_VOICE_ACTIVE ||
+            (voice->envelope_state == MIPSNES2_DSP_ENVELOPE_RELEASE &&
+             voice->envelope != 0U) ||
             (voice->brr_stream_active &&
              (voice->interpolation_index >= UINT16_C(0x4000) ||
               voice_pitch(dsp, index) != 0U)) ||
@@ -235,8 +383,10 @@ static void service_sample_event(mipsnes2_dsp *dsp)
     unsigned int index;
     bool poll_keys = (dsp->sample_count & UINT64_C(1)) == 0U;
 
+    advance_envelope_counter(dsp, 1U);
     for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
         mipsnes2_dsp_voice *voice = &dsp->voices[index];
+        bool update_envelope = false;
 
         if (voice->key_on_delay != 0U) {
             if (voice->brr_stream_active && voice->key_on_delay <= 4U &&
@@ -244,6 +394,7 @@ static void service_sample_event(mipsnes2_dsp *dsp)
                 decode_voice_brr_group(dsp, index);
             }
             --voice->key_on_delay;
+            update_envelope = voice->key_on_delay == 0U;
             if (voice->key_on_delay == 0U &&
                 voice->state == MIPSNES2_DSP_VOICE_KEY_ON_DELAY) {
                 voice->state = MIPSNES2_DSP_VOICE_ACTIVE;
@@ -265,10 +416,21 @@ static void service_sample_event(mipsnes2_dsp *dsp)
                 position = UINT16_C(0x7fff);
             }
             voice->interpolation_index = (uint16_t)position;
+            update_envelope = voice->state == MIPSNES2_DSP_VOICE_ACTIVE ||
+                              voice->state == MIPSNES2_DSP_VOICE_RELEASE;
+        } else {
+            update_envelope = voice->state == MIPSNES2_DSP_VOICE_ACTIVE ||
+                              voice->state == MIPSNES2_DSP_VOICE_RELEASE;
         }
         if ((dsp->internal_flags & UINT8_C(0x80)) != 0U &&
             voice->state != MIPSNES2_DSP_VOICE_WAITING) {
             voice->state = MIPSNES2_DSP_VOICE_WAITING;
+            release_envelope(dsp, index, true);
+            dsp->registers[
+                (index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE) +
+                MIPSNES2_DSP_VOICE_REGISTER_OUTX] = 0U;
+        } else if (update_envelope) {
+            update_voice_envelope(dsp, index);
         }
     }
     if (!poll_keys) {
@@ -280,6 +442,7 @@ static void service_sample_event(mipsnes2_dsp *dsp)
         if ((dsp->registers[MIPSNES2_DSP_REGISTER_KOFF] & bit) != 0U &&
             dsp->voices[index].state != MIPSNES2_DSP_VOICE_WAITING) {
             dsp->voices[index].state = MIPSNES2_DSP_VOICE_RELEASE;
+            release_envelope(dsp, index, false);
         }
     }
     for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
@@ -293,11 +456,17 @@ static void service_sample_event(mipsnes2_dsp *dsp)
 void mipsnes2_dsp_init(mipsnes2_dsp *dsp)
 {
     if (dsp != NULL) {
+        unsigned int index;
+
         (void)memset(dsp, 0, sizeof(*dsp));
         /* The internal reset/mute/echo-disable state is distinct from the
          * readable register shadow, whose electrical reset value is not
          * claimed by this foundation. */
         dsp->internal_flags = UINT8_C(0xe0);
+        for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
+            dsp->voices[index].envelope_state =
+                MIPSNES2_DSP_ENVELOPE_RELEASE;
+        }
         dsp->initialized = true;
     }
 }
@@ -454,6 +623,7 @@ bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles)
         ++dsp->sample_count;
         --samples;
     }
+    advance_envelope_counter(dsp, samples);
     dsp->sample_count += samples;
     return true;
 }

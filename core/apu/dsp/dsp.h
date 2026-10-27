@@ -20,6 +20,9 @@ enum {
     MIPSNES2_DSP_VOICE_REGISTER_PITCH_LOW = 0x02,
     MIPSNES2_DSP_VOICE_REGISTER_PITCH_HIGH = 0x03,
     MIPSNES2_DSP_VOICE_REGISTER_SRCN = 0x04,
+    MIPSNES2_DSP_VOICE_REGISTER_ADSR1 = 0x05,
+    MIPSNES2_DSP_VOICE_REGISTER_ADSR2 = 0x06,
+    MIPSNES2_DSP_VOICE_REGISTER_GAIN = 0x07,
     MIPSNES2_DSP_VOICE_REGISTER_ENVX = 0x08,
     MIPSNES2_DSP_VOICE_REGISTER_OUTX = 0x09,
     MIPSNES2_DSP_REGISTER_KON = 0x4c,
@@ -36,6 +39,13 @@ typedef enum {
     MIPSNES2_DSP_VOICE_RELEASE
 } mipsnes2_dsp_voice_state;
 
+typedef enum {
+    MIPSNES2_DSP_ENVELOPE_ATTACK = 0,
+    MIPSNES2_DSP_ENVELOPE_DECAY,
+    MIPSNES2_DSP_ENVELOPE_SUSTAIN,
+    MIPSNES2_DSP_ENVELOPE_RELEASE
+} mipsnes2_dsp_envelope_state;
+
 typedef struct {
     int16_t brr_ring[MIPSNES2_DSP_BRR_RING_SAMPLE_COUNT];
     int16_t brr_previous1;
@@ -46,7 +56,9 @@ typedef struct {
     uint16_t brr_address;
     uint16_t interpolation_index;
     uint16_t pitch;
+    uint16_t envelope;
     uint64_t decoded_groups;
+    int32_t envelope_calculation;
     uint8_t source_number;
     uint8_t key_on_delay;
     uint8_t brr_group_index;
@@ -54,6 +66,7 @@ typedef struct {
     uint8_t ring_offset;
     uint8_t ring_write_offset;
     mipsnes2_dsp_voice_state state;
+    mipsnes2_dsp_envelope_state envelope_state;
     bool directory_loaded;
     bool brr_stream_active;
 } mipsnes2_dsp_voice;
@@ -76,7 +89,7 @@ typedef struct {
 } mipsnes2_dsp_interpolation_input;
 
 /* State is intentionally public for deterministic inspection. Gaussian output,
- * envelopes, mixing, echo and PCM generation are not yet implemented. */
+ * envelope multiplication, mixing, echo and PCM are not yet implemented. */
 typedef struct {
     uint8_t registers[MIPSNES2_DSP_REGISTER_COUNT];
     mipsnes2_dsp_voice voices[MIPSNES2_DSP_VOICE_COUNT];
@@ -86,6 +99,7 @@ typedef struct {
     uint8_t internal_flags;
     uint8_t pending_key_on;
     uint8_t sample_phase;
+    uint16_t envelope_counter;
     uint64_t smp_cycles;
     uint64_t sample_count;
     bool initialized;

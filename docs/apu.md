@@ -10,8 +10,9 @@ clock. The same clock advances the timers and a first S-DSP register/sample-even
 foundation. Eight voice-control records, sample-granularity key polling, source
 directory latching and a pure BRR block decoder now exist. Per-voice BRR
 group streaming, a twelve-sample ring, unmodulated pitch progression and the
-four-point interpolation input are connected. There is still no Gaussian output,
-envelope, mixer, PCM buffer or audio output.
+four-point interpolation input are connected. The shared rate counter now drives
+11-bit ADSR, all GAIN modes and release. There is still no Gaussian output,
+envelope multiplication, mixer, PCM buffer or audio output.
 
 ## Design direction
 
@@ -56,6 +57,8 @@ The first voice-control and decoder slice is recorded in the
 [S-DSP voice/BRR audit](sdsp-voice-brr-foundation-audit.md).
 The connected source traversal and pitch input are recorded in the
 [S-DSP BRR stream/pitch audit](sdsp-brr-stream-pitch-audit.md).
+The next state-only audio layer is recorded in the
+[S-DSP envelope audit](sdsp-envelope-audit.md).
 RFAuds2 is transport infrastructure only
 and must never become a core dependency or SNES timing source. The inspected candidate
 was RFAuds2 `0.1.0-alpha.1` at revision

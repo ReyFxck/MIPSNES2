@@ -8,7 +8,9 @@ replacements for DSP semantics. A register/address layer, 32-S-SMP-cycle event
 cadence, eight voice-control records and a pure BRR block decoder now exist.
 Per-voice BRR traversal decodes four samples at a time into a twelve-sample ring,
 advances the raw 14-bit pitch and exposes a four-point interpolation input. It
-does not yet apply Gaussian coefficients or produce PCM.
+also advances an 11-bit ADSR/GAIN envelope from the shared rate counter and writes
+`ENVX`. It does not yet apply Gaussian coefficients, multiply an interpolated
+sample by the envelope or produce PCM.
 
 ## Design direction
 
@@ -24,14 +26,14 @@ Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Document
 implementation evidence before promotion.
 
 - [ ] [IN PROGRESS] Register state — 128 bytes, address latch and `$F2/$F3` access exist; most side effects/polling remain
-- [ ] [IN PROGRESS] Eight voice state — key control, source latches, BRR ring/traversal and raw pitch state exist; envelopes and output remain
+- [ ] [IN PROGRESS] Eight voice state — key/source, BRR ring/traversal, raw pitch and envelope state exist; Gaussian/sample output remains
 - [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact 32-step phase placement remains
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact microsteps/envelope zero remain
 - [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 stepping and documented cap exist; PMON/noise phase behavior remains
 - [ ] [IN PROGRESS] Interpolation — four ring samples and the eight-bit fractional input are exposed; Gaussian table/math/output remain
-- [ ] ADSR
-- [ ] GAIN envelopes
-- [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation, release marker and soft reset exist; exact microsteps and release envelope remain
+- [ ] [IN PROGRESS] ADSR — 11-bit attack/decay/sustain state and shared rate/offset counter exist; exact per-voice microphases and sample multiplication remain
+- [ ] [IN PROGRESS] GAIN envelopes — Direct, linear/exp decrease, linear/bent increase and release progression exist; exact per-voice microphases remain
+- [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
 - [ ] Noise generator
 - [ ] Pitch modulation
 - [ ] Voice volumes
@@ -50,6 +52,8 @@ The implemented subset is documented in the
 [APU clock/DSP register audit](apu-clock-dsp-register-audit.md) and
 [voice/BRR audit](sdsp-voice-brr-foundation-audit.md). The connected traversal is
 recorded in the [BRR stream/pitch audit](sdsp-brr-stream-pitch-audit.md).
+ADSR/GAIN progression is recorded in the
+[envelope audit](sdsp-envelope-audit.md).
 Register writes currently
 become visible at register or sample-event granularity; exact within-32-cycle-loop
 phases are not modeled. The readable

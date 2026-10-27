@@ -22,7 +22,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP communication and timing | Directional ports plus nominal rational master-to-S-SMP clock bridge; electrical race order and oscillator drift pending |
 | core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | All 256 opcodes, ARAM/IPL, ports, `$F2/$F3` DSP route and three-stage timers under the APU clock; exact bus phases and interrupt/reset entry pending |
-| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight voice records, ARAM BRR group streams, twelve-sample rings and raw pitch/interpolation inputs; Gaussian output, envelopes, mixer and PCM absent |
+| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight voice records, ARAM BRR group streams, twelve-sample rings, raw pitch/interpolation inputs and ADSR/GAIN progression; Gaussian output, envelope multiplication, mixer and PCM absent |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
@@ -62,7 +62,9 @@ filter/clamp/wrap arithmetic. Attached voices preload three four-sample groups,
 rotate a physical twelve-sample ring as the 14-bit 2.12 pitch position crosses
 four samples, traverse end/loop blocks and expose the four-point/eight-bit input
 surface for later Gaussian interpolation. It has no Gaussian calculation,
-envelope, echo, mixer or PCM semantics. Exact
+envelope/sample multiplication, echo, mixer or PCM semantics. A shared 15-bit
+countdown phase drives the documented 32 envelope rates/offsets; each voice has
+an 11-bit ADSR/GAIN/release value and an `ENVX` shadow. Exact
 instruction bus phases, within-DSP-loop register visibility, mailbox races and
 physical oscillator drift remain open.
 `resume` advances one
@@ -719,5 +721,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   traversal with `ENDX`, advances unmodulated 14-bit pitch and exposes the future
   Gaussian interpolator's four samples/fraction. Gaussian output, envelopes,
   mixing, echo and PCM remain.
+- 2026-10-27: the S-DSP global envelope counter now supplies all 32 documented
+  rates and phase offsets. Eleven-bit voice state covers ADSR, Direct GAIN, four
+  timed GAIN curves, key-off/reset/end release and `ENVX`; interpolation output,
+  envelope multiplication, mixing and PCM remain separate.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
