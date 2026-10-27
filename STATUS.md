@@ -821,7 +821,11 @@ do not incorrectly stop source decoding. Deterministic host vectors cover
 one-shot/chunked equivalence and all listed boundaries. This is still not PCM:
 Gaussian coefficients/output, envelopes, mixing, echo and platform delivery are
 absent. A clean host suite, focused ASan/UBSan, repository checks and GCC
-`-fanalyzer` pass locally. See the
+`-fanalyzer` pass locally. Revision `63871ad` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40527825775),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40527825843) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40527825732).
+No target-runtime or audio-output result is claimed. See the
 [S-DSP BRR stream/pitch audit](docs/sdsp-brr-stream-pitch-audit.md).
 
 Next primary block: implement Gaussian interpolation output and the first
