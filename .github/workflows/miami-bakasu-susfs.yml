@@ -93,10 +93,9 @@ jobs:
 
       - name: Configure kernel and preserve Infinity X module ABI name
         working-directory: kernel
-        env:
-          PATH: ${{ env.HOME }}/clang/bin:${{ env.PATH }}
         run: |
           set -euxo pipefail
+          export PATH="$HOME/clang/bin:$PATH"
           make O="$OUT" ARCH=arm64 vendor/holi-qgki_defconfig
           scripts/config --file "$OUT/.config" --set-str LOCALVERSION "-ZenX-g5bad3b0962dc"
           scripts/config --file "$OUT/.config" -d LOCALVERSION_AUTO
@@ -122,11 +121,11 @@ jobs:
       - name: Build Image
         working-directory: kernel
         env:
-          PATH: ${{ env.HOME }}/clang/bin:${{ env.PATH }}
           KBUILD_BUILD_USER: build-user
           KBUILD_BUILD_HOST: build-host
         run: |
-          set -o pipefail
+          set -euxo pipefail
+          export PATH="$HOME/clang/bin:$PATH"
           make O="$OUT" ARCH=arm64 LLVM=1 LLVM_IAS=1 -j"$(nproc)" Image 2>&1 | tee ../kernel-build.log
           test -s "$OUT/arch/arm64/boot/Image"
 
