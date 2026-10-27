@@ -304,6 +304,18 @@ static int test_voice_stream(void)
           chunked.voices[0].decoded_groups);
     CHECK(dsp.envelope_counter == chunked.envelope_counter);
     CHECK(dsp.noise_lfsr == chunked.noise_lfsr);
+    CHECK(dsp.voices[0].source_sample ==
+          chunked.voices[0].source_sample);
+    CHECK(dsp.voices[0].output_sample ==
+          chunked.voices[0].output_sample);
+    CHECK(dsp.voices[0].left_sample ==
+          chunked.voices[0].left_sample);
+    CHECK(dsp.voices[0].right_sample ==
+          chunked.voices[0].right_sample);
+    CHECK(dsp.voices[0].output_sample_valid ==
+          chunked.voices[0].output_sample_valid);
+    CHECK(dsp.registers[MIPSNES2_DSP_VOICE_REGISTER_OUTX] ==
+          chunked.registers[MIPSNES2_DSP_VOICE_REGISTER_OUTX]);
     CHECK(dsp.voices[0].envelope == chunked.voices[0].envelope);
     CHECK(dsp.voices[0].envelope_calculation ==
           chunked.voices[0].envelope_calculation);
@@ -444,6 +456,8 @@ static int test_noise(void)
     }
     CHECK(mipsnes2_dsp_voice_noise_input(&dsp, 0U, &sample));
     CHECK(sample == INT16_C(-8192));
+    CHECK(dsp.voices[0].source_sample == INT16_C(-8192));
+    CHECK(dsp.voices[0].output_sample == 0);
 
     mipsnes2_dsp_init(&dsp);
     CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_FLG,
@@ -489,6 +503,161 @@ static int test_noise(void)
     CHECK(direct.envelope_counter == chunked.envelope_counter);
     CHECK(direct.noise_lfsr == chunked.noise_lfsr);
     CHECK(direct.noise_lfsr == expected);
+    return 0;
+}
+
+static int test_noise_output(void)
+{
+    mipsnes2_dsp dsp;
+    mipsnes2_dsp_stereo_sample stereo;
+    int16_t sample = INT16_C(1234);
+
+    mipsnes2_dsp_init(&dsp);
+    CHECK(!mipsnes2_dsp_voice_output_sample(NULL, 0U, &sample));
+    CHECK(!mipsnes2_dsp_voice_output_sample(
+        &dsp, MIPSNES2_DSP_VOICE_COUNT, &sample));
+    CHECK(!mipsnes2_dsp_voice_output_sample(&dsp, 0U, NULL));
+    CHECK(!mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == INT16_C(1234));
+    CHECK(!mipsnes2_dsp_voice_stereo_sample(NULL, 0U, &stereo));
+    CHECK(!mipsnes2_dsp_voice_stereo_sample(
+        &dsp, MIPSNES2_DSP_VOICE_COUNT, &stereo));
+    CHECK(!mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, NULL));
+    CHECK(!mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, &stereo));
+
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_FLG, 0U));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_NON, UINT8_C(1)));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_VOICE_REGISTER_ADSR1, 0U));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_VOICE_REGISTER_GAIN,
+                         UINT8_C(0x40)));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_KON, UINT8_C(1)));
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == 0);
+    CHECK(mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, &stereo));
+    CHECK(stereo.left == 0 && stereo.right == 0);
+    CHECK(mipsnes2_dsp_advance(
+        &dsp, UINT64_C(5) * MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(dsp.voices[0].envelope == UINT16_C(0x400));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == 0);
+    CHECK(dsp.registers[MIPSNES2_DSP_VOICE_REGISTER_OUTX] == 0U);
+
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(dsp.voices[0].source_sample == INT16_C(-16384));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == INT16_C(-8192));
+    CHECK(dsp.registers[MIPSNES2_DSP_VOICE_REGISTER_OUTX] ==
+          UINT8_C(0xe0));
+    CHECK(mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, &stereo));
+    CHECK(stereo.left == 0 && stereo.right == 0);
+
+    CHECK(write_register(
+        &dsp, MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT,
+        UINT8_C(0x40)));
+    CHECK(write_register(
+        &dsp, MIPSNES2_DSP_VOICE_REGISTER_VOLUME_RIGHT,
+        UINT8_C(0xc0)));
+    dsp.noise_lfsr = UINT16_C(0x2000);
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == INT16_C(4096));
+    CHECK(dsp.registers[MIPSNES2_DSP_VOICE_REGISTER_OUTX] ==
+          UINT8_C(0x10));
+    CHECK(mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, &stereo));
+    CHECK(stereo.left == INT16_C(2048));
+    CHECK(stereo.right == INT16_C(-2048));
+
+    dsp.noise_lfsr = UINT16_C(0x7ffd);
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == INT16_C(-2));
+    CHECK(dsp.registers[MIPSNES2_DSP_VOICE_REGISTER_OUTX] ==
+          UINT8_C(0xff));
+    CHECK(mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, &stereo));
+    CHECK(stereo.left == INT16_C(-1));
+    CHECK(stereo.right == INT16_C(1));
+    dsp.noise_lfsr = UINT16_C(3);
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == INT16_C(1));
+    CHECK(mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, &stereo));
+    CHECK(stereo.left == 0 && stereo.right == INT16_C(-1));
+
+    dsp.noise_lfsr = UINT16_C(0x2000);
+    dsp.voices[0].state = MIPSNES2_DSP_VOICE_RELEASE;
+    dsp.voices[0].envelope_state = MIPSNES2_DSP_ENVELOPE_RELEASE;
+    dsp.voices[0].envelope = UINT16_C(16);
+    dsp.voices[0].envelope_calculation = INT32_C(16);
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == INT16_C(64));
+    CHECK(dsp.voices[0].envelope == UINT16_C(8));
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == INT16_C(32));
+    CHECK(dsp.voices[0].envelope == 0U);
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == 0);
+
+    dsp.voices[0].state = MIPSNES2_DSP_VOICE_ACTIVE;
+    dsp.voices[0].envelope_state = MIPSNES2_DSP_ENVELOPE_SUSTAIN;
+    dsp.voices[0].envelope = UINT16_C(0x400);
+    dsp.voices[0].envelope_calculation = INT32_C(0x400);
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_FLG,
+                         UINT8_C(0x80)));
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == 0);
+    CHECK(dsp.registers[MIPSNES2_DSP_VOICE_REGISTER_OUTX] == 0U);
+    CHECK(mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, &stereo));
+    CHECK(stereo.left == 0 && stereo.right == 0);
+
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_FLG, 0U));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_NON, 0U));
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(!mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(!mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, &stereo));
+
+    mipsnes2_dsp_init(&dsp);
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_FLG, 0U));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_NON, UINT8_C(3)));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_VOICE_REGISTER_ADSR1, 0U));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_VOICE_REGISTER_GAIN,
+                         UINT8_C(0x40)));
+    CHECK(write_register(
+        &dsp, MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT, UINT8_C(0x20)));
+    CHECK(write_register(
+        &dsp, MIPSNES2_DSP_VOICE_REGISTER_STRIDE +
+              MIPSNES2_DSP_VOICE_REGISTER_ADSR1,
+        0U));
+    CHECK(write_register(
+        &dsp, MIPSNES2_DSP_VOICE_REGISTER_STRIDE +
+              MIPSNES2_DSP_VOICE_REGISTER_GAIN,
+        UINT8_C(0x40)));
+    CHECK(write_register(
+        &dsp, MIPSNES2_DSP_VOICE_REGISTER_STRIDE +
+              MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT,
+        UINT8_C(0x40)));
+    CHECK(write_register(
+        &dsp, MIPSNES2_DSP_VOICE_REGISTER_STRIDE +
+              MIPSNES2_DSP_VOICE_REGISTER_VOLUME_RIGHT,
+        UINT8_C(0xc0)));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_KON, UINT8_C(3)));
+    CHECK(mipsnes2_dsp_advance(
+        &dsp, UINT64_C(6) * MIPSNES2_DSP_SAMPLE_CYCLES));
+    dsp.noise_lfsr = UINT16_C(0x2000);
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 0U, &sample));
+    CHECK(sample == INT16_C(4096));
+    CHECK(mipsnes2_dsp_voice_stereo_sample(&dsp, 0U, &stereo));
+    CHECK(stereo.left == INT16_C(1024) && stereo.right == 0);
+    CHECK(mipsnes2_dsp_voice_output_sample(&dsp, 1U, &sample));
+    CHECK(sample == INT16_C(4096));
+    CHECK(mipsnes2_dsp_voice_stereo_sample(&dsp, 1U, &stereo));
+    CHECK(stereo.left == INT16_C(2048));
+    CHECK(stereo.right == INT16_C(-2048));
     return 0;
 }
 
@@ -741,7 +910,8 @@ int main(void)
     CHECK(test_voice_stream() == 0);
     CHECK(test_envelope() == 0);
     CHECK(test_noise() == 0);
+    CHECK(test_noise_output() == 0);
 
-    (void)puts("S-DSP BRR, pitch, envelope and noise foundation: OK");
+    (void)puts("S-DSP BRR, pitch, envelope and noise-output foundation: OK");
     return 0;
 }

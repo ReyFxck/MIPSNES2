@@ -155,6 +155,15 @@ static uint16_t step_noise_lfsr(uint16_t value)
     return (uint16_t)((value >> 1U) | feedback);
 }
 
+static int16_t current_noise_sample(const mipsnes2_dsp *dsp)
+{
+    uint16_t value = dsp->noise_lfsr;
+
+    return (int16_t)((value & UINT16_C(0x4000)) != 0U
+                         ? (int32_t)value - INT32_C(0x8000)
+                         : (int32_t)value);
+}
+
 static uint16_t apply_noise_transform(const uint16_t transform[15],
                                       uint16_t value)
 {
@@ -231,6 +240,65 @@ static void update_envelope_register(mipsnes2_dsp *dsp,
 
     dsp->registers[base + MIPSNES2_DSP_VOICE_REGISTER_ENVX] =
         (uint8_t)(voice->envelope >> 4U);
+}
+
+static int32_t signed_register_value(uint8_t value)
+{
+    return value < UINT8_C(0x80) ? (int32_t)value
+                                 : (int32_t)value - INT32_C(0x100);
+}
+
+static void update_voice_noise_output(mipsnes2_dsp *dsp,
+                                      unsigned int index)
+{
+    mipsnes2_dsp_voice *voice = &dsp->voices[index];
+    uint8_t bit = (uint8_t)(UINT8_C(1) << index);
+    uint8_t base = (uint8_t)(index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE);
+    int32_t adjusted;
+
+    if ((dsp->registers[MIPSNES2_DSP_REGISTER_NON] & bit) == 0U) {
+        voice->output_sample_valid = false;
+        return;
+    }
+    voice->source_sample = current_noise_sample(dsp);
+    adjusted = arithmetic_shift_right(
+        (int32_t)voice->source_sample * (int32_t)voice->envelope, 11U);
+    voice->output_sample = (int16_t)adjusted;
+    voice->left_sample = (int16_t)arithmetic_shift_right(
+        (int32_t)voice->output_sample * signed_register_value(
+            dsp->registers[
+                base + MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT]),
+        7U);
+    voice->right_sample = (int16_t)arithmetic_shift_right(
+        (int32_t)voice->output_sample * signed_register_value(
+            dsp->registers[
+                base + MIPSNES2_DSP_VOICE_REGISTER_VOLUME_RIGHT]),
+        7U);
+    voice->output_sample_valid = true;
+    dsp->registers[base + MIPSNES2_DSP_VOICE_REGISTER_OUTX] =
+        (uint8_t)((uint16_t)voice->output_sample >> 8U);
+}
+
+static void refresh_idle_noise_outputs(mipsnes2_dsp *dsp)
+{
+    unsigned int index;
+    int16_t source = current_noise_sample(dsp);
+
+    for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
+        mipsnes2_dsp_voice *voice = &dsp->voices[index];
+        uint8_t bit = (uint8_t)(UINT8_C(1) << index);
+        uint8_t base = (uint8_t)(
+            index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE);
+
+        if ((dsp->registers[MIPSNES2_DSP_REGISTER_NON] & bit) != 0U) {
+            voice->source_sample = source;
+            voice->output_sample = 0;
+            voice->left_sample = 0;
+            voice->right_sample = 0;
+            voice->output_sample_valid = true;
+            dsp->registers[base + MIPSNES2_DSP_VOICE_REGISTER_OUTX] = 0U;
+        }
+    }
 }
 
 static void release_envelope(mipsnes2_dsp *dsp, unsigned int index,
@@ -417,6 +485,14 @@ static void begin_key_on(mipsnes2_dsp *dsp, unsigned int index)
     voice->decoded_groups = 0U;
     voice->envelope = 0U;
     voice->envelope_calculation = 0;
+    voice->output_sample = 0;
+    voice->left_sample = 0;
+    voice->right_sample = 0;
+    voice->output_sample_valid =
+        (dsp->registers[MIPSNES2_DSP_REGISTER_NON] &
+         (uint8_t)(UINT8_C(1) << index)) != 0U;
+    voice->source_sample = voice->output_sample_valid
+                               ? current_noise_sample(dsp) : 0;
     voice->envelope_state = MIPSNES2_DSP_ENVELOPE_ATTACK;
     voice->brr_group_index = 0U;
     voice->brr_header = 0U;
@@ -445,8 +521,13 @@ static bool event_work_pending(const mipsnes2_dsp *dsp)
     for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
         const mipsnes2_dsp_voice *voice = &dsp->voices[index];
         uint8_t bit = (uint8_t)(UINT8_C(1) << index);
+        bool noise_selected =
+            (dsp->registers[MIPSNES2_DSP_REGISTER_NON] & bit) != 0U;
 
         if (voice->key_on_delay != 0U ||
+            voice->output_sample_valid != noise_selected ||
+            (noise_selected && voice->envelope == 0U &&
+             voice->output_sample != 0) ||
             voice->state == MIPSNES2_DSP_VOICE_ACTIVE ||
             (voice->envelope_state == MIPSNES2_DSP_ENVELOPE_RELEASE &&
              voice->envelope != 0U) ||
@@ -508,10 +589,18 @@ static void service_sample_event(mipsnes2_dsp *dsp)
             update_envelope = voice->state == MIPSNES2_DSP_VOICE_ACTIVE ||
                               voice->state == MIPSNES2_DSP_VOICE_RELEASE;
         }
+        update_voice_noise_output(dsp, index);
         if ((dsp->internal_flags & UINT8_C(0x80)) != 0U &&
             voice->state != MIPSNES2_DSP_VOICE_WAITING) {
             voice->state = MIPSNES2_DSP_VOICE_WAITING;
             release_envelope(dsp, index, true);
+            voice->source_sample = 0;
+            voice->output_sample = 0;
+            voice->left_sample = 0;
+            voice->right_sample = 0;
+            voice->output_sample_valid =
+                (dsp->registers[MIPSNES2_DSP_REGISTER_NON] &
+                 (uint8_t)(UINT8_C(1) << index)) != 0U;
             dsp->registers[
                 (index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE) +
                 MIPSNES2_DSP_VOICE_REGISTER_OUTX] = 0U;
@@ -688,18 +777,39 @@ bool mipsnes2_dsp_voice_interpolation_input(
 bool mipsnes2_dsp_voice_noise_input(const mipsnes2_dsp *dsp,
                                     size_t voice_index, int16_t *sample)
 {
-    uint16_t value;
-
     if (dsp == NULL || !dsp->initialized ||
         voice_index >= MIPSNES2_DSP_VOICE_COUNT || sample == NULL ||
         (dsp->registers[MIPSNES2_DSP_REGISTER_NON] &
          (uint8_t)(UINT8_C(1) << voice_index)) == 0U) {
         return false;
     }
-    value = dsp->noise_lfsr;
-    *sample = (int16_t)((value & UINT16_C(0x4000)) != 0U
-                            ? (int32_t)value - INT32_C(0x8000)
-                            : (int32_t)value);
+    *sample = current_noise_sample(dsp);
+    return true;
+}
+
+bool mipsnes2_dsp_voice_output_sample(const mipsnes2_dsp *dsp,
+                                      size_t voice_index, int16_t *sample)
+{
+    if (dsp == NULL || !dsp->initialized ||
+        voice_index >= MIPSNES2_DSP_VOICE_COUNT || sample == NULL ||
+        !dsp->voices[voice_index].output_sample_valid) {
+        return false;
+    }
+    *sample = dsp->voices[voice_index].output_sample;
+    return true;
+}
+
+bool mipsnes2_dsp_voice_stereo_sample(const mipsnes2_dsp *dsp,
+                                      size_t voice_index,
+                                      mipsnes2_dsp_stereo_sample *sample)
+{
+    if (dsp == NULL || !dsp->initialized ||
+        voice_index >= MIPSNES2_DSP_VOICE_COUNT || sample == NULL ||
+        !dsp->voices[voice_index].output_sample_valid) {
+        return false;
+    }
+    sample->left = dsp->voices[voice_index].left_sample;
+    sample->right = dsp->voices[voice_index].right_sample;
     return true;
 }
 
@@ -729,6 +839,9 @@ bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles)
         --samples;
     }
     advance_global_state(dsp, samples);
+    if (samples != 0U) {
+        refresh_idle_noise_outputs(dsp);
+    }
     dsp->sample_count += samples;
     return true;
 }

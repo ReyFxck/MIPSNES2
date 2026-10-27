@@ -17,6 +17,8 @@ enum {
     MIPSNES2_DSP_SAMPLE_CYCLES = 32,
     MIPSNES2_DSP_KEY_ON_DELAY_SAMPLES = 5,
     MIPSNES2_DSP_VOICE_REGISTER_STRIDE = 16,
+    MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT = 0x00,
+    MIPSNES2_DSP_VOICE_REGISTER_VOLUME_RIGHT = 0x01,
     MIPSNES2_DSP_VOICE_REGISTER_PITCH_LOW = 0x02,
     MIPSNES2_DSP_VOICE_REGISTER_PITCH_HIGH = 0x03,
     MIPSNES2_DSP_VOICE_REGISTER_SRCN = 0x04,
@@ -51,6 +53,10 @@ typedef struct {
     int16_t brr_ring[MIPSNES2_DSP_BRR_RING_SAMPLE_COUNT];
     int16_t brr_previous1;
     int16_t brr_previous2;
+    int16_t source_sample;
+    int16_t output_sample;
+    int16_t left_sample;
+    int16_t right_sample;
     uint16_t directory_address;
     uint16_t source_start_address;
     uint16_t source_loop_address;
@@ -70,6 +76,7 @@ typedef struct {
     mipsnes2_dsp_envelope_state envelope_state;
     bool directory_loaded;
     bool brr_stream_active;
+    bool output_sample_valid;
 } mipsnes2_dsp_voice;
 
 typedef struct {
@@ -89,8 +96,13 @@ typedef struct {
     uint8_t fraction;
 } mipsnes2_dsp_interpolation_input;
 
-/* State is intentionally public for deterministic inspection. Gaussian output,
- * envelope multiplication, mixing, echo and PCM are not yet implemented. */
+typedef struct {
+    int16_t left;
+    int16_t right;
+} mipsnes2_dsp_stereo_sample;
+
+/* State is intentionally public for deterministic inspection. BRR Gaussian
+ * output, voice mixing, echo and PCM are not yet implemented. */
 typedef struct {
     uint8_t registers[MIPSNES2_DSP_REGISTER_COUNT];
     mipsnes2_dsp_voice voices[MIPSNES2_DSP_VOICE_COUNT];
@@ -132,6 +144,16 @@ bool mipsnes2_dsp_voice_interpolation_input(
  * This is a pre-envelope input, not a mixed or output PCM sample. */
 bool mipsnes2_dsp_voice_noise_input(const mipsnes2_dsp *dsp,
                                     size_t voice_index, int16_t *sample);
+
+/* Return the post-envelope, pre-VxVOL voice sample. This foundation currently
+ * resolves only NON-selected noise voices; BRR requires Gaussian output first. */
+bool mipsnes2_dsp_voice_output_sample(const mipsnes2_dsp *dsp,
+                                      size_t voice_index, int16_t *sample);
+
+/* Return post-VxVOLL/VxVOLR stereo state for a resolved voice sample. */
+bool mipsnes2_dsp_voice_stereo_sample(const mipsnes2_dsp *dsp,
+                                      size_t voice_index,
+                                      mipsnes2_dsp_stereo_sample *sample);
 
 /* Advance the S-DSP's fixed one-sample-per-32-S-SMP-cycle cadence. */
 bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles);

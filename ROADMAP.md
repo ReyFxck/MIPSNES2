@@ -257,12 +257,12 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact phase/envelope effects remain
 - [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 step/cap exists; pitch modulation and exact phase remain
 - [ ] [IN PROGRESS] Interpolation — four ring samples and eight-bit fraction are exposed; Gaussian coefficients/output remain
-- [ ] [IN PROGRESS] ADSR — 11-bit attack/decay/sustain state and shared rate/offset counter exist; exact microphases and sample multiplication remain
+- [ ] [IN PROGRESS] ADSR — 11-bit state and shared counter drive resolved noise samples; BRR/Gaussian multiplication and exact microphases remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct and four timed modes plus release progression exist; exact microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
-- [ ] [IN PROGRESS] Noise generator — shared 15-bit LFSR, all `FLG.NCK` rates and per-voice `NON` selection exist; exact microphase/output integration remains
+- [ ] [IN PROGRESS] Noise generator — shared 15-bit LFSR, all rates, `NON`, envelope/`OUTX` and voice stereo output exist; exact microphases and mixing remain
 - [ ] Pitch modulation
-- [ ] Voice volumes
+- [ ] [IN PROGRESS] Voice volumes — signed `VxVOLL`/`VxVOLR` arithmetic exists for resolved noise voices; BRR voices and mixer integration remain
 - [ ] Main volumes
 - [ ] Echo buffer
 - [ ] FIR filter

@@ -32,11 +32,14 @@ timed GAIN curves, saturating release, reset zeroing and `ENVX` updates.
 Noise fixtures cover the `$4000` seed, signed-15 conversion, `NON` sharing,
 rate-zero hold, fast/slow/offset counter events, a million-step scalar/bulk
 equivalence check and irregular clock chunking while BRR transport continues.
+Resolved-noise fixtures cover the five empty key-on samples, envelope `>>11`,
+negative rounding, `OUTX`, signed/inverted left-right voice volumes, Release
+ordering, reset zeroing and unresolved-BRR rejection.
 `test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
 chunked equivalence, atomic SPC700 admission and credit, timer coordination,
 SLEEP continuation and overflow handling. The four-point API is only the input to
-future Gaussian interpolation; noise and envelope values are not yet multiplied
-into samples, so these events are not PCM output.
+future Gaussian interpolation. Noise voices now reach per-voice stereo state,
+but there is no voice mixer or PCM output.
 
 `test-spc700-alu` verifies the exact 100-opcode OR/AND/EOR/CMP/ADC/SBC,
 ASL/ROL/LSR/ROR and byte INC/DEC block across every documented addressing form.

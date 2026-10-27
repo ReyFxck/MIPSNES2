@@ -729,5 +729,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   `FLG.NCK`; `NON` exposes that signed source per voice while BRR transport keeps
   running. Logarithmic bulk advancement is equivalent to scalar recurrence;
   output multiplication, mixing and exact DSP microphases remain separate.
+- 2026-10-27: resolved `NON` voices now multiply the signed-15 source by the
+  current 11-bit envelope, publish `OUTX`, then apply signed left/right voice
+  volumes. BRR/Gaussian source resolution, ordered mixing and PCM remain open.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

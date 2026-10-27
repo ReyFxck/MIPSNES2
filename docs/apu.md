@@ -12,8 +12,9 @@ directory latching and a pure BRR block decoder now exist. Per-voice BRR
 group streaming, a twelve-sample ring, unmodulated pitch progression and the
 four-point interpolation input are connected. The shared rate counter now drives
 11-bit ADSR, all GAIN modes and release, plus the shared 15-bit noise LFSR selected
-per voice by `NON`. There is still no Gaussian output, envelope multiplication,
-mixer, PCM buffer or audio output.
+per voice by `NON`. Resolved noise voices now apply the envelope, update `OUTX`
+and expose signed left/right voice-volume samples. There is still no BRR Gaussian
+output, mixer, PCM buffer or audio output.
 
 ## Design direction
 
@@ -62,6 +63,8 @@ The next state-only audio layer is recorded in the
 [S-DSP envelope audit](sdsp-envelope-audit.md).
 The shared noise source is recorded in the
 [S-DSP noise audit](sdsp-noise-audit.md).
+Its resolved per-voice path is recorded in the
+[S-DSP noise voice-output audit](sdsp-noise-voice-output-audit.md).
 RFAuds2 is transport infrastructure only
 and must never become a core dependency or SNES timing source. The inspected candidate
 was RFAuds2 `0.1.0-alpha.1` at revision

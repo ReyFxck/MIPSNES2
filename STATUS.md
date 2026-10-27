@@ -857,8 +857,21 @@ ASan/UBSan, repository checks and GCC `-fanalyzer` pass locally. Revision
 No target-runtime or audio-output result is claimed. See the
 [S-DSP noise audit](docs/sdsp-noise-audit.md).
 
-Next primary block: establish independently sourced Gaussian coefficients and
-signed rounding before connecting interpolation output to the envelope; the
+The following resolved-source slice connects `NON` voices through the current
+11-bit envelope and signed eight-bit left/right voice volumes. It publishes the
+post-envelope mono sample, the documented high byte in `OUTX`, and a per-voice
+stereo pair. Arithmetic right shifts are explicit for negative products, and the
+sample uses the current envelope before that envelope advances. Host vectors
+cover the five empty key-on samples, positive/negative rounding, phase inversion,
+Release-to-zero, reset clearing, `NON` deselection and chunk equivalence. BRR
+voices intentionally remain unresolved until Gaussian coefficients are sourced;
+there is still no voice mixer or PCM. The clean host suite and repository checks
+pass locally; focused DSP/APU/machine ASan+UBSan runs pass and GCC `-fanalyzer`
+reports no DSP or focused-test diagnostics. See the
+[S-DSP noise voice-output audit](docs/sdsp-noise-voice-output-audit.md).
+
+Next primary block: add ordered/clamped dry mixing for the resolved noise path,
+or establish independently sourced Gaussian coefficients for BRR voices; the
 table explicitly attributed to another emulator was not imported. Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2084,17 +2097,17 @@ platform persistence remains incomplete.
 ## DSP
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] [IN PROGRESS] Eight voice state — key/source, BRR ring/traversal, raw pitch and envelope state exist; Gaussian/sample output remains
+- [ ] [IN PROGRESS] Eight voice state — BRR/ring/pitch/envelope plus resolved noise stereo output exist; Gaussian and mixing remain
 - [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact DSP microphases remain
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact phase/envelope effects remain
 - [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 step/cap exists; pitch modulation and exact phase remain
 - [ ] [IN PROGRESS] Interpolation — four ring samples and eight-bit fraction are exposed; Gaussian coefficients/output remain
-- [ ] [IN PROGRESS] ADSR — 11-bit attack/decay/sustain state and shared rate/offset counter exist; exact microphases and sample multiplication remain
+- [ ] [IN PROGRESS] ADSR — 11-bit state/counter drive resolved noise samples; BRR/Gaussian multiplication and exact microphases remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct and four timed modes plus release progression exist; exact microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
-- [ ] [IN PROGRESS] Noise generator — shared 15-bit LFSR, all `FLG.NCK` rates and per-voice `NON` input selection exist; exact microphase/output integration remains
+- [ ] [IN PROGRESS] Noise generator — LFSR/rates/`NON`, envelope/`OUTX` and stereo voice output exist; exact microphases and mixing remain
 - [ ] Pitch modulation
-- [ ] Voice volumes
+- [ ] [IN PROGRESS] Voice volumes — signed left/right arithmetic exists for resolved noise voices; BRR and mixer integration remain
 - [ ] Main volumes
 - [ ] Echo buffer
 - [ ] FIR filter
