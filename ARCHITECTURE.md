@@ -22,7 +22,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP communication and timing | Directional ports plus nominal rational master-to-S-SMP clock bridge; electrical race order and oscillator drift pending |
 | core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | All 256 opcodes, ARAM/IPL, ports, `$F2/$F3` DSP route and three-stage timers under the APU clock; exact bus phases and interrupt/reset entry pending |
-| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight voice-control records, ARAM source latches and pure BRR block decode; streaming, envelopes, mixer and PCM absent |
+| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight voice records, ARAM BRR group streams, twelve-sample rings and raw pitch/interpolation inputs; Gaussian output, envelopes, mixer and PCM absent |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
@@ -58,8 +58,11 @@ inhibition, `ENDX` clear, internal `FLG` reset state and a 32-S-SMP-cycle sample
 event. Its eight voice records poll `KON`/`KOFF` every other sample, latch
 `DIR`/`SRCN` source addresses from borrowed ARAM and model the five-event key-on
 preparation period. A side-effect-free API decodes one BRR block with exact
-filter/clamp/wrap arithmetic. It has no connected BRR stream, pitch,
-interpolation, envelope, echo, mixer or PCM semantics. Exact
+filter/clamp/wrap arithmetic. Attached voices preload three four-sample groups,
+rotate a physical twelve-sample ring as the 14-bit 2.12 pitch position crosses
+four samples, traverse end/loop blocks and expose the four-point/eight-bit input
+surface for later Gaussian interpolation. It has no Gaussian calculation,
+envelope, echo, mixer or PCM semantics. Exact
 instruction bus phases, within-DSP-loop register visibility, mailbox races and
 physical oscillator drift remain open.
 `resume` advances one
@@ -711,5 +714,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   deterministic alternating-sample phase, latch `DIR`/`SRCN` entries from ARAM
   and complete a five-event key-on preparation state. A pure BRR decoder covers
   all shifts/filters and explicit clamp/wrap arithmetic; streaming and PCM remain.
+- 2026-10-27: per-voice BRR transport now decodes four-sample groups into a
+  twelve-sample ring, carries predictor history across blocks, follows end/loop
+  traversal with `ENDX`, advances unmodulated 14-bit pitch and exposes the future
+  Gaussian interpolator's four samples/fraction. Gaussian output, envelopes,
+  mixing, echo and PCM remain.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

@@ -23,10 +23,13 @@ per-cycle bus sequencing.
 `test-dsp` verifies the 128-byte S-DSP register/address boundary, inhibited
 writes, `ENDX` clear, internal `FLG` state, 32-S-SMP-cycle events, eight-voice
 key polling/source-directory state and exact standalone BRR shift/filter/clamp
-vectors. `test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
+vectors. It also checks three-group key-on preload, twelve-sample ring rotation,
+14-bit pitch/fraction progression, end/loop traversal, live loop-directory refresh,
+release/reset decode continuation, ARAM address wrap and one-shot/chunked stream
+equivalence. `test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
 chunked equivalence, atomic SPC700 admission and credit, timer coordination,
-SLEEP continuation and overflow handling. The BRR decoder is not yet connected to
-a voice sample stream, and these events are not PCM output.
+SLEEP continuation and overflow handling. The four-point API is only the input to
+future Gaussian interpolation; these events are not PCM output.
 
 `test-spc700-alu` verifies the exact 100-opcode OR/AND/EOR/CMP/ADC/SBC,
 ASL/ROL/LSR/ROR and byte INC/DEC block across every documented addressing form.

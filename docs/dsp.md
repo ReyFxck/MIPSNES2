@@ -5,8 +5,10 @@
 Emulate the SNES DSP: eight voices, BRR, interpolation, pitch/envelopes, mixing,
 noise, modulation and echo/FIR. SPU2 and PSP audio are output devices, not
 replacements for DSP semantics. A register/address layer, 32-S-SMP-cycle event
-cadence, eight voice-control records and a pure BRR block decoder now exist. They
-do not yet produce PCM.
+cadence, eight voice-control records and a pure BRR block decoder now exist.
+Per-voice BRR traversal decodes four samples at a time into a twelve-sample ring,
+advances the raw 14-bit pitch and exposes a four-point interpolation input. It
+does not yet apply Gaussian coefficients or produce PCM.
 
 ## Design direction
 
@@ -22,11 +24,11 @@ Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Document
 implementation evidence before promotion.
 
 - [ ] [IN PROGRESS] Register state — 128 bytes, address latch and `$F2/$F3` access exist; most side effects/polling remain
-- [ ] [IN PROGRESS] Eight voice state — key waiting/delay/active/release control and source-directory latches exist; sample pipeline state remains
-- [ ] [IN PROGRESS] BRR decode — exact pure nine-byte block arithmetic exists; voice ring/stream integration remains
-- [ ] BRR loop/end behavior
-- [ ] Pitch progression
-- [ ] Interpolation
+- [ ] [IN PROGRESS] Eight voice state — key control, source latches, BRR ring/traversal and raw pitch state exist; envelopes and output remain
+- [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact 32-step phase placement remains
+- [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact microsteps/envelope zero remain
+- [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 stepping and documented cap exist; PMON/noise phase behavior remains
+- [ ] [IN PROGRESS] Interpolation — four ring samples and the eight-bit fractional input are exposed; Gaussian table/math/output remain
 - [ ] ADSR
 - [ ] GAIN envelopes
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation, release marker and soft reset exist; exact microsteps and release envelope remain
@@ -46,7 +48,9 @@ implementation evidence before promotion.
 
 The implemented subset is documented in the
 [APU clock/DSP register audit](apu-clock-dsp-register-audit.md) and
-[voice/BRR audit](sdsp-voice-brr-foundation-audit.md). Register writes currently
+[voice/BRR audit](sdsp-voice-brr-foundation-audit.md). The connected traversal is
+recorded in the [BRR stream/pitch audit](sdsp-brr-stream-pitch-audit.md).
+Register writes currently
 become visible at register or sample-event granularity; exact within-32-cycle-loop
 phases are not modeled. The readable
 power-on shadow is deterministically zero while internal flags begin at `$E0`, so

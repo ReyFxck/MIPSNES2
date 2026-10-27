@@ -11,10 +11,14 @@ enum {
     MIPSNES2_DSP_VOICE_COUNT = 8,
     MIPSNES2_DSP_BRR_BLOCK_SIZE = 9,
     MIPSNES2_DSP_BRR_SAMPLE_COUNT = 16,
+    MIPSNES2_DSP_BRR_RING_SAMPLE_COUNT = 12,
+    MIPSNES2_DSP_BRR_GROUP_SAMPLE_COUNT = 4,
     MIPSNES2_DSP_ARAM_SIZE = 65536,
     MIPSNES2_DSP_SAMPLE_CYCLES = 32,
     MIPSNES2_DSP_KEY_ON_DELAY_SAMPLES = 5,
     MIPSNES2_DSP_VOICE_REGISTER_STRIDE = 16,
+    MIPSNES2_DSP_VOICE_REGISTER_PITCH_LOW = 0x02,
+    MIPSNES2_DSP_VOICE_REGISTER_PITCH_HIGH = 0x03,
     MIPSNES2_DSP_VOICE_REGISTER_SRCN = 0x04,
     MIPSNES2_DSP_VOICE_REGISTER_ENVX = 0x08,
     MIPSNES2_DSP_VOICE_REGISTER_OUTX = 0x09,
@@ -33,13 +37,25 @@ typedef enum {
 } mipsnes2_dsp_voice_state;
 
 typedef struct {
+    int16_t brr_ring[MIPSNES2_DSP_BRR_RING_SAMPLE_COUNT];
+    int16_t brr_previous1;
+    int16_t brr_previous2;
     uint16_t directory_address;
     uint16_t source_start_address;
     uint16_t source_loop_address;
+    uint16_t brr_address;
+    uint16_t interpolation_index;
+    uint16_t pitch;
+    uint64_t decoded_groups;
     uint8_t source_number;
     uint8_t key_on_delay;
+    uint8_t brr_group_index;
+    uint8_t brr_header;
+    uint8_t ring_offset;
+    uint8_t ring_write_offset;
     mipsnes2_dsp_voice_state state;
     bool directory_loaded;
+    bool brr_stream_active;
 } mipsnes2_dsp_voice;
 
 typedef struct {
@@ -53,8 +69,14 @@ typedef struct {
     bool loop;
 } mipsnes2_dsp_brr_block;
 
-/* State is intentionally public for deterministic inspection. PCM generation,
- * pitch, envelopes, mixing and echo are not yet implemented. */
+typedef struct {
+    int16_t samples[4];
+    uint8_t sample_index;
+    uint8_t fraction;
+} mipsnes2_dsp_interpolation_input;
+
+/* State is intentionally public for deterministic inspection. Gaussian output,
+ * envelopes, mixing, echo and PCM generation are not yet implemented. */
 typedef struct {
     uint8_t registers[MIPSNES2_DSP_REGISTER_COUNT];
     mipsnes2_dsp_voice voices[MIPSNES2_DSP_VOICE_COUNT];
@@ -83,6 +105,12 @@ bool mipsnes2_dsp_brr_decode_block(const uint8_t *encoded,
                                    size_t encoded_size,
                                    int16_t previous1, int16_t previous2,
                                    mipsnes2_dsp_brr_block *decoded);
+
+/* Return the four logical BRR-ring samples and 8-bit fractional position that
+ * would feed the future Gaussian interpolator. */
+bool mipsnes2_dsp_voice_interpolation_input(
+    const mipsnes2_dsp *dsp, size_t voice_index,
+    mipsnes2_dsp_interpolation_input *input);
 
 /* Advance the S-DSP's fixed one-sample-per-32-S-SMP-cycle cadence. */
 bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles);

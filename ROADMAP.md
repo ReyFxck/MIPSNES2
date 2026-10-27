@@ -252,11 +252,11 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Phase 8 exit gate verified
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] [IN PROGRESS] Eight voice state — key-control/source latches exist; streaming/pitch/envelope state remains
-- [ ] [IN PROGRESS] BRR decode — pure exact block decoder exists; per-voice ring and traversal remain
-- [ ] BRR loop/end behavior
-- [ ] Pitch progression
-- [ ] Interpolation
+- [ ] [IN PROGRESS] Eight voice state — key/source, BRR ring/traversal and raw pitch state exist; envelopes/output remain
+- [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact DSP microphases remain
+- [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact phase/envelope effects remain
+- [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 step/cap exists; pitch modulation and exact phase remain
+- [ ] [IN PROGRESS] Interpolation — four ring samples and eight-bit fraction are exposed; Gaussian coefficients/output remain
 - [ ] ADSR
 - [ ] GAIN envelopes
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling and five-event preparation exist; exact microsteps/release decay remain

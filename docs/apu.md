@@ -8,8 +8,10 @@ logical S-SMP timer block and a caller-owned instruction-atomic SPC700 interpret
 covering all 256 opcode values now run under a nominal rational machine-to-S-SMP
 clock. The same clock advances the timers and a first S-DSP register/sample-event
 foundation. Eight voice-control records, sample-granularity key polling, source
-directory latching and a pure BRR block decoder now exist. There is still no
-voice sample pipeline, PCM buffer or audio output.
+directory latching and a pure BRR block decoder now exist. Per-voice BRR
+group streaming, a twelve-sample ring, unmodulated pitch progression and the
+four-point interpolation input are connected. There is still no Gaussian output,
+envelope, mixer, PCM buffer or audio output.
 
 ## Design direction
 
@@ -52,6 +54,8 @@ interrupt/reset entry, cross-clock races and most S-DSP semantics do not.
 See the [APU clock/DSP register audit](apu-clock-dsp-register-audit.md).
 The first voice-control and decoder slice is recorded in the
 [S-DSP voice/BRR audit](sdsp-voice-brr-foundation-audit.md).
+The connected source traversal and pitch input are recorded in the
+[S-DSP BRR stream/pitch audit](sdsp-brr-stream-pitch-audit.md).
 RFAuds2 is transport infrastructure only
 and must never become a core dependency or SNES timing source. The inspected candidate
 was RFAuds2 `0.1.0-alpha.1` at revision
