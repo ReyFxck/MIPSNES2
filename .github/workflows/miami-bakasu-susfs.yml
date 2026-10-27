@@ -75,7 +75,15 @@ jobs:
           cp -av ../susfs4ksu/kernel_patches/include/linux/. include/linux/
           PATCH="$(find ../susfs4ksu/kernel_patches -maxdepth 1 -type f -name '50_add_susfs_in_kernel-5.4.patch' -print -quit)"
           test -n "$PATCH"
-          patch -p1 --fuzz=3 --forward < "$PATCH" | tee ../susfs-patch.log
+          # This non-GKI 5.4 tree has /proc/cmdline but no fs/proc/bootconfig.c.
+          # Remove only that inapplicable GKI-only diff before applying everything else strictly.
+          awk '
+            /^diff --git a\/fs\/proc\/bootconfig\.c b\/fs\/proc\/bootconfig\.c$/ { skip=1; next }
+            skip && /^diff --git / { skip=0 }
+            !skip { print }
+          ' "$PATCH" > ../susfs-miami-5.4.patch
+          grep -q '^diff --git a/fs/proc/bootconfig.c ' ../susfs-miami-5.4.patch && exit 1 || true
+          patch --batch -p1 --fuzz=3 --forward < ../susfs-miami-5.4.patch | tee ../susfs-patch.log
           if find . -name '*.rej' -print -quit | grep -q .; then
             echo "SUSFS patch produced reject files; refusing to build unsafe artifact."
             find . -name '*.rej' -print -exec cat {} \;
