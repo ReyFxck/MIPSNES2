@@ -26,14 +26,12 @@ jobs:
       EXPECTED_RELEASE: 5.4.302-ZenX-g5bad3b0962dc
       OUT: out
     steps:
-      - name: Install build dependencies
+      - name: Verify preinstalled build tools
         run: |
           set -euxo pipefail
-          timeout 180 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 update
-          timeout 300 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 install -y --no-install-recommends \
-            bc bison flex libssl-dev make git zip unzip cpio rsync \
-            python3 python-is-python3 libelf-dev dwarves device-tree-compiler \
-            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu curl xz-utils zstd lz4
+          for x in make git curl tar patch awk sed grep zip unzip cpio rsync python3 bc bison flex perl; do
+            command -v "$x"
+          done
 
       - name: Fetch exact Infinity X kernel source
         run: |
