@@ -65,8 +65,11 @@ per-voice S3/S4/S5/S8/S9 positions inside the 32-step hardware schedule, and a
 The clean host suite and repository checks pass locally. Focused ASan/UBSan
 runs cover the DSP, APU timing bridge and machine integration, and GCC
 `-fanalyzer` reports no diagnostics for the DSP implementation or its focused
-test. Successful host/PS2/PSP CI remains the publication gate. Cross-build
-success is not a target-runtime or audible-output result.
+test. Revision `cb955698` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40603798701),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40603798698) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40603798694).
+Cross-build success is not a target-runtime or audible-output result.
 
 ## Open boundaries
 

@@ -867,7 +867,11 @@ Release-to-zero, reset clearing, `NON` deselection and chunk equivalence. BRR
 voices intentionally remain unresolved until Gaussian coefficients are sourced;
 there is still no voice mixer or PCM. The clean host suite and repository checks
 pass locally; focused DSP/APU/machine ASan+UBSan runs pass and GCC `-fanalyzer`
-reports no DSP or focused-test diagnostics. See the
+reports no DSP or focused-test diagnostics. Revision `cb955698` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40603798701),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40603798698) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40603798694).
+No target-runtime or audible-output result is claimed. See the
 [S-DSP noise voice-output audit](docs/sdsp-noise-voice-output-audit.md).
 
 Next primary block: add ordered/clamped dry mixing for the resolved noise path,
