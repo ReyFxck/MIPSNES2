@@ -1,0 +1,204 @@
+name: Miami BakaSU SUSFS AnyKernel3
+
+on:
+  push:
+    branches:
+      - tmp-miami-bakasu-susfs-build
+    paths:
+      - ".github/workflows/miami-bakasu-susfs.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      KERNEL_REPO: https://github.com/JNWSG/Lineage_android_kernel_motorola_sm6375.git
+      KERNEL_BRANCH: "16.2"
+      KERNEL_SHA: 5bad3b0962dcf3d0833b46f00fe383edb1b97ea3
+      BAKASU_SHA: 1ccbf7b6414680ad269049eb5e103afdc7ccc00a
+      EXPECTED_RELEASE: 5.4.302-ZenX-g5bad3b0962dc
+      OUT: out
+    steps:
+      - name: Install build dependencies
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison flex libssl-dev make git zip unzip cpio rsync \
+            python3 python-is-python3 libelf-dev dwarves device-tree-compiler \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu curl xz-utils zstd lz4
+
+      - name: Fetch exact Infinity X kernel source
+        run: |
+          set -euxo pipefail
+          git clone --depth=1 --branch "$KERNEL_BRANCH" "$KERNEL_REPO" kernel
+          cd kernel
+          test "$(git rev-parse HEAD)" = "$KERNEL_SHA"
+          git log -1 --oneline
+
+      - name: Install matching Android clang r596125
+        run: |
+          set -euxo pipefail
+          mkdir -p "$HOME/clang"
+          curl -L --fail --retry 4 --retry-all-errors \
+            "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main-kernel/clang-r596125.tar.gz" \
+            -o /tmp/clang-r596125.tar.gz
+          tar -xzf /tmp/clang-r596125.tar.gz -C "$HOME/clang"
+          "$HOME/clang/bin/clang" --version
+
+      - name: Integrate BakaSU compatibility revision
+        working-directory: kernel
+        run: |
+          set -euxo pipefail
+          rm -rf KernelSU drivers/kernelsu
+          mkdir KernelSU
+          git -C KernelSU init
+          git -C KernelSU remote add origin https://github.com/Baka-SU/BakaSU.git
+          git -C KernelSU fetch --depth=1 origin "$BAKASU_SHA"
+          git -C KernelSU checkout --detach FETCH_HEAD
+          test "$(git -C KernelSU rev-parse HEAD)" = "$BAKASU_SHA"
+          ln -s ../KernelSU/kernel drivers/kernelsu
+          grep -q 'obj-$(CONFIG_KSU) += kernelsu/' drivers/Makefile || \
+            printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> drivers/Makefile
+          grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || \
+            sed -i '/endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
+
+      - name: Apply SUSFS kernel 5.4 backport strictly
+        working-directory: kernel
+        run: |
+          set -euxo pipefail
+          git clone --depth=1 --branch kernel-5.4 https://gitlab.com/simonpunk/susfs4ksu.git ../susfs4ksu
+          cp -av ../susfs4ksu/kernel_patches/fs/. fs/
+          cp -av ../susfs4ksu/kernel_patches/include/linux/. include/linux/
+          PATCH="$(find ../susfs4ksu/kernel_patches -maxdepth 1 -type f -name '50_add_susfs_in_kernel-5.4.patch' -print -quit)"
+          test -n "$PATCH"
+          patch -p1 --fuzz=3 --forward < "$PATCH" | tee ../susfs-patch.log
+          if find . -name '*.rej' -print -quit | grep -q .; then
+            echo "SUSFS patch produced reject files; refusing to build unsafe artifact."
+            find . -name '*.rej' -print -exec cat {} \;
+            exit 1
+          fi
+          grep -R "SUSFS_VERSION" ../susfs4ksu/kernel_patches/include fs include/linux 2>/dev/null | head -20 || true
+
+      - name: Configure kernel and preserve Infinity X module ABI name
+        working-directory: kernel
+        env:
+          PATH: ${{ env.HOME }}/clang/bin:${{ env.PATH }}
+        run: |
+          set -euxo pipefail
+          make O="$OUT" ARCH=arm64 vendor/holi-qgki_defconfig
+          scripts/config --file "$OUT/.config" --set-str LOCALVERSION "-ZenX-g5bad3b0962dc"
+          scripts/config --file "$OUT/.config" -d LOCALVERSION_AUTO
+          scripts/config --file "$OUT/.config" -e KSU
+          scripts/config --file "$OUT/.config" -d KSU_TRACEPOINT_HOOK
+          scripts/config --file "$OUT/.config" -d KSU_MANUAL_HOOK
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS_SUS_PATH
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS_SUS_MOUNT
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS_SUS_KSTAT
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS_SUS_MAP
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS_SPOOF_UNAME
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS_ENABLE_LOG
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+          scripts/config --file "$OUT/.config" -e KSU_SUSFS_OPEN_REDIRECT
+          make O="$OUT" ARCH=arm64 LLVM=1 LLVM_IAS=1 olddefconfig
+          grep -E 'CONFIG_LOCALVERSION|CONFIG_KSU|CONFIG_THREAD_INFO_IN_TASK|CONFIG_MODVERSIONS' "$OUT/.config" | tee ../final-config.txt
+          rel="$(make -s O="$OUT" ARCH=arm64 kernelrelease)"
+          echo "kernelrelease=$rel"
+          test "$rel" = "$EXPECTED_RELEASE"
+
+      - name: Build Image
+        working-directory: kernel
+        env:
+          PATH: ${{ env.HOME }}/clang/bin:${{ env.PATH }}
+          KBUILD_BUILD_USER: build-user
+          KBUILD_BUILD_HOST: build-host
+        run: |
+          set -o pipefail
+          make O="$OUT" ARCH=arm64 LLVM=1 LLVM_IAS=1 -j"$(nproc)" Image 2>&1 | tee ../kernel-build.log
+          test -s "$OUT/arch/arm64/boot/Image"
+
+      - name: Validate built kernel
+        working-directory: kernel
+        run: |
+          set -euxo pipefail
+          IMAGE="$OUT/arch/arm64/boot/Image"
+          file "$IMAGE"
+          sha256sum "$IMAGE" | tee ../Image.sha256
+          strings "$IMAGE" | grep -F "$EXPECTED_RELEASE" | head -5
+          strings "$IMAGE" | grep -Ei 'KernelSU|ReSukiSU|SUSFS' | head -30 || true
+          test "$(stat -c%s "$IMAGE")" -gt 30000000
+          test "$(stat -c%s "$IMAGE")" -lt 65000000
+
+      - name: Package Miami-only AnyKernel3
+        run: |
+          set -euxo pipefail
+          git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git AnyKernel3
+          rm -rf AnyKernel3/.git AnyKernel3/.github
+          rm -rf AnyKernel3/modules/* AnyKernel3/patch/* AnyKernel3/ramdisk/*
+          cp kernel/out/arch/arm64/boot/Image AnyKernel3/Image
+          cat > AnyKernel3/anykernel.sh <<'AK3'
+          ### AnyKernel3 Ramdisk Mod Script
+          ## Miami / Motorola Edge 30 Neo
+          ## BakaSU + SUSFS, kernel-only replacement
+
+          properties() { '
+          kernel.string=Miami 5.4.302 ZenX + BakaSU + SUSFS
+          do.devicecheck=1
+          do.modules=0
+          do.systemless=1
+          do.cleanup=1
+          do.cleanuponabort=0
+          device.name1=miami
+          supported.versions=
+          supported.patchlevels=
+          supported.vendorpatchlevels=
+          '; }
+
+          BLOCK=boot;
+          IS_SLOT_DEVICE=1;
+          RAMDISK_COMPRESSION=auto;
+          PATCH_VBMETA_FLAG=auto;
+
+          . tools/ak3-core.sh;
+
+          dump_boot;
+          write_boot;
+          AK3
+          cat > AnyKernel3/BUILD_INFO.txt <<EOF
+          Device: Motorola Edge 30 Neo (miami)
+          ROM source boot: Infinity X 4.1 unofficial
+          Kernel source: JNWSG/Lineage_android_kernel_motorola_sm6375
+          Kernel source commit: $KERNEL_SHA
+          Expected kernel release: $EXPECTED_RELEASE
+          BakaSU/ReSukiSU compatibility commit: $BAKASU_SHA
+          SUSFS kernel branch: simonpunk/susfs4ksu kernel-5.4
+          Packaging: AnyKernel3, kernel-only, A/B boot partition
+          Note: Original ramdisk/vendor_boot/dtbo are intentionally preserved.
+          EOF
+          cp final-config.txt AnyKernel3/BUILD_CONFIG_KSU.txt
+          cp susfs-patch.log AnyKernel3/SUSFS_PATCH_LOG.txt
+          cd AnyKernel3
+          zip -r9 ../Miami-InfinityX4.1-BakaSU-SUSFS-AnyKernel3.zip . \
+            -x 'README.md' 'LICENSE'
+          cd ..
+          sha256sum Miami-InfinityX4.1-BakaSU-SUSFS-AnyKernel3.zip | tee Miami-InfinityX4.1-BakaSU-SUSFS-AnyKernel3.zip.sha256
+          unzip -t Miami-InfinityX4.1-BakaSU-SUSFS-AnyKernel3.zip
+
+      - name: Upload flashable ZIP and diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: Miami-InfinityX4.1-BakaSU-SUSFS
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            Miami-InfinityX4.1-BakaSU-SUSFS-AnyKernel3.zip
+            Miami-InfinityX4.1-BakaSU-SUSFS-AnyKernel3.zip.sha256
+            Image.sha256
+            final-config.txt
+            susfs-patch.log
+            kernel-build.log
