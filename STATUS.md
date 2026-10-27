@@ -849,7 +849,12 @@ end/loop behavior continue behind that selection. Idle bulk advancement applies
 the linear recurrence logarithmically and is checked against one million scalar
 steps plus irregular chunks. This still produces no sample: source/envelope
 multiplication, volumes and mixing remain absent. A clean host suite, focused
-ASan/UBSan, repository checks and GCC `-fanalyzer` pass locally. See the
+ASan/UBSan, repository checks and GCC `-fanalyzer` pass locally. Revision
+`d4e270f` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40532156395),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40532156424) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40532156392).
+No target-runtime or audio-output result is claimed. See the
 [S-DSP noise audit](docs/sdsp-noise-audit.md).
 
 Next primary block: establish independently sourced Gaussian coefficients and
