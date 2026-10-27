@@ -768,8 +768,13 @@ counts exactly 106 new bytes, executes all 256 base paths, exhausts MUL and DIV,
 and covers bit truth tables, branches, control flow, word flags, decimal adjustment,
 wait states, mapped failure and cycle overflow. See the
 [SPC700 complete-opcode audit](docs/spc700-complete-opcode-audit.md).
-Publication revision and CI evidence are pending. No target-runtime or audio result
-is claimed.
+A clean `make clean && make -j2 test`, focused ASan/UBSan, repository checks and
+GCC `-fanalyzer` pass locally. Clang, PS2SDK, `psp-config` and target runtime are
+unavailable locally. Revision `e55ff3e` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40438359090),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40438359009) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40438359436).
+No target-runtime or audio result is claimed.
 
 Next primary block: connect SPC700 execution to a deterministic S-SMP clock domain,
 then begin the independently verified S-DSP path. Refining
