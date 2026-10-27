@@ -837,7 +837,11 @@ end-without-loop header clear it, and `ENVX` reflects the high seven bits. Host
 vectors cover every mode, counter offsets, clamps, state transitions and chunk
 equivalence. This still produces no sample: Gaussian interpolation and envelope
 multiplication remain absent. A clean host suite, focused ASan/UBSan, repository
-checks and GCC `-fanalyzer` pass locally. See the
+checks and GCC `-fanalyzer` pass locally. Revision `c6465ae` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40529929718),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40529929482) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40529929606).
+No target-runtime or audio-output result is claimed. See the
 [S-DSP envelope audit](docs/sdsp-envelope-audit.md).
 
 Next primary block: establish independently sourced Gaussian coefficients and
