@@ -252,14 +252,14 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Phase 8 exit gate verified
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] Eight voice state
-- [ ] BRR decode
+- [ ] [IN PROGRESS] Eight voice state — key-control/source latches exist; streaming/pitch/envelope state remains
+- [ ] [IN PROGRESS] BRR decode — pure exact block decoder exists; per-voice ring and traversal remain
 - [ ] BRR loop/end behavior
 - [ ] Pitch progression
 - [ ] Interpolation
 - [ ] ADSR
 - [ ] GAIN envelopes
-- [ ] Key-on/key-off
+- [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling and five-event preparation exist; exact microsteps/release decay remain
 - [ ] Noise generator
 - [ ] Pitch modulation
 - [ ] Voice volumes
@@ -267,11 +267,11 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Echo buffer
 - [ ] FIR filter
 - [ ] Feedback
-- [ ] Clamping and signed arithmetic
+- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR clamp/wrap is explicit; later mixer/echo arithmetic remains
 - [ ] [IN PROGRESS] Sample timing — one deterministic event per 32 S-SMP cycles; pipeline/sample values pending
 - [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
 - [ ] Golden sample tests
-- [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3` and common S-SMP time exist; voice/polling semantics pending
+- [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3`, ARAM source latches, common time and sample-granularity key polling exist; exact microsteps pending
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
 - [x] Timer integration — machine APU clock advances S-SMP timers
 - [ ] Sample generation pipeline

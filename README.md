@@ -59,8 +59,10 @@ Only PPU counter registers, VRAM ports, CGRAM ports and OAM ports exist; there i
 The caller-owned SPC700 foundation covers all 256 opcode values atomically and a
 nominal rational APU clock now advances it, the three S-SMP timers and a first
 S-DSP register/sample-cadence foundation from machine master time. `$F2/$F3`,
-128 register bytes and one event per 32 S-SMP cycles are testable; voices, BRR,
-mixing, PCM output, a full ROM runner, compatibility and performance remain.
+128 register bytes, one event per 32 S-SMP cycles, eight voice-control records,
+key polling/source-directory latches and pure BRR block decoding are testable.
+Voice sample streaming, mixing, PCM output, a full ROM runner, compatibility and
+performance remain.
 
 Current milestone: Phase 4 — Ricoh 5A22 interrupt/timer foundation.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and

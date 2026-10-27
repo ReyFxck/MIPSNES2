@@ -785,17 +785,29 @@ initial registers are copied rather than inventing undocumented reset values.
 Host tests cover full-second and irregular chunk equivalence, instruction credit,
 SLEEP, timer/DSP cadence and a synthetic IPL program writing the DSP through machine
 resume. See the [APU clock/DSP register audit](docs/apu-clock-dsp-register-audit.md).
-Voice state, BRR, envelopes, mixing, echo/FIR, PCM output, exact DSP polling,
-cross-clock races and physical oscillator drift remain unimplemented. Local clean
-tests, sanitizers, repository checks and static analysis pass. Revision
+At that checkpoint, voice state, BRR, envelopes, mixing, echo/FIR, PCM output,
+exact DSP polling, cross-clock races and physical oscillator drift remained
+unimplemented. Local clean tests, sanitizers, repository checks and static analysis
+passed. Revision
 `1bec5ce` passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40440467920),
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40440468813) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40440468028).
 No target-runtime or audio-output result is claimed.
 
-Next primary block: implement independently verified S-DSP voice/key-on state and
-the first BRR/sample pipeline slice. Refining
+The first S-DSP voice-control/BRR slice now exposes eight deterministic voice
+records, attaches the DSP to the existing caller-owned ARAM, polls `KON`/`KOFF`
+on alternating sample events, latches `DIR`/`SRCN` start and loop addresses and
+models the five-event key-on preparation period. A pure BRR decoder covers all
+shifts and filters with explicit signed-16 clamp and signed-15 wrap. Host vectors
+cover directory lookup, key overwrite/poll/reset behavior, chunk equivalence and
+decoder edge arithmetic. See the
+[S-DSP voice/BRR audit](docs/sdsp-voice-brr-foundation-audit.md). This is not PCM:
+voice BRR streaming, pitch, interpolation, envelopes, mixing, echo and device
+output remain unimplemented.
+
+Next primary block: connect per-voice BRR stream/ring state, pitch progression and
+the interpolation input path. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
@@ -2020,14 +2032,14 @@ platform persistence remains incomplete.
 ## DSP
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] Eight voice state
-- [ ] BRR decode
+- [ ] [IN PROGRESS] Eight voice state — key-control/source latches exist; streaming/pitch/envelope state remains
+- [ ] [IN PROGRESS] BRR decode — pure exact block decoder exists; per-voice ring and traversal remain
 - [ ] BRR loop/end behavior
 - [ ] Pitch progression
 - [ ] Interpolation
 - [ ] ADSR
 - [ ] GAIN envelopes
-- [ ] Key-on/key-off
+- [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling and five-event preparation exist; exact microsteps/release decay remain
 - [ ] Noise generator
 - [ ] Pitch modulation
 - [ ] Voice volumes
@@ -2035,14 +2047,14 @@ platform persistence remains incomplete.
 - [ ] Echo buffer
 - [ ] FIR filter
 - [ ] Feedback
-- [ ] Clamping and signed arithmetic
+- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR clamp/wrap is explicit; later mixer/echo arithmetic remains
 - [ ] [IN PROGRESS] Sample timing — one deterministic event per 32 S-SMP cycles; pipeline/sample values pending
 - [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
 - [ ] Golden sample tests
 
 ## APU and audio
 
-- [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3` and common S-SMP time exist; voice/polling semantics pending
+- [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3`, ARAM source latches, common time and sample-granularity key polling exist; exact microsteps pending
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
 - [x] Timer integration — machine APU clock advances S-SMP timers
 - [ ] Sample generation pipeline

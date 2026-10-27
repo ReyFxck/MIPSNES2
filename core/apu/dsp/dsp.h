@@ -3,21 +3,66 @@
 #define MIPSNES2_DSP_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 enum {
     MIPSNES2_DSP_REGISTER_COUNT = 128,
+    MIPSNES2_DSP_VOICE_COUNT = 8,
+    MIPSNES2_DSP_BRR_BLOCK_SIZE = 9,
+    MIPSNES2_DSP_BRR_SAMPLE_COUNT = 16,
+    MIPSNES2_DSP_ARAM_SIZE = 65536,
     MIPSNES2_DSP_SAMPLE_CYCLES = 32,
+    MIPSNES2_DSP_KEY_ON_DELAY_SAMPLES = 5,
+    MIPSNES2_DSP_VOICE_REGISTER_STRIDE = 16,
+    MIPSNES2_DSP_VOICE_REGISTER_SRCN = 0x04,
+    MIPSNES2_DSP_VOICE_REGISTER_ENVX = 0x08,
+    MIPSNES2_DSP_VOICE_REGISTER_OUTX = 0x09,
+    MIPSNES2_DSP_REGISTER_KON = 0x4c,
+    MIPSNES2_DSP_REGISTER_KOFF = 0x5c,
+    MIPSNES2_DSP_REGISTER_DIR = 0x5d,
     MIPSNES2_DSP_REGISTER_FLG = 0x6c,
     MIPSNES2_DSP_REGISTER_ENDX = 0x7c
 };
 
-/* Register storage is intentionally public for deterministic state inspection.
- * It is not yet a voice, BRR, envelope, echo or PCM implementation. */
+typedef enum {
+    MIPSNES2_DSP_VOICE_WAITING = 0,
+    MIPSNES2_DSP_VOICE_KEY_ON_DELAY,
+    MIPSNES2_DSP_VOICE_ACTIVE,
+    MIPSNES2_DSP_VOICE_RELEASE
+} mipsnes2_dsp_voice_state;
+
+typedef struct {
+    uint16_t directory_address;
+    uint16_t source_start_address;
+    uint16_t source_loop_address;
+    uint8_t source_number;
+    uint8_t key_on_delay;
+    mipsnes2_dsp_voice_state state;
+    bool directory_loaded;
+} mipsnes2_dsp_voice;
+
+typedef struct {
+    int16_t samples[MIPSNES2_DSP_BRR_SAMPLE_COUNT];
+    int16_t previous1;
+    int16_t previous2;
+    uint8_t header;
+    uint8_t shift;
+    uint8_t filter;
+    bool end;
+    bool loop;
+} mipsnes2_dsp_brr_block;
+
+/* State is intentionally public for deterministic inspection. PCM generation,
+ * pitch, envelopes, mixing and echo are not yet implemented. */
 typedef struct {
     uint8_t registers[MIPSNES2_DSP_REGISTER_COUNT];
+    mipsnes2_dsp_voice voices[MIPSNES2_DSP_VOICE_COUNT];
+    uint8_t *ram;
+    size_t ram_size;
     uint8_t address;
     uint8_t internal_flags;
+    uint8_t pending_key_on;
     uint8_t sample_phase;
     uint64_t smp_cycles;
     uint64_t sample_count;
@@ -25,10 +70,19 @@ typedef struct {
 } mipsnes2_dsp;
 
 void mipsnes2_dsp_init(mipsnes2_dsp *dsp);
+bool mipsnes2_dsp_attach_ram(mipsnes2_dsp *dsp, uint8_t *ram,
+                             size_t ram_size);
 bool mipsnes2_dsp_write_address(mipsnes2_dsp *dsp, uint8_t address);
 bool mipsnes2_dsp_read_address(const mipsnes2_dsp *dsp, uint8_t *address);
 bool mipsnes2_dsp_write_data(mipsnes2_dsp *dsp, uint8_t value);
 bool mipsnes2_dsp_read_data(const mipsnes2_dsp *dsp, uint8_t *value);
+
+/* Decode one documented nine-byte BRR block, high nibble first. The two
+ * history samples are inputs and their updated values are returned. */
+bool mipsnes2_dsp_brr_decode_block(const uint8_t *encoded,
+                                   size_t encoded_size,
+                                   int16_t previous1, int16_t previous2,
+                                   mipsnes2_dsp_brr_block *decoded);
 
 /* Advance the S-DSP's fixed one-sample-per-32-S-SMP-cycle cadence. */
 bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles);

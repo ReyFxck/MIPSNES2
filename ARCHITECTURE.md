@@ -22,7 +22,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP communication and timing | Directional ports plus nominal rational master-to-S-SMP clock bridge; electrical race order and oscillator drift pending |
 | core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | All 256 opcodes, ARAM/IPL, ports, `$F2/$F3` DSP route and three-stage timers under the APU clock; exact bus phases and interrupt/reset entry pending |
-| core/apu/dsp | Emulated SNES DSP and sample generation | 128-byte register/address foundation, initial `FLG`/`ENDX` effects and 32-cycle sample-event cadence; voices and PCM absent |
+| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight voice-control records, ARAM source latches and pure BRR block decode; streaming, envelopes, mixer and PCM absent |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
@@ -53,9 +53,13 @@ instructions, advances timers and S-DSP cadence, and keeps running devices while
 SLEEP/STOP halt instruction execution. Machine configuration can copy an explicit
 SPC700 register seed; undocumented reset registers are not fabricated.
 
-The first S-DSP layer exposes `$F2/$F3`, a 128-byte register file, bit-7 write
+The S-DSP layer exposes `$F2/$F3`, a 128-byte register file, bit-7 write
 inhibition, `ENDX` clear, internal `FLG` reset state and a 32-S-SMP-cycle sample
-event. It has no voice, BRR, envelope, echo, mixer or PCM semantics. Exact
+event. Its eight voice records poll `KON`/`KOFF` every other sample, latch
+`DIR`/`SRCN` source addresses from borrowed ARAM and model the five-event key-on
+preparation period. A side-effect-free API decodes one BRR block with exact
+filter/clamp/wrap arithmetic. It has no connected BRR stream, pitch,
+interpolation, envelope, echo, mixer or PCM semantics. Exact
 instruction bus phases, within-DSP-loop register visibility, mailbox races and
 physical oscillator drift remain open.
 `resume` advances one
@@ -703,5 +707,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   timers and S-DSP sample cadence from machine time. `$F2/$F3` reach a 128-byte
   S-DSP register foundation with bit-7 write inhibition, `ENDX` clear and internal
   `FLG` reset state. Voices, PCM and exact cross-clock/bus phase behavior remain.
+- 2026-10-27: eight S-DSP voice-control records now poll key registers at a
+  deterministic alternating-sample phase, latch `DIR`/`SRCN` entries from ARAM
+  and complete a five-event key-on preparation state. A pure BRR decoder covers
+  all shifts/filters and explicit clamp/wrap arithmetic; streaming and PCM remain.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

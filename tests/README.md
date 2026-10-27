@@ -20,11 +20,13 @@ operands/targets, cycle overflow and
 instruction-to-timer advancement. It does not claim a complete interpreter or
 per-cycle bus sequencing.
 
-`test-dsp` verifies the first 128-byte S-DSP register/address boundary, inhibited
-writes, `ENDX` clear, internal `FLG` state and the 32-S-SMP-cycle sample-event
-cadence. `test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
+`test-dsp` verifies the 128-byte S-DSP register/address boundary, inhibited
+writes, `ENDX` clear, internal `FLG` state, 32-S-SMP-cycle events, eight-voice
+key polling/source-directory state and exact standalone BRR shift/filter/clamp
+vectors. `test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
 chunked equivalence, atomic SPC700 admission and credit, timer coordination,
-SLEEP continuation and overflow handling. These sample events are not PCM output.
+SLEEP continuation and overflow handling. The BRR decoder is not yet connected to
+a voice sample stream, and these events are not PCM output.
 
 `test-spc700-alu` verifies the exact 100-opcode OR/AND/EOR/CMP/ADC/SBC,
 ASL/ROL/LSR/ROR and byte INC/DEC block across every documented addressing form.

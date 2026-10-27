@@ -44,6 +44,7 @@ int main(void)
     CHECK(!mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f3), 0U));
     mipsnes2_dsp_init(&dsp);
     CHECK(mipsnes2_smp_memory_attach_dsp(&memory, &dsp));
+    CHECK(dsp.ram == ram && dsp.ram_size == sizeof(ram));
     CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f2),
                                     UINT8_C(0x2c)));
     CHECK(mipsnes2_smp_memory_write(&memory, UINT16_C(0x00f3),

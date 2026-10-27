@@ -32,6 +32,10 @@ bool mipsnes2_smp_memory_attach_dsp(mipsnes2_smp_memory *memory,
         !dsp->initialized) {
         return false;
     }
+    if (!mipsnes2_dsp_attach_ram(dsp, memory->ram,
+                                 MIPSNES2_SMP_RAM_SIZE)) {
+        return false;
+    }
     memory->dsp = dsp;
     return true;
 }

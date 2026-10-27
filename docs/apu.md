@@ -7,7 +7,9 @@ of final emulated samples. Platform code owns delivery buffers and device APIs. 
 logical S-SMP timer block and a caller-owned instruction-atomic SPC700 interpreter
 covering all 256 opcode values now run under a nominal rational machine-to-S-SMP
 clock. The same clock advances the timers and a first S-DSP register/sample-event
-foundation. There is still no voice synthesis, PCM buffer or audio pipeline.
+foundation. Eight voice-control records, sample-granularity key polling, source
+directory latching and a pure BRR block decoder now exist. There is still no
+voice sample pipeline, PCM buffer or audio output.
 
 ## Design direction
 
@@ -29,7 +31,7 @@ prove RFAuds2/SPU2 or PSP delivery.
 Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Document
 implementation evidence before promotion.
 
-- [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3` register route and common cycle domain exist; voice effects and exact polling remain
+- [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3`, ARAM source directories, common time and sample-granularity key polling exist; exact DSP microsteps remain
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox is clocked at atomic boundaries; electrical races remain
 - [x] Timer integration — machine APU clock advances the existing S-SMP timers
 - [ ] Sample generation pipeline
@@ -48,6 +50,8 @@ aggregate cycle totals, including word/control-flow/stack/bit/multiply/divide an
 wait-state families. Nominal synchronized scheduling now exists. Exact bus phases,
 interrupt/reset entry, cross-clock races and most S-DSP semantics do not.
 See the [APU clock/DSP register audit](apu-clock-dsp-register-audit.md).
+The first voice-control and decoder slice is recorded in the
+[S-DSP voice/BRR audit](sdsp-voice-brr-foundation-audit.md).
 RFAuds2 is transport infrastructure only
 and must never become a core dependency or SNES timing source. The inspected candidate
 was RFAuds2 `0.1.0-alpha.1` at revision
