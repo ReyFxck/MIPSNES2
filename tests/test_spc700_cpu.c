@@ -20,104 +20,10 @@ static int same_registers(const mipsnes2_spc700_registers *left,
            left->sp == right->sp && left->psw == right->psw;
 }
 
-static int extended_opcode(uint8_t opcode)
-{
-    uint8_t group = opcode & UINT8_C(0xe0);
-    uint8_t mode = opcode & UINT8_C(0x1f);
-
-    if (group <= UINT8_C(0xa0) &&
-        (mode == UINT8_C(0x04) || mode == UINT8_C(0x05) ||
-         mode == UINT8_C(0x06) || mode == UINT8_C(0x07) ||
-         mode == UINT8_C(0x08) || mode == UINT8_C(0x09) ||
-         mode == UINT8_C(0x14) || mode == UINT8_C(0x15) ||
-         mode == UINT8_C(0x16) || mode == UINT8_C(0x17) ||
-         mode == UINT8_C(0x18) || mode == UINT8_C(0x19))) {
-        return 1;
-    }
-    if ((opcode & UINT8_C(0x80)) == 0U &&
-        (mode == UINT8_C(0x0b) || mode == UINT8_C(0x0c) ||
-         mode == UINT8_C(0x1b) || mode == UINT8_C(0x1c))) {
-        return 1;
-    }
-    switch (opcode) {
-    case UINT8_C(0x1d):
-    case UINT8_C(0x3d):
-    case UINT8_C(0x8b):
-    case UINT8_C(0x8c):
-    case UINT8_C(0x9b):
-    case UINT8_C(0x9c):
-    case UINT8_C(0xab):
-    case UINT8_C(0xac):
-    case UINT8_C(0xbb):
-    case UINT8_C(0xbc):
-    case UINT8_C(0xdc):
-    case UINT8_C(0xfc):
-        return 1;
-    default:
-        return 0;
-    }
-}
-
 static int supported_opcode(uint8_t opcode)
 {
-    if (extended_opcode(opcode)) {
-        return 1;
-    }
-    switch (opcode) {
-    case UINT8_C(0x00):
-    case UINT8_C(0x20):
-    case UINT8_C(0x40):
-    case UINT8_C(0x5d):
-    case UINT8_C(0x60):
-    case UINT8_C(0x7d):
-    case UINT8_C(0x80):
-    case UINT8_C(0x8d):
-    case UINT8_C(0x8f):
-    case UINT8_C(0x9d):
-    case UINT8_C(0xa0):
-    case UINT8_C(0xaf):
-    case UINT8_C(0xbd):
-    case UINT8_C(0xbf):
-    case UINT8_C(0xc0):
-    case UINT8_C(0xc4):
-    case UINT8_C(0xc5):
-    case UINT8_C(0xc6):
-    case UINT8_C(0xc7):
-    case UINT8_C(0xc9):
-    case UINT8_C(0xcb):
-    case UINT8_C(0xcc):
-    case UINT8_C(0xcd):
-    case UINT8_C(0xd4):
-    case UINT8_C(0xd5):
-    case UINT8_C(0xd6):
-    case UINT8_C(0xd7):
-    case UINT8_C(0xd8):
-    case UINT8_C(0xd9):
-    case UINT8_C(0xdb):
-    case UINT8_C(0xdd):
-    case UINT8_C(0xe0):
-    case UINT8_C(0xe4):
-    case UINT8_C(0xe5):
-    case UINT8_C(0xe6):
-    case UINT8_C(0xe7):
-    case UINT8_C(0xe8):
-    case UINT8_C(0xe9):
-    case UINT8_C(0xeb):
-    case UINT8_C(0xec):
-    case UINT8_C(0xed):
-    case UINT8_C(0xf4):
-    case UINT8_C(0xf5):
-    case UINT8_C(0xf6):
-    case UINT8_C(0xf7):
-    case UINT8_C(0xf8):
-    case UINT8_C(0xf9):
-    case UINT8_C(0xfa):
-    case UINT8_C(0xfb):
-    case UINT8_C(0xfd):
-        return 1;
-    default:
-        return 0;
-    }
+    (void)opcode;
+    return 1;
 }
 
 int main(void)

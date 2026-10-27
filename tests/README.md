@@ -26,6 +26,13 @@ It includes 54 accumulator and 18 direct-memory ALU cases, all 28 shift/INC/DEC
 forms, exact lengths/cycles, P-selected mapped memory, MMIO failure/rollback,
 timer coupling and all 262,144 byte ADC/SBC operand/carry combinations.
 
+`test-spc700-complete` independently counts the remaining 106 opcodes, executes
+all 256 base dispatch paths and verifies bit, branch, call/return, stack, word,
+compare, multiply/divide, decimal-adjust and wait-state behavior. It exhausts all
+65,536 MUL inputs, every X/Y pair with six A samples for DIV, all A/H/C decimal
+adjust inputs and cycle-overflow boundaries. This completes opcode semantics, not
+per-cycle bus sequencing, interrupt entry, DSP or audio integration.
+
 The CPU suite includes boundary-visible ABORT vectors, native/emulation stack layouts,
 priority, WAI restart-address behavior and invalid-bus diagnostics. It does not claim
 physical mid-instruction ABORT sampling or rollback.

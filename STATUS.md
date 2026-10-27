@@ -758,8 +758,21 @@ unavailable locally. Revision `696ca39` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40405331400).
 No target-runtime or audio result is claimed.
 
-Next primary block: implement the 16-bit MOVW/arithmetic family, followed by
-branches and stack/control flow. Refining
+The remaining 106 SPC700 opcode values now complete all 256 instruction-atomic
+dispatch entries. This block adds word arithmetic and MOVW, branches, calls,
+returns, stack behavior, bit operations, X/Y compare forms, multiply/divide,
+decimal adjustment and SLEEP/STOP wait states. Direct-page words wrap within the
+selected page, stack accesses wrap within page one, and conditional timing checks
+the maximum taken cost before access. The independent complete-opcode fixture
+counts exactly 106 new bytes, executes all 256 base paths, exhausts MUL and DIV,
+and covers bit truth tables, branches, control flow, word flags, decimal adjustment,
+wait states, mapped failure and cycle overflow. See the
+[SPC700 complete-opcode audit](docs/spc700-complete-opcode-audit.md).
+Publication revision and CI evidence are pending. No target-runtime or audio result
+is claimed.
+
+Next primary block: connect SPC700 execution to a deterministic S-SMP clock domain,
+then begin the independently verified S-DSP path. Refining
 DMA/HDMA electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
@@ -1961,25 +1974,25 @@ platform persistence remains incomplete.
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC with no invented reset values
 - [x] Instruction fetch — bounded S-SMP-map fetch, IPL overlay and 16-bit PC wrap verified
-- [ ] [IN PROGRESS] Opcode dispatch — 150 PSW/MOV/ALU/shift/increment/decrement opcodes execute; 106 values fail explicitly
-- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, absolute, indexed, register-indirect and direct-indirect forms verified
-- [ ] [IN PROGRESS] Load/store — byte register/memory MOV subset verified; MOVW remains absent
-- [ ] [IN PROGRESS] Arithmetic and flags — byte CMP/ADC/SBC and INC/DEC verified; word/decimal/multiply/divide remain
-- [ ] Decimal adjust
+- [x] Opcode dispatch — all 256 opcode values execute atomically
+- [x] Addressing modes — all architectural operand and address forms represented
+- [x] Load/store — byte and word register/memory MOV families verified
+- [x] Arithmetic and flags — byte/word arithmetic, compare, decimal adjust, multiply and divide verified
+- [x] Decimal adjust
 - [x] Byte logic and shifts — OR/AND/EOR plus ASL/ROL/LSR/ROR addressing families verified
-- [ ] Branches and calls
-- [ ] Stack behavior
-- [ ] Bit operations
-- [ ] Multiply/divide
-- [ ] Sleep and stop
-- [ ] [IN PROGRESS] Instruction timing — implemented 2/3/4/5/6/7-cycle costs feed timers atomically; bus phases absent
+- [x] Branches and calls
+- [x] Stack behavior
+- [x] Bit operations
+- [x] Multiply/divide
+- [x] Sleep and stop
+- [ ] [IN PROGRESS] Instruction timing — documented aggregate 2-12-cycle costs and taken-branch deltas feed timers atomically; exact bus phases absent
 - [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM and optional IPL overlay verified; rest of S-SMP map/runtime pending
 - [ ] IPL provenance decision
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
-- [ ] [IN PROGRESS] Instruction tests — all 256 dispatch values, PSW/MOV/ALU/shift/INC/DEC matrices and exhaustive byte ADC/SBC covered
-- [ ] [IN PROGRESS] Timing regressions — instruction/timer coupling, overflow and unavailable operand/target cases covered
+- [x] Instruction tests — every opcode, family matrices and exhaustive byte ADC/SBC, MUL/DIV and decimal-adjust coverage
+- [ ] [IN PROGRESS] Timing regressions — aggregate costs, timer coupling, taken branches, overflow and unavailable operand/target cases covered; per-cycle phases remain
 
 ## DSP
 

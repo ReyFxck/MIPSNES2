@@ -4,11 +4,10 @@
 an optional caller-supplied 64-byte IPL image, the communication mailbox and
 the `$F1/$FA-$FF` timer-register route. `timers.[ch]` owns the three-stage
 timer state and an explicit S-SMP-cycle advance API. `cpu.[ch]` owns caller-provided
-register state plus bounded atomic fetch/dispatch for 150 PSW/MOV/ALU/shift/
-increment/decrement instructions across mapped addressing modes.
-It does not derive S-SMP time from the S-CPU. DSP and TEST MMIO, word operations,
-bit operations, control flow, stack behavior and the rest of the instruction set remain
-deliberately unimplemented.
+register state plus bounded instruction-atomic fetch/dispatch for all 256 opcode
+values across the architectural addressing modes. It does not derive S-SMP time
+from the S-CPU. DSP and TEST MMIO, interrupt entry, exact per-cycle bus phases and
+synchronized S-CPU/S-SMP/S-DSP execution remain deliberately unimplemented.
 
 See the [memory-map audit](../../../docs/smp-memory-map-audit.md),
 [timer audit](../../../docs/smp-timer-audit.md) and
@@ -19,5 +18,6 @@ See the [memory-map audit](../../../docs/smp-memory-map-audit.md),
 the [absolute MOV audit](../../../docs/spc700-absolute-mov-audit.md), the
 [absolute-indexed MOV audit](../../../docs/spc700-absolute-indexed-mov-audit.md),
 the [indirect and memory MOV audit](../../../docs/spc700-indirect-and-memory-mov-audit.md),
-the [100-opcode ALU audit](../../../docs/spc700-100-opcode-alu-audit.md), and the
+the [100-opcode ALU audit](../../../docs/spc700-100-opcode-alu-audit.md), the
+[complete-opcode audit](../../../docs/spc700-complete-opcode-audit.md), and the
 [canonical status](../../../STATUS.md).

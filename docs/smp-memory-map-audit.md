@@ -42,9 +42,11 @@ Host `make test` and `make check` passed with C99 `cc` on 2026-10-25.
 Pinned PS2/PSP CI cross-builds are pending publication. No physical console,
 PCSX2, ARMSX2, PPSSPP or NetherSX2 run was performed for this block.
 
-This map is a strict partial interface. It cannot run an SPC700 program:
-there is no register state, instruction engine, DSP, timers, audio samples or
-S-SMP clock scheduling. Input clear is immediate in this API, whereas the
+This audit originally introduced a strict partial map without an instruction
+engine. The current tree now has register state, timers and an instruction-atomic
+256-opcode SPC700 engine, but still cannot run a complete APU: there is no DSP,
+audio sample path, interrupt entry or synchronized S-SMP clock domain. Input clear
+is immediate in this API, whereas the
 sound manual describes a next-cycle clear and undefined results when an
 S-CPU write races it. Those electrical details remain unverified here.
 Exact power-on ARAM contents are not claimed. Real firmware provenance and

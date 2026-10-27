@@ -33,8 +33,15 @@ typedef enum {
     MIPSNES2_SPC700_NOT_READY,
     MIPSNES2_SPC700_MEMORY_UNAVAILABLE,
     MIPSNES2_SPC700_UNIMPLEMENTED_OPCODE,
-    MIPSNES2_SPC700_CYCLE_OVERFLOW
+    MIPSNES2_SPC700_CYCLE_OVERFLOW,
+    MIPSNES2_SPC700_HALTED
 } mipsnes2_spc700_result;
+
+typedef enum {
+    MIPSNES2_SPC700_RUNNING = 0,
+    MIPSNES2_SPC700_SLEEPING,
+    MIPSNES2_SPC700_STOPPED
+} mipsnes2_spc700_wait_state;
 
 /* Caller-owned execution state. The memory object is borrowed and must remain
  * at a stable address. Initialization copies caller-selected registers instead
@@ -45,6 +52,7 @@ typedef struct {
     uint64_t instruction_cycles;
     uint16_t last_opcode_address;
     uint8_t last_opcode;
+    mipsnes2_spc700_wait_state wait_state;
     bool has_fetched_opcode;
     bool initialized;
 } mipsnes2_spc700;
@@ -53,11 +61,13 @@ bool mipsnes2_spc700_init(mipsnes2_spc700 *cpu,
                           mipsnes2_smp_memory *memory,
                           const mipsnes2_spc700_registers *registers);
 
-/* Executes one complete supported instruction atomically. A rejected opcode or
- * unavailable operand/target is recorded for diagnostics but does not change
+/* Executes one complete instruction atomically. An unavailable operand/target
+ * is recorded for diagnostics but does not change
  * programmer-visible registers, the cycle total or timers. Successful mapped
  * reads/writes retain the side effects owned by mipsnes2_smp_memory_read/write;
- * exact per-cycle bus ordering is not represented by this boundary. */
+ * exact per-cycle bus ordering is not represented by this boundary. SLEEP and
+ * STOP commit their documented three cycles and then return HALTED on later
+ * calls until the caller reinitializes the CPU. */
 mipsnes2_spc700_result mipsnes2_spc700_step(mipsnes2_spc700 *cpu);
 
 #endif

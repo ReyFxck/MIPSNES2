@@ -227,25 +227,25 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 
 - [x] Register state — caller-owned A/X/Y/SP/PSW/PC
 - [x] Instruction fetch — bounded S-SMP map, IPL overlay and PC wrap
-- [ ] [IN PROGRESS] Opcode dispatch — 150 PSW/MOV/ALU/shift/increment/decrement opcodes implemented
-- [ ] [IN PROGRESS] Addressing modes — implied/register, immediate, direct-page, indexed, register-indirect and direct-indirect subsets
-- [ ] [IN PROGRESS] Load/store — byte register/memory MOV subset, including direct-page memory transfers; MOVW remains
-- [ ] [IN PROGRESS] Arithmetic and flags — byte CMP/ADC/SBC and INC/DEC families implemented; word/decimal/multiply/divide remain
-- [ ] Decimal adjust
+- [x] Opcode dispatch — all 256 opcode values implemented atomically
+- [x] Addressing modes — all architectural operand and address forms represented
+- [x] Load/store — byte and word register/memory MOV families
+- [x] Arithmetic and flags — byte/word arithmetic, compare, decimal adjust, multiply and divide
+- [x] Decimal adjust
 - [x] Byte logic and shifts — OR/AND/EOR plus ASL/ROL/LSR/ROR addressing families
-- [ ] Branches and calls
-- [ ] Stack behavior
-- [ ] Bit operations
-- [ ] Multiply/divide
-- [ ] Sleep and stop
-- [ ] [IN PROGRESS] Instruction timing — atomic 2/3/4/5/6/7-cycle subset advances timers
+- [x] Branches and calls
+- [x] Stack behavior
+- [x] Bit operations
+- [x] Multiply/divide
+- [x] Sleep and stop
+- [ ] [IN PROGRESS] Instruction timing — documented aggregate 2-12-cycle costs and taken-branch deltas advance timers atomically; exact bus phases remain
 - [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay and write-through tested; remaining MMIO, interpreter and hardware validation pending
 - [ ] IPL provenance decision
 - [ ] [IN PROGRESS] I/O registers — `$F1/$F4-$FF` partial route exists; TEST and DSP registers remain
 - [ ] [IN PROGRESS] Timers — three-stage 128/16-cycle counters, targets, enable edges and read-clear outputs verified with explicit S-SMP cycles; synchronized clock domain and electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` input-pair clear verified; cross-clock timing pending
-- [ ] [IN PROGRESS] Instruction tests — 256-value dispatch, PSW/MOV/ALU/shift/INC/DEC matrices and exhaustive byte ADC/SBC coverage
-- [ ] [IN PROGRESS] Timing regressions — instruction/timer, overflow and missing-operand coverage
+- [x] Instruction tests — every opcode, family matrices and exhaustive byte ADC/SBC, MUL/DIV and decimal-adjust coverage
+- [ ] [IN PROGRESS] Timing regressions — aggregate instruction/timer, taken-branch, overflow and missing-operand coverage; per-cycle phases remain
 
 ## Phase 8 — DSP / Audio
 

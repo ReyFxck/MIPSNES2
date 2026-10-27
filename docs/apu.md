@@ -4,8 +4,9 @@
 
 APU integration owns SPC700/DSP coordination, timers, CPU communication and generation
 of final emulated samples. Platform code owns delivery buffers and device APIs. The
-logical S-SMP timer block and a small caller-owned SPC700 execution foundation
-exist, but there is no coordinated APU clock or audio pipeline.
+logical S-SMP timer block and a caller-owned instruction-atomic SPC700 interpreter
+covering all 256 opcode values exist, but there is no coordinated APU clock,
+S-DSP implementation or audio pipeline.
 
 ## Design direction
 
@@ -42,9 +43,10 @@ remains unimplemented or unverified; document implementation evidence before pro
 
 ## Research and decisions
 
-Only 150 SPC700 PSW/MOV/ALU/shift/increment/decrement instructions are implemented,
-including mapped accumulator and direct-memory arithmetic. Word/control-flow/stack/
-bit families and S-DSP semantics do not exist.
+All 256 SPC700 opcode values have instruction-atomic semantics with documented
+aggregate cycle totals, including word/control-flow/stack/bit/multiply/divide and
+wait-state families. Exact bus phases, interrupt entry, synchronized scheduling and
+S-DSP semantics do not exist.
 RFAuds2 is transport infrastructure only
 and must never become a core dependency or SNES timing source. The inspected candidate
 was RFAuds2 `0.1.0-alpha.1` at revision
