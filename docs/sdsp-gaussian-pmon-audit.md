@@ -104,8 +104,11 @@ The clean `make -j2 test` host suite passes. Focused ASan/UBSan runs cover the
 DSP, APU timing bridge and machine integration with leak detection disabled only
 for the managed runtime. GCC `-fanalyzer` reports no diagnostics for `dsp.c` or
 `test_dsp.c`; `git diff --check` and `tools/check_repository.py` also pass.
-Cross-build evidence is recorded in `STATUS.md` after CI completes. Cross-build
-success is not target-runtime or audible-output evidence.
+Revision `5d71e198` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40731608107),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40731607932) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40731607900).
+Cross-build success is not target-runtime or audible-output evidence.
 
 ## Open boundaries
 

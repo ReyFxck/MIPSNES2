@@ -904,8 +904,11 @@ independent phase outputs, live BRR/noise switching, output scale and PMON's
 positive, negative, rounding, suppression and cap edges. No emulator source or
 emulator-derived coefficient table was imported. The clean host suite and
 repository checks pass; focused DSP/APU/machine ASan+UBSan runs pass and GCC
-`-fanalyzer` reports no DSP or focused-test diagnostics. CI evidence will be
-attached after the published revision finishes. See the
+`-fanalyzer` reports no DSP or focused-test diagnostics. Revision `5d71e198`
+passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40731608107),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40731607932) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40731607900). See the
 [S-DSP Gaussian/PMON audit](docs/sdsp-gaussian-pmon-audit.md). There is still no
 echo, mute/DAC stage, PCM buffer or audible platform output.
 
