@@ -909,11 +909,31 @@ passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40731608107),
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40731607932) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40731607900). See the
-[S-DSP Gaussian/PMON audit](docs/sdsp-gaussian-pmon-audit.md). There is still no
-echo, mute/DAC stage, PCM buffer or audible platform output.
+[S-DSP Gaussian/PMON audit](docs/sdsp-gaussian-pmon-audit.md). At that revision
+there was no echo, mute/DAC stage, PCM buffer or audible platform output.
 
-Next primary block: resolve echo-send selection and the echo RAM/FIR/feedback
-pipeline from hardware documentation, then define the mute/DAC-to-PCM boundary.
+The echo/output slice now resolves an ordered `EON` voice-send mix independently
+from the dry path, reads left-aligned signed-15 stereo samples from the
+16-bit-wrapping `ESA`/`EDL` ARAM ring, and advances independent eight-entry FIR
+histories. The documented signed 1.7 FIR arithmetic wraps the first seven taps,
+clamps the newest-tap addition and clears bit 0. Signed `EVOLL`/`EVOLR` joins the
+dry result with a final signed-16 clamp; signed `EFB` returns the filtered result
+to the ordered send mix before clamp/low-bit clear and an optional little-endian
+ring write. `FLG` bit 5 suppresses writes without stopping reads, FIR or pointer
+movement, while bit 6 zeros only the exposed DAC-facing sample. `ESA` is applied
+one sample after its register read, `EDL` is latched only at offset zero, delay
+zero still spans four bytes and all ARAM addressing wraps at 16 bits. Host vectors
+cover pure FIR overflow/clamp edges, echo-write protection, mute continuation,
+address/delay wrap, EDL relatching, one-shot/chunked equivalence and a read-only
+APU timing preflight that cannot double-write borrowed ARAM. The clean host
+suite and repository checks pass locally; sanitizer/analyzer and cross-build CI
+evidence are recorded below after publication. See the
+[S-DSP echo/output audit](docs/sdsp-echo-output-audit.md). This is an inspectable
+sample boundary, not a PCM queue or audible platform output.
+
+Next primary block: define deterministic PCM buffering and a platform-independent
+handoff from the mute-gated sample, without allowing device timing to drive S-DSP
+time.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2139,7 +2159,7 @@ platform persistence remains incomplete.
 ## DSP
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] [IN PROGRESS] Eight voice state — BRR/noise, Gaussian, envelope, PMON and resolved dry mixing exist; echo remains
+- [ ] [IN PROGRESS] Eight voice state — BRR/noise, Gaussian, envelope, PMON, dry mixing and `EON` send selection exist; exact microphases remain
 - [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact DSP microphases remain
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact phase/envelope effects remain
 - [ ] [IN PROGRESS] Pitch progression — raw and PMON-adjusted 2.12 steps plus the documented cap exist; exact phases remain
@@ -2150,21 +2170,21 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Noise generator — LFSR/rates/`NON`, envelope/`OUTX`, stereo and dry mixing exist; exact microphases remain
 - [ ] [IN PROGRESS] Pitch modulation — preceding-voice output, staged signed shifts, voice-0 ignore, target-`NON` suppression and cap exist; exact fetch phases remain
 - [ ] [IN PROGRESS] Voice volumes — signed left/right arithmetic feeds BRR/noise into the resolved ordered mixer; exact phases remain
-- [ ] [IN PROGRESS] Main volumes — signed left/right arithmetic applies after the complete resolved dry mix; echo/DAC integration remains
-- [ ] Echo buffer
-- [ ] FIR filter
-- [ ] Feedback
-- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR and ordered dry-mixer rules are explicit; echo remains
+- [ ] [IN PROGRESS] Main volumes — signed dry output is integrated with echo volume and final clamping; exact fetch phases remain
+- [x] Echo buffer — sample-level `ESA`/`EDL` ARAM ring, stereo wrap and protected writes are host verified
+- [x] FIR filter — signed eight-tap history, partial wrap, final clamp and low-bit clear are host verified
+- [x] Feedback — ordered `EON` send, signed `EFB` and protected left-aligned writes are host verified
+- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR, dry, FIR, feedback and final-mix rules are explicit; post-DAC polarity remains
 - [ ] [IN PROGRESS] Sample timing — deterministic sample values and one event per 32 S-SMP cycles exist; exact pipeline phases remain
-- [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
-- [ ] [IN PROGRESS] Golden sample tests — coefficient hash, Gaussian phase/overflow, PMON, BRR/noise output and mixer vectors exist; echo/DAC/PCM vectors remain
+- [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX`, `FLG` reset/mute/echo gate and `ESA`/`EDL` latching exist; exact phases remain
+- [ ] [IN PROGRESS] Golden sample tests — Gaussian, PMON, dry, echo/FIR/feedback, mute and chunk vectors exist; buffered PCM vectors remain
 
 ## APU and audio
 
 - [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3`, ARAM source latches, common time and sample-granularity key polling exist; exact microsteps pending
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
 - [x] Timer integration — machine APU clock advances S-SMP timers
-- [ ] Sample generation pipeline
+- [ ] [IN PROGRESS] Sample generation pipeline — voices through echo and mute-gated final samples exist; exact phases and PCM handoff remain
 - [ ] Deterministic sample buffering
 - [ ] Output sample format contract
 - [ ] Platform-independent PCM output interface

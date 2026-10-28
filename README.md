@@ -69,7 +69,11 @@ voices with the documented four-tap wrap/clamp arithmetic. BRR and noise sources
 apply the 11-bit envelope as left-aligned signed-15 output, update `OUTX`, feed
 sample-level `PMON`, and expose signed `VxVOLL`/`VxVOLR` stereo samples. Resolved
 voices are mixed in voice order with per-addition signed-16 saturation, then pass
-through signed `MVOLL`/`MVOLR`. Exact DSP microphases, echo, mute/DAC, PCM output,
+through signed `MVOLL`/`MVOLR`. `EON` now selects the echo-send voices, borrowed
+ARAM supplies the `ESA`/`EDL` circular stereo buffer, the documented eight-tap
+FIR and `EFB` feedback arithmetic feed protected writes, and signed `EVOLL`/
+`EVOLR` join the final clamped mix. `FLG.MUTE` gates an inspectable DAC-facing
+sample without stopping synthesis. Exact DSP microphases, PCM buffering/output,
 a full ROM runner, compatibility and performance remain.
 
 Current milestone: Phase 4 — Ricoh 5A22 interrupt/timer foundation.

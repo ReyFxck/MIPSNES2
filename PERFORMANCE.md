@@ -61,6 +61,14 @@ the reference path has no target timing measurement.
 | Miscellaneous | TBD | TBD | |
 | Peak memory | TBD | TBD | |
 
+With ARAM attached, the reference DSP now services every 32-cycle sample event so
+the echo pointer, two FIR histories and possible RAM writes advance even while all
+voices are idle. This intentionally removes the previous idle bulk shortcut for a
+real machine instance. No PS2/PSP cost has been measured; future optimization must
+preserve sample-for-sample RAM, history, write-protection and register-latch behavior
+against this reference path before introducing packed/MMI/VFPU kernels or safe bulk
+special cases.
+
 The PS2 ROM path now reserves 64 KiB additional static EE memory for ARAM.
 No target peak-memory measurement, sound workload or audio throughput result
 has been collected. The PSP build links the map but does not allocate an ARAM

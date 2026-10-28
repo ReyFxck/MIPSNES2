@@ -5,17 +5,17 @@
 
 static bool advance_devices(mipsnes2_apu_timing *timing, uint64_t cycles)
 {
-    mipsnes2_dsp next_dsp;
-
     if (cycles == 0U) {
         return true;
     }
-    next_dsp = *timing->dsp;
-    if (!mipsnes2_dsp_advance(&next_dsp, cycles) ||
-        !mipsnes2_smp_memory_advance(timing->memory, cycles)) {
+    /* DSP echo writes borrow the memory map's ARAM, so overflow validation must
+     * not advance a copied DSP with the same RAM pointer. After this read-only
+     * precheck both device advances are infallible for initialized state. */
+    if (!mipsnes2_dsp_can_advance(timing->dsp, cycles) ||
+        !mipsnes2_smp_memory_advance(timing->memory, cycles) ||
+        !mipsnes2_dsp_advance(timing->dsp, cycles)) {
         return false;
     }
-    *timing->dsp = next_dsp;
     return true;
 }
 
@@ -71,7 +71,6 @@ mipsnes2_apu_timing_result mipsnes2_apu_timing_run_until(
     size_t instruction_limit, mipsnes2_apu_timing_report *report)
 {
     mipsnes2_clock_ratio next_ratio;
-    mipsnes2_dsp checked_dsp;
     uint64_t generated;
     uint64_t available;
     uint64_t samples_before;
@@ -101,8 +100,7 @@ mipsnes2_apu_timing_result mipsnes2_apu_timing_run_until(
         timing->instruction_credit > UINT64_MAX - generated) {
         return MIPSNES2_APU_TIMING_CLOCK_OVERFLOW;
     }
-    checked_dsp = *timing->dsp;
-    if (!mipsnes2_dsp_advance(&checked_dsp, generated)) {
+    if (!mipsnes2_dsp_can_advance(timing->dsp, generated)) {
         return MIPSNES2_APU_TIMING_CLOCK_OVERFLOW;
     }
 

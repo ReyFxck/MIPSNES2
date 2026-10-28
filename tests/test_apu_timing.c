@@ -43,6 +43,14 @@ static bool fixture_init(fixture *item, const uint8_t *program,
         with_cpu ? &item->cpu : NULL, &item->memory, &item->dsp);
 }
 
+static bool write_dsp_register(fixture *item, uint8_t reg, uint8_t value)
+{
+    return mipsnes2_smp_memory_write(
+               &item->memory, UINT16_C(0x00f2), reg) &&
+           mipsnes2_smp_memory_write(
+               &item->memory, UINT16_C(0x00f3), value);
+}
+
 int main(void)
 {
     static const uint8_t nops[64] = {0};
@@ -78,6 +86,31 @@ int main(void)
     CHECK(chunked.timing.smp_cycles == direct.timing.smp_cycles);
     CHECK(chunked.dsp.sample_count == direct.dsp.sample_count);
     CHECK(chunked.dsp.sample_phase == direct.dsp.sample_phase);
+
+    /* Timing overflow preflight must not run a copied DSP that still aliases
+     * live ARAM. One sample reads 2000, filters to 1000 and writes EFB=500;
+     * a hidden preflight write would make the committed result 124 instead. */
+    CHECK(fixture_init(&direct, nops, sizeof(nops), false));
+    direct.ram[0] = UINT8_C(0xd0);
+    direct.ram[1] = UINT8_C(0x07);
+    CHECK(write_dsp_register(&direct, MIPSNES2_DSP_REGISTER_FLG, 0U));
+    CHECK(write_dsp_register(
+        &direct,
+        MIPSNES2_DSP_REGISTER_FIR_BASE +
+            (7U * MIPSNES2_DSP_VOICE_REGISTER_STRIDE),
+        UINT8_C(0x40)));
+    CHECK(write_dsp_register(&direct,
+                             MIPSNES2_DSP_REGISTER_ECHO_FEEDBACK,
+                             UINT8_C(0x40)));
+    CHECK(mipsnes2_apu_timing_run_until(
+              &direct.timing, UINT64_C(672), 0U, &report) ==
+          MIPSNES2_APU_TIMING_OK);
+    CHECK(report.smp_cycles_generated == UINT64_C(32));
+    CHECK(direct.dsp.sample_count == UINT64_C(1));
+    CHECK(direct.dsp.echo.fir_sample.left == INT16_C(1000));
+    CHECK(direct.dsp.echo.write_sample.left == INT16_C(500));
+    CHECK(direct.ram[0] == UINT8_C(0xf4) &&
+          direct.ram[1] == UINT8_C(0x01));
 
     CHECK(fixture_init(&direct, nops, sizeof(nops), true));
     CHECK(mipsnes2_smp_memory_write(

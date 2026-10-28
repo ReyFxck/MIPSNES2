@@ -13,6 +13,7 @@ enum {
     MIPSNES2_DSP_BRR_SAMPLE_COUNT = 16,
     MIPSNES2_DSP_BRR_RING_SAMPLE_COUNT = 12,
     MIPSNES2_DSP_BRR_GROUP_SAMPLE_COUNT = 4,
+    MIPSNES2_DSP_FIR_TAP_COUNT = 8,
     MIPSNES2_DSP_ARAM_SIZE = 65536,
     MIPSNES2_DSP_SAMPLE_CYCLES = 32,
     MIPSNES2_DSP_KEY_ON_DELAY_SAMPLES = 5,
@@ -28,14 +29,21 @@ enum {
     MIPSNES2_DSP_VOICE_REGISTER_ENVX = 0x08,
     MIPSNES2_DSP_VOICE_REGISTER_OUTX = 0x09,
     MIPSNES2_DSP_REGISTER_MAIN_VOLUME_LEFT = 0x0c,
+    MIPSNES2_DSP_REGISTER_ECHO_FEEDBACK = 0x0d,
+    MIPSNES2_DSP_REGISTER_FIR_BASE = 0x0f,
     MIPSNES2_DSP_REGISTER_MAIN_VOLUME_RIGHT = 0x1c,
+    MIPSNES2_DSP_REGISTER_ECHO_VOLUME_LEFT = 0x2c,
     MIPSNES2_DSP_REGISTER_PMON = 0x2d,
+    MIPSNES2_DSP_REGISTER_ECHO_VOLUME_RIGHT = 0x3c,
     MIPSNES2_DSP_REGISTER_NON = 0x3d,
     MIPSNES2_DSP_REGISTER_KON = 0x4c,
+    MIPSNES2_DSP_REGISTER_EON = 0x4d,
     MIPSNES2_DSP_REGISTER_KOFF = 0x5c,
     MIPSNES2_DSP_REGISTER_DIR = 0x5d,
     MIPSNES2_DSP_REGISTER_FLG = 0x6c,
-    MIPSNES2_DSP_REGISTER_ENDX = 0x7c
+    MIPSNES2_DSP_REGISTER_ESA = 0x6d,
+    MIPSNES2_DSP_REGISTER_ENDX = 0x7c,
+    MIPSNES2_DSP_REGISTER_EDL = 0x7d
 };
 
 typedef enum {
@@ -111,12 +119,38 @@ typedef struct {
     uint8_t resolved_voice_mask;
 } mipsnes2_dsp_dry_mix;
 
-/* State is intentionally public for deterministic inspection. Echo and PCM
- * output are not yet implemented. */
+typedef struct {
+    int16_t history_left[MIPSNES2_DSP_FIR_TAP_COUNT];
+    int16_t history_right[MIPSNES2_DSP_FIR_TAP_COUNT];
+    mipsnes2_dsp_stereo_sample voice_mix;
+    mipsnes2_dsp_stereo_sample fir_sample;
+    mipsnes2_dsp_stereo_sample feedback_sample;
+    mipsnes2_dsp_stereo_sample write_sample;
+    uint16_t base_address;
+    uint16_t address;
+    uint16_t offset;
+    uint16_t length;
+    uint8_t history_index;
+    uint8_t resolved_voice_mask;
+    bool ram_valid;
+    bool write_enabled;
+} mipsnes2_dsp_echo;
+
+typedef struct {
+    mipsnes2_dsp_stereo_sample echo_sample;
+    mipsnes2_dsp_stereo_sample mixed_sample;
+    mipsnes2_dsp_stereo_sample dac_sample;
+    bool muted;
+} mipsnes2_dsp_output;
+
+/* State is intentionally public for deterministic inspection. PCM buffering
+ * and platform audio transport are not yet implemented. */
 typedef struct {
     uint8_t registers[MIPSNES2_DSP_REGISTER_COUNT];
     mipsnes2_dsp_voice voices[MIPSNES2_DSP_VOICE_COUNT];
     mipsnes2_dsp_dry_mix dry_mix;
+    mipsnes2_dsp_echo echo;
+    mipsnes2_dsp_output output;
     uint8_t *ram;
     size_t ram_size;
     uint8_t address;
@@ -162,6 +196,12 @@ bool mipsnes2_dsp_gaussian_coefficient(size_t index,
 bool mipsnes2_dsp_gaussian_interpolate(
     const mipsnes2_dsp_interpolation_input *input, int16_t *sample);
 
+/* Apply the documented eight-tap echo FIR arithmetic. Samples are ordered
+ * oldest to newest and must be right-aligned signed-15 values. */
+bool mipsnes2_dsp_fir(const int16_t samples[MIPSNES2_DSP_FIR_TAP_COUNT],
+                      const int8_t coefficients[MIPSNES2_DSP_FIR_TAP_COUNT],
+                      int16_t *sample);
+
 /* Return the shared signed-15 noise source when NON selects it for this voice.
  * This is a pre-envelope input, not a mixed or output PCM sample. */
 bool mipsnes2_dsp_voice_noise_input(const mipsnes2_dsp *dsp,
@@ -182,6 +222,19 @@ bool mipsnes2_dsp_voice_stereo_sample(const mipsnes2_dsp *dsp,
  * voice included in this sample. */
 bool mipsnes2_dsp_resolved_dry_mix(const mipsnes2_dsp *dsp,
                                    mipsnes2_dsp_dry_mix *mix);
+
+/* Return the sample-level echo-ring/filter/feedback state. */
+bool mipsnes2_dsp_resolved_echo(const mipsnes2_dsp *dsp,
+                                mipsnes2_dsp_echo *echo);
+
+/* Return the final pre-transport mix and the FLG.MUTE-gated DAC-facing
+ * sample. No platform PCM has been emitted at this boundary. */
+bool mipsnes2_dsp_resolved_output(const mipsnes2_dsp *dsp,
+                                  mipsnes2_dsp_output *output);
+
+/* Check the cycle/sample counters without advancing DSP or ARAM state. */
+bool mipsnes2_dsp_can_advance(const mipsnes2_dsp *dsp,
+                              uint64_t smp_cycles);
 
 /* Advance the S-DSP's fixed one-sample-per-32-S-SMP-cycle cadence. */
 bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles);

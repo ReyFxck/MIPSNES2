@@ -22,7 +22,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP communication and timing | Directional ports plus nominal rational master-to-S-SMP clock bridge; electrical race order and oscillator drift pending |
 | core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | All 256 opcodes, ARAM/IPL, ports, `$F2/$F3` DSP route and three-stage timers under the APU clock; exact bus phases and interrupt/reset entry pending |
-| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight BRR/noise voices, Gaussian interpolation, ADSR/GAIN, `OUTX`, `PMON`, signed voice/main volume and ordered dry mixing; exact microphases, echo, mute/DAC and PCM absent |
+| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight BRR/noise voices, Gaussian interpolation, ADSR/GAIN, `OUTX`, `PMON`, signed voice/main volume, ordered dry mixing, ARAM echo/FIR/feedback and mute-gated final samples; exact microphases and PCM transport absent |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
@@ -33,7 +33,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 
 Directories without source contain an explicit scope README, not stub functions.
 There is a partial machine instance and an explicit-path PS2 ROM-file adapter,
-but no full ROM runner, complete renderer or PCM-producing S-DSP. `mipsnes2_machine_init` validates an image and constructs the
+but no full ROM runner, complete renderer or buffered PCM-producing S-DSP. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
 optional VRAM/CGRAM/OAM/ARAM bytes. An optional S-SMP map borrows 64 KiB ARAM
@@ -66,7 +66,14 @@ signed-15 noise sources pass through the 11-bit envelope as left-aligned output,
 `OUTX`, sample-level `PMON`, signed voice volumes, ordered saturation and signed
 main volume. A shared countdown phase drives the documented 32 envelope
 rates/offsets; each voice has an 11-bit ADSR/GAIN/release value and an `ENVX`
-shadow. Echo/FIR, mute/DAC and PCM semantics remain absent. Exact
+shadow. `EON` selects a separately saturated voice sum for the stereo echo path.
+Each sample reads a left-aligned signed-15 pair from the 16-bit-wrapping
+`ESA`/`EDL` ARAM ring, advances two eight-entry histories, applies the signed
+1.7 FIR coefficients with the documented partial wrap/final clamp, and combines
+the result through signed `EVOLL`/`EVOLR` and `EFB`. `FLG` bit 5 suppresses only
+the left-aligned ring write; bit 6 gates the final DAC-facing sample while the
+entire pipeline continues. This final state is inspectable but is not a PCM queue
+or platform-audio interface. Exact
 instruction bus phases, within-DSP-loop register visibility, mailbox races and
 physical oscillator drift remain open.
 `resume` advances one
@@ -742,5 +749,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   left-aligned signed-15, and sample-level `PMON` uses the preceding voice with
   staged signed shifts, target-`NON` suppression and the `$7fff` position cap.
   Exact DSP microphases, echo, mute/DAC and PCM remain unresolved.
+- 2026-10-28: the sample-level echo path now separates `EON` voices, reads the
+  16-bit-wrapping `ESA`/`EDL` ARAM ring, runs the documented eight-tap FIR,
+  applies `EFB` feedback and protected writes, mixes signed `EVOLL`/`EVOLR`, and
+  exposes a `FLG.MUTE`-gated DAC-facing sample. Exact 32-cycle microphases,
+  post-DAC polarity, buffering and platform delivery remain unresolved.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

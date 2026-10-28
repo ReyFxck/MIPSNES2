@@ -252,7 +252,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Phase 8 exit gate verified
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] [IN PROGRESS] Eight voice state — BRR/noise, Gaussian, envelope, PMON and resolved dry mixing exist; echo remains
+- [ ] [IN PROGRESS] Eight voice state — BRR/noise, Gaussian, envelope, PMON, dry mixing and `EON` send selection exist; exact microphases remain
 - [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact DSP microphases remain
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact phase/envelope effects remain
 - [ ] [IN PROGRESS] Pitch progression — raw and PMON-adjusted 2.12 steps plus the documented cap exist; exact phases remain
@@ -263,18 +263,18 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Noise generator — shared LFSR/rates, `NON`, envelope/`OUTX`, stereo and dry mixing exist; exact microphases remain
 - [ ] [IN PROGRESS] Pitch modulation — preceding-voice output, staged signed shifts, voice-0 ignore, target-`NON` suppression and cap exist; exact fetch phases remain
 - [ ] [IN PROGRESS] Voice volumes — signed `VxVOLL`/`VxVOLR` feed BRR/noise into the resolved ordered mixer; exact phases remain
-- [ ] [IN PROGRESS] Main volumes — signed `MVOLL`/`MVOLR` apply after the complete resolved dry mix; echo/DAC integration remains
-- [ ] Echo buffer
-- [ ] FIR filter
-- [ ] Feedback
-- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR and ordered dry-mixer rules are explicit; echo arithmetic remains
+- [ ] [IN PROGRESS] Main volumes — signed dry output is integrated with echo volume and final clamping; exact fetch phases remain
+- [x] Echo buffer — sample-level `ESA`/`EDL` ARAM ring, stereo wrap and protected writes are host verified
+- [x] FIR filter — signed eight-tap history, partial wrap, final clamp and low-bit clear are host verified
+- [x] Feedback — ordered `EON` send, signed `EFB` and protected left-aligned writes are host verified
+- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR, dry, FIR, feedback and final-mix rules are explicit; post-DAC polarity remains
 - [ ] [IN PROGRESS] Sample timing — deterministic sample values and one event per 32 S-SMP cycles exist; exact pipeline phases remain
-- [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
-- [ ] [IN PROGRESS] Golden sample tests — coefficient hash, Gaussian phase/overflow, PMON, BRR/noise output and mixer vectors exist; echo/DAC/PCM vectors remain
+- [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX`, `FLG` reset/mute/echo gate and `ESA`/`EDL` latching exist; exact phases remain
+- [ ] [IN PROGRESS] Golden sample tests — Gaussian, PMON, dry, echo/FIR/feedback, mute and chunk vectors exist; buffered PCM vectors remain
 - [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3`, ARAM source latches, common time and sample-granularity key polling exist; exact microsteps pending
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
 - [x] Timer integration — machine APU clock advances S-SMP timers
-- [ ] Sample generation pipeline
+- [ ] [IN PROGRESS] Sample generation pipeline — voices through echo and mute-gated final samples exist; exact phases and PCM handoff remain
 - [ ] Deterministic sample buffering
 - [ ] Output sample format contract
 - [ ] Resampling policy

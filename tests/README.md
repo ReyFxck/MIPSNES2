@@ -42,12 +42,15 @@ negative modulation, staged negative rounding, target-`NON` suppression, ignored
 voice-0 bit and the `$7fff` position cap. Dry-mix fixtures cover Voice-0-to-7
 accumulation, saturation after each addition, all eight voice slots, explicit
 inclusion masks, signed main-volume rounding/wrap, reset zeroing and chunk
-equivalence.
+equivalence. Echo fixtures validate pure eight-tap FIR arithmetic, first-seven
+wrap, newest-tap clamp, low-bit clearing, `EON` send selection, one-sample `ESA`
+application, `EDL=0` and delayed relatching, 16-bit ARAM wrap, signed `EVOL`/`EFB`,
+write protection, feedback writes, mute continuation and irregular clock chunks.
 `test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
 chunked equivalence, atomic SPC700 admission and credit, timer coordination,
-SLEEP continuation and overflow handling. BRR and noise voices now reach
-per-voice stereo state, sample-level pitch modulation, an ordered dry mix and
-signed main-volume state, but there is no echo, mute/DAC or PCM output.
+SLEEP continuation, overflow handling and non-mutating DSP/ARAM preflight. BRR and noise voices now reach
+per-voice stereo state, sample-level pitch modulation, ordered dry/echo paths and
+a mute-gated final sample, but there is no PCM queue or device output.
 
 `test-spc700-alu` verifies the exact 100-opcode OR/AND/EOR/CMP/ADC/SBC,
 ASL/ROL/LSR/ROR and byte INC/DEC block across every documented addressing form.

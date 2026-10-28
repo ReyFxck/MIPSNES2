@@ -212,6 +212,36 @@ static uint16_t read_ram16(const mipsnes2_dsp *dsp, uint16_t address)
                       ((uint16_t)dsp->ram[next] << 8U));
 }
 
+static void write_ram16(mipsnes2_dsp *dsp, uint16_t address, int16_t value)
+{
+    uint16_t next = (uint16_t)(address + UINT16_C(1));
+    uint16_t bits = (uint16_t)value;
+
+    dsp->ram[address] = (uint8_t)bits;
+    dsp->ram[next] = (uint8_t)(bits >> 8U);
+}
+
+static int16_t filter_echo_fir(
+    const int16_t samples[MIPSNES2_DSP_FIR_TAP_COUNT],
+    const int8_t coefficients[MIPSNES2_DSP_FIR_TAP_COUNT])
+{
+    int32_t partial = 0;
+    int32_t newest;
+    unsigned int tap;
+
+    for (tap = 0U; tap < MIPSNES2_DSP_FIR_TAP_COUNT - 1U; ++tap) {
+        partial += arithmetic_shift_right(
+            (int32_t)samples[tap] * (int32_t)coefficients[tap], 6U);
+    }
+    partial = wrap_signed16(partial);
+    newest = arithmetic_shift_right(
+        (int32_t)samples[MIPSNES2_DSP_FIR_TAP_COUNT - 1U] *
+            (int32_t)coefficients[MIPSNES2_DSP_FIR_TAP_COUNT - 1U],
+        6U);
+    return (int16_t)(arithmetic_shift_right(
+        clamp_signed16(partial + newest), 1U) * INT32_C(2));
+}
+
 static uint16_t voice_pitch(const mipsnes2_dsp *dsp, unsigned int index)
 {
     uint8_t base = (uint8_t)(index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE);
@@ -486,6 +516,146 @@ static void update_resolved_dry_mix(mipsnes2_dsp *dsp)
     dsp->dry_mix.resolved_voice_mask = mask;
 }
 
+static void update_echo_voice_mix(mipsnes2_dsp *dsp)
+{
+    int32_t left = 0;
+    int32_t right = 0;
+    uint8_t mask = 0U;
+    uint8_t enabled = dsp->registers[MIPSNES2_DSP_REGISTER_EON];
+    unsigned int index;
+
+    for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
+        const mipsnes2_dsp_voice *voice = &dsp->voices[index];
+        uint8_t bit = (uint8_t)(UINT8_C(1) << index);
+
+        if (!voice->output_sample_valid || (enabled & bit) == 0U) {
+            continue;
+        }
+        left = clamp_signed16(left + (int32_t)voice->left_sample);
+        right = clamp_signed16(right + (int32_t)voice->right_sample);
+        mask |= bit;
+    }
+    dsp->echo.voice_mix.left = (int16_t)left;
+    dsp->echo.voice_mix.right = (int16_t)right;
+    dsp->echo.resolved_voice_mask = mask;
+}
+
+static void update_final_output(mipsnes2_dsp *dsp)
+{
+    int32_t left;
+    int32_t right;
+
+    dsp->output.echo_sample.left = wrap_signed16(arithmetic_shift_right(
+        (int32_t)dsp->echo.fir_sample.left * signed_register_value(
+            dsp->registers[MIPSNES2_DSP_REGISTER_ECHO_VOLUME_LEFT]),
+        7U));
+    dsp->output.echo_sample.right = wrap_signed16(arithmetic_shift_right(
+        (int32_t)dsp->echo.fir_sample.right * signed_register_value(
+            dsp->registers[MIPSNES2_DSP_REGISTER_ECHO_VOLUME_RIGHT]),
+        7U));
+    left = (int32_t)dsp->dry_mix.main_sample.left +
+           (int32_t)dsp->output.echo_sample.left;
+    right = (int32_t)dsp->dry_mix.main_sample.right +
+            (int32_t)dsp->output.echo_sample.right;
+    dsp->output.mixed_sample.left = clamp_signed16(left);
+    dsp->output.mixed_sample.right = clamp_signed16(right);
+    dsp->output.muted = (dsp->internal_flags & UINT8_C(0x40)) != 0U;
+    if (dsp->output.muted) {
+        dsp->output.dac_sample.left = 0;
+        dsp->output.dac_sample.right = 0;
+    } else {
+        dsp->output.dac_sample = dsp->output.mixed_sample;
+    }
+}
+
+static void update_echo_and_output(mipsnes2_dsp *dsp)
+{
+    int16_t ordered_left[MIPSNES2_DSP_FIR_TAP_COUNT];
+    int16_t ordered_right[MIPSNES2_DSP_FIR_TAP_COUNT];
+    int8_t coefficients[MIPSNES2_DSP_FIR_TAP_COUNT];
+    uint8_t current_history = dsp->echo.history_index;
+    unsigned int tap;
+    int32_t left;
+    int32_t right;
+
+    dsp->echo.ram_valid = dsp->ram != NULL &&
+                          dsp->ram_size >= MIPSNES2_DSP_ARAM_SIZE;
+    dsp->echo.write_enabled =
+        (dsp->internal_flags & UINT8_C(0x20)) == 0U;
+    update_echo_voice_mix(dsp);
+    if (!dsp->echo.ram_valid) {
+        update_final_output(dsp);
+        return;
+    }
+
+    if (dsp->echo.offset == 0U) {
+        dsp->echo.length = (uint16_t)(
+            (uint16_t)(dsp->registers[MIPSNES2_DSP_REGISTER_EDL] &
+                       UINT8_C(0x0f)) << 11U);
+        if (dsp->echo.length == 0U) {
+            dsp->echo.length = UINT16_C(4);
+        }
+    }
+    dsp->echo.address = (uint16_t)(dsp->echo.base_address +
+                                   dsp->echo.offset);
+    dsp->echo.history_left[current_history] = (int16_t)
+        arithmetic_shift_right(wrap_signed16((int32_t)read_ram16(
+            dsp, dsp->echo.address)), 1U);
+    dsp->echo.history_right[current_history] = (int16_t)
+        arithmetic_shift_right(wrap_signed16((int32_t)read_ram16(
+            dsp, (uint16_t)(dsp->echo.address + UINT16_C(2)))), 1U);
+
+    for (tap = 0U; tap < MIPSNES2_DSP_FIR_TAP_COUNT; ++tap) {
+        uint8_t history = (uint8_t)(
+            (current_history + 1U + tap) &
+            (MIPSNES2_DSP_FIR_TAP_COUNT - 1U));
+        uint8_t coefficient_register = (uint8_t)(
+            MIPSNES2_DSP_REGISTER_FIR_BASE +
+            (tap * MIPSNES2_DSP_VOICE_REGISTER_STRIDE));
+
+        ordered_left[tap] = dsp->echo.history_left[history];
+        ordered_right[tap] = dsp->echo.history_right[history];
+        coefficients[tap] = (int8_t)signed_register_value(
+            dsp->registers[coefficient_register]);
+    }
+    dsp->echo.fir_sample.left = filter_echo_fir(
+        ordered_left, coefficients);
+    dsp->echo.fir_sample.right = filter_echo_fir(
+        ordered_right, coefficients);
+    update_final_output(dsp);
+
+    dsp->echo.feedback_sample.left = wrap_signed16(arithmetic_shift_right(
+        (int32_t)dsp->echo.fir_sample.left * signed_register_value(
+            dsp->registers[MIPSNES2_DSP_REGISTER_ECHO_FEEDBACK]),
+        7U));
+    dsp->echo.feedback_sample.right = wrap_signed16(arithmetic_shift_right(
+        (int32_t)dsp->echo.fir_sample.right * signed_register_value(
+            dsp->registers[MIPSNES2_DSP_REGISTER_ECHO_FEEDBACK]),
+        7U));
+    left = clamp_signed16((int32_t)dsp->echo.voice_mix.left +
+                          (int32_t)dsp->echo.feedback_sample.left);
+    right = clamp_signed16((int32_t)dsp->echo.voice_mix.right +
+                           (int32_t)dsp->echo.feedback_sample.right);
+    dsp->echo.write_sample.left = (int16_t)(
+        arithmetic_shift_right(left, 1U) * INT32_C(2));
+    dsp->echo.write_sample.right = (int16_t)(
+        arithmetic_shift_right(right, 1U) * INT32_C(2));
+    if (dsp->echo.write_enabled) {
+        write_ram16(dsp, dsp->echo.address, dsp->echo.write_sample.left);
+        write_ram16(dsp, (uint16_t)(dsp->echo.address + UINT16_C(2)),
+                    dsp->echo.write_sample.right);
+    }
+
+    dsp->echo.offset = (uint16_t)(dsp->echo.offset + UINT16_C(4));
+    if (dsp->echo.offset >= dsp->echo.length) {
+        dsp->echo.offset = 0U;
+    }
+    dsp->echo.base_address = (uint16_t)(
+        (uint16_t)dsp->registers[MIPSNES2_DSP_REGISTER_ESA] << 8U);
+    dsp->echo.history_index = (uint8_t)(
+        (current_history + 1U) & (MIPSNES2_DSP_FIR_TAP_COUNT - 1U));
+}
+
 static void refresh_idle_noise_outputs(mipsnes2_dsp *dsp)
 {
     unsigned int index;
@@ -508,6 +678,7 @@ static void refresh_idle_noise_outputs(mipsnes2_dsp *dsp)
         }
     }
     update_resolved_dry_mix(dsp);
+    update_echo_and_output(dsp);
 }
 
 static void release_envelope(mipsnes2_dsp *dsp, unsigned int index,
@@ -728,7 +899,10 @@ static bool event_work_pending(const mipsnes2_dsp *dsp)
 {
     unsigned int index;
 
-    if (dsp->pending_key_on != 0U) {
+    /* With ARAM attached the echo pointer, FIR history and optional writes
+     * advance every output sample even when all voices are idle. */
+    if ((dsp->ram != NULL && dsp->ram_size >= MIPSNES2_DSP_ARAM_SIZE) ||
+        dsp->pending_key_on != 0U) {
         return true;
     }
     for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
@@ -828,6 +1002,7 @@ static void service_sample_event(mipsnes2_dsp *dsp)
         }
     }
     update_resolved_dry_mix(dsp);
+    update_echo_and_output(dsp);
     if (!poll_keys) {
         return;
     }
@@ -859,6 +1034,8 @@ void mipsnes2_dsp_init(mipsnes2_dsp *dsp)
          * claimed by this foundation. */
         dsp->internal_flags = UINT8_C(0xe0);
         dsp->noise_lfsr = UINT16_C(0x4000);
+        dsp->echo.length = UINT16_C(4);
+        dsp->output.muted = true;
         for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
             dsp->voices[index].envelope_state =
                 MIPSNES2_DSP_ENVELOPE_RELEASE;
@@ -876,6 +1053,7 @@ bool mipsnes2_dsp_attach_ram(mipsnes2_dsp *dsp, uint8_t *ram,
     }
     dsp->ram = ram;
     dsp->ram_size = ram_size;
+    dsp->echo.ram_valid = true;
     return true;
 }
 
@@ -1015,6 +1193,26 @@ bool mipsnes2_dsp_gaussian_interpolate(
     return true;
 }
 
+bool mipsnes2_dsp_fir(
+    const int16_t samples[MIPSNES2_DSP_FIR_TAP_COUNT],
+    const int8_t coefficients[MIPSNES2_DSP_FIR_TAP_COUNT],
+    int16_t *sample)
+{
+    unsigned int index;
+
+    if (samples == NULL || coefficients == NULL || sample == NULL) {
+        return false;
+    }
+    for (index = 0U; index < MIPSNES2_DSP_FIR_TAP_COUNT; ++index) {
+        if (samples[index] < INT16_C(-16384) ||
+            samples[index] > INT16_C(16383)) {
+            return false;
+        }
+    }
+    *sample = filter_echo_fir(samples, coefficients);
+    return true;
+}
+
 bool mipsnes2_dsp_voice_noise_input(const mipsnes2_dsp *dsp,
                                     size_t voice_index, int16_t *sample)
 {
@@ -1064,7 +1262,28 @@ bool mipsnes2_dsp_resolved_dry_mix(const mipsnes2_dsp *dsp,
     return true;
 }
 
-bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles)
+bool mipsnes2_dsp_resolved_echo(const mipsnes2_dsp *dsp,
+                                mipsnes2_dsp_echo *echo)
+{
+    if (dsp == NULL || !dsp->initialized || echo == NULL) {
+        return false;
+    }
+    *echo = dsp->echo;
+    return true;
+}
+
+bool mipsnes2_dsp_resolved_output(const mipsnes2_dsp *dsp,
+                                  mipsnes2_dsp_output *output)
+{
+    if (dsp == NULL || !dsp->initialized || output == NULL) {
+        return false;
+    }
+    *output = dsp->output;
+    return true;
+}
+
+bool mipsnes2_dsp_can_advance(const mipsnes2_dsp *dsp,
+                              uint64_t smp_cycles)
 {
     uint64_t samples;
     uint64_t whole;
@@ -1079,9 +1298,23 @@ bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles)
     remainder = (uint8_t)(smp_cycles % MIPSNES2_DSP_SAMPLE_CYCLES);
     phase = (uint16_t)dsp->sample_phase + remainder;
     samples = whole + (phase / MIPSNES2_DSP_SAMPLE_CYCLES);
-    if (dsp->sample_count > UINT64_MAX - samples) {
+    return dsp->sample_count <= UINT64_MAX - samples;
+}
+
+bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles)
+{
+    uint64_t samples;
+    uint64_t whole;
+    uint8_t remainder;
+    uint16_t phase;
+
+    if (!mipsnes2_dsp_can_advance(dsp, smp_cycles)) {
         return false;
     }
+    whole = smp_cycles / MIPSNES2_DSP_SAMPLE_CYCLES;
+    remainder = (uint8_t)(smp_cycles % MIPSNES2_DSP_SAMPLE_CYCLES);
+    phase = (uint16_t)dsp->sample_phase + remainder;
+    samples = whole + (phase / MIPSNES2_DSP_SAMPLE_CYCLES);
     dsp->sample_phase = (uint8_t)(phase % MIPSNES2_DSP_SAMPLE_CYCLES);
     dsp->smp_cycles += smp_cycles;
     while (samples != 0U && event_work_pending(dsp)) {
