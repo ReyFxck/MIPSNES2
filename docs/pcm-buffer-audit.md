@@ -58,6 +58,15 @@ FIFO through normal machine/APU advancement and verifies that power-on empties
 and reattaches it. Host tests remain offline evidence: they do not prove an
 SPU2/RFAuds2 path, PSP device delivery, audible polarity or target latency.
 
+Local evidence for this tree consists of a clean `make -j2 test`; the full suite
+under ASan+UBSan with leak detection disabled only because LeakSanitizer cannot
+inspect the managed runtime; GCC `-fanalyzer` over `pcm.c`, `dsp.c`, `machine.c`
+and their focused tests; repository checks; and diff checks. Revision `1772869`
+passed [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40789747258),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40789747107) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40789747467).
+Cross-compilation does not prove audible output or real-console timing.
+
 ## Open boundaries
 
 - Exact within-32-cycle DSP microphases and post-DAC analog polarity remain open.

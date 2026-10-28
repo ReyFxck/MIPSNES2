@@ -943,8 +943,14 @@ platform. Machine configuration validates optional storage, resets and reattache
 it on power-on, and requires the APU/ARAM path. Host fixtures cover invalid
 construction, circular order, counter saturation, non-zero final-sample handoff,
 overflow without DSP backpressure, chunk equivalence and machine integration.
-See the [PCM buffer audit](docs/pcm-buffer-audit.md). This is still not audible
-PS2/PSP output and makes no target latency or throughput claim.
+The clean host suite, full ASan+UBSan suite with leak detection disabled only for
+the managed runtime, repository checks and GCC `-fanalyzer` over the changed core
+and focused tests pass. Revision `1772869` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40789747258),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40789747107) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40789747467). See the
+[PCM buffer audit](docs/pcm-buffer-audit.md). This is still not audible PS2/PSP
+output and makes no target latency or throughput claim.
 
 Next primary block: define deterministic resampling and bounded rate-conversion
 state without allowing device consumption to drive emulated time.
