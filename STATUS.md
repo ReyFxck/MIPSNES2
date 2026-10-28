@@ -926,8 +926,12 @@ zero still spans four bytes and all ARAM addressing wraps at 16 bits. Host vecto
 cover pure FIR overflow/clamp edges, echo-write protection, mute continuation,
 address/delay wrap, EDL relatching, one-shot/chunked equivalence and a read-only
 APU timing preflight that cannot double-write borrowed ARAM. The clean host
-suite and repository checks pass locally; sanitizer/analyzer and cross-build CI
-evidence are recorded below after publication. See the
+suite and repository checks pass locally; focused DSP/APU/machine ASan+UBSan
+runs pass and GCC `-fanalyzer` reports no diagnostics for the changed core and
+focused tests. Revision `d02a671` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40776210118),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40776210175) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40776210150). See the
 [S-DSP echo/output audit](docs/sdsp-echo-output-audit.md). This is an inspectable
 sample boundary, not a PCM queue or audible platform output.
 

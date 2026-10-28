@@ -89,9 +89,11 @@ enabled the real DSP is allowed to overwrite the same memory.
 Local evidence for this revision consists of a clean `make -j2 test`; focused
 DSP/APU/machine ASan+UBSan runs with leak detection disabled only for the managed
 runtime; GCC `-fanalyzer` over `dsp.c`, `timing.c` and both focused tests; repository
-checks; and diff checks. Published host/PS2/PSP workflow URLs are added to `STATUS.md` after
-the commit is available. Cross-compilation does not prove audible output or real
-console timing.
+checks; and diff checks. Revision `d02a671` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40776210118),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40776210175) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40776210150).
+Cross-compilation does not prove audible output or real console timing.
 
 ## Open boundaries
 
