@@ -23,6 +23,76 @@ static const uint16_t envelope_counter_offsets[32] = {
     536U, 0U, 1040U, 536U, 0U, 1040U, 0U, 0U
 };
 
+/* 512 coefficients transcribed from the hardware-extracted SnesLab/fullsnes
+ * documentation. FNV-1a over little-endian 16-bit entries: b1216dfae1423abe. */
+static const uint16_t gaussian_coefficients[512] = {
+    UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000),
+    UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000), UINT16_C(0x000),
+    UINT16_C(0x001), UINT16_C(0x001), UINT16_C(0x001), UINT16_C(0x001), UINT16_C(0x001), UINT16_C(0x001), UINT16_C(0x001), UINT16_C(0x001),
+    UINT16_C(0x001), UINT16_C(0x001), UINT16_C(0x001), UINT16_C(0x002), UINT16_C(0x002), UINT16_C(0x002), UINT16_C(0x002), UINT16_C(0x002),
+    UINT16_C(0x002), UINT16_C(0x002), UINT16_C(0x003), UINT16_C(0x003), UINT16_C(0x003), UINT16_C(0x003), UINT16_C(0x003), UINT16_C(0x004),
+    UINT16_C(0x004), UINT16_C(0x004), UINT16_C(0x004), UINT16_C(0x004), UINT16_C(0x005), UINT16_C(0x005), UINT16_C(0x005), UINT16_C(0x005),
+    UINT16_C(0x006), UINT16_C(0x006), UINT16_C(0x006), UINT16_C(0x006), UINT16_C(0x007), UINT16_C(0x007), UINT16_C(0x007), UINT16_C(0x008),
+    UINT16_C(0x008), UINT16_C(0x008), UINT16_C(0x009), UINT16_C(0x009), UINT16_C(0x009), UINT16_C(0x00a), UINT16_C(0x00a), UINT16_C(0x00a),
+    UINT16_C(0x00b), UINT16_C(0x00b), UINT16_C(0x00b), UINT16_C(0x00c), UINT16_C(0x00c), UINT16_C(0x00d), UINT16_C(0x00d), UINT16_C(0x00e),
+    UINT16_C(0x00e), UINT16_C(0x00f), UINT16_C(0x00f), UINT16_C(0x00f), UINT16_C(0x010), UINT16_C(0x010), UINT16_C(0x011), UINT16_C(0x011),
+    UINT16_C(0x012), UINT16_C(0x013), UINT16_C(0x013), UINT16_C(0x014), UINT16_C(0x014), UINT16_C(0x015), UINT16_C(0x015), UINT16_C(0x016),
+    UINT16_C(0x017), UINT16_C(0x017), UINT16_C(0x018), UINT16_C(0x018), UINT16_C(0x019), UINT16_C(0x01a), UINT16_C(0x01b), UINT16_C(0x01b),
+    UINT16_C(0x01c), UINT16_C(0x01d), UINT16_C(0x01d), UINT16_C(0x01e), UINT16_C(0x01f), UINT16_C(0x020), UINT16_C(0x020), UINT16_C(0x021),
+    UINT16_C(0x022), UINT16_C(0x023), UINT16_C(0x024), UINT16_C(0x024), UINT16_C(0x025), UINT16_C(0x026), UINT16_C(0x027), UINT16_C(0x028),
+    UINT16_C(0x029), UINT16_C(0x02a), UINT16_C(0x02b), UINT16_C(0x02c), UINT16_C(0x02d), UINT16_C(0x02e), UINT16_C(0x02f), UINT16_C(0x030),
+    UINT16_C(0x031), UINT16_C(0x032), UINT16_C(0x033), UINT16_C(0x034), UINT16_C(0x035), UINT16_C(0x036), UINT16_C(0x037), UINT16_C(0x038),
+    UINT16_C(0x03a), UINT16_C(0x03b), UINT16_C(0x03c), UINT16_C(0x03d), UINT16_C(0x03e), UINT16_C(0x040), UINT16_C(0x041), UINT16_C(0x042),
+    UINT16_C(0x043), UINT16_C(0x045), UINT16_C(0x046), UINT16_C(0x047), UINT16_C(0x049), UINT16_C(0x04a), UINT16_C(0x04c), UINT16_C(0x04d),
+    UINT16_C(0x04e), UINT16_C(0x050), UINT16_C(0x051), UINT16_C(0x053), UINT16_C(0x054), UINT16_C(0x056), UINT16_C(0x057), UINT16_C(0x059),
+    UINT16_C(0x05a), UINT16_C(0x05c), UINT16_C(0x05e), UINT16_C(0x05f), UINT16_C(0x061), UINT16_C(0x063), UINT16_C(0x064), UINT16_C(0x066),
+    UINT16_C(0x068), UINT16_C(0x06a), UINT16_C(0x06b), UINT16_C(0x06d), UINT16_C(0x06f), UINT16_C(0x071), UINT16_C(0x073), UINT16_C(0x075),
+    UINT16_C(0x076), UINT16_C(0x078), UINT16_C(0x07a), UINT16_C(0x07c), UINT16_C(0x07e), UINT16_C(0x080), UINT16_C(0x082), UINT16_C(0x084),
+    UINT16_C(0x086), UINT16_C(0x089), UINT16_C(0x08b), UINT16_C(0x08d), UINT16_C(0x08f), UINT16_C(0x091), UINT16_C(0x093), UINT16_C(0x096),
+    UINT16_C(0x098), UINT16_C(0x09a), UINT16_C(0x09c), UINT16_C(0x09f), UINT16_C(0x0a1), UINT16_C(0x0a3), UINT16_C(0x0a6), UINT16_C(0x0a8),
+    UINT16_C(0x0ab), UINT16_C(0x0ad), UINT16_C(0x0af), UINT16_C(0x0b2), UINT16_C(0x0b4), UINT16_C(0x0b7), UINT16_C(0x0ba), UINT16_C(0x0bc),
+    UINT16_C(0x0bf), UINT16_C(0x0c1), UINT16_C(0x0c4), UINT16_C(0x0c7), UINT16_C(0x0c9), UINT16_C(0x0cc), UINT16_C(0x0cf), UINT16_C(0x0d2),
+    UINT16_C(0x0d4), UINT16_C(0x0d7), UINT16_C(0x0da), UINT16_C(0x0dd), UINT16_C(0x0e0), UINT16_C(0x0e3), UINT16_C(0x0e6), UINT16_C(0x0e9),
+    UINT16_C(0x0ec), UINT16_C(0x0ef), UINT16_C(0x0f2), UINT16_C(0x0f5), UINT16_C(0x0f8), UINT16_C(0x0fb), UINT16_C(0x0fe), UINT16_C(0x101),
+    UINT16_C(0x104), UINT16_C(0x107), UINT16_C(0x10b), UINT16_C(0x10e), UINT16_C(0x111), UINT16_C(0x114), UINT16_C(0x118), UINT16_C(0x11b),
+    UINT16_C(0x11e), UINT16_C(0x122), UINT16_C(0x125), UINT16_C(0x129), UINT16_C(0x12c), UINT16_C(0x130), UINT16_C(0x133), UINT16_C(0x137),
+    UINT16_C(0x13a), UINT16_C(0x13e), UINT16_C(0x141), UINT16_C(0x145), UINT16_C(0x148), UINT16_C(0x14c), UINT16_C(0x150), UINT16_C(0x153),
+    UINT16_C(0x157), UINT16_C(0x15b), UINT16_C(0x15f), UINT16_C(0x162), UINT16_C(0x166), UINT16_C(0x16a), UINT16_C(0x16e), UINT16_C(0x172),
+    UINT16_C(0x176), UINT16_C(0x17a), UINT16_C(0x17d), UINT16_C(0x181), UINT16_C(0x185), UINT16_C(0x189), UINT16_C(0x18d), UINT16_C(0x191),
+    UINT16_C(0x195), UINT16_C(0x19a), UINT16_C(0x19e), UINT16_C(0x1a2), UINT16_C(0x1a6), UINT16_C(0x1aa), UINT16_C(0x1ae), UINT16_C(0x1b2),
+    UINT16_C(0x1b7), UINT16_C(0x1bb), UINT16_C(0x1bf), UINT16_C(0x1c3), UINT16_C(0x1c8), UINT16_C(0x1cc), UINT16_C(0x1d0), UINT16_C(0x1d5),
+    UINT16_C(0x1d9), UINT16_C(0x1dd), UINT16_C(0x1e2), UINT16_C(0x1e6), UINT16_C(0x1eb), UINT16_C(0x1ef), UINT16_C(0x1f3), UINT16_C(0x1f8),
+    UINT16_C(0x1fc), UINT16_C(0x201), UINT16_C(0x205), UINT16_C(0x20a), UINT16_C(0x20f), UINT16_C(0x213), UINT16_C(0x218), UINT16_C(0x21c),
+    UINT16_C(0x221), UINT16_C(0x226), UINT16_C(0x22a), UINT16_C(0x22f), UINT16_C(0x233), UINT16_C(0x238), UINT16_C(0x23d), UINT16_C(0x241),
+    UINT16_C(0x246), UINT16_C(0x24b), UINT16_C(0x250), UINT16_C(0x254), UINT16_C(0x259), UINT16_C(0x25e), UINT16_C(0x263), UINT16_C(0x267),
+    UINT16_C(0x26c), UINT16_C(0x271), UINT16_C(0x276), UINT16_C(0x27b), UINT16_C(0x280), UINT16_C(0x284), UINT16_C(0x289), UINT16_C(0x28e),
+    UINT16_C(0x293), UINT16_C(0x298), UINT16_C(0x29d), UINT16_C(0x2a2), UINT16_C(0x2a6), UINT16_C(0x2ab), UINT16_C(0x2b0), UINT16_C(0x2b5),
+    UINT16_C(0x2ba), UINT16_C(0x2bf), UINT16_C(0x2c4), UINT16_C(0x2c9), UINT16_C(0x2ce), UINT16_C(0x2d3), UINT16_C(0x2d8), UINT16_C(0x2dc),
+    UINT16_C(0x2e1), UINT16_C(0x2e6), UINT16_C(0x2eb), UINT16_C(0x2f0), UINT16_C(0x2f5), UINT16_C(0x2fa), UINT16_C(0x2ff), UINT16_C(0x304),
+    UINT16_C(0x309), UINT16_C(0x30e), UINT16_C(0x313), UINT16_C(0x318), UINT16_C(0x31d), UINT16_C(0x322), UINT16_C(0x326), UINT16_C(0x32b),
+    UINT16_C(0x330), UINT16_C(0x335), UINT16_C(0x33a), UINT16_C(0x33f), UINT16_C(0x344), UINT16_C(0x349), UINT16_C(0x34e), UINT16_C(0x353),
+    UINT16_C(0x357), UINT16_C(0x35c), UINT16_C(0x361), UINT16_C(0x366), UINT16_C(0x36b), UINT16_C(0x370), UINT16_C(0x374), UINT16_C(0x379),
+    UINT16_C(0x37e), UINT16_C(0x383), UINT16_C(0x388), UINT16_C(0x38c), UINT16_C(0x391), UINT16_C(0x396), UINT16_C(0x39b), UINT16_C(0x39f),
+    UINT16_C(0x3a4), UINT16_C(0x3a9), UINT16_C(0x3ad), UINT16_C(0x3b2), UINT16_C(0x3b7), UINT16_C(0x3bb), UINT16_C(0x3c0), UINT16_C(0x3c5),
+    UINT16_C(0x3c9), UINT16_C(0x3ce), UINT16_C(0x3d2), UINT16_C(0x3d7), UINT16_C(0x3dc), UINT16_C(0x3e0), UINT16_C(0x3e5), UINT16_C(0x3e9),
+    UINT16_C(0x3ed), UINT16_C(0x3f2), UINT16_C(0x3f6), UINT16_C(0x3fb), UINT16_C(0x3ff), UINT16_C(0x403), UINT16_C(0x408), UINT16_C(0x40c),
+    UINT16_C(0x410), UINT16_C(0x415), UINT16_C(0x419), UINT16_C(0x41d), UINT16_C(0x421), UINT16_C(0x425), UINT16_C(0x42a), UINT16_C(0x42e),
+    UINT16_C(0x432), UINT16_C(0x436), UINT16_C(0x43a), UINT16_C(0x43e), UINT16_C(0x442), UINT16_C(0x446), UINT16_C(0x44a), UINT16_C(0x44e),
+    UINT16_C(0x452), UINT16_C(0x455), UINT16_C(0x459), UINT16_C(0x45d), UINT16_C(0x461), UINT16_C(0x465), UINT16_C(0x468), UINT16_C(0x46c),
+    UINT16_C(0x470), UINT16_C(0x473), UINT16_C(0x477), UINT16_C(0x47a), UINT16_C(0x47e), UINT16_C(0x481), UINT16_C(0x485), UINT16_C(0x488),
+    UINT16_C(0x48c), UINT16_C(0x48f), UINT16_C(0x492), UINT16_C(0x496), UINT16_C(0x499), UINT16_C(0x49c), UINT16_C(0x49f), UINT16_C(0x4a2),
+    UINT16_C(0x4a6), UINT16_C(0x4a9), UINT16_C(0x4ac), UINT16_C(0x4af), UINT16_C(0x4b2), UINT16_C(0x4b5), UINT16_C(0x4b7), UINT16_C(0x4ba),
+    UINT16_C(0x4bd), UINT16_C(0x4c0), UINT16_C(0x4c3), UINT16_C(0x4c5), UINT16_C(0x4c8), UINT16_C(0x4cb), UINT16_C(0x4cd), UINT16_C(0x4d0),
+    UINT16_C(0x4d2), UINT16_C(0x4d5), UINT16_C(0x4d7), UINT16_C(0x4d9), UINT16_C(0x4dc), UINT16_C(0x4de), UINT16_C(0x4e0), UINT16_C(0x4e3),
+    UINT16_C(0x4e5), UINT16_C(0x4e7), UINT16_C(0x4e9), UINT16_C(0x4eb), UINT16_C(0x4ed), UINT16_C(0x4ef), UINT16_C(0x4f1), UINT16_C(0x4f3),
+    UINT16_C(0x4f5), UINT16_C(0x4f6), UINT16_C(0x4f8), UINT16_C(0x4fa), UINT16_C(0x4fb), UINT16_C(0x4fd), UINT16_C(0x4ff), UINT16_C(0x500),
+    UINT16_C(0x502), UINT16_C(0x503), UINT16_C(0x504), UINT16_C(0x506), UINT16_C(0x507), UINT16_C(0x508), UINT16_C(0x50a), UINT16_C(0x50b),
+    UINT16_C(0x50c), UINT16_C(0x50d), UINT16_C(0x50e), UINT16_C(0x50f), UINT16_C(0x510), UINT16_C(0x511), UINT16_C(0x511), UINT16_C(0x512),
+    UINT16_C(0x513), UINT16_C(0x514), UINT16_C(0x514), UINT16_C(0x515), UINT16_C(0x516), UINT16_C(0x516), UINT16_C(0x517), UINT16_C(0x517),
+    UINT16_C(0x517), UINT16_C(0x518), UINT16_C(0x518), UINT16_C(0x518), UINT16_C(0x518), UINT16_C(0x518), UINT16_C(0x519), UINT16_C(0x519)
+};
+
+
 static int32_t arithmetic_shift_right(int32_t value, unsigned int amount)
 {
     uint32_t magnitude;
@@ -54,6 +124,33 @@ static int16_t wrap_signed16(int32_t value)
     return wrapped <= (uint16_t)INT16_MAX
                ? (int16_t)wrapped
                : (int16_t)((int32_t)wrapped - INT32_C(0x10000));
+}
+
+static int16_t interpolate_gaussian(const int16_t samples[4],
+                                    uint8_t fraction)
+{
+    int32_t partial;
+    int32_t newest;
+
+    partial = arithmetic_shift_right(
+        (int32_t)gaussian_coefficients[UINT8_C(0xff) - fraction] *
+            (int32_t)samples[0],
+        10U);
+    partial += arithmetic_shift_right(
+        (int32_t)gaussian_coefficients[UINT16_C(0x1ff) - fraction] *
+            (int32_t)samples[1],
+        10U);
+    partial += arithmetic_shift_right(
+        (int32_t)gaussian_coefficients[UINT16_C(0x100) + fraction] *
+            (int32_t)samples[2],
+        10U);
+    partial = wrap_signed16(partial);
+    newest = arithmetic_shift_right(
+        (int32_t)gaussian_coefficients[fraction] *
+            (int32_t)samples[3],
+        10U);
+    return (int16_t)arithmetic_shift_right(
+        clamp_signed16(partial + newest), 1U);
 }
 
 static int16_t clamp_and_wrap_brr(int32_t value)
@@ -125,6 +222,26 @@ static uint16_t voice_pitch(const mipsnes2_dsp *dsp, unsigned int index)
                       dsp->registers[
                           base + MIPSNES2_DSP_VOICE_REGISTER_PITCH_LOW]) &
            UINT16_C(0x3fff);
+}
+
+static uint16_t effective_voice_pitch(const mipsnes2_dsp *dsp,
+                                      unsigned int index)
+{
+    uint16_t base_pitch = voice_pitch(dsp, index);
+    uint8_t bit = (uint8_t)(UINT8_C(1) << index);
+    int32_t pitch = base_pitch;
+
+    if (index != 0U &&
+        (dsp->registers[MIPSNES2_DSP_REGISTER_PMON] & bit) != 0U &&
+        (dsp->registers[MIPSNES2_DSP_REGISTER_NON] & bit) == 0U &&
+        dsp->voices[index - 1U].output_sample_valid) {
+        int32_t modulation = arithmetic_shift_right(
+            dsp->voices[index - 1U].output_sample, 5U);
+
+        pitch += arithmetic_shift_right(
+            modulation * (int32_t)base_pitch, 10U);
+    }
+    return (uint16_t)pitch;
 }
 
 static void advance_envelope_counter(mipsnes2_dsp *dsp, uint64_t samples)
@@ -268,32 +385,70 @@ static int32_t signed_register_value(uint8_t value)
                                  : (int32_t)value - INT32_C(0x100);
 }
 
-static void update_voice_noise_output(mipsnes2_dsp *dsp,
-                                      unsigned int index)
+static bool fill_voice_interpolation_input(
+    const mipsnes2_dsp_voice *voice,
+    mipsnes2_dsp_interpolation_input *input)
+{
+    uint8_t sample_index;
+    unsigned int index;
+
+    if (!voice->brr_stream_active || voice->decoded_groups < 3U) {
+        return false;
+    }
+    sample_index = (uint8_t)(voice->interpolation_index >> 12U);
+    for (index = 0U; index < 4U; ++index) {
+        input->samples[index] = voice->brr_ring[
+            (voice->ring_offset + sample_index + index) %
+            MIPSNES2_DSP_BRR_RING_SAMPLE_COUNT];
+    }
+    input->sample_index = sample_index;
+    input->fraction = (uint8_t)(voice->interpolation_index >> 4U);
+    return true;
+}
+
+static void update_voice_output(mipsnes2_dsp *dsp, unsigned int index)
 {
     mipsnes2_dsp_voice *voice = &dsp->voices[index];
     uint8_t bit = (uint8_t)(UINT8_C(1) << index);
     uint8_t base = (uint8_t)(index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE);
+    bool noise_selected =
+        (dsp->registers[MIPSNES2_DSP_REGISTER_NON] & bit) != 0U;
     int32_t adjusted;
 
-    if ((dsp->registers[MIPSNES2_DSP_REGISTER_NON] & bit) == 0U) {
-        voice->output_sample_valid = false;
-        return;
+    voice->output_uses_noise = noise_selected;
+    if (noise_selected) {
+        voice->source_sample = current_noise_sample(dsp);
+    } else {
+        mipsnes2_dsp_interpolation_input input;
+
+        if (!fill_voice_interpolation_input(voice, &input)) {
+            if (voice->brr_stream_active && voice->key_on_delay != 0U) {
+                voice->source_sample = 0;
+            } else {
+                voice->output_sample_valid = false;
+                return;
+            }
+        } else {
+            voice->source_sample = interpolate_gaussian(
+                input.samples, input.fraction);
+        }
     }
-    voice->source_sample = current_noise_sample(dsp);
+    /* BRR and noise sources are signed 15-bit values. The S-DSP keeps the
+     * post-envelope sample left-aligned in 16 bits and clears its low bit. */
     adjusted = arithmetic_shift_right(
-        (int32_t)voice->source_sample * (int32_t)voice->envelope, 11U);
+        (int32_t)voice->source_sample * (int32_t)voice->envelope, 10U);
+    adjusted = arithmetic_shift_right(adjusted, 1U) * INT32_C(2);
     voice->output_sample = (int16_t)adjusted;
-    voice->left_sample = (int16_t)arithmetic_shift_right(
+    voice->left_sample = wrap_signed16(arithmetic_shift_right(
         (int32_t)voice->output_sample * signed_register_value(
             dsp->registers[
                 base + MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT]),
-        7U);
-    voice->right_sample = (int16_t)arithmetic_shift_right(
+        7U));
+    voice->right_sample = wrap_signed16(arithmetic_shift_right(
         (int32_t)voice->output_sample * signed_register_value(
             dsp->registers[
                 base + MIPSNES2_DSP_VOICE_REGISTER_VOLUME_RIGHT]),
-        7U);
+        7U));
     voice->output_sample_valid = true;
     dsp->registers[base + MIPSNES2_DSP_VOICE_REGISTER_OUTX] =
         (uint8_t)((uint16_t)voice->output_sample >> 8U);
@@ -348,6 +503,7 @@ static void refresh_idle_noise_outputs(mipsnes2_dsp *dsp)
             voice->left_sample = 0;
             voice->right_sample = 0;
             voice->output_sample_valid = true;
+            voice->output_uses_noise = true;
             dsp->registers[base + MIPSNES2_DSP_VOICE_REGISTER_OUTX] = 0U;
         }
     }
@@ -542,6 +698,10 @@ static void begin_key_on(mipsnes2_dsp *dsp, unsigned int index)
     voice->left_sample = 0;
     voice->right_sample = 0;
     voice->output_sample_valid =
+        ((dsp->registers[MIPSNES2_DSP_REGISTER_NON] &
+          (uint8_t)(UINT8_C(1) << index)) != 0U) ||
+        voice->directory_loaded;
+    voice->output_uses_noise =
         (dsp->registers[MIPSNES2_DSP_REGISTER_NON] &
          (uint8_t)(UINT8_C(1) << index)) != 0U;
     voice->source_sample = voice->output_sample_valid
@@ -578,8 +738,8 @@ static bool event_work_pending(const mipsnes2_dsp *dsp)
             (dsp->registers[MIPSNES2_DSP_REGISTER_NON] & bit) != 0U;
 
         if (voice->key_on_delay != 0U ||
-            voice->output_sample_valid != noise_selected ||
-            (noise_selected && voice->envelope == 0U &&
+            voice->output_uses_noise != noise_selected ||
+            (voice->output_sample_valid && voice->envelope == 0U &&
              voice->output_sample != 0) ||
             voice->state == MIPSNES2_DSP_VOICE_ACTIVE ||
             (voice->envelope_state == MIPSNES2_DSP_ENVELOPE_RELEASE &&
@@ -619,6 +779,7 @@ static void service_sample_event(mipsnes2_dsp *dsp)
                 voice->state == MIPSNES2_DSP_VOICE_KEY_ON_DELAY) {
                 voice->state = MIPSNES2_DSP_VOICE_ACTIVE;
             }
+            update_voice_output(dsp, index);
         } else if (voice->brr_stream_active) {
             uint32_t position;
 
@@ -630,7 +791,8 @@ static void service_sample_event(mipsnes2_dsp *dsp)
                 decode_voice_brr_group(dsp, index);
                 voice->interpolation_index &= UINT16_C(0x3fff);
             }
-            voice->pitch = voice_pitch(dsp, index);
+            update_voice_output(dsp, index);
+            voice->pitch = effective_voice_pitch(dsp, index);
             position = (uint32_t)voice->interpolation_index + voice->pitch;
             if (position > UINT16_C(0x7fff)) {
                 position = UINT16_C(0x7fff);
@@ -639,10 +801,10 @@ static void service_sample_event(mipsnes2_dsp *dsp)
             update_envelope = voice->state == MIPSNES2_DSP_VOICE_ACTIVE ||
                               voice->state == MIPSNES2_DSP_VOICE_RELEASE;
         } else {
+            update_voice_output(dsp, index);
             update_envelope = voice->state == MIPSNES2_DSP_VOICE_ACTIVE ||
                               voice->state == MIPSNES2_DSP_VOICE_RELEASE;
         }
-        update_voice_noise_output(dsp, index);
         if ((dsp->internal_flags & UINT8_C(0x80)) != 0U &&
             voice->state != MIPSNES2_DSP_VOICE_WAITING) {
             voice->state = MIPSNES2_DSP_VOICE_WAITING;
@@ -652,6 +814,10 @@ static void service_sample_event(mipsnes2_dsp *dsp)
             voice->left_sample = 0;
             voice->right_sample = 0;
             voice->output_sample_valid =
+                (dsp->registers[MIPSNES2_DSP_REGISTER_NON] &
+                 (uint8_t)(UINT8_C(1) << index)) != 0U ||
+                voice->brr_stream_active;
+            voice->output_uses_noise =
                 (dsp->registers[MIPSNES2_DSP_REGISTER_NON] &
                  (uint8_t)(UINT8_C(1) << index)) != 0U;
             dsp->registers[
@@ -805,26 +971,47 @@ bool mipsnes2_dsp_voice_interpolation_input(
     mipsnes2_dsp_interpolation_input *input)
 {
     const mipsnes2_dsp_voice *voice;
-    uint8_t sample_index;
-    unsigned int index;
 
     if (dsp == NULL || !dsp->initialized ||
         voice_index >= MIPSNES2_DSP_VOICE_COUNT || input == NULL) {
         return false;
     }
     voice = &dsp->voices[voice_index];
-    if (!voice->brr_stream_active || voice->key_on_delay != 0U ||
-        voice->decoded_groups < 3U) {
+    if (voice->key_on_delay != 0U) {
         return false;
     }
-    sample_index = (uint8_t)(voice->interpolation_index >> 12U);
-    for (index = 0U; index < 4U; ++index) {
-        input->samples[index] = voice->brr_ring[
-            (voice->ring_offset + sample_index + index) %
-            MIPSNES2_DSP_BRR_RING_SAMPLE_COUNT];
+    return fill_voice_interpolation_input(voice, input);
+}
+
+bool mipsnes2_dsp_gaussian_coefficient(size_t index,
+                                       uint16_t *coefficient)
+{
+    if (index >= sizeof(gaussian_coefficients) /
+                     sizeof(gaussian_coefficients[0]) ||
+        coefficient == NULL) {
+        return false;
     }
-    input->sample_index = sample_index;
-    input->fraction = (uint8_t)(voice->interpolation_index >> 4U);
+    *coefficient = gaussian_coefficients[index];
+    return true;
+}
+
+bool mipsnes2_dsp_gaussian_interpolate(
+    const mipsnes2_dsp_interpolation_input *input, int16_t *sample)
+{
+    unsigned int index;
+
+    if (input == NULL || sample == NULL ||
+        input->sample_index >=
+            (MIPSNES2_DSP_BRR_GROUP_SAMPLE_COUNT * 2U)) {
+        return false;
+    }
+    for (index = 0U; index < 4U; ++index) {
+        if (input->samples[index] < INT16_C(-16384) ||
+            input->samples[index] > INT16_C(16383)) {
+            return false;
+        }
+    }
+    *sample = interpolate_gaussian(input->samples, input->fraction);
     return true;
 }
 

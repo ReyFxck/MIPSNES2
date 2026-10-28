@@ -32,17 +32,22 @@ timed GAIN curves, saturating release, reset zeroing and `ENVX` updates.
 Noise fixtures cover the `$4000` seed, signed-15 conversion, `NON` sharing,
 rate-zero hold, fast/slow/offset counter events, a million-step scalar/bulk
 equivalence check and irregular clock chunking while BRR transport continues.
-Resolved-noise fixtures cover the five empty key-on samples, envelope `>>11`,
-negative rounding, `OUTX`, signed/inverted left-right voice volumes, Release
-ordering, reset zeroing and unresolved-BRR rejection.
-Resolved dry-mix fixtures cover Voice-0-to-7 accumulation, saturation after each
-addition, all eight voice slots, explicit inclusion masks, signed main-volume
-rounding/wrap, reset zeroing and chunk equivalence.
+Resolved-source fixtures cover the five empty key-on samples, left-aligned
+signed-15 envelope output, low-bit clearing, negative rounding, full-range
+`OUTX`, signed/inverted left-right voice volumes, Release ordering and reset
+zeroing. Gaussian fixtures hash and inspect all 512 coefficients, validate every
+phase quartet, pin independent interpolation/overflow vectors and drive a BRR
+voice through envelope, volume and dry mixing. PMON fixtures cover positive and
+negative modulation, staged negative rounding, target-`NON` suppression, ignored
+voice-0 bit and the `$7fff` position cap. Dry-mix fixtures cover Voice-0-to-7
+accumulation, saturation after each addition, all eight voice slots, explicit
+inclusion masks, signed main-volume rounding/wrap, reset zeroing and chunk
+equivalence.
 `test-apu-timing` verifies nominal master-to-S-SMP conversion, one-shot/
 chunked equivalence, atomic SPC700 admission and credit, timer coordination,
-SLEEP continuation and overflow handling. The four-point API is only the input to
-future Gaussian interpolation. Noise voices now reach per-voice stereo state,
-an ordered dry mix and signed main-volume state, but there is no echo or PCM output.
+SLEEP continuation and overflow handling. BRR and noise voices now reach
+per-voice stereo state, sample-level pitch modulation, an ordered dry mix and
+signed main-volume state, but there is no echo, mute/DAC or PCM output.
 
 `test-spc700-alu` verifies the exact 100-opcode OR/AND/EOR/CMP/ADC/SBC,
 ASL/ROL/LSR/ROR and byte INC/DEC block across every documented addressing form.

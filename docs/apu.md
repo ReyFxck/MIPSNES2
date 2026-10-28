@@ -10,12 +10,14 @@ clock. The same clock advances the timers and a first S-DSP register/sample-even
 foundation. Eight voice-control records, sample-granularity key polling, source
 directory latching and a pure BRR block decoder now exist. Per-voice BRR
 group streaming, a twelve-sample ring, unmodulated pitch progression and the
-four-point interpolation input are connected. The shared rate counter now drives
+four-point interpolation input are connected. The published 512-entry Gaussian
+table resolves BRR output, and sample-level `PMON` modulates voices 1 through 7
+from the preceding post-envelope sample. The shared rate counter now drives
 11-bit ADSR, all GAIN modes and release, plus the shared 15-bit noise LFSR selected
-per voice by `NON`. Resolved noise voices now apply the envelope, update `OUTX`
-and expose signed left/right voice-volume samples. Those resolved voices are now
-mixed in order with per-addition saturation and signed main volume. There is
-still no BRR Gaussian output, echo, PCM buffer or audio output.
+per voice by `NON`. Resolved BRR/noise voices apply the envelope as left-aligned
+signed-15 output, update `OUTX` and expose signed left/right voice-volume samples.
+Those voices are mixed in order with per-addition saturation and signed main
+volume. There is still no echo, mute/DAC, PCM buffer or audio output.
 
 ## Design direction
 
@@ -68,6 +70,8 @@ Its resolved per-voice path is recorded in the
 [S-DSP noise voice-output audit](sdsp-noise-voice-output-audit.md).
 The resolved ordered/main-volume path is recorded in the
 [S-DSP dry-mix audit](sdsp-dry-mix-audit.md).
+Gaussian BRR output, corrected left-aligned sample scale and sample-level PMON
+are recorded in the [S-DSP Gaussian/PMON audit](sdsp-gaussian-pmon-audit.md).
 RFAuds2 is transport infrastructure only
 and must never become a core dependency or SNES timing source. The inspected candidate
 was RFAuds2 `0.1.0-alpha.1` at revision

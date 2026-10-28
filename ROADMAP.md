@@ -252,25 +252,25 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Phase 8 exit gate verified
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] [IN PROGRESS] Eight voice state — BRR/ring/pitch/envelope plus resolved dry mixing exist; Gaussian and echo remain
+- [ ] [IN PROGRESS] Eight voice state — BRR/noise, Gaussian, envelope, PMON and resolved dry mixing exist; echo remains
 - [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact DSP microphases remain
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact phase/envelope effects remain
-- [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 step/cap exists; pitch modulation and exact phase remain
-- [ ] [IN PROGRESS] Interpolation — four ring samples and eight-bit fraction are exposed; Gaussian coefficients/output remain
-- [ ] [IN PROGRESS] ADSR — 11-bit state and shared counter drive resolved noise samples; BRR/Gaussian multiplication and exact microphases remain
+- [ ] [IN PROGRESS] Pitch progression — raw and PMON-adjusted 2.12 steps plus the documented cap exist; exact phases remain
+- [ ] [IN PROGRESS] Interpolation — 512 coefficients, four-point wrap/clamp math and BRR output exist; exact microphases remain
+- [ ] [IN PROGRESS] ADSR — 11-bit state and shared counter drive resolved BRR/noise samples; exact microphases remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct and four timed modes plus release progression exist; exact microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
 - [ ] [IN PROGRESS] Noise generator — shared LFSR/rates, `NON`, envelope/`OUTX`, stereo and dry mixing exist; exact microphases remain
-- [ ] Pitch modulation
-- [ ] [IN PROGRESS] Voice volumes — signed `VxVOLL`/`VxVOLR` feed the resolved ordered mixer; BRR voices remain
-- [ ] [IN PROGRESS] Main volumes — signed `MVOLL`/`MVOLR` apply after the resolved dry mix; echo/DAC integration remains
+- [ ] [IN PROGRESS] Pitch modulation — preceding-voice output, staged signed shifts, voice-0 ignore, target-`NON` suppression and cap exist; exact fetch phases remain
+- [ ] [IN PROGRESS] Voice volumes — signed `VxVOLL`/`VxVOLR` feed BRR/noise into the resolved ordered mixer; exact phases remain
+- [ ] [IN PROGRESS] Main volumes — signed `MVOLL`/`MVOLR` apply after the complete resolved dry mix; echo/DAC integration remains
 - [ ] Echo buffer
 - [ ] FIR filter
 - [ ] Feedback
 - [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR and ordered dry-mixer rules are explicit; echo arithmetic remains
-- [ ] [IN PROGRESS] Sample timing — one deterministic event per 32 S-SMP cycles; pipeline/sample values pending
+- [ ] [IN PROGRESS] Sample timing — deterministic sample values and one event per 32 S-SMP cycles exist; exact pipeline phases remain
 - [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
-- [ ] Golden sample tests
+- [ ] [IN PROGRESS] Golden sample tests — coefficient hash, Gaussian phase/overflow, PMON, BRR/noise output and mixer vectors exist; echo/DAC/PCM vectors remain
 - [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3`, ARAM source latches, common time and sample-granularity key polling exist; exact microsteps pending
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
 - [x] Timer integration — machine APU clock advances S-SMP timers

@@ -5,9 +5,8 @@
 This slice connects currently resolved per-voice stereo samples to an ordered
 dry mixer. It records the saturated pre-main-volume pair, the pair after signed
 `MVOLL`/`MVOLR`, and an eight-bit mask identifying every voice included in that
-sample. The mask is part of the contract because only `NON` noise sources are
-numerically resolved: an active BRR voice remains excluded until independently
-sourced Gaussian coefficients provide its interpolated sample.
+sample. The original checkpoint resolved only `NON` noise sources; the later
+Gaussian milestone now sends BRR voices through the same unchanged ordered mixer.
 
 This is deterministic intermediate state, not final audio. Echo/FIR, echo
 volume, mute/DAC behavior, PCM buffering and platform delivery remain absent.
@@ -64,6 +63,6 @@ Cross-build success is not target-runtime or audible-output evidence.
 
 ## Open boundaries
 
-BRR Gaussian interpolation is the primary missing dry-path source. Pitch
-modulation, echo send mixing, echo RAM/FIR/feedback, `EVOL`, mute/DAC behavior,
-PCM buffering and PS2/PSP output remain separate work.
+Gaussian BRR input and sample-level pitch modulation are now connected and
+audited separately. Echo send mixing, echo RAM/FIR/feedback, `EVOL`, mute/DAC
+behavior, PCM buffering and PS2/PSP output remain separate work.

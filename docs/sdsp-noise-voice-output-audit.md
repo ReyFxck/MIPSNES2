@@ -6,26 +6,28 @@ This slice connects the already verified shared noise source to the per-voice
 envelope and voice-volume stages. For a voice selected by `NON`, the core now
 records the signed-15 source, the post-envelope mono sample, `OUTX`, and the
 post-`VxVOLL`/`VxVOLR` stereo pair. Public inspection APIs return these states
-only while the noise path is resolved. A BRR voice remains deliberately invalid
-until independently sourced Gaussian coefficients make its interpolated source
-available.
+only while the source path is resolved. The later Gaussian milestone connects
+BRR voices through the same envelope and volume path.
 
-This is the first numerically resolved voice sample, not final audio. There is no
-eight-voice mixer, master volume, echo/FIR, mute/DAC stage, PCM queue or platform
-delivery in this slice.
+At this historical checkpoint this was the first numerically resolved voice
+sample and there was no mixer or main volume. Later audited slices connect the
+ordered dry mixer, Gaussian BRR source and PMON. Echo/FIR, mute/DAC, PCM queue and
+platform delivery are still absent.
 
 ## Arithmetic and ordering
 
 All operations use explicit signed arithmetic rather than implementation-defined
 host shifts or `char` signedness:
 
-- source-to-envelope: `S = arithmetic_shift_right(source * envelope, 11)`;
+- source-to-envelope for the core's right-aligned signed-15 source:
+  `S = clear_low_bit(arithmetic_shift_right(source * envelope, 10))`;
 - `OUTX`: the high byte of the signed post-envelope sample;
 - left/right voice volume: `V = arithmetic_shift_right(S * signed_volume, 7)`.
 
-The envelope is unsigned 11-bit. Voice volumes are converted explicitly from
-eight-bit two's-complement register values. Products fit in signed 32 bits and
-the resolved results fit in signed 16 bits.
+The envelope is unsigned 11-bit. `S` is signed-15 data left-aligned in a signed
+16-bit word, matching full-range `OUTX` and PMON. Voice volumes are converted
+explicitly from eight-bit two's-complement register values, and their results use
+explicit signed-16 wrapping.
 
 At each sample event, the current source is multiplied by the current envelope;
 only after that is the envelope advanced. This preserves the documented pipeline
@@ -44,9 +46,9 @@ per-voice S3/S4/S5/S8/S9 positions inside the 32-step hardware schedule, and a
   `OUTX` after envelope multiplication and before per-voice volume, and defines
   signed left/right voice volumes.
 - [Anomie's S-DSP Doc, revision 1212](https://gist.github.com/nyanpasu64/a0d916ce6924912a7116682bf778e9a0)
-  provides the exact envelope `>>11`, voice-volume `>>7`, signed phase inversion,
-  `OUTX` high-byte rule and sample-before-envelope-update ordering. No emulator
-  implementation or coefficient table was imported.
+  provides the envelope scaling, left-aligned 15-bit output, voice-volume `>>7`,
+  signed phase inversion, `OUTX` high-byte rule and sample-before-envelope-update
+  ordering. No emulator implementation or coefficient table was imported.
 
 ## Deterministic evidence
 
@@ -69,10 +71,12 @@ test. Revision `cb955698` passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40603798701),
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40603798698) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40603798694).
-Cross-build success is not a target-runtime or audible-output result.
+Cross-build success is not a target-runtime or audible-output result. Those CI
+links validate the original checkpoint; the later left-alignment correction and
+BRR integration are validated in the Gaussian/PMON audit.
 
 ## Open boundaries
 
-Gaussian interpolation remains blocked on independently sourced coefficients.
-Pitch modulation, ordered voice mixing/clamping, master volume, mute, echo/FIR,
-PCM buffering and PS2/PSP output remain separate work.
+Gaussian interpolation, pitch modulation, ordered voice mixing/clamping and main
+volume are now connected and audited separately. Mute, echo/FIR, PCM buffering
+and PS2/PSP output remain separate work.

@@ -891,8 +891,26 @@ or focused-test diagnostics. Revision `72f266d` passed
 No target-runtime or audible-output result is claimed. See the
 [S-DSP dry-mix audit](docs/sdsp-dry-mix-audit.md).
 
-Next primary block: establish independently sourced Gaussian coefficients for
-BRR voices; the table explicitly attributed to another emulator was not imported.
+The Gaussian/PMON slice now resolves BRR voices with all 512 coefficients
+transcribed from published hardware documentation and pinned by a little-endian
+FNV-1a checksum. Four-point interpolation preserves the documented partial
+signed-16 wrap, final clamp and signed-15 result, including the known overflow
+pop. BRR and noise sources now produce left-aligned signed-15 envelope output,
+correct full-range `OUTX`, signed voice volume and ordered dry mixing. `PMON`
+uses the preceding voice's same-event post-envelope output with the documented
+staged signed shifts, ignores voice 0, is suppressed for a target selected by
+`NON`, and retains the `$7fff` position cap. Host vectors cover the entire table,
+independent phase outputs, live BRR/noise switching, output scale and PMON's
+positive, negative, rounding, suppression and cap edges. No emulator source or
+emulator-derived coefficient table was imported. The clean host suite and
+repository checks pass; focused DSP/APU/machine ASan+UBSan runs pass and GCC
+`-fanalyzer` reports no DSP or focused-test diagnostics. CI evidence will be
+attached after the published revision finishes. See the
+[S-DSP Gaussian/PMON audit](docs/sdsp-gaussian-pmon-audit.md). There is still no
+echo, mute/DAC stage, PCM buffer or audible platform output.
+
+Next primary block: resolve echo-send selection and the echo RAM/FIR/feedback
+pipeline from hardware documentation, then define the mute/DAC-to-PCM boundary.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2118,25 +2136,25 @@ platform persistence remains incomplete.
 ## DSP
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] [IN PROGRESS] Eight voice state — BRR/ring/pitch/envelope plus resolved dry mixing exist; Gaussian and echo remain
+- [ ] [IN PROGRESS] Eight voice state — BRR/noise, Gaussian, envelope, PMON and resolved dry mixing exist; echo remains
 - [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact DSP microphases remain
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact phase/envelope effects remain
-- [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 step/cap exists; pitch modulation and exact phase remain
-- [ ] [IN PROGRESS] Interpolation — four ring samples and eight-bit fraction are exposed; Gaussian coefficients/output remain
-- [ ] [IN PROGRESS] ADSR — 11-bit state/counter drive resolved noise samples; BRR/Gaussian multiplication and exact microphases remain
+- [ ] [IN PROGRESS] Pitch progression — raw and PMON-adjusted 2.12 steps plus the documented cap exist; exact phases remain
+- [ ] [IN PROGRESS] Interpolation — 512 coefficients, four-point wrap/clamp math and BRR output exist; exact microphases remain
+- [ ] [IN PROGRESS] ADSR — 11-bit state/counter drive resolved BRR/noise samples; exact microphases remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct and four timed modes plus release progression exist; exact microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
 - [ ] [IN PROGRESS] Noise generator — LFSR/rates/`NON`, envelope/`OUTX`, stereo and dry mixing exist; exact microphases remain
-- [ ] Pitch modulation
-- [ ] [IN PROGRESS] Voice volumes — signed left/right arithmetic feeds the resolved ordered mixer; BRR integration remains
-- [ ] [IN PROGRESS] Main volumes — signed left/right arithmetic applies after the resolved dry mix; echo/DAC integration remains
+- [ ] [IN PROGRESS] Pitch modulation — preceding-voice output, staged signed shifts, voice-0 ignore, target-`NON` suppression and cap exist; exact fetch phases remain
+- [ ] [IN PROGRESS] Voice volumes — signed left/right arithmetic feeds BRR/noise into the resolved ordered mixer; exact phases remain
+- [ ] [IN PROGRESS] Main volumes — signed left/right arithmetic applies after the complete resolved dry mix; echo/DAC integration remains
 - [ ] Echo buffer
 - [ ] FIR filter
 - [ ] Feedback
 - [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR and ordered dry-mixer rules are explicit; echo remains
-- [ ] [IN PROGRESS] Sample timing — one deterministic event per 32 S-SMP cycles; pipeline/sample values pending
+- [ ] [IN PROGRESS] Sample timing — deterministic sample values and one event per 32 S-SMP cycles exist; exact pipeline phases remain
 - [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
-- [ ] Golden sample tests
+- [ ] [IN PROGRESS] Golden sample tests — coefficient hash, Gaussian phase/overflow, PMON, BRR/noise output and mixer vectors exist; echo/DAC/PCM vectors remain
 
 ## APU and audio
 

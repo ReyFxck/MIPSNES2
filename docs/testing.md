@@ -202,7 +202,7 @@ is not console execution; a foundation binary is not a test-ROM runner.
 | CPU | Opcode/mode/flag/addressing/interrupt edge cases with sourced expectations |
 | Bus/cartridge | Synthetic mapping/mirror/MMIO/malformed-input fixtures |
 | PPU | State/port/priority/window/color and rendering reference vectors |
-| SPC700/DSP | Complete opcode/flag/addressing matrices, deterministic cadence coupling, key/source state, BRR/ring/pitch/traversal, ADSR/GAIN, noise envelope/`OUTX`/stereo, ordered saturation and signed main-volume vectors; future Gaussian/echo vectors |
+| SPC700/DSP | Complete opcode/flag/addressing matrices, deterministic cadence coupling, key/source state, BRR/ring/traversal, ADSR/GAIN, noise, all Gaussian coefficients/arithmetic, left-aligned `OUTX`, PMON, ordered saturation and signed main-volume vectors; future echo/DAC/PCM vectors |
 | DMA/scheduler | Transfer boundaries, arbitration, event ties, drift and determinism |
 | Serialization | Round-trip state, version and malformed-input checks |
 | Optimized paths | Differential outputs/state plus real-target before/after timings |

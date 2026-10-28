@@ -64,11 +64,13 @@ key polling/source-directory latches, exact BRR arithmetic, four-sample group
 streaming, a twelve-sample ring, raw pitch/interpolation inputs and 11-bit
 ADSR/GAIN/release progression are testable. A shared 15-bit noise LFSR now follows
 all 32 `FLG.NCK` rates and `NON` selects it per voice without stopping BRR
-transport. Noise voices now apply the 11-bit envelope, update `OUTX` and expose
-signed `VxVOLL`/`VxVOLR` stereo samples. Resolved voices are mixed in voice order
-with per-addition signed-16 saturation, then pass through signed `MVOLL`/`MVOLR`.
-Gaussian output for BRR voices, echo, PCM output, a full ROM runner,
-compatibility and performance remain.
+transport. The hardware-published 512-entry Gaussian table now resolves BRR
+voices with the documented four-tap wrap/clamp arithmetic. BRR and noise sources
+apply the 11-bit envelope as left-aligned signed-15 output, update `OUTX`, feed
+sample-level `PMON`, and expose signed `VxVOLL`/`VxVOLR` stereo samples. Resolved
+voices are mixed in voice order with per-addition signed-16 saturation, then pass
+through signed `MVOLL`/`MVOLR`. Exact DSP microphases, echo, mute/DAC, PCM output,
+a full ROM runner, compatibility and performance remain.
 
 Current milestone: Phase 4 — Ricoh 5A22 interrupt/timer foundation.
 [STATUS.md](STATUS.md) is the canonical record of exactly which builds, tests and

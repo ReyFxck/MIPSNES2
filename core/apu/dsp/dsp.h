@@ -29,6 +29,7 @@ enum {
     MIPSNES2_DSP_VOICE_REGISTER_OUTX = 0x09,
     MIPSNES2_DSP_REGISTER_MAIN_VOLUME_LEFT = 0x0c,
     MIPSNES2_DSP_REGISTER_MAIN_VOLUME_RIGHT = 0x1c,
+    MIPSNES2_DSP_REGISTER_PMON = 0x2d,
     MIPSNES2_DSP_REGISTER_NON = 0x3d,
     MIPSNES2_DSP_REGISTER_KON = 0x4c,
     MIPSNES2_DSP_REGISTER_KOFF = 0x5c,
@@ -79,6 +80,7 @@ typedef struct {
     bool directory_loaded;
     bool brr_stream_active;
     bool output_sample_valid;
+    bool output_uses_noise;
 } mipsnes2_dsp_voice;
 
 typedef struct {
@@ -109,8 +111,8 @@ typedef struct {
     uint8_t resolved_voice_mask;
 } mipsnes2_dsp_dry_mix;
 
-/* State is intentionally public for deterministic inspection. BRR Gaussian
- * output, echo and PCM are not yet implemented. */
+/* State is intentionally public for deterministic inspection. Echo and PCM
+ * output are not yet implemented. */
 typedef struct {
     uint8_t registers[MIPSNES2_DSP_REGISTER_COUNT];
     mipsnes2_dsp_voice voices[MIPSNES2_DSP_VOICE_COUNT];
@@ -143,19 +145,30 @@ bool mipsnes2_dsp_brr_decode_block(const uint8_t *encoded,
                                    int16_t previous1, int16_t previous2,
                                    mipsnes2_dsp_brr_block *decoded);
 
-/* Return the four logical BRR-ring samples and 8-bit fractional position that
- * would feed the future Gaussian interpolator. */
+/* Return four logical BRR-ring samples from oldest to newest and the 8-bit
+ * fractional position used by the Gaussian interpolator. */
 bool mipsnes2_dsp_voice_interpolation_input(
     const mipsnes2_dsp *dsp, size_t voice_index,
     mipsnes2_dsp_interpolation_input *input);
+
+/* Expose the documented hardware-extracted 512-entry coefficient ROM for
+ * deterministic inspection. */
+bool mipsnes2_dsp_gaussian_coefficient(size_t index,
+                                       uint16_t *coefficient);
+
+/* Apply the S-DSP's four-point Gaussian arithmetic to signed-15 samples,
+ * including the documented partial signed-16 wrap, final clamp and conversion
+ * back to signed 15 bits. */
+bool mipsnes2_dsp_gaussian_interpolate(
+    const mipsnes2_dsp_interpolation_input *input, int16_t *sample);
 
 /* Return the shared signed-15 noise source when NON selects it for this voice.
  * This is a pre-envelope input, not a mixed or output PCM sample. */
 bool mipsnes2_dsp_voice_noise_input(const mipsnes2_dsp *dsp,
                                     size_t voice_index, int16_t *sample);
 
-/* Return the post-envelope, pre-VxVOL voice sample. This foundation currently
- * resolves only NON-selected noise voices; BRR requires Gaussian output first. */
+/* Return the left-aligned signed-15, post-envelope, pre-VxVOL sample for
+ * resolved BRR or noise. */
 bool mipsnes2_dsp_voice_output_sample(const mipsnes2_dsp *dsp,
                                       size_t voice_index, int16_t *sample);
 
@@ -165,8 +178,8 @@ bool mipsnes2_dsp_voice_stereo_sample(const mipsnes2_dsp *dsp,
                                       mipsnes2_dsp_stereo_sample *sample);
 
 /* Return the ordered, per-addition-clamped sum of currently resolved voices
- * before and after signed MVOLL/MVOLR. The mask identifies the included voices;
- * BRR voices remain excluded until Gaussian output is resolved. */
+ * before and after signed MVOLL/MVOLR. The mask identifies every BRR/noise
+ * voice included in this sample. */
 bool mipsnes2_dsp_resolved_dry_mix(const mipsnes2_dsp *dsp,
                                    mipsnes2_dsp_dry_mix *mix);
 

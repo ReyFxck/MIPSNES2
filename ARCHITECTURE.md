@@ -22,7 +22,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP communication and timing | Directional ports plus nominal rational master-to-S-SMP clock bridge; electrical race order and oscillator drift pending |
 | core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | All 256 opcodes, ARAM/IPL, ports, `$F2/$F3` DSP route and three-stage timers under the APU clock; exact bus phases and interrupt/reset entry pending |
-| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight voice records, ARAM BRR group streams, twelve-sample rings, raw pitch/interpolation inputs and ADSR/GAIN progression; Gaussian output, envelope multiplication, mixer and PCM absent |
+| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight BRR/noise voices, Gaussian interpolation, ADSR/GAIN, `OUTX`, `PMON`, signed voice/main volume and ordered dry mixing; exact microphases, echo, mute/DAC and PCM absent |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
@@ -60,11 +60,13 @@ event. Its eight voice records poll `KON`/`KOFF` every other sample, latch
 preparation period. A side-effect-free API decodes one BRR block with exact
 filter/clamp/wrap arithmetic. Attached voices preload three four-sample groups,
 rotate a physical twelve-sample ring as the 14-bit 2.12 pitch position crosses
-four samples, traverse end/loop blocks and expose the four-point/eight-bit input
-surface for later Gaussian interpolation. It has no Gaussian calculation,
-envelope/sample multiplication, echo, mixer or PCM semantics. A shared 15-bit
-countdown phase drives the documented 32 envelope rates/offsets; each voice has
-an 11-bit ADSR/GAIN/release value and an `ENVX` shadow. Exact
+four samples, and traverse end/loop blocks. A hardware-published 512-entry table
+feeds the documented four-point Gaussian wrap/clamp arithmetic. BRR or shared
+signed-15 noise sources pass through the 11-bit envelope as left-aligned output,
+`OUTX`, sample-level `PMON`, signed voice volumes, ordered saturation and signed
+main volume. A shared countdown phase drives the documented 32 envelope
+rates/offsets; each voice has an 11-bit ADSR/GAIN/release value and an `ENVX`
+shadow. Echo/FIR, mute/DAC and PCM semantics remain absent. Exact
 instruction bus phases, within-DSP-loop register visibility, mailbox races and
 physical oscillator drift remain open.
 `resume` advances one
@@ -735,5 +737,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-28: the resolved dry path now sums voices 0 through 7 with signed-16
   saturation after every addition, exposes the included-voice mask, then applies
   signed `MVOLL`/`MVOLR`. BRR voices, echo, mute/DAC and PCM remain unresolved.
+- 2026-10-28: the hardware-published 512-entry Gaussian table now resolves BRR
+  output with explicit partial wrap/final clamp. BRR and noise envelope output is
+  left-aligned signed-15, and sample-level `PMON` uses the preceding voice with
+  staged signed shifts, target-`NON` suppression and the `$7fff` position cap.
+  Exact DSP microphases, echo, mute/DAC and PCM remain unresolved.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
