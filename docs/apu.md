@@ -19,13 +19,16 @@ signed-15 output, update `OUTX` and expose signed left/right voice-volume sample
 Those voices are mixed in order with per-addition saturation and signed main
 volume. A separate `EON` sum now feeds the stereo ARAM echo ring, eight-tap FIR
 and signed feedback path; signed echo volume joins the final clamped mix and
-`FLG.MUTE` gates a deterministic DAC-facing sample. There is still no PCM buffer,
-resampler or audio-device output.
+`FLG.MUTE` gates a deterministic DAC-facing sample. An optional caller-owned FIFO
+now receives signed 16-bit left/right frames at the native 32 kHz cadence. The
+bounded interface drops new frames and counts them when full, while an empty read
+returns no frame; neither case changes emulated time. There is still no resampler
+or audio-device output.
 
 ## Design direction
 
 Keep port synchronization and sample-buffer ownership explicit. Platform pacing must not alter
-deterministic core state. The common boundary will expose emulated PCM without device
+deterministic core state. The common boundary exposes typed emulated PCM without device
 APIs. PS2 will prefer a PS2-only RFAuds2 adapter; PSP and host remain independent.
 The SPU2/RFAuds2 output rate must never drive SPC700/S-DSP time. Decide output format,
 resampling and underrun policy from correctness and target latency measurements.
@@ -45,14 +48,14 @@ implementation evidence before promotion.
 - [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3`, ARAM source directories, common time and sample-granularity key polling exist; exact DSP microsteps remain
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox is clocked at atomic boundaries; electrical races remain
 - [x] Timer integration — machine APU clock advances the existing S-SMP timers
-- [ ] [IN PROGRESS] Sample generation pipeline — voices through echo and mute-gated final samples exist; exact DSP phases and PCM handoff remain
-- [ ] Deterministic sample buffering
-- [ ] Output sample format contract
-- [ ] Platform-independent PCM output interface
+- [ ] [IN PROGRESS] Sample generation pipeline — voices through echo, mute-gated final samples and native PCM handoff exist; exact DSP phases remain
+- [x] Deterministic sample buffering — caller-owned bounded FIFO preserves order and diagnostics
+- [x] Output sample format contract — typed signed 16-bit left/right frames at native 32 kHz
+- [x] Platform-independent PCM output interface — bounded reads expose frames without device APIs
 - [ ] Resampling policy
-- [ ] Underflow/overflow behavior
-- [ ] Host offline audio tests
-- [ ] [IN PROGRESS] Integrated APU regression tests — clock chunking, CPU/timer/DSP cadence and machine execution covered; PCM vectors pending
+- [x] Underflow/overflow behavior — empty reads return zero; full writes drop newest and count it
+- [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
+- [ ] [IN PROGRESS] Integrated APU regression tests — clock chunking, CPU/timer/DSP cadence, PCM and machine execution are covered; exact phases remain
 
 ## Research and decisions
 
@@ -77,7 +80,9 @@ The resolved ordered/main-volume path is recorded in the
 Gaussian BRR output, corrected left-aligned sample scale and sample-level PMON
 are recorded in the [S-DSP Gaussian/PMON audit](sdsp-gaussian-pmon-audit.md).
 ARAM echo, FIR/feedback and the mute-gated final sample are recorded in the
-[S-DSP echo/output audit](sdsp-echo-output-audit.md).
+[S-DSP echo/output audit](sdsp-echo-output-audit.md). The native typed output
+contract, bounded FIFO and machine attachment are recorded in the
+[PCM buffer audit](pcm-buffer-audit.md).
 RFAuds2 is transport infrastructure only
 and must never become a core dependency or SNES timing source. The inspected candidate
 was RFAuds2 `0.1.0-alpha.1` at revision

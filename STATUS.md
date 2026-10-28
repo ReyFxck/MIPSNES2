@@ -932,12 +932,22 @@ focused tests. Revision `d02a671` passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40776210118),
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40776210175) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40776210150). See the
-[S-DSP echo/output audit](docs/sdsp-echo-output-audit.md). This is an inspectable
-sample boundary, not a PCM queue or audible platform output.
+[S-DSP echo/output audit](docs/sdsp-echo-output-audit.md).
 
-Next primary block: define deterministic PCM buffering and a platform-independent
-handoff from the mute-gated sample, without allowing device timing to drive S-DSP
-time.
+That mute-gated boundary now feeds an optional caller-owned, fixed-capacity FIFO
+with typed signed-16 left/right frames at the native 32 kHz cadence. The common
+interface performs no allocation or device I/O. A full FIFO drops the new frame,
+preserves queued order and increments a saturating diagnostic while S-DSP time
+continues; an empty read returns zero frames and leaves silence/concealment to the
+platform. Machine configuration validates optional storage, resets and reattaches
+it on power-on, and requires the APU/ARAM path. Host fixtures cover invalid
+construction, circular order, counter saturation, non-zero final-sample handoff,
+overflow without DSP backpressure, chunk equivalence and machine integration.
+See the [PCM buffer audit](docs/pcm-buffer-audit.md). This is still not audible
+PS2/PSP output and makes no target latency or throughput claim.
+
+Next primary block: define deterministic resampling and bounded rate-conversion
+state without allowing device consumption to drive emulated time.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2181,21 +2191,21 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR, dry, FIR, feedback and final-mix rules are explicit; post-DAC polarity remains
 - [ ] [IN PROGRESS] Sample timing — deterministic sample values and one event per 32 S-SMP cycles exist; exact pipeline phases remain
 - [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX`, `FLG` reset/mute/echo gate and `ESA`/`EDL` latching exist; exact phases remain
-- [ ] [IN PROGRESS] Golden sample tests — Gaussian, PMON, dry, echo/FIR/feedback, mute and chunk vectors exist; buffered PCM vectors remain
+- [ ] [IN PROGRESS] Golden sample tests — Gaussian, PMON, dry, echo/FIR/feedback, mute, chunk and buffered PCM vectors exist; exact phases remain
 
 ## APU and audio
 
 - [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3`, ARAM source latches, common time and sample-granularity key polling exist; exact microsteps pending
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
 - [x] Timer integration — machine APU clock advances S-SMP timers
-- [ ] [IN PROGRESS] Sample generation pipeline — voices through echo and mute-gated final samples exist; exact phases and PCM handoff remain
-- [ ] Deterministic sample buffering
-- [ ] Output sample format contract
-- [ ] Platform-independent PCM output interface
+- [ ] [IN PROGRESS] Sample generation pipeline — voices through echo, mute-gated final samples and native PCM handoff exist; exact phases remain
+- [x] Deterministic sample buffering — caller-owned bounded FIFO preserves order and diagnostics
+- [x] Output sample format contract — typed signed 16-bit left/right frames at native 32 kHz
+- [x] Platform-independent PCM output interface — bounded reads expose frames without device APIs
 - [ ] Resampling policy
-- [ ] Underflow/overflow behavior
-- [ ] Host offline audio tests
-- [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP and machine fixtures exist; PCM vectors pending
+- [x] Underflow/overflow behavior — empty reads return zero; full writes drop newest and count it
+- [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
+- [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP/PCM and machine fixtures exist; exact phases remain
 
 ## PS2 backend
 

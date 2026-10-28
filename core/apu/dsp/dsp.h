@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "core/apu/pcm.h"
+
 enum {
     MIPSNES2_DSP_REGISTER_COUNT = 128,
     MIPSNES2_DSP_VOICE_COUNT = 8,
@@ -143,14 +145,15 @@ typedef struct {
     bool muted;
 } mipsnes2_dsp_output;
 
-/* State is intentionally public for deterministic inspection. PCM buffering
- * and platform audio transport are not yet implemented. */
+/* State is intentionally public for deterministic inspection. Platform audio
+ * transport and resampling remain outside this emulated-device state. */
 typedef struct {
     uint8_t registers[MIPSNES2_DSP_REGISTER_COUNT];
     mipsnes2_dsp_voice voices[MIPSNES2_DSP_VOICE_COUNT];
     mipsnes2_dsp_dry_mix dry_mix;
     mipsnes2_dsp_echo echo;
     mipsnes2_dsp_output output;
+    mipsnes2_pcm_buffer *pcm;
     uint8_t *ram;
     size_t ram_size;
     uint8_t address;
@@ -167,6 +170,9 @@ typedef struct {
 void mipsnes2_dsp_init(mipsnes2_dsp *dsp);
 bool mipsnes2_dsp_attach_ram(mipsnes2_dsp *dsp, uint8_t *ram,
                              size_t ram_size);
+bool mipsnes2_dsp_attach_pcm(mipsnes2_dsp *dsp,
+                             mipsnes2_pcm_buffer *pcm);
+void mipsnes2_dsp_detach_pcm(mipsnes2_dsp *dsp);
 bool mipsnes2_dsp_write_address(mipsnes2_dsp *dsp, uint8_t address);
 bool mipsnes2_dsp_read_address(const mipsnes2_dsp *dsp, uint8_t *address);
 bool mipsnes2_dsp_write_data(mipsnes2_dsp *dsp, uint8_t value);
@@ -228,7 +234,7 @@ bool mipsnes2_dsp_resolved_echo(const mipsnes2_dsp *dsp,
                                 mipsnes2_dsp_echo *echo);
 
 /* Return the final pre-transport mix and the FLG.MUTE-gated DAC-facing
- * sample. No platform PCM has been emitted at this boundary. */
+ * sample. An attached PCM FIFO receives this dac_sample once per sample. */
 bool mipsnes2_dsp_resolved_output(const mipsnes2_dsp *dsp,
                                   mipsnes2_dsp_output *output);
 

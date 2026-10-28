@@ -18,6 +18,7 @@ static uint8_t cgram[MIPSNES2_PPU_CGRAM_SIZE];
 static uint8_t oam[MIPSNES2_PPU_OAM_SIZE];
 static uint8_t aram[MIPSNES2_SMP_RAM_SIZE];
 static uint8_t synthetic_ipl[MIPSNES2_SMP_IPL_SIZE];
+static mipsnes2_pcm_frame pcm_frames[4];
 static mipsnes2_machine machine;
 static uint16_t captured_y[2];
 static uint16_t captured_color[2];
@@ -144,6 +145,31 @@ int main(void)
     CHECK(mipsnes2_machine_run_until(
               &machine, UINT64_MAX, 0U, 0U, &sequences,
               &report, &timing_result) == MIPSNES2_MACHINE_RUN_INVALID_ARGUMENT);
+
+    config.pcm_frames = pcm_frames;
+    config.pcm_capacity = 0U;
+    CHECK(mipsnes2_machine_init(&machine, &config) ==
+          MIPSNES2_MACHINE_INVALID_ARGUMENT);
+    config.pcm_capacity = 4U;
+    CHECK(mipsnes2_machine_init(&machine, &config) ==
+          MIPSNES2_MACHINE_INVALID_ARGUMENT);
+    config.aram = aram;
+    config.aram_size = sizeof(aram);
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    CHECK(machine.dsp.pcm == &machine.pcm && machine.pcm.count == 0U);
+    CHECK(mipsnes2_machine_run_until(
+              &machine, UINT64_C(100000), 100000U, 0U, &sequences,
+              &report, &timing_result) == MIPSNES2_MACHINE_RUN_HORIZON);
+    CHECK(timing_result == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+    CHECK(machine.dsp.sample_count > UINT64_C(4));
+    CHECK(machine.pcm.count == 4U && machine.pcm.dropped_frames != 0U);
+    CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+    CHECK(machine.dsp.pcm == &machine.pcm && machine.pcm.count == 0U &&
+          machine.pcm.dropped_frames == 0U);
+    config.pcm_frames = NULL;
+    config.pcm_capacity = 0U;
+    config.aram = NULL;
+    config.aram_size = 0U;
 
     config.standard = (mipsnes2_hv_standard)2;
     CHECK(mipsnes2_machine_init(&machine, &config) ==

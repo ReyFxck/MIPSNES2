@@ -50,6 +50,10 @@ typedef struct {
     size_t oam_size;
     uint8_t *aram;
     size_t aram_size;
+    /* Optional native 32 kHz stereo FIFO storage. Requires ARAM so machine
+     * time advances an S-DSP. Storage remains caller-owned. */
+    mipsnes2_pcm_frame *pcm_frames;
+    size_t pcm_capacity;
     const uint8_t *smp_ipl;
     size_t smp_ipl_size;
     /* Optional explicit SPC700 reset seed. Hardware A/X/Y/SP/PSW reset values
@@ -65,8 +69,8 @@ typedef struct {
 } mipsnes2_machine_config;
 
 /* Stable address required: bus and CPU callbacks point into this object.
- * Image, WRAM, SRAM and optional PPU/APU memory remain caller-owned for the entire
- * machine lifetime.
+ * Image, WRAM, SRAM and optional PPU/APU/PCM memory remain caller-owned for the
+ * entire machine lifetime.
  * Initialize in place; do not copy or move an initialized machine.
  */
 typedef struct {
@@ -79,6 +83,7 @@ typedef struct {
     mipsnes2_cpu_io io;
     mipsnes2_apu_io_ports apu_ports;
     mipsnes2_dsp dsp;
+    mipsnes2_pcm_buffer pcm;
     mipsnes2_smp_memory smp_memory;
     mipsnes2_spc700 smp_cpu;
     mipsnes2_apu_timing apu_timing;

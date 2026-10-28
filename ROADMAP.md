@@ -270,17 +270,18 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR, dry, FIR, feedback and final-mix rules are explicit; post-DAC polarity remains
 - [ ] [IN PROGRESS] Sample timing — deterministic sample values and one event per 32 S-SMP cycles exist; exact pipeline phases remain
 - [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX`, `FLG` reset/mute/echo gate and `ESA`/`EDL` latching exist; exact phases remain
-- [ ] [IN PROGRESS] Golden sample tests — Gaussian, PMON, dry, echo/FIR/feedback, mute and chunk vectors exist; buffered PCM vectors remain
+- [ ] [IN PROGRESS] Golden sample tests — Gaussian, PMON, dry, echo/FIR/feedback, mute, chunk and buffered PCM vectors exist; exact phases remain
 - [ ] [IN PROGRESS] SPC700/DSP interconnect — `$F2/$F3`, ARAM source latches, common time and sample-granularity key polling exist; exact microsteps pending
 - [ ] [IN PROGRESS] CPU/APU port synchronization — shared mailbox ownership exists; asynchronous clocks and race ordering pending
 - [x] Timer integration — machine APU clock advances S-SMP timers
-- [ ] [IN PROGRESS] Sample generation pipeline — voices through echo and mute-gated final samples exist; exact phases and PCM handoff remain
-- [ ] Deterministic sample buffering
-- [ ] Output sample format contract
+- [ ] [IN PROGRESS] Sample generation pipeline — voices through echo, mute-gated final samples and native PCM handoff exist; exact phases remain
+- [x] Deterministic sample buffering — bounded caller-owned FIFO
+- [x] Output sample format contract — typed signed 16-bit stereo at native 32 kHz
+- [x] Platform-independent PCM output interface — bounded typed reads without device APIs
 - [ ] Resampling policy
-- [ ] Underflow/overflow behavior
-- [ ] Host offline audio tests
-- [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP and machine fixtures exist; PCM vectors pending
+- [x] Underflow/overflow behavior — empty read and drop-newest/count-full semantics are explicit
+- [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
+- [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP/PCM and machine fixtures exist; exact phases remain
 
 ## Phase 9 — Base SNES Integration
 

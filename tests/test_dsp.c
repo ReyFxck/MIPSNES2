@@ -1119,6 +1119,9 @@ static int test_echo_and_output(void)
     mipsnes2_dsp chunked;
     mipsnes2_dsp_echo echo;
     mipsnes2_dsp_output output;
+    mipsnes2_pcm_buffer pcm;
+    mipsnes2_pcm_frame pcm_storage[1];
+    mipsnes2_pcm_frame pcm_output;
 
     (void)memset(&echo, UINT8_C(0xa5), sizeof(echo));
     (void)memset(&output, UINT8_C(0xa5), sizeof(output));
@@ -1166,6 +1169,8 @@ static int test_echo_and_output(void)
                          UINT8_C(0xf0)));
     dsp.voices[0].envelope = UINT16_C(0x400);
     dsp.noise_lfsr = UINT16_C(0x2000);
+    CHECK(mipsnes2_pcm_buffer_init(&pcm, pcm_storage, 1U));
+    CHECK(mipsnes2_dsp_attach_pcm(&dsp, &pcm));
 
     CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
     CHECK(mipsnes2_dsp_resolved_echo(&dsp, &echo));
@@ -1184,6 +1189,10 @@ static int test_echo_and_output(void)
     CHECK(output.mixed_sample.left == INT16_C(1012) &&
           output.mixed_sample.right == INT16_C(-1012));
     CHECK(output.dac_sample.left == INT16_C(1012) && !output.muted);
+    CHECK(mipsnes2_pcm_buffer_read(&pcm, &pcm_output, 1U) == 1U);
+    CHECK(pcm_output.left == INT16_C(1012) &&
+          pcm_output.right == INT16_C(-1012));
+    mipsnes2_dsp_detach_pcm(&dsp);
     CHECK(ram[0] == UINT8_C(0xd0) && ram[1] == UINT8_C(0x07));
 
     CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
@@ -1447,6 +1456,73 @@ static int test_envelope(void)
     return 0;
 }
 
+static int test_pcm_handoff(void)
+{
+    mipsnes2_dsp dsp;
+    mipsnes2_dsp chunked;
+    mipsnes2_pcm_buffer buffer;
+    mipsnes2_pcm_buffer chunked_buffer;
+    mipsnes2_pcm_frame storage[4];
+    mipsnes2_pcm_frame chunked_storage[4];
+    mipsnes2_pcm_frame output[4];
+    size_t index;
+
+    mipsnes2_dsp_init(&dsp);
+    CHECK(!mipsnes2_dsp_attach_pcm(NULL, &buffer));
+    CHECK(!mipsnes2_dsp_attach_pcm(&dsp, NULL));
+    CHECK(mipsnes2_pcm_buffer_init(&buffer, storage, 4U));
+    CHECK(mipsnes2_dsp_attach_pcm(&dsp, &buffer));
+    CHECK(mipsnes2_dsp_advance(
+        &dsp, UINT64_C(3) * MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(dsp.sample_count == UINT64_C(3));
+    CHECK(buffer.count == 3U && buffer.dropped_frames == 0U);
+    CHECK(mipsnes2_pcm_buffer_read(&buffer, output, 3U) == 3U);
+    for (index = 0U; index < 3U; ++index) {
+        CHECK(output[index].left == 0 && output[index].right == 0);
+    }
+
+    CHECK(mipsnes2_dsp_advance(
+        &dsp, UINT64_C(6) * MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(dsp.sample_count == UINT64_C(9));
+    CHECK(buffer.count == 4U && buffer.dropped_frames == UINT64_C(2));
+    CHECK(mipsnes2_pcm_buffer_read(&buffer, output, 4U) == 4U);
+    for (index = 0U; index < 4U; ++index) {
+        CHECK(output[index].left == dsp.output.dac_sample.left);
+        CHECK(output[index].right == dsp.output.dac_sample.right);
+    }
+
+    mipsnes2_dsp_detach_pcm(&dsp);
+    CHECK(dsp.pcm == NULL);
+    CHECK(mipsnes2_dsp_advance(
+        &dsp, UINT64_C(2) * MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(buffer.count == 0U);
+
+    mipsnes2_dsp_init(&dsp);
+    chunked = dsp;
+    mipsnes2_pcm_buffer_reset(&buffer);
+    CHECK(mipsnes2_pcm_buffer_init(
+        &chunked_buffer, chunked_storage, 4U));
+    CHECK(mipsnes2_dsp_attach_pcm(&dsp, &buffer));
+    CHECK(mipsnes2_dsp_attach_pcm(&chunked, &chunked_buffer));
+    CHECK(mipsnes2_dsp_advance(
+        &dsp, UINT64_C(7) * MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_advance(&chunked, 1U));
+    CHECK(mipsnes2_dsp_advance(&chunked, 31U));
+    CHECK(mipsnes2_dsp_advance(
+        &chunked, UINT64_C(6) * MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(dsp.sample_count == chunked.sample_count);
+    CHECK(buffer.count == chunked_buffer.count);
+    CHECK(buffer.dropped_frames == chunked_buffer.dropped_frames);
+    CHECK(mipsnes2_pcm_buffer_read(&buffer, output, 4U) == 4U);
+    CHECK(mipsnes2_pcm_buffer_read(
+        &chunked_buffer, chunked_storage, 4U) == 4U);
+    for (index = 0U; index < 4U; ++index) {
+        CHECK(output[index].left == chunked_storage[index].left);
+        CHECK(output[index].right == chunked_storage[index].right);
+    }
+    return 0;
+}
+
 int main(void)
 {
     mipsnes2_dsp dsp;
@@ -1529,8 +1605,9 @@ int main(void)
     CHECK(test_resolved_dry_mix() == 0);
     CHECK(test_echo_fir() == 0);
     CHECK(test_echo_and_output() == 0);
+    CHECK(test_pcm_handoff() == 0);
 
     (void)puts(
-        "S-DSP Gaussian, dry mix, echo/FIR and output foundation: OK");
+        "S-DSP Gaussian, echo/output and bounded PCM foundation: OK");
     return 0;
 }

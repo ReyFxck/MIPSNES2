@@ -69,10 +69,17 @@ preserve sample-for-sample RAM, history, write-protection and register-latch beh
 against this reference path before introducing packed/MMI/VFPU kernels or safe bulk
 special cases.
 
-The PS2 ROM path now reserves 64 KiB additional static EE memory for ARAM.
-No target peak-memory measurement, sound workload or audio throughput result
-has been collected. The PSP build links the map but does not allocate an ARAM
-runtime buffer yet.
+Attaching the optional PCM FIFO also requires one bounded enqueue attempt per
+sample, including muted/idle output. A full queue drops the newest frame and
+increments a saturating diagnostic instead of blocking or slowing emulated time.
+No host or target throughput/latency claim has been measured for this path.
+
+The PS2 ROM path now reserves 64 KiB additional static EE memory for ARAM. No
+platform currently supplies PCM FIFO storage at runtime, so the new core API adds
+only state fields to existing machine/DSP objects in those binaries. No target
+peak-memory measurement, sound workload or audio throughput result has been
+collected. The PSP build links the map but does not allocate an ARAM runtime
+buffer yet.
 
 ## Development environments
 

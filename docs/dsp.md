@@ -18,8 +18,9 @@ saturation after each addition, then signed `MVOLL`/`MVOLR` is applied. `EON`
 drives a separate ordered send mix into the `ESA`/`EDL` circular ARAM buffer and
 eight-tap signed FIR. Signed `EFB` closes the protected feedback path, signed
 `EVOLL`/`EVOLR` joins the final clamped mix and `FLG.MUTE` gates an inspectable
-DAC-facing sample without stopping processing. Exact DSP microphases, post-DAC
-polarity, PCM buffering and device delivery remain absent.
+DAC-facing sample without stopping processing. An optional bounded FIFO receives
+that signed 16-bit stereo pair at each 32 kHz sample event. Exact DSP microphases,
+post-DAC polarity, resampling and device delivery remain absent.
 
 ## Design direction
 
@@ -53,7 +54,7 @@ implementation evidence before promotion.
 - [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR, dry, FIR, feedback and final-mix rules are explicit; post-DAC polarity remains
 - [ ] [IN PROGRESS] Sample timing — deterministic sample values and 32-cycle event cadence exist; exact DSP pipeline phases remain
 - [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX`, `FLG` reset/mute/echo gate and sample-level `ESA`/`EDL` latching exist; exact phases remain
-- [ ] [IN PROGRESS] Golden sample tests — Gaussian, PMON, dry mix, echo/FIR/feedback, mute and chunk vectors exist; buffered PCM vectors remain
+- [ ] [IN PROGRESS] Golden sample tests — Gaussian, PMON, dry mix, echo/FIR/feedback, mute, chunk and buffered PCM vectors exist; exact phases remain
 
 ## Research and decisions
 
@@ -72,7 +73,9 @@ Ordered saturation and signed main volume are recorded in the
 Gaussian coefficients, BRR output scaling and pitch modulation are recorded in
 the [Gaussian/PMON audit](sdsp-gaussian-pmon-audit.md).
 The circular ARAM echo path, FIR/feedback arithmetic and mute-gated final state
-are recorded in the [echo/output audit](sdsp-echo-output-audit.md).
+are recorded in the [echo/output audit](sdsp-echo-output-audit.md). Native PCM
+format, queueing and overflow semantics are recorded in the
+[PCM buffer audit](pcm-buffer-audit.md).
 Register writes currently
 become visible at register or sample-event granularity; exact within-32-cycle-loop
 phases are not modeled. The readable

@@ -18,6 +18,7 @@ TEST_CPU_CYCLES = $(BUILD_DIR)/test-cpu-cycles
 TEST_CPU_DIFFERENTIAL = $(BUILD_DIR)/test-cpu-differential
 TEST_CPU_IO = $(BUILD_DIR)/test-cpu-io
 TEST_APU_IO_PORTS = $(BUILD_DIR)/test-apu-io-ports
+TEST_PCM = $(BUILD_DIR)/test-pcm
 TEST_DSP = $(BUILD_DIR)/test-dsp
 TEST_APU_TIMING = $(BUILD_DIR)/test-apu-timing
 TEST_SMP_TIMERS = $(BUILD_DIR)/test-smp-timers
@@ -54,7 +55,7 @@ TEST_DMA_REGISTERS = $(BUILD_DIR)/test-dma-registers
 TEST_DMA_TRANSFER = $(BUILD_DIR)/test-dma-transfer
 TEST_HDMA = $(BUILD_DIR)/test-hdma
 TEST_DMA_TIMING = $(BUILD_DIR)/test-dma-timing
-CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o $(BUILD_DIR)/apu_io_ports.o $(BUILD_DIR)/dsp.o $(BUILD_DIR)/smp_timers.o $(BUILD_DIR)/smp_memory.o $(BUILD_DIR)/spc700_cpu.o $(BUILD_DIR)/apu_timing.o $(BUILD_DIR)/dma_registers.o $(BUILD_DIR)/dma_transfer.o $(BUILD_DIR)/hdma.o $(BUILD_DIR)/ppu_counters.o $(BUILD_DIR)/ppu_vram.o $(BUILD_DIR)/ppu_cgram.o $(BUILD_DIR)/ppu_oam.o $(BUILD_DIR)/ppu_tile4.o $(BUILD_DIR)/ppu_sprite_scanline.o $(BUILD_DIR)/ppu_bg2_scanline.o $(BUILD_DIR)/ppu_bg4_scanline.o $(BUILD_DIR)/ppu_bg_registers.o $(BUILD_DIR)/ppu_mode0_mix.o $(BUILD_DIR)/ppu_mode1_mix.o $(BUILD_DIR)/ppu_window_mask.o $(BUILD_DIR)/ppu_color_math.o \
+CORE_OBJS = $(BUILD_DIR)/log.o $(BUILD_DIR)/bus.o $(BUILD_DIR)/cpu_io.o $(BUILD_DIR)/apu_io_ports.o $(BUILD_DIR)/pcm.o $(BUILD_DIR)/dsp.o $(BUILD_DIR)/smp_timers.o $(BUILD_DIR)/smp_memory.o $(BUILD_DIR)/spc700_cpu.o $(BUILD_DIR)/apu_timing.o $(BUILD_DIR)/dma_registers.o $(BUILD_DIR)/dma_transfer.o $(BUILD_DIR)/hdma.o $(BUILD_DIR)/ppu_counters.o $(BUILD_DIR)/ppu_vram.o $(BUILD_DIR)/ppu_cgram.o $(BUILD_DIR)/ppu_oam.o $(BUILD_DIR)/ppu_tile4.o $(BUILD_DIR)/ppu_sprite_scanline.o $(BUILD_DIR)/ppu_bg2_scanline.o $(BUILD_DIR)/ppu_bg4_scanline.o $(BUILD_DIR)/ppu_bg_registers.o $(BUILD_DIR)/ppu_mode0_mix.o $(BUILD_DIR)/ppu_mode1_mix.o $(BUILD_DIR)/ppu_window_mask.o $(BUILD_DIR)/ppu_color_math.o \
 	$(BUILD_DIR)/cpu.o \
 	$(BUILD_DIR)/snes_bus.o $(BUILD_DIR)/scheduler.o \
 	$(BUILD_DIR)/5a22_timing.o $(BUILD_DIR)/hv_timing.o \
@@ -82,7 +83,10 @@ $(BUILD_DIR)/cpu_io.o: core/bus/cpu_io.c core/bus/cpu_io.h | $(BUILD_DIR)
 $(BUILD_DIR)/apu_io_ports.o: core/apu/io_ports.c core/apu/io_ports.h core/bus/interface.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
-$(BUILD_DIR)/dsp.o: core/apu/dsp/dsp.c core/apu/dsp/dsp.h | $(BUILD_DIR)
+$(BUILD_DIR)/pcm.o: core/apu/pcm.c core/apu/pcm.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/dsp.o: core/apu/dsp/dsp.c core/apu/dsp/dsp.h core/apu/pcm.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/smp_timers.o: core/apu/spc700/timers.c core/apu/spc700/timers.h | $(BUILD_DIR)
@@ -208,6 +212,9 @@ $(TEST_CPU_IO): tests/test_cpu_io.c core/bus/cpu_io.h $(LIB)
 $(TEST_APU_IO_PORTS): tests/test_apu_io_ports.c core/apu/io_ports.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_PCM): tests/test_pcm.c core/apu/pcm.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(TEST_DSP): tests/test_dsp.c core/apu/dsp/dsp.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -319,7 +326,7 @@ $(TEST_DMA_TIMING): tests/test_dma_timing.c core/scheduler/cpu_timing.h $(LIB)
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_DIFFERENTIAL) $(TEST_CPU_IO) $(TEST_APU_IO_PORTS) $(TEST_DSP) $(TEST_APU_TIMING) $(TEST_SMP_TIMERS) $(TEST_SMP_MEMORY) $(TEST_SPC700_CPU) $(TEST_SPC700_ALU) $(TEST_SPC700_COMPLETE) $(TEST_DMA_REGISTERS) $(TEST_DMA_TRANSFER) $(TEST_HDMA) $(TEST_DMA_TIMING) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG4_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_MODE1_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) $(TEST_PS2_VIDEO_FRAME) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_DIFFERENTIAL) $(TEST_CPU_IO) $(TEST_APU_IO_PORTS) $(TEST_PCM) $(TEST_DSP) $(TEST_APU_TIMING) $(TEST_SMP_TIMERS) $(TEST_SMP_MEMORY) $(TEST_SPC700_CPU) $(TEST_SPC700_ALU) $(TEST_SPC700_COMPLETE) $(TEST_DMA_REGISTERS) $(TEST_DMA_TRANSFER) $(TEST_HDMA) $(TEST_DMA_TIMING) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG4_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_MODE1_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) $(TEST_PS2_VIDEO_FRAME) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
@@ -327,6 +334,7 @@ test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_DI
 	$(TEST_CPU_DIFFERENTIAL)
 	$(TEST_CPU_IO)
 	$(TEST_APU_IO_PORTS)
+	$(TEST_PCM)
 	$(TEST_DSP)
 	$(TEST_APU_TIMING)
 	$(TEST_SMP_TIMERS)
@@ -368,7 +376,7 @@ test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_DI
 clean:
 	$(RM) -r $(BUILD_DIR)
 
--include $(BUILD_DIR)/log.d $(BUILD_DIR)/bus.d $(BUILD_DIR)/cpu_io.d $(BUILD_DIR)/apu_io_ports.d $(BUILD_DIR)/dsp.d $(BUILD_DIR)/smp_timers.d $(BUILD_DIR)/smp_memory.d $(BUILD_DIR)/spc700_cpu.d $(BUILD_DIR)/apu_timing.d $(BUILD_DIR)/dma_registers.d $(BUILD_DIR)/dma_transfer.d $(BUILD_DIR)/hdma.d \
+-include $(BUILD_DIR)/log.d $(BUILD_DIR)/bus.d $(BUILD_DIR)/cpu_io.d $(BUILD_DIR)/apu_io_ports.d $(BUILD_DIR)/pcm.d $(BUILD_DIR)/dsp.d $(BUILD_DIR)/smp_timers.d $(BUILD_DIR)/smp_memory.d $(BUILD_DIR)/spc700_cpu.d $(BUILD_DIR)/apu_timing.d $(BUILD_DIR)/dma_registers.d $(BUILD_DIR)/dma_transfer.d $(BUILD_DIR)/hdma.d \
 	$(BUILD_DIR)/ppu_counters.d $(BUILD_DIR)/ppu_vram.d $(BUILD_DIR)/ppu_cgram.d $(BUILD_DIR)/ppu_oam.d $(BUILD_DIR)/ppu_tile4.d $(BUILD_DIR)/ppu_sprite_scanline.d $(BUILD_DIR)/ppu_bg2_scanline.d $(BUILD_DIR)/ppu_bg4_scanline.d $(BUILD_DIR)/ppu_bg_registers.d $(BUILD_DIR)/ppu_mode0_mix.d $(BUILD_DIR)/ppu_mode1_mix.d $(BUILD_DIR)/ppu_window_mask.d $(BUILD_DIR)/ppu_color_math.d \
 	$(BUILD_DIR)/snes_bus.d \
 	$(BUILD_DIR)/cpu.d $(BUILD_DIR)/scheduler.d \

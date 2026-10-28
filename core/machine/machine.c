@@ -533,6 +533,13 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     mipsnes2_cpu_io_init(&machine->io, UINT8_C(2));
     mipsnes2_apu_io_ports_init(&machine->apu_ports);
     mipsnes2_dsp_init(&machine->dsp);
+    if (machine->pcm.initialized) {
+        mipsnes2_pcm_buffer_reset(&machine->pcm);
+        if (!mipsnes2_dsp_attach_pcm(&machine->dsp, &machine->pcm)) {
+            machine->ready = false;
+            return MIPSNES2_MACHINE_TIMING_ERROR;
+        }
+    }
     machine->smp_cpu = (mipsnes2_spc700){0};
     machine->apu_timing = (mipsnes2_apu_timing){0};
     machine->apu_report = (mipsnes2_apu_timing_report){0};
@@ -717,6 +724,9 @@ mipsnes2_machine_result mipsnes2_machine_init(
         ((config->aram == NULL && config->aram_size != 0U) ||
          (config->aram != NULL &&
           config->aram_size < MIPSNES2_SMP_RAM_SIZE)) ||
+        ((config->pcm_frames == NULL && config->pcm_capacity != 0U) ||
+         (config->pcm_frames != NULL &&
+          (config->pcm_capacity == 0U || config->aram == NULL))) ||
         ((config->smp_ipl == NULL && config->smp_ipl_size != 0U) ||
          (config->smp_ipl != NULL &&
           (config->aram == NULL ||
@@ -750,6 +760,11 @@ mipsnes2_machine_result mipsnes2_machine_init(
     machine->oam_size = config->oam_size;
     machine->aram = config->aram;
     machine->aram_size = config->aram_size;
+    if (config->pcm_frames != NULL &&
+        !mipsnes2_pcm_buffer_init(&machine->pcm, config->pcm_frames,
+                                  config->pcm_capacity)) {
+        return MIPSNES2_MACHINE_INVALID_ARGUMENT;
+    }
     machine->smp_ipl = config->smp_ipl;
     machine->smp_ipl_size = config->smp_ipl_size;
     machine->smp_cpu_enabled = config->smp_initial_registers != NULL;

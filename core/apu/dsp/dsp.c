@@ -901,7 +901,8 @@ static bool event_work_pending(const mipsnes2_dsp *dsp)
 
     /* With ARAM attached the echo pointer, FIR history and optional writes
      * advance every output sample even when all voices are idle. */
-    if ((dsp->ram != NULL && dsp->ram_size >= MIPSNES2_DSP_ARAM_SIZE) ||
+    if (dsp->pcm != NULL ||
+        (dsp->ram != NULL && dsp->ram_size >= MIPSNES2_DSP_ARAM_SIZE) ||
         dsp->pending_key_on != 0U) {
         return true;
     }
@@ -1003,6 +1004,13 @@ static void service_sample_event(mipsnes2_dsp *dsp)
     }
     update_resolved_dry_mix(dsp);
     update_echo_and_output(dsp);
+    if (dsp->pcm != NULL) {
+        mipsnes2_pcm_frame frame;
+
+        frame.left = dsp->output.dac_sample.left;
+        frame.right = dsp->output.dac_sample.right;
+        (void)mipsnes2_pcm_buffer_push(dsp->pcm, frame);
+    }
     if (!poll_keys) {
         return;
     }
@@ -1055,6 +1063,24 @@ bool mipsnes2_dsp_attach_ram(mipsnes2_dsp *dsp, uint8_t *ram,
     dsp->ram_size = ram_size;
     dsp->echo.ram_valid = true;
     return true;
+}
+
+bool mipsnes2_dsp_attach_pcm(mipsnes2_dsp *dsp,
+                             mipsnes2_pcm_buffer *pcm)
+{
+    if (dsp == NULL || !dsp->initialized || pcm == NULL ||
+        !pcm->initialized) {
+        return false;
+    }
+    dsp->pcm = pcm;
+    return true;
+}
+
+void mipsnes2_dsp_detach_pcm(mipsnes2_dsp *dsp)
+{
+    if (dsp != NULL && dsp->initialized) {
+        dsp->pcm = NULL;
+    }
 }
 
 bool mipsnes2_dsp_write_address(mipsnes2_dsp *dsp, uint8_t address)

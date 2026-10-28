@@ -22,21 +22,21 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP communication and timing | Directional ports plus nominal rational master-to-S-SMP clock bridge; electrical race order and oscillator drift pending |
 | core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | All 256 opcodes, ARAM/IPL, ports, `$F2/$F3` DSP route and three-stage timers under the APU clock; exact bus phases and interrupt/reset entry pending |
-| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight BRR/noise voices, Gaussian interpolation, ADSR/GAIN, `OUTX`, `PMON`, signed voice/main volume, ordered dry mixing, ARAM echo/FIR/feedback and mute-gated final samples; exact microphases and PCM transport absent |
+| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight BRR/noise voices, Gaussian interpolation, ADSR/GAIN, `OUTX`, `PMON`, signed voice/main volume, ordered dry mixing, ARAM echo/FIR/feedback, mute-gated final samples and optional bounded native PCM handoff; exact microphases, resampling and device transport absent |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
-| core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
+| core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
 | platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path to bounded CPU-only machine run and single-frame GS submission; GS runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
 Directories without source contain an explicit scope README, not stub functions.
 There is a partial machine instance and an explicit-path PS2 ROM-file adapter,
-but no full ROM runner, complete renderer or buffered PCM-producing S-DSP. `mipsnes2_machine_init` validates an image and constructs the
+but no full ROM runner, complete renderer or platform audio adapter. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
-optional VRAM/CGRAM/OAM/ARAM bytes. An optional S-SMP map borrows 64 KiB ARAM
+optional VRAM/CGRAM/OAM/ARAM bytes while resetting optional PCM queue state. An optional S-SMP map borrows 64 KiB ARAM
 and optional caller-provided 64-byte IPL; without the IPL, mapped high-page
 reads fail explicitly. PS2 reserves ARAM, while PSP merely compiles the same
 core. The S-SMP map and S-CPU bus meet through machine-owned directional
@@ -72,8 +72,10 @@ Each sample reads a left-aligned signed-15 pair from the 16-bit-wrapping
 1.7 FIR coefficients with the documented partial wrap/final clamp, and combines
 the result through signed `EVOLL`/`EVOLR` and `EFB`. `FLG` bit 5 suppresses only
 the left-aligned ring write; bit 6 gates the final DAC-facing sample while the
-entire pipeline continues. This final state is inspectable but is not a PCM queue
-or platform-audio interface. Exact
+entire pipeline continues. An optional caller-owned FIFO receives that signed-16
+left/right pair once per 32 kHz sample event. It drops newest and counts when full,
+returns no frame when empty and never controls S-DSP time; it is a platform-neutral
+handoff, not resampling or device output. Exact
 instruction bus phases, within-DSP-loop register visibility, mailbox races and
 physical oscillator drift remain open.
 `resume` advances one
@@ -499,7 +501,7 @@ communication costs. PSP has independent Allegrex/cache/MIPS/VFPU/GU/audio choic
 Hardware acceleration must not leak GS/GU behavior into the SNES PPU model.
 
 Audio follows an emulated-PCM boundary: SPC700/S-DSP owns SNES time and produces
-samples; a platform adapter transports them. The preferred future PS2 transport is
+samples into a bounded caller-owned FIFO; a platform adapter transports them. The preferred future PS2 transport is
 RFAuds2 behind a PS2-only audio interface. PSP and host retain independent backends.
 RFAuds2 never enters `core/`, and its fixed SPU2 output rate never controls SNES time.
 
@@ -754,5 +756,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   applies `EFB` feedback and protected writes, mixes signed `EVOLL`/`EVOLR`, and
   exposes a `FLG.MUTE`-gated DAC-facing sample. Exact 32-cycle microphases,
   post-DAC polarity, buffering and platform delivery remain unresolved.
+- 2026-10-28: an optional caller-owned PCM FIFO now receives typed signed-16
+  stereo frames at the native 32 kHz sample cadence. Full queues drop newest and
+  count without backpressuring S-DSP time; empty reads return no frame. Resampling,
+  platform delivery, target synchronization and audible output remain unresolved.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
