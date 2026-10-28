@@ -884,7 +884,11 @@ single final clamp, cover negative master-volume rounding and wrap, exercise all
 eight voices, reset zeroing and chunk equivalence. There is still no echo, mute/
 DAC stage or PCM. The clean host suite and repository checks pass locally;
 focused DSP/APU/machine ASan+UBSan runs pass and GCC `-fanalyzer` reports no DSP
-or focused-test diagnostics. See the
+or focused-test diagnostics. Revision `72f266d` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40726802138),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40726802327) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40726802404).
+No target-runtime or audible-output result is claimed. See the
 [S-DSP dry-mix audit](docs/sdsp-dry-mix-audit.md).
 
 Next primary block: establish independently sourced Gaussian coefficients for

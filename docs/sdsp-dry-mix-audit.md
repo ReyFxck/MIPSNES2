@@ -55,9 +55,12 @@ or the individual per-voice S4/S5 microphases.
 
 The clean host suite and repository checks pass locally. Focused ASan/UBSan runs
 cover the DSP, APU timing bridge and machine integration, and GCC `-fanalyzer`
-reports no diagnostics for the DSP implementation or its focused test.
-Successful host/PS2/PSP CI remains the publication gate. Cross-build success is
-not target-runtime or audible-output evidence.
+reports no diagnostics for the DSP implementation or its focused test. Revision
+`72f266d` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40726802138),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40726802327) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40726802404).
+Cross-build success is not target-runtime or audible-output evidence.
 
 ## Open boundaries
 
