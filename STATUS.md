@@ -874,9 +874,22 @@ reports no DSP or focused-test diagnostics. Revision `cb955698` passed
 No target-runtime or audible-output result is claimed. See the
 [S-DSP noise voice-output audit](docs/sdsp-noise-voice-output-audit.md).
 
-Next primary block: add ordered/clamped dry mixing for the resolved noise path,
-or establish independently sourced Gaussian coefficients for BRR voices; the
-table explicitly attributed to another emulator was not imported. Refining DMA/HDMA
+The resolved dry-mix slice now accumulates available voices strictly from 0 to 7,
+clamping left and right to signed 16 bits after every addition. It exposes the
+pre-main-volume pair, the signed `MVOLL`/`MVOLR` result and a mask identifying
+which voices were actually included. This makes the partial boundary explicit:
+noise voices participate, while BRR voices remain excluded until Gaussian output
+is independently resolved. Host vectors distinguish ordered saturation from a
+single final clamp, cover negative master-volume rounding and wrap, exercise all
+eight voices, reset zeroing and chunk equivalence. There is still no echo, mute/
+DAC stage or PCM. The clean host suite and repository checks pass locally;
+focused DSP/APU/machine ASan+UBSan runs pass and GCC `-fanalyzer` reports no DSP
+or focused-test diagnostics. See the
+[S-DSP dry-mix audit](docs/sdsp-dry-mix-audit.md).
+
+Next primary block: establish independently sourced Gaussian coefficients for
+BRR voices; the table explicitly attributed to another emulator was not imported.
+Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
 
@@ -2101,7 +2114,7 @@ platform persistence remains incomplete.
 ## DSP
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] [IN PROGRESS] Eight voice state — BRR/ring/pitch/envelope plus resolved noise stereo output exist; Gaussian and mixing remain
+- [ ] [IN PROGRESS] Eight voice state — BRR/ring/pitch/envelope plus resolved dry mixing exist; Gaussian and echo remain
 - [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact DSP microphases remain
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact phase/envelope effects remain
 - [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 step/cap exists; pitch modulation and exact phase remain
@@ -2109,14 +2122,14 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] ADSR — 11-bit state/counter drive resolved noise samples; BRR/Gaussian multiplication and exact microphases remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct and four timed modes plus release progression exist; exact microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
-- [ ] [IN PROGRESS] Noise generator — LFSR/rates/`NON`, envelope/`OUTX` and stereo voice output exist; exact microphases and mixing remain
+- [ ] [IN PROGRESS] Noise generator — LFSR/rates/`NON`, envelope/`OUTX`, stereo and dry mixing exist; exact microphases remain
 - [ ] Pitch modulation
-- [ ] [IN PROGRESS] Voice volumes — signed left/right arithmetic exists for resolved noise voices; BRR and mixer integration remain
-- [ ] Main volumes
+- [ ] [IN PROGRESS] Voice volumes — signed left/right arithmetic feeds the resolved ordered mixer; BRR integration remains
+- [ ] [IN PROGRESS] Main volumes — signed left/right arithmetic applies after the resolved dry mix; echo/DAC integration remains
 - [ ] Echo buffer
 - [ ] FIR filter
 - [ ] Feedback
-- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR clamp/wrap is explicit; later mixer/echo arithmetic remains
+- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR and ordered dry-mixer rules are explicit; echo remains
 - [ ] [IN PROGRESS] Sample timing — one deterministic event per 32 S-SMP cycles; pipeline/sample values pending
 - [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
 - [ ] Golden sample tests

@@ -732,5 +732,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-27: resolved `NON` voices now multiply the signed-15 source by the
   current 11-bit envelope, publish `OUTX`, then apply signed left/right voice
   volumes. BRR/Gaussian source resolution, ordered mixing and PCM remain open.
+- 2026-10-28: the resolved dry path now sums voices 0 through 7 with signed-16
+  saturation after every addition, exposes the included-voice mask, then applies
+  signed `MVOLL`/`MVOLR`. BRR voices, echo, mute/DAC and PCM remain unresolved.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

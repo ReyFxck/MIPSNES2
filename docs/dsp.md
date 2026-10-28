@@ -12,8 +12,9 @@ also advances an 11-bit ADSR/GAIN envelope from the shared rate counter and writ
 `ENVX`. That counter also clocks a shared 15-bit noise LFSR at `FLG.NCK`; `NON`
 selects its signed pre-envelope input per voice while BRR transport continues. It
 now multiplies resolved noise inputs by the current envelope, updates `OUTX` and
-applies signed left/right voice volumes. It does not yet resolve BRR Gaussian
-output, mix voices or produce PCM.
+applies signed left/right voice volumes. Resolved voices are accumulated 0 through
+7 with signed-16 saturation after each addition, then signed `MVOLL`/`MVOLR` is
+applied. It does not yet resolve BRR Gaussian output, echo or PCM.
 
 ## Design direction
 
@@ -29,7 +30,7 @@ Planning checklist only; [STATUS.md](../STATUS.md) is canonical. Document
 implementation evidence before promotion.
 
 - [ ] [IN PROGRESS] Register state — 128 bytes, address latch and `$F2/$F3` access exist; most side effects/polling remain
-- [ ] [IN PROGRESS] Eight voice state — key/source, BRR ring/traversal, raw pitch and envelope state exist; Gaussian/sample output remains
+- [ ] [IN PROGRESS] Eight voice state — BRR/ring/pitch/envelope plus resolved dry mixing exist; Gaussian and echo remain
 - [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact 32-step phase placement remains
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact microsteps/envelope zero remain
 - [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 stepping and documented cap exist; PMON/noise phase behavior remains
@@ -37,14 +38,14 @@ implementation evidence before promotion.
 - [ ] [IN PROGRESS] ADSR — 11-bit state and shared counter drive resolved noise samples; BRR/Gaussian multiplication and exact per-voice microphases remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct, linear/exp decrease, linear/bent increase and release progression exist; exact per-voice microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
-- [ ] [IN PROGRESS] Noise generator — reset seed, recurrence, all rates, `NON`, envelope/`OUTX` and stereo voice output exist; exact microphases and mixing remain
+- [ ] [IN PROGRESS] Noise generator — seed/recurrence/rates, `NON`, envelope/`OUTX`, stereo and dry mixing exist; exact microphases remain
 - [ ] Pitch modulation
-- [ ] [IN PROGRESS] Voice volumes — signed left/right arithmetic exists for resolved noise voices; BRR and mixer integration remain
-- [ ] Main volumes
+- [ ] [IN PROGRESS] Voice volumes — signed left/right arithmetic feeds the resolved ordered mixer; BRR integration remains
+- [ ] [IN PROGRESS] Main volumes — signed left/right arithmetic follows the resolved dry mix; echo/DAC integration remains
 - [ ] Echo buffer
 - [ ] FIR filter
 - [ ] Feedback
-- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR signed-16 clamp and signed-15 wrap are explicit; mixer/echo paths remain
+- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR and ordered dry-mixer rules are explicit; echo remains
 - [ ] [IN PROGRESS] Sample timing — deterministic 32-cycle event cadence exists; DSP pipeline phases and sample values remain
 - [ ] [IN PROGRESS] DSP register side effects — bit-7 write inhibition, `ENDX` clear and internal `FLG` reset/write exist; remaining effects pending
 - [ ] Golden sample tests
@@ -61,6 +62,8 @@ Shared noise state and selection are recorded in the
 [noise audit](sdsp-noise-audit.md).
 Noise envelope/`OUTX`/voice-volume output is recorded in the
 [noise voice-output audit](sdsp-noise-voice-output-audit.md).
+Ordered saturation and signed main volume are recorded in the
+[dry-mix audit](sdsp-dry-mix-audit.md).
 Register writes currently
 become visible at register or sample-event granularity; exact within-32-cycle-loop
 phases are not modeled. The readable

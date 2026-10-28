@@ -36,6 +36,26 @@ static int32_t arithmetic_shift_right(int32_t value, unsigned int amount)
     return -(int32_t)((magnitude + bias) >> amount);
 }
 
+static int16_t clamp_signed16(int32_t value)
+{
+    if (value > INT16_MAX) {
+        return INT16_MAX;
+    }
+    if (value < INT16_MIN) {
+        return INT16_MIN;
+    }
+    return (int16_t)value;
+}
+
+static int16_t wrap_signed16(int32_t value)
+{
+    uint16_t wrapped = (uint16_t)((uint32_t)value & UINT32_C(0xffff));
+
+    return wrapped <= (uint16_t)INT16_MAX
+               ? (int16_t)wrapped
+               : (int16_t)((int32_t)wrapped - INT32_C(0x10000));
+}
+
 static int16_t clamp_and_wrap_brr(int32_t value)
 {
     uint16_t wrapped;
@@ -279,6 +299,38 @@ static void update_voice_noise_output(mipsnes2_dsp *dsp,
         (uint8_t)((uint16_t)voice->output_sample >> 8U);
 }
 
+static void update_resolved_dry_mix(mipsnes2_dsp *dsp)
+{
+    int32_t left = 0;
+    int32_t right = 0;
+    uint8_t mask = 0U;
+    unsigned int index;
+
+    /* Saturation is observable, so preserve the documented Voice 0-to-7
+     * accumulation order and clamp after every individual addition. */
+    for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
+        const mipsnes2_dsp_voice *voice = &dsp->voices[index];
+
+        if (!voice->output_sample_valid) {
+            continue;
+        }
+        left = clamp_signed16(left + (int32_t)voice->left_sample);
+        right = clamp_signed16(right + (int32_t)voice->right_sample);
+        mask |= (uint8_t)(UINT8_C(1) << index);
+    }
+    dsp->dry_mix.voice_mix.left = (int16_t)left;
+    dsp->dry_mix.voice_mix.right = (int16_t)right;
+    dsp->dry_mix.main_sample.left = wrap_signed16(arithmetic_shift_right(
+        left * signed_register_value(
+            dsp->registers[MIPSNES2_DSP_REGISTER_MAIN_VOLUME_LEFT]),
+        7U));
+    dsp->dry_mix.main_sample.right = wrap_signed16(arithmetic_shift_right(
+        right * signed_register_value(
+            dsp->registers[MIPSNES2_DSP_REGISTER_MAIN_VOLUME_RIGHT]),
+        7U));
+    dsp->dry_mix.resolved_voice_mask = mask;
+}
+
 static void refresh_idle_noise_outputs(mipsnes2_dsp *dsp)
 {
     unsigned int index;
@@ -299,6 +351,7 @@ static void refresh_idle_noise_outputs(mipsnes2_dsp *dsp)
             dsp->registers[base + MIPSNES2_DSP_VOICE_REGISTER_OUTX] = 0U;
         }
     }
+    update_resolved_dry_mix(dsp);
 }
 
 static void release_envelope(mipsnes2_dsp *dsp, unsigned int index,
@@ -608,6 +661,7 @@ static void service_sample_event(mipsnes2_dsp *dsp)
             update_voice_envelope(dsp, index);
         }
     }
+    update_resolved_dry_mix(dsp);
     if (!poll_keys) {
         return;
     }
@@ -810,6 +864,16 @@ bool mipsnes2_dsp_voice_stereo_sample(const mipsnes2_dsp *dsp,
     }
     sample->left = dsp->voices[voice_index].left_sample;
     sample->right = dsp->voices[voice_index].right_sample;
+    return true;
+}
+
+bool mipsnes2_dsp_resolved_dry_mix(const mipsnes2_dsp *dsp,
+                                   mipsnes2_dsp_dry_mix *mix)
+{
+    if (dsp == NULL || !dsp->initialized || mix == NULL) {
+        return false;
+    }
+    *mix = dsp->dry_mix;
     return true;
 }
 

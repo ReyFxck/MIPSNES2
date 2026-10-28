@@ -314,6 +314,8 @@ static int test_voice_stream(void)
           chunked.voices[0].right_sample);
     CHECK(dsp.voices[0].output_sample_valid ==
           chunked.voices[0].output_sample_valid);
+    CHECK(memcmp(&dsp.dry_mix, &chunked.dry_mix,
+                 sizeof(dsp.dry_mix)) == 0);
     CHECK(dsp.registers[MIPSNES2_DSP_VOICE_REGISTER_OUTX] ==
           chunked.registers[MIPSNES2_DSP_VOICE_REGISTER_OUTX]);
     CHECK(dsp.voices[0].envelope == chunked.voices[0].envelope);
@@ -661,6 +663,141 @@ static int test_noise_output(void)
     return 0;
 }
 
+static int test_resolved_dry_mix(void)
+{
+    mipsnes2_dsp dsp;
+    mipsnes2_dsp direct;
+    mipsnes2_dsp chunked;
+    mipsnes2_dsp_dry_mix mix;
+    unsigned int index;
+
+    (void)memset(&mix, UINT8_C(0xa5), sizeof(mix));
+    mipsnes2_dsp_init(&dsp);
+    CHECK(!mipsnes2_dsp_resolved_dry_mix(NULL, &mix));
+    CHECK(!mipsnes2_dsp_resolved_dry_mix(&dsp, NULL));
+    CHECK(mipsnes2_dsp_resolved_dry_mix(&dsp, &mix));
+    CHECK(mix.resolved_voice_mask == 0U);
+    CHECK(mix.voice_mix.left == 0 && mix.voice_mix.right == 0);
+    CHECK(mix.main_sample.left == 0 && mix.main_sample.right == 0);
+
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_FLG, 0U));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_NON,
+                         UINT8_C(0x0f)));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_MAIN_VOLUME_LEFT,
+                         UINT8_C(0x40)));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_MAIN_VOLUME_RIGHT,
+                         UINT8_C(0xc0)));
+    for (index = 0U; index < 4U; ++index) {
+        uint8_t base = (uint8_t)(
+            index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE);
+
+        CHECK(write_register(
+            &dsp, (uint8_t)(base + MIPSNES2_DSP_VOICE_REGISTER_ADSR1),
+            0U));
+        CHECK(write_register(
+            &dsp, (uint8_t)(base + MIPSNES2_DSP_VOICE_REGISTER_GAIN),
+            UINT8_C(0x7f)));
+        CHECK(write_register(
+            &dsp,
+            (uint8_t)(base + MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT),
+            index < 3U ? UINT8_C(0x7f) : UINT8_C(0x80)));
+        CHECK(write_register(
+            &dsp,
+            (uint8_t)(base + MIPSNES2_DSP_VOICE_REGISTER_VOLUME_RIGHT),
+            index == 0U ? UINT8_C(0x80) : UINT8_C(0x7f)));
+    }
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_KON,
+                         UINT8_C(0x0f)));
+    CHECK(mipsnes2_dsp_advance(
+        &dsp, UINT64_C(6) * MIPSNES2_DSP_SAMPLE_CYCLES));
+    dsp.noise_lfsr = UINT16_C(0x3fff);
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_resolved_dry_mix(&dsp, &mix));
+    CHECK(mix.resolved_voice_mask == UINT8_C(0x0f));
+    CHECK(dsp.voices[0].output_sample == INT16_C(16255));
+    CHECK(dsp.voices[0].left_sample == INT16_C(16128));
+    CHECK(dsp.voices[0].right_sample == INT16_C(-16255));
+    CHECK(mix.voice_mix.left == INT16_C(16512));
+    CHECK(mix.voice_mix.right == INT16_C(32129));
+    CHECK(mix.main_sample.left == INT16_C(8256));
+    CHECK(mix.main_sample.right == INT16_C(-16065));
+
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_MAIN_VOLUME_LEFT,
+                         UINT8_C(0x80)));
+    for (index = 0U; index < 4U; ++index) {
+        uint8_t reg = (uint8_t)(
+            (index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE) +
+            MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT);
+
+        CHECK(write_register(&dsp, reg, UINT8_C(0x80)));
+    }
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_resolved_dry_mix(&dsp, &mix));
+    CHECK(mix.voice_mix.left == INT16_MIN);
+    CHECK(mix.main_sample.left == INT16_MIN);
+
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_FLG,
+                         UINT8_C(0x80)));
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_resolved_dry_mix(&dsp, &mix));
+    CHECK(mix.resolved_voice_mask == UINT8_C(0x0f));
+    CHECK(mix.voice_mix.left == 0 && mix.voice_mix.right == 0);
+    CHECK(mix.main_sample.left == 0 && mix.main_sample.right == 0);
+
+    mipsnes2_dsp_init(&dsp);
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_FLG, 0U));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_NON,
+                         UINT8_C(0xff)));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_MAIN_VOLUME_LEFT,
+                         UINT8_C(0x40)));
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_MAIN_VOLUME_RIGHT,
+                         UINT8_C(0x40)));
+    for (index = 0U; index < MIPSNES2_DSP_VOICE_COUNT; ++index) {
+        uint8_t base = (uint8_t)(
+            index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE);
+
+        CHECK(write_register(
+            &dsp, (uint8_t)(base + MIPSNES2_DSP_VOICE_REGISTER_ADSR1),
+            0U));
+        CHECK(write_register(
+            &dsp, (uint8_t)(base + MIPSNES2_DSP_VOICE_REGISTER_GAIN),
+            UINT8_C(0x40)));
+        CHECK(write_register(
+            &dsp,
+            (uint8_t)(base + MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT),
+            UINT8_C(1)));
+        CHECK(write_register(
+            &dsp,
+            (uint8_t)(base + MIPSNES2_DSP_VOICE_REGISTER_VOLUME_RIGHT),
+            UINT8_C(0xff)));
+    }
+    CHECK(write_register(&dsp, MIPSNES2_DSP_REGISTER_KON,
+                         UINT8_C(0xff)));
+    CHECK(mipsnes2_dsp_advance(
+        &dsp, UINT64_C(6) * MIPSNES2_DSP_SAMPLE_CYCLES));
+    dsp.noise_lfsr = UINT16_C(0x2000);
+    CHECK(mipsnes2_dsp_advance(&dsp, MIPSNES2_DSP_SAMPLE_CYCLES));
+    CHECK(mipsnes2_dsp_resolved_dry_mix(&dsp, &mix));
+    CHECK(mix.resolved_voice_mask == UINT8_C(0xff));
+    CHECK(mix.voice_mix.left == INT16_C(256));
+    CHECK(mix.voice_mix.right == INT16_C(-256));
+    CHECK(mix.main_sample.left == INT16_C(128));
+    CHECK(mix.main_sample.right == INT16_C(-128));
+
+    direct = dsp;
+    chunked = dsp;
+    CHECK(mipsnes2_dsp_advance(&direct, UINT64_C(777)));
+    CHECK(mipsnes2_dsp_advance(&chunked, UINT64_C(13)));
+    CHECK(mipsnes2_dsp_advance(&chunked, UINT64_C(244)));
+    CHECK(mipsnes2_dsp_advance(&chunked, UINT64_C(520)));
+    CHECK(direct.sample_count == chunked.sample_count);
+    CHECK(direct.sample_phase == chunked.sample_phase);
+    CHECK(direct.noise_lfsr == chunked.noise_lfsr);
+    CHECK(memcmp(&direct.dry_mix, &chunked.dry_mix,
+                 sizeof(direct.dry_mix)) == 0);
+    return 0;
+}
+
 static int test_envelope(void)
 {
     static const uint16_t expected_rates[32] = {
@@ -911,7 +1048,8 @@ int main(void)
     CHECK(test_envelope() == 0);
     CHECK(test_noise() == 0);
     CHECK(test_noise_output() == 0);
+    CHECK(test_resolved_dry_mix() == 0);
 
-    (void)puts("S-DSP BRR, pitch, envelope and noise-output foundation: OK");
+    (void)puts("S-DSP voice, envelope, noise and dry-mix foundation: OK");
     return 0;
 }

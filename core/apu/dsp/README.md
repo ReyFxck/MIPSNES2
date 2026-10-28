@@ -15,14 +15,17 @@ the four timed GAIN modes and release, updating `ENVX` deterministically. The sa
 counter clocks a shared 15-bit noise LFSR from `FLG.NCK`; `NON` exposes its
 signed input per voice without stopping BRR transport. Resolved noise voices
 apply the current envelope, update `OUTX`, and expose signed left/right samples
-after `VxVOLL`/`VxVOLR`.
+after `VxVOLL`/`VxVOLR`. The resolved dry path then accumulates voices 0 through
+7 with signed-16 saturation after each addition and applies signed
+`MVOLL`/`MVOLR`; its mask identifies which voices are included.
 
 This is not final audio synthesis. Gaussian coefficients/output for BRR voices,
-pitch modulation, echo/FIR, mixing, PCM samples and platform output remain absent.
+pitch modulation, echo/FIR, mute/DAC, PCM samples and platform output remain absent.
 See the [APU clock/DSP register audit](../../../docs/apu-clock-dsp-register-audit.md)
 and [voice/BRR audit](../../../docs/sdsp-voice-brr-foundation-audit.md)
 and [BRR stream/pitch audit](../../../docs/sdsp-brr-stream-pitch-audit.md)
 and [envelope audit](../../../docs/sdsp-envelope-audit.md)
 and [noise audit](../../../docs/sdsp-noise-audit.md)
 and [noise voice-output audit](../../../docs/sdsp-noise-voice-output-audit.md)
+and [dry-mix audit](../../../docs/sdsp-dry-mix-audit.md)
 and [canonical status](../../../STATUS.md).

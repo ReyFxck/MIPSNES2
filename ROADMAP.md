@@ -252,7 +252,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Phase 8 exit gate verified
 
 - [ ] [IN PROGRESS] Register state — 128-byte shadow and `$F2/$F3` address/data path exist; full side effects pending
-- [ ] [IN PROGRESS] Eight voice state — key/source, BRR ring/traversal, raw pitch and envelope state exist; Gaussian/sample output remains
+- [ ] [IN PROGRESS] Eight voice state — BRR/ring/pitch/envelope plus resolved dry mixing exist; Gaussian and echo remain
 - [ ] [IN PROGRESS] BRR decode — exact block arithmetic and four-sample per-voice streaming exist; exact DSP microphases remain
 - [ ] [IN PROGRESS] BRR loop/end behavior — completed end blocks set `ENDX` and jump through the current directory loop pointer; exact phase/envelope effects remain
 - [ ] [IN PROGRESS] Pitch progression — unmodulated 14-bit 2.12 step/cap exists; pitch modulation and exact phase remain
@@ -260,14 +260,14 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] ADSR — 11-bit state and shared counter drive resolved noise samples; BRR/Gaussian multiplication and exact microphases remain
 - [ ] [IN PROGRESS] GAIN envelopes — Direct and four timed modes plus release progression exist; exact microphases remain
 - [ ] [IN PROGRESS] Key-on/key-off — alternating-sample polling, five-event preparation and release decay exist; exact microsteps remain
-- [ ] [IN PROGRESS] Noise generator — shared 15-bit LFSR, all rates, `NON`, envelope/`OUTX` and voice stereo output exist; exact microphases and mixing remain
+- [ ] [IN PROGRESS] Noise generator — shared LFSR/rates, `NON`, envelope/`OUTX`, stereo and dry mixing exist; exact microphases remain
 - [ ] Pitch modulation
-- [ ] [IN PROGRESS] Voice volumes — signed `VxVOLL`/`VxVOLR` arithmetic exists for resolved noise voices; BRR voices and mixer integration remain
-- [ ] Main volumes
+- [ ] [IN PROGRESS] Voice volumes — signed `VxVOLL`/`VxVOLR` feed the resolved ordered mixer; BRR voices remain
+- [ ] [IN PROGRESS] Main volumes — signed `MVOLL`/`MVOLR` apply after the resolved dry mix; echo/DAC integration remains
 - [ ] Echo buffer
 - [ ] FIR filter
 - [ ] Feedback
-- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR clamp/wrap is explicit; later mixer/echo arithmetic remains
+- [ ] [IN PROGRESS] Clamping and signed arithmetic — BRR and ordered dry-mixer rules are explicit; echo arithmetic remains
 - [ ] [IN PROGRESS] Sample timing — one deterministic event per 32 S-SMP cycles; pipeline/sample values pending
 - [ ] [IN PROGRESS] DSP register side effects — write inhibition, `ENDX` clear and internal `FLG` state exist; remaining effects pending
 - [ ] Golden sample tests

@@ -27,6 +27,8 @@ enum {
     MIPSNES2_DSP_VOICE_REGISTER_GAIN = 0x07,
     MIPSNES2_DSP_VOICE_REGISTER_ENVX = 0x08,
     MIPSNES2_DSP_VOICE_REGISTER_OUTX = 0x09,
+    MIPSNES2_DSP_REGISTER_MAIN_VOLUME_LEFT = 0x0c,
+    MIPSNES2_DSP_REGISTER_MAIN_VOLUME_RIGHT = 0x1c,
     MIPSNES2_DSP_REGISTER_NON = 0x3d,
     MIPSNES2_DSP_REGISTER_KON = 0x4c,
     MIPSNES2_DSP_REGISTER_KOFF = 0x5c,
@@ -101,11 +103,18 @@ typedef struct {
     int16_t right;
 } mipsnes2_dsp_stereo_sample;
 
+typedef struct {
+    mipsnes2_dsp_stereo_sample voice_mix;
+    mipsnes2_dsp_stereo_sample main_sample;
+    uint8_t resolved_voice_mask;
+} mipsnes2_dsp_dry_mix;
+
 /* State is intentionally public for deterministic inspection. BRR Gaussian
- * output, voice mixing, echo and PCM are not yet implemented. */
+ * output, echo and PCM are not yet implemented. */
 typedef struct {
     uint8_t registers[MIPSNES2_DSP_REGISTER_COUNT];
     mipsnes2_dsp_voice voices[MIPSNES2_DSP_VOICE_COUNT];
+    mipsnes2_dsp_dry_mix dry_mix;
     uint8_t *ram;
     size_t ram_size;
     uint8_t address;
@@ -154,6 +163,12 @@ bool mipsnes2_dsp_voice_output_sample(const mipsnes2_dsp *dsp,
 bool mipsnes2_dsp_voice_stereo_sample(const mipsnes2_dsp *dsp,
                                       size_t voice_index,
                                       mipsnes2_dsp_stereo_sample *sample);
+
+/* Return the ordered, per-addition-clamped sum of currently resolved voices
+ * before and after signed MVOLL/MVOLR. The mask identifies the included voices;
+ * BRR voices remain excluded until Gaussian output is resolved. */
+bool mipsnes2_dsp_resolved_dry_mix(const mipsnes2_dsp *dsp,
+                                   mipsnes2_dsp_dry_mix *mix);
 
 /* Advance the S-DSP's fixed one-sample-per-32-S-SMP-cycle cadence. */
 bool mipsnes2_dsp_advance(mipsnes2_dsp *dsp, uint64_t smp_cycles);
