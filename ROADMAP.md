@@ -280,7 +280,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Platform-independent PCM output interface — bounded typed reads without device APIs
 - [x] Resampling policy — deterministic integer-linear conversion from native 32 kHz to bounded caller blocks at rates at or above 32 kHz
 - [x] Underflow/overflow behavior — empty read and drop-newest/count-full semantics are explicit
-- [ ] [IN PROGRESS] PS2 48 kHz transport contract — bounded staging, accepted-prefix retry and starvation/backpressure diagnostics are host verified; RFAuds2/SPU2 binding remains
+- [ ] [IN PROGRESS] PS2 48 kHz transport contract — bounded asynchronous launch/poll, accepted-tail retry and pinned RFAuds2 API mapping are host verified; runtime/SPU2 validation remains
 - [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
 - [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP/PCM and machine fixtures exist; exact phases remain
 
@@ -316,7 +316,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] VU feasibility review
 - [ ] VIF transfer cost review
 - [ ] IOP offload feasibility
-- [ ] [IN PROGRESS] Audio transport — bounded 48 kHz adapter contract exists; RFAuds2/SPU2 binding, target validation and optimization remain
+- [ ] [IN PROGRESS] Audio transport — pinned RFAuds2 thin binding and bounded 48 kHz asynchronous contract exist; runtime lifecycle, target validation and optimization remain
 - [ ] Regression tests
 - [ ] Real hardware benchmarks
 

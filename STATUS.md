@@ -966,20 +966,34 @@ saturation. Revision `1c54b65` passed
 [PCM resampler audit](docs/pcm-resampler-audit.md). This is a reference transport
 utility, not an SPU2/RFAuds2 adapter or audible-output result.
 
-The PS2 backend now has a fixed-capacity 48 kHz transport adapter around that
-converter. One pump either retries its retained ordered tail or drains a new bounded
-block, then makes at most one callback that accepts a prefix. Zero/partial acceptance
-keeps the remainder for the next pump without consuming more source PCM; starvation
-does not synthesize silence or run the emulator. Caller-provided staging storage,
-explicit reports and saturating counters cover generation, offers, acceptance,
-starvation, backpressure and callback contract violations. Host fixtures verify exact
-32-to-48 kHz samples, multiple partial retries, source non-consumption while a tail is
-pending, reset and saturation. See the
-[PS2 audio-adapter audit](docs/ps2-audio-adapter-audit.md). No RFAuds2 dependency,
-SPU2 call, device pacing or audible-output result is claimed.
+The PS2 backend now has a fixed-capacity 48 kHz asynchronous transport adapter around
+that converter. One pump performs at most one launch or poll. A successful launch
+owns a copied request until a later poll reports its accepted prefix; pending,
+zero/partial acceptance and transport errors preserve the ordered tail without
+consuming more source PCM. Reset refuses an in-flight request, starvation does not
+synthesize silence or run the emulator, and saturating counters distinguish launches,
+polls, pending events, backpressure, transport errors and contract violations. Host
+fixtures cover exact samples, delayed completion, zero/partial acceptance, retry,
+errors, reset and saturation. Revision `170b00f` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40907886065),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40907886069) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40907886149).
 
-Next primary block: pin and review the current RFAuds2 revision/API, then implement
-only the thin PS2 transport binding against the tested accepted-prefix contract.
+The merged RFAuds2 `main` revision
+`f82e0967104fc96f37259e1abc124341eef6a76c` is now the exact provisional pin.
+The optional PS2-only binding maps its `submit_s16_async`/`submit_poll` API to the
+adapter without copying RFAuds2 source into this repository. Host tests use a narrow
+API fixture, the PS2 workflow fetches and cross-builds that exact checkout, and the
+Makefile rejects a different external HEAD. The open `fix/comprehensive-hardening`
+branch was reviewed but not selected: its intended DMA/cache/lifecycle fixes are
+valuable, while refill generation and diagnostic-counter races plus missing execution
+coverage for the low-level DMA state machine remain. See the
+[PS2 audio-adapter audit](docs/ps2-audio-adapter-audit.md) and
+[RFAuds2 branch review](docs/rfauds2-branch-review.md). No SPU2 runtime call, device
+pacing or audible-output result is claimed.
+
+Next primary block: connect the pinned optional binding to the PS2 runtime lifecycle
+with fixed storage, explicit prebuffer/start/stop order and on-screen diagnostics.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2255,9 +2269,9 @@ platform persistence remains incomplete.
 - [ ] SRAM persistence
 - [ ] SPU2 output
 - [ ] [IN PROGRESS] Audio buffering — bounded 48 kHz staging and retained-tail ownership are host verified; device buffering remains
-- [ ] Pin a reviewed RFAuds2 version/revision
-- [ ] PS2-only RFAuds2 adapter behind platform audio interface
-- [ ] [IN PROGRESS] RFAuds2 asynchronous accepted-tail/backpressure handling — generic accepted-prefix retry contract exists; RFAuds2 binding remains
+- [x] Pin a reviewed RFAuds2 version/revision — merged `main` commit `f82e0967104fc96f37259e1abc124341eef6a76c`
+- [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — thin optional binding exists; runtime lifecycle remains
+- [ ] [IN PROGRESS] RFAuds2 asynchronous accepted-tail/backpressure handling — two-phase launch/poll and ordered retry are host verified; target runtime remains
 - [ ] RFAuds2 FAT/Slim real-hardware and long-duration validation
 - [ ] IOP service initialization
 - [ ] Error reporting

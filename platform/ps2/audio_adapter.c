@@ -23,51 +23,117 @@ static void increment_saturating(uint64_t *value)
 
 bool mipsnes2_ps2_audio_adapter_init(
     mipsnes2_ps2_audio_adapter *adapter, mipsnes2_pcm_frame *staging,
-    size_t staging_capacity, mipsnes2_ps2_audio_submit submit,
-    void *submit_context)
+    size_t staging_capacity, mipsnes2_ps2_audio_launch launch,
+    mipsnes2_ps2_audio_poll poll, void *transport_context)
 {
     if (adapter == NULL) {
         return false;
     }
     (void)memset(adapter, 0, sizeof(*adapter));
-    if (staging == NULL || staging_capacity == 0U || submit == NULL ||
-        !mipsnes2_pcm_resampler_init(
+    if (staging == NULL || staging_capacity == 0U || launch == NULL ||
+        poll == NULL || !mipsnes2_pcm_resampler_init(
             &adapter->resampler, MIPSNES2_PS2_AUDIO_OUTPUT_RATE)) {
         return false;
     }
     adapter->staging = staging;
     adapter->staging_capacity = staging_capacity;
-    adapter->submit = submit;
-    adapter->submit_context = submit_context;
+    adapter->launch = launch;
+    adapter->poll = poll;
+    adapter->transport_context = transport_context;
     adapter->initialized = true;
     return true;
 }
 
-void mipsnes2_ps2_audio_adapter_reset(
+bool mipsnes2_ps2_audio_adapter_reset(
     mipsnes2_ps2_audio_adapter *adapter)
 {
     mipsnes2_pcm_frame *staging;
     size_t staging_capacity;
-    mipsnes2_ps2_audio_submit submit;
-    void *submit_context;
+    mipsnes2_ps2_audio_launch launch;
+    mipsnes2_ps2_audio_poll poll;
+    void *transport_context;
 
-    if (adapter == NULL || !adapter->initialized) {
-        return;
+    if (adapter == NULL || !adapter->initialized ||
+        adapter->request_in_flight) {
+        return false;
     }
     staging = adapter->staging;
     staging_capacity = adapter->staging_capacity;
-    submit = adapter->submit;
-    submit_context = adapter->submit_context;
+    launch = adapter->launch;
+    poll = adapter->poll;
+    transport_context = adapter->transport_context;
     (void)memset(adapter, 0, sizeof(*adapter));
     adapter->staging = staging;
     adapter->staging_capacity = staging_capacity;
-    adapter->submit = submit;
-    adapter->submit_context = submit_context;
+    adapter->launch = launch;
+    adapter->poll = poll;
+    adapter->transport_context = transport_context;
     if (!mipsnes2_pcm_resampler_init(
             &adapter->resampler, MIPSNES2_PS2_AUDIO_OUTPUT_RATE)) {
-        return;
+        return false;
     }
     adapter->initialized = true;
+    return true;
+}
+
+static bool state_is_ready(const mipsnes2_ps2_audio_adapter *adapter,
+                           const mipsnes2_pcm_buffer *source)
+{
+    if (!adapter->initialized || adapter->staging == NULL ||
+        adapter->staging_capacity == 0U || adapter->launch == NULL ||
+        adapter->poll == NULL || !adapter->resampler.initialized ||
+        !source->initialized ||
+        adapter->pending_offset > adapter->staging_capacity ||
+        adapter->pending_frames >
+            adapter->staging_capacity - adapter->pending_offset) {
+        return false;
+    }
+    if (adapter->request_in_flight) {
+        return adapter->in_flight_frames != 0U &&
+               adapter->in_flight_frames == adapter->pending_frames;
+    }
+    return adapter->in_flight_frames == 0U;
+}
+
+static mipsnes2_ps2_audio_pump_result poll_request(
+    mipsnes2_ps2_audio_adapter *adapter,
+    mipsnes2_ps2_audio_pump_report *report)
+{
+    size_t accepted = 0U;
+    size_t offered = adapter->in_flight_frames;
+    int result;
+
+    increment_saturating(&adapter->poll_calls);
+    result = adapter->poll(adapter->transport_context, &accepted);
+    report->transport_result = result;
+    report->pending_frames = adapter->pending_frames;
+    if (result == 0) {
+        increment_saturating(&adapter->pending_events);
+        return MIPSNES2_PS2_AUDIO_PUMP_PENDING;
+    }
+
+    adapter->request_in_flight = false;
+    adapter->in_flight_frames = 0U;
+    if (result < 0) {
+        increment_saturating(&adapter->transport_errors);
+        return MIPSNES2_PS2_AUDIO_PUMP_TRANSPORT_ERROR;
+    }
+    if (result != 1 || accepted > offered) {
+        increment_saturating(&adapter->contract_errors);
+        return MIPSNES2_PS2_AUDIO_PUMP_TRANSPORT_CONTRACT_ERROR;
+    }
+
+    report->accepted_frames = accepted;
+    add_saturating(&adapter->accepted_frames, accepted);
+    adapter->pending_offset += accepted;
+    adapter->pending_frames -= accepted;
+    report->pending_frames = adapter->pending_frames;
+    if (adapter->pending_frames != 0U) {
+        increment_saturating(&adapter->backpressure_events);
+        return MIPSNES2_PS2_AUDIO_PUMP_BACKPRESSURE;
+    }
+    adapter->pending_offset = 0U;
+    return MIPSNES2_PS2_AUDIO_PUMP_OK;
 }
 
 mipsnes2_ps2_audio_pump_result mipsnes2_ps2_audio_adapter_pump(
@@ -75,7 +141,7 @@ mipsnes2_ps2_audio_pump_result mipsnes2_ps2_audio_adapter_pump(
     mipsnes2_ps2_audio_pump_report *report)
 {
     size_t offered;
-    size_t accepted;
+    int result;
 
     if (report != NULL) {
         (void)memset(report, 0, sizeof(*report));
@@ -83,13 +149,11 @@ mipsnes2_ps2_audio_pump_result mipsnes2_ps2_audio_adapter_pump(
     if (adapter == NULL || source == NULL || report == NULL) {
         return MIPSNES2_PS2_AUDIO_PUMP_INVALID_ARGUMENT;
     }
-    if (!adapter->initialized || adapter->staging == NULL ||
-        adapter->staging_capacity == 0U || adapter->submit == NULL ||
-        !adapter->resampler.initialized || !source->initialized ||
-        adapter->pending_offset > adapter->staging_capacity ||
-        adapter->pending_frames >
-            adapter->staging_capacity - adapter->pending_offset) {
+    if (!state_is_ready(adapter, source)) {
         return MIPSNES2_PS2_AUDIO_PUMP_NOT_READY;
+    }
+    if (adapter->request_in_flight) {
+        return poll_request(adapter, report);
     }
 
     if (adapter->pending_frames == 0U) {
@@ -108,26 +172,23 @@ mipsnes2_ps2_audio_pump_result mipsnes2_ps2_audio_adapter_pump(
 
     offered = adapter->pending_frames;
     report->offered_frames = offered;
-    increment_saturating(&adapter->submit_calls);
+    report->pending_frames = offered;
+    increment_saturating(&adapter->launch_calls);
     add_saturating(&adapter->offered_frames, offered);
-    accepted = adapter->submit(
-        adapter->submit_context, adapter->staging + adapter->pending_offset,
+    result = adapter->launch(
+        adapter->transport_context, adapter->staging + adapter->pending_offset,
         offered);
-    if (accepted > offered) {
+    report->transport_result = result;
+    if (result < 0) {
+        increment_saturating(&adapter->transport_errors);
+        return MIPSNES2_PS2_AUDIO_PUMP_TRANSPORT_ERROR;
+    }
+    if (result != 0) {
         increment_saturating(&adapter->contract_errors);
-        report->pending_frames = adapter->pending_frames;
         return MIPSNES2_PS2_AUDIO_PUMP_TRANSPORT_CONTRACT_ERROR;
     }
 
-    report->accepted_frames = accepted;
-    add_saturating(&adapter->accepted_frames, accepted);
-    adapter->pending_offset += accepted;
-    adapter->pending_frames -= accepted;
-    report->pending_frames = adapter->pending_frames;
-    if (adapter->pending_frames != 0U) {
-        increment_saturating(&adapter->backpressure_events);
-        return MIPSNES2_PS2_AUDIO_PUMP_BACKPRESSURE;
-    }
-    adapter->pending_offset = 0U;
-    return MIPSNES2_PS2_AUDIO_PUMP_OK;
+    adapter->in_flight_frames = offered;
+    adapter->request_in_flight = true;
+    return MIPSNES2_PS2_AUDIO_PUMP_SUBMITTED;
 }

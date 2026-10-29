@@ -511,10 +511,12 @@ RFAuds2 never enters `core/`, and its fixed SPU2 output rate never controls SNES
 The shared reference rate converter is integer-only and consumer-driven: it can
 drain queued 32 kHz frames to a bounded 48 kHz PS2 block, but it cannot request
 more emulation work, fabricate underrun silence or call a device API. The PS2 adapter
-borrows fixed staging storage and offers at most one block per pump. Its callback
-accepts a prefix; any ordered tail remains owned by the adapter and must be retried
-before more source PCM is drained. Device pacing therefore cannot become an emulation
-clock. The future RFAuds2 binding is only the callback-side transport layer.
+borrows fixed staging storage and performs at most one transport operation per pump.
+A launch copies one request; later polls report pending or a completed accepted
+prefix. Any ordered tail remains owned by the adapter and is relaunched before more
+source PCM is drained. Device pacing therefore cannot become an emulation clock. The
+optional RFAuds2 binding is PS2-only and maps exactly this two-phase contract; module
+lifecycle, prebuffer/start policy and physical-device behavior remain outside core.
 
 ## Cartridge and enhancement boundaries
 

@@ -11,6 +11,23 @@ EE_LIBS = -ldraw -lgraph -lpacket -ldma -ldebug -lc
 EE_INCS = -I../..
 EE_CFLAGS = -std=c99 -Wextra -Werror
 
+# Optional external binding. RFAUDS2_ROOT must be an exact reviewed checkout;
+# the default scaffold remains self-contained and does not vendor RFAuds2.
+ifeq ($(MIPSNES2_RFAUDS2),1)
+ifeq ($(strip $(RFAUDS2_ROOT)),)
+$(error RFAUDS2_ROOT is unset; see docs/ps2.md)
+endif
+RFAUDS2_REQUIRED_COMMIT = f82e0967104fc96f37259e1abc124341eef6a76c
+RFAUDS2_CHECKOUT_COMMIT = $(shell git -C $(RFAUDS2_ROOT) rev-parse HEAD 2>/dev/null)
+ifneq ($(RFAUDS2_CHECKOUT_COMMIT),$(RFAUDS2_REQUIRED_COMMIT))
+$(error RFAUDS2_ROOT must be exact commit $(RFAUDS2_REQUIRED_COMMIT))
+endif
+EE_OBJS += rfauds2_transport.o
+EE_INCS += -I$(RFAUDS2_ROOT)/include
+EE_LDFLAGS += -L$(RFAUDS2_ROOT)/build
+EE_LIBS := -lrfauds2 $(EE_LIBS)
+endif
+
 .PHONY: all clean
 all: $(EE_BIN)
 
@@ -21,6 +38,9 @@ gs_present.o: gs_present.c gs_present.h video_frame.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 audio_adapter.o: audio_adapter.c audio_adapter.h ../../core/apu/pcm.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+rfauds2_transport.o: rfauds2_transport.c rfauds2_transport.h audio_adapter.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 log.o: ../../core/common/log.c ../../core/common/log.h

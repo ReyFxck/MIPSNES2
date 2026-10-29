@@ -66,7 +66,10 @@ No emulator implementation was copied. Scaffolding calls only standard C functio
 PCM transport, provided continued testing shows it is suitable. The decision was
 recorded after inspecting RFAuds2 `0.1.0-alpha.1` at revision
 `f82e0967104fc96f37259e1abc124341eef6a76c` on 2026-10-10, including its README,
-API/architecture material and emulator-integration guidance.
+API/architecture material and emulator-integration guidance. That merged `main`
+revision was re-reviewed and selected as the exact provisional integration pin on
+2026-10-29. The open `fix/comprehensive-hardening` branch is not the pin; see the
+[branch review](rfauds2-branch-review.md).
 
 RFAuds2 is pre-1.0/experimental. Its current repository reports deterministic host
 regressions and PS2 cross-build coverage, plus audible testing in NetherSX2 inherited
@@ -82,18 +85,22 @@ SNES SPC700/S-DSP -> common emulated PCM contract -> PS2 adapter -> RFAuds2 -> I
 
 The emulated SPC700/S-DSP owns SNES audio timing. The common bounded reference
 converter can drain native 32 kHz frames into 48 kHz caller blocks without running
-the machine. The PS2-only adapter borrows fixed staging storage, makes at most one
-transport call per pump and retains any unaccepted ordered tail before it consumes
-more source PCM. Starvation and backpressure are reported and counted; neither can
-request more emulation work. RFAuds2 only transports final PCM for the PS2 device;
+the machine. The PS2-only adapter borrows fixed staging storage and makes at most one
+asynchronous launch or poll per pump. Launch copies the request; poll later reports
+pending or the accepted prefix. The adapter retains zero/partial/error tails before
+it consumes more source PCM. Starvation and backpressure are reported and counted;
+neither can request more emulation work. RFAuds2 only transports final PCM for the PS2 device;
 its 48 kHz SPU2 boundary must never set the emulated clock. PSP keeps a dedicated
 PSP audio backend, and host keeps offline/testing output.
 S-DSP/sample generation must remain testable without RFAuds2 or physical SPU2.
 
-Future integration must pin a reviewed RFAuds2 version or revision, bind its current
-API to the tested accepted-prefix callback and validate underrun/backpressure behavior
-on real PS2 hardware. Do not copy RFAuds2 source into unrelated `core/` directories.
-No RFAuds2 or SPU2 runtime dependency is added by the current milestone. See the
+`platform/ps2/rfauds2_transport.c` is the thin mapping to the pinned
+`rfauds2_submit_s16_async`/`rfauds2_submit_poll` API. It is enabled only with
+`MIPSNES2_RFAUDS2=1` and an external `RFAUDS2_ROOT` at the exact pinned commit;
+the Makefile rejects another checkout. The PS2 CI builds that exact external source,
+then cross-links the optional binding. Do not copy RFAuds2 source into unrelated
+`core/` directories. Runtime module load/bind/start/stop, IRX embedding, prebuffer and
+real-hardware underrun/backpressure validation remain. See the
 [PS2 audio-adapter audit](ps2-audio-adapter-audit.md).
 
 ## Dedicated optimization candidates
@@ -113,9 +120,9 @@ No optimization below has been implemented or benchmarked. These are research ga
 - [ ] VU0 candidate vector kernels and synchronization-cost review
 - [ ] VU1 candidate vector kernels and synchronization-cost review
 - [ ] SPU2 final audio buffering and underrun measurement
-- [ ] Pin a reviewed RFAuds2 version/revision
-- [ ] [IN PROGRESS] PS2-only audio adapter for the common PCM contract — bounded 48 kHz contract exists; device binding remains
-- [ ] [IN PROGRESS] RFAuds2 asynchronous tail/backpressure handling — generic accepted-prefix retry exists; RFAuds2 binding remains
+- [x] Pin reviewed RFAuds2 revision `f82e0967104fc96f37259e1abc124341eef6a76c`
+- [ ] [IN PROGRESS] PS2-only audio adapter for the common PCM contract — thin optional RFAuds2 mapping exists; runtime lifecycle remains
+- [ ] [IN PROGRESS] RFAuds2 asynchronous tail/backpressure handling — launch/poll and ordered retry are host verified; target validation remains
 - [ ] RFAuds2 FAT/Slim PS2 and long-duration validation
 - [ ] IOP platform services, storage and peripherals
 - [ ] Real-hardware timer calibration and subsystem profiling

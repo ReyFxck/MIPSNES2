@@ -7,6 +7,8 @@ on:
   workflow_call:
 permissions:
   contents: read
+env:
+  RFAUDS2_REF: f82e0967104fc96f37259e1abc124341eef6a76c
 jobs:
   build:
     name: PS2 diagnostic build
@@ -23,6 +25,18 @@ jobs:
           key: toolchain-ubuntu24-x64-ps2-${{ hashFiles('tools/toolchains.json') }}
       - name: Install verified toolchain
         run: python3 tools/setup_toolchain.py ps2 "$RUNNER_TEMP/mipsnes2-toolchains" "$HOME/.cache/mipsnes2-toolchains"
+      - name: Fetch and build pinned RFAuds2
+        env:
+          PS2DEV: ${{ runner.temp }}/mipsnes2-toolchains/ps2dev
+          PS2SDK: ${{ runner.temp }}/mipsnes2-toolchains/ps2dev/ps2sdk
+        run: |
+          export PATH="$PS2DEV/bin:$PS2DEV/ee/bin:$PS2DEV/iop/bin:$PATH"
+          git init "$RUNNER_TEMP/rfauds2"
+          git -C "$RUNNER_TEMP/rfauds2" remote add origin https://github.com/ReyFxck/RFAuds2.git
+          git -C "$RUNNER_TEMP/rfauds2" fetch --depth 1 origin "$RFAUDS2_REF"
+          git -C "$RUNNER_TEMP/rfauds2" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/rfauds2" rev-parse HEAD)" = "$RFAUDS2_REF"
+          make -C "$RUNNER_TEMP/rfauds2" all PS2DEV="$PS2DEV" PS2SDK="$PS2SDK" PS2SDKSRC="$PS2SDK"
       - name: Cross-compile diagnostic
         env:
           PS2DEV: ${{ runner.temp }}/mipsnes2-toolchains/ps2dev
@@ -30,7 +44,7 @@ jobs:
         run: |
           export PATH="$PS2DEV/bin:$PS2DEV/ee/bin:$PS2DEV/iop/bin:$PATH"
           mips64r5900el-ps2-elf-gcc --version
-          make -C platform/ps2
+          make -C platform/ps2 MIPSNES2_RFAUDS2=1 RFAUDS2_ROOT="$RUNNER_TEMP/rfauds2"
       - name: Stage development artifact and checksums
         run: |
           mkdir -p dist
