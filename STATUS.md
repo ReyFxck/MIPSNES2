@@ -952,8 +952,18 @@ and focused tests pass. Revision `1772869` passed
 [PCM buffer audit](docs/pcm-buffer-audit.md). This is still not audible PS2/PSP
 output and makes no target latency or throughput claim.
 
-Next primary block: define deterministic resampling and bounded rate-conversion
-state without allowing device consumption to drive emulated time.
+The PCM boundary now also supplies a bounded integer-linear rate converter for
+output rates at or above the native 32 kHz rate. Its output phase advances by the
+native rate in output-rate units, signed interpolation rounds deterministically,
+and at most two source frames are retained across calls. Starvation returns only
+already-produced frames, output capacity bounds every call and saturating counters
+record source/output progress. Host fixtures cover identity conversion, the PS2
+32-to-48 kHz ratio, starvation/resume, extrema, chunk equivalence, reset and counter
+saturation. See the [PCM resampler audit](docs/pcm-resampler-audit.md). This is a
+reference transport utility, not an SPU2/RFAuds2 adapter or audible-output result.
+
+Next primary block: define the PS2-only 48 kHz device-adapter ownership and
+accepted-tail/backpressure contract before connecting the reviewed RFAuds2 revision.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2208,7 +2218,7 @@ platform persistence remains incomplete.
 - [x] Deterministic sample buffering — caller-owned bounded FIFO preserves order and diagnostics
 - [x] Output sample format contract — typed signed 16-bit left/right frames at native 32 kHz
 - [x] Platform-independent PCM output interface — bounded reads expose frames without device APIs
-- [ ] Resampling policy
+- [x] Resampling policy — deterministic integer-linear conversion from native 32 kHz to bounded caller blocks at rates at or above 32 kHz
 - [x] Underflow/overflow behavior — empty reads return zero; full writes drop newest and count it
 - [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
 - [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP/PCM and machine fixtures exist; exact phases remain

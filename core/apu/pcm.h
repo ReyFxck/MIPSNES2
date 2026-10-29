@@ -34,6 +34,28 @@ typedef struct {
     bool initialized;
 } mipsnes2_pcm_buffer;
 
+/* Deterministic transport-side linear rate converter. The S-DSP always
+ * produces MIPSNES2_PCM_SAMPLE_RATE frames per second; this state only drains
+ * an already-produced FIFO into a caller-owned output block. It cannot advance
+ * emulated time or synthesize missing input.
+ *
+ * Output rates below the native rate are rejected. The intended first use is
+ * the PS2 48 kHz boundary, while the same bounded state can serve independent
+ * PSP/host adapters whose rate is at least 32 kHz. At most two source frames
+ * are retained across calls.
+ */
+typedef struct {
+    uint32_t output_rate;
+    uint32_t phase;
+    mipsnes2_pcm_frame current;
+    mipsnes2_pcm_frame next;
+    uint64_t source_frames;
+    uint64_t output_frames;
+    bool has_current;
+    bool has_next;
+    bool initialized;
+} mipsnes2_pcm_resampler;
+
 bool mipsnes2_pcm_buffer_init(mipsnes2_pcm_buffer *buffer,
                               mipsnes2_pcm_frame *frames,
                               size_t capacity);
@@ -54,5 +76,20 @@ bool mipsnes2_pcm_buffer_push(mipsnes2_pcm_buffer *buffer,
 size_t mipsnes2_pcm_buffer_read(mipsnes2_pcm_buffer *buffer,
                                 mipsnes2_pcm_frame *frames,
                                 size_t max_frames);
+
+bool mipsnes2_pcm_resampler_init(mipsnes2_pcm_resampler *resampler,
+                                 uint32_t output_rate);
+
+/* Clear phase, retained frames and counters while preserving output_rate. */
+void mipsnes2_pcm_resampler_reset(mipsnes2_pcm_resampler *resampler);
+
+/* Produce at most max_frames. Linear interpolation uses integer arithmetic and
+ * round-to-nearest, with half values rounded away from zero. Starvation simply
+ * returns the frames already produced; silence and device-underrun accounting
+ * belong to the platform adapter. Input and output storage must not overlap. */
+size_t mipsnes2_pcm_resampler_process(mipsnes2_pcm_resampler *resampler,
+                                      mipsnes2_pcm_buffer *source,
+                                      mipsnes2_pcm_frame *frames,
+                                      size_t max_frames);
 
 #endif

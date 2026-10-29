@@ -22,14 +22,19 @@ and signed feedback path; signed echo volume joins the final clamped mix and
 `FLG.MUTE` gates a deterministic DAC-facing sample. An optional caller-owned FIFO
 now receives signed 16-bit left/right frames at the native 32 kHz cadence. The
 bounded interface drops new frames and counts them when full, while an empty read
-returns no frame; neither case changes emulated time. There is still no resampler
-or audio-device output.
+returns no frame; neither case changes emulated time. A separate bounded
+integer-linear converter now drains already-produced frames at output rates greater
+than or equal to 32 kHz. It keeps at most two source frames, emits only into
+caller-bounded blocks and returns no fabricated frame on starvation. There is still
+no audio-device output.
 
 ## Design direction
 
 Keep port synchronization and sample-buffer ownership explicit. Platform pacing must not alter
 deterministic core state. The common boundary exposes typed emulated PCM without device
-APIs. PS2 will prefer a PS2-only RFAuds2 adapter; PSP and host remain independent.
+APIs. The common rate converter is a deterministic reference utility, not an audio
+clock: it never runs the machine to satisfy a consumer. PS2 will prefer a PS2-only
+RFAuds2 adapter; PSP and host remain independent.
 The SPU2/RFAuds2 output rate must never drive SPC700/S-DSP time. Decide output format,
 resampling and underrun policy from correctness and target latency measurements.
 
@@ -52,7 +57,7 @@ implementation evidence before promotion.
 - [x] Deterministic sample buffering — caller-owned bounded FIFO preserves order and diagnostics
 - [x] Output sample format contract — typed signed 16-bit left/right frames at native 32 kHz
 - [x] Platform-independent PCM output interface — bounded reads expose frames without device APIs
-- [ ] Resampling policy
+- [x] Resampling policy — integer-linear native-rate conversion with bounded state and deterministic signed rounding
 - [x] Underflow/overflow behavior — empty reads return zero; full writes drop newest and count it
 - [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
 - [ ] [IN PROGRESS] Integrated APU regression tests — clock chunking, CPU/timer/DSP cadence, PCM and machine execution are covered; exact phases remain
@@ -82,7 +87,9 @@ are recorded in the [S-DSP Gaussian/PMON audit](sdsp-gaussian-pmon-audit.md).
 ARAM echo, FIR/feedback and the mute-gated final sample are recorded in the
 [S-DSP echo/output audit](sdsp-echo-output-audit.md). The native typed output
 contract, bounded FIFO and machine attachment are recorded in the
-[PCM buffer audit](pcm-buffer-audit.md).
+[PCM buffer audit](pcm-buffer-audit.md). The transport-side rational phase,
+integer interpolation and chunk/starvation contract are recorded in the
+[PCM resampler audit](pcm-resampler-audit.md).
 RFAuds2 is transport infrastructure only
 and must never become a core dependency or SNES timing source. The inspected candidate
 was RFAuds2 `0.1.0-alpha.1` at revision

@@ -80,9 +80,11 @@ The required boundary is:
 SNES SPC700/S-DSP -> common emulated PCM contract -> PS2 adapter -> RFAuds2 -> IOP/SPU2
 ```
 
-The emulated SPC700/S-DSP owns SNES audio timing. RFAuds2 only transports/resamples
-final PCM for the PS2 device; its 48 kHz SPU2 boundary must never set the emulated
-clock. PSP keeps a dedicated PSP audio backend, and host keeps offline/testing output.
+The emulated SPC700/S-DSP owns SNES audio timing. The common bounded reference
+converter can drain native 32 kHz frames into 48 kHz caller blocks without running
+the machine. RFAuds2 only transports final PCM for the PS2 device; its 48 kHz SPU2
+boundary must never set the emulated clock. PSP keeps a dedicated PSP audio backend,
+and host keeps offline/testing output.
 S-DSP/sample generation must remain testable without RFAuds2 or physical SPU2.
 
 Future integration must pin a reviewed RFAuds2 version or revision, define the

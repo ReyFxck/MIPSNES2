@@ -278,7 +278,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Deterministic sample buffering — bounded caller-owned FIFO
 - [x] Output sample format contract — typed signed 16-bit stereo at native 32 kHz
 - [x] Platform-independent PCM output interface — bounded typed reads without device APIs
-- [ ] Resampling policy
+- [x] Resampling policy — deterministic integer-linear conversion from native 32 kHz to bounded caller blocks at rates at or above 32 kHz
 - [x] Underflow/overflow behavior — empty read and drop-newest/count-full semantics are explicit
 - [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
 - [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP/PCM and machine fixtures exist; exact phases remain

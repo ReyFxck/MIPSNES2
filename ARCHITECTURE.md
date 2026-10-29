@@ -22,7 +22,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/dma | Channel state and transfer planning | Eight register banks, mode/address helpers and bounded general-DMA/HDMA cursors; resumable scheduler, shared refresh, A/B bus policy, same-channel cancellation, VBlank deactivation and final-channel zero-descriptor shortening integrated; electrical timing pending |
 | core/apu | S-CPU/S-SMP communication and timing | Directional ports plus nominal rational master-to-S-SMP clock bridge; electrical race order and oscillator drift pending |
 | core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | All 256 opcodes, ARAM/IPL, ports, `$F2/$F3` DSP route and three-stage timers under the APU clock; exact bus phases and interrupt/reset entry pending |
-| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight BRR/noise voices, Gaussian interpolation, ADSR/GAIN, `OUTX`, `PMON`, signed voice/main volume, ordered dry mixing, ARAM echo/FIR/feedback, mute-gated final samples and optional bounded native PCM handoff; exact microphases, resampling and device transport absent |
+| core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight BRR/noise voices, Gaussian interpolation, ADSR/GAIN, `OUTX`, `PMON`, signed voice/main volume, ordered dry mixing, ARAM echo/FIR/feedback, mute-gated final samples and optional bounded native PCM handoff; exact microphases and device transport absent |
 | core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
@@ -74,8 +74,11 @@ the result through signed `EVOLL`/`EVOLR` and `EFB`. `FLG` bit 5 suppresses only
 the left-aligned ring write; bit 6 gates the final DAC-facing sample while the
 entire pipeline continues. An optional caller-owned FIFO receives that signed-16
 left/right pair once per 32 kHz sample event. It drops newest and counts when full,
-returns no frame when empty and never controls S-DSP time; it is a platform-neutral
-handoff, not resampling or device output. Exact
+returns no frame when empty and never controls S-DSP time. A separate optional
+integer-linear converter drains already-produced frames into bounded caller output
+blocks at rates greater than or equal to 32 kHz; it retains at most two input frames,
+synthesizes no samples on starvation and cannot advance the machine. Neither layer
+performs device output. Exact
 instruction bus phases, within-DSP-loop register visibility, mailbox races and
 physical oscillator drift remain open.
 `resume` advances one
@@ -504,6 +507,9 @@ Audio follows an emulated-PCM boundary: SPC700/S-DSP owns SNES time and produces
 samples into a bounded caller-owned FIFO; a platform adapter transports them. The preferred future PS2 transport is
 RFAuds2 behind a PS2-only audio interface. PSP and host retain independent backends.
 RFAuds2 never enters `core/`, and its fixed SPU2 output rate never controls SNES time.
+The shared reference rate converter is integer-only and consumer-driven: it can
+drain queued 32 kHz frames to a bounded 48 kHz PS2 block, but it cannot request
+more emulation work, fabricate underrun silence or call a device API.
 
 ## Cartridge and enhancement boundaries
 
@@ -760,5 +766,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   stereo frames at the native 32 kHz sample cadence. Full queues drop newest and
   count without backpressuring S-DSP time; empty reads return no frame. Resampling,
   platform delivery, target synchronization and audible output remain unresolved.
+- 2026-10-29: a bounded integer-linear rate converter now drains the PCM FIFO to
+  caller blocks at rates greater than or equal to 32 kHz. Its rational phase,
+  signed rounding and starvation behavior are deterministic across chunk sizes;
+  device transport, underrun concealment and audible output remain unresolved.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

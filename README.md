@@ -172,7 +172,9 @@ Platform backends call a shared, platform-independent SNES core. The intended co
 contains CPU, bus, cartridge, scheduler, DMA/HDMA, PPU and APU. GS/GU present frames;
 SPU2/PSP audio receive emulated audio. They do not replace SNES PPU/DSP behavior.
 RFAuds2 is the preferred future PS2 PCM transport behind a PS2-only adapter; it is
-not a core dependency and does not control emulated audio time.
+not a core dependency and does not control emulated audio time. The shared bounded
+integer-linear converter only drains already-generated PCM into caller output blocks;
+it cannot drive emulation or call a device API.
 Target-specific MIPS, MMI, scratchpad, DMA, VU and VFPU paths are encouraged only
 when correct, tested and measurably beneficial on their respective hardware.
 
