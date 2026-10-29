@@ -1001,9 +1001,12 @@ accepted frames. A bounded statistics snapshot precedes ordered stop, flush and
 shutdown. The diagnostic always makes eight bounded machine calls toward predetermined
 absolute NTSC horizons, with one launch/poll after each; bounded final collection
 polls cannot run the machine. Synthetic host coverage verifies init/failure order, prebuffer/start,
-busy rules, diagnostics and shutdown. Cross-build success will establish only SDK
-portability: no target IRX/RPC/SPU2 execution, pacing, sustained delivery or audible
-output result is claimed.
+busy rules, diagnostics and shutdown. Revision `5c0a8c7` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40971768192),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40971768122) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40971768254). This establishes
+only SDK build/link portability: no target IRX/RPC/SPU2 execution, pacing, sustained
+delivery or audible output result is claimed.
 
 Next primary block: capture the bounded IRX init/prebuffer/start/statistics/shutdown
 diagnostic on an Android PS2 emulator with version/settings and ELF checksum.
