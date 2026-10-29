@@ -10,6 +10,7 @@ EE_OBJS = main.o diagnostic_suite.o rom_file.o video_frame.o gs_present.o audio_
 EE_LIBS = -ldraw -lgraph -lpacket -ldma -ldebug -lc
 EE_INCS = -I../..
 EE_CFLAGS = -std=c99 -Wextra -Werror
+BIN2C ?= bin2c
 
 # Optional external binding. RFAUDS2_ROOT must be an exact reviewed checkout;
 # the default scaffold remains self-contained and does not vendor RFAuds2.
@@ -48,7 +49,7 @@ rfauds2_runtime.o: rfauds2_runtime.c rfauds2_runtime.h rfauds2_transport.h audio
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 rfauds2_irx.c: $(RFAUDS2_ROOT)/build/rfauds2.irx
-	bin2c $< $@ rfauds2_irx
+	$(BIN2C) $< $@ rfauds2_irx
 
 rfauds2_irx.o: rfauds2_irx.c
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@

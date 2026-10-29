@@ -42,6 +42,9 @@ jobs:
           git -C "$RUNNER_TEMP/ps2sdk-src" fetch --depth 1 origin "$RFAUDS2_PS2SDK_REF"
           git -C "$RUNNER_TEMP/ps2sdk-src" checkout --detach FETCH_HEAD
           test "$(git -C "$RUNNER_TEMP/ps2sdk-src" rev-parse HEAD)" = "$RFAUDS2_PS2SDK_REF"
+          make -C "$RUNNER_TEMP/ps2sdk-src/tools/bin2c" \
+            PS2SDKSRC="$RUNNER_TEMP/ps2sdk-src"
+          test -x "$RUNNER_TEMP/ps2sdk-src/tools/bin2c/bin/bin2c"
           make -C "$RUNNER_TEMP/rfauds2" \
             build/librfauds2.a build/rfauds2.irx \
             PS2DEV="$PS2DEV" PS2SDK="$PS2SDK" \
@@ -54,7 +57,10 @@ jobs:
         run: |
           export PATH="$PS2DEV/bin:$PS2DEV/ee/bin:$PS2DEV/iop/bin:$PATH"
           mips64r5900el-ps2-elf-gcc --version
-          make -C platform/ps2 MIPSNES2_RFAUDS2=1 RFAUDS2_ROOT="$RUNNER_TEMP/rfauds2"
+          make -C platform/ps2 \
+            MIPSNES2_RFAUDS2=1 \
+            RFAUDS2_ROOT="$RUNNER_TEMP/rfauds2" \
+            BIN2C="$RUNNER_TEMP/ps2sdk-src/tools/bin2c/bin/bin2c"
       - name: Stage development artifact and checksums
         run: |
           mkdir -p dist

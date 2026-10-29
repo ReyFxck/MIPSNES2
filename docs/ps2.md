@@ -103,7 +103,9 @@ S-DSP/sample generation must remain testable without RFAuds2 or physical SPU2.
 the Makefile rejects another checkout. The PS2 CI builds that exact external source,
 including its IRX against PS2SDK source commit
 `4996c6f63d42d2cf5d68dfa2f7bb74b9e3c653f5`. PS2SDK `bin2c` embeds that IRX as a
-generated, ignored C build artifact before the optional binding is cross-linked.
+generated, ignored C build artifact before the optional binding is cross-linked;
+CI builds the host tool from that same PS2SDK source checkout instead of assuming
+the binary toolchain archive installed it.
 `platform/ps2/rfauds2_runtime.c` coordinates init, latency/volume/stat reset,
 accepted-frame prebuffering, start, statistics, stop, flush and shutdown with fixed
 caller-owned storage. The ROM diagnostic advances eight predetermined emulated
