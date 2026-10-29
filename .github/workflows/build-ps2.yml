@@ -36,7 +36,7 @@ jobs:
           git -C "$RUNNER_TEMP/rfauds2" fetch --depth 1 origin "$RFAUDS2_REF"
           git -C "$RUNNER_TEMP/rfauds2" checkout --detach FETCH_HEAD
           test "$(git -C "$RUNNER_TEMP/rfauds2" rev-parse HEAD)" = "$RFAUDS2_REF"
-          make -C "$RUNNER_TEMP/rfauds2" all PS2DEV="$PS2DEV" PS2SDK="$PS2SDK" PS2SDKSRC="$PS2SDK"
+          make -C "$RUNNER_TEMP/rfauds2" build/librfauds2.a PS2DEV="$PS2DEV" PS2SDK="$PS2SDK"
       - name: Cross-compile diagnostic
         env:
           PS2DEV: ${{ runner.temp }}/mipsnes2-toolchains/ps2dev
