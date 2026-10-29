@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 env:
-  RFAUDS2_REF: f82e0967104fc96f37259e1abc124341eef6a76c
+  RFAUDS2_REF: 38cd7ae09a1ad646c9009e5ff38f675ecc8ee584
 jobs:
   build:
     name: PS2 diagnostic build

@@ -66,10 +66,11 @@ No emulator implementation was copied. Scaffolding calls only standard C functio
 PCM transport, provided continued testing shows it is suitable. The decision was
 recorded after inspecting RFAuds2 `0.1.0-alpha.1` at revision
 `f82e0967104fc96f37259e1abc124341eef6a76c` on 2026-10-10, including its README,
-API/architecture material and emulator-integration guidance. That merged `main`
-revision was re-reviewed and selected as the exact provisional integration pin on
-2026-10-29. The open `fix/comprehensive-hardening` branch is not the pin; see the
-[branch review](rfauds2-branch-review.md).
+API/architecture material and emulator-integration guidance. The later
+`fix/comprehensive-hardening` work was corrected, re-reviewed and merged by
+[RFAuds2 PR #2](https://github.com/ReyFxck/RFAuds2/pull/2). Its `0.1.0-alpha.2`
+`main` merge commit `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584` became the exact
+integration pin on 2026-10-29; see the [branch review](rfauds2-branch-review.md).
 
 RFAuds2 is pre-1.0/experimental. Its current repository reports deterministic host
 regressions and PS2 cross-build coverage, plus audible testing in NetherSX2 inherited
@@ -120,7 +121,7 @@ No optimization below has been implemented or benchmarked. These are research ga
 - [ ] VU0 candidate vector kernels and synchronization-cost review
 - [ ] VU1 candidate vector kernels and synchronization-cost review
 - [ ] SPU2 final audio buffering and underrun measurement
-- [x] Pin reviewed RFAuds2 revision `f82e0967104fc96f37259e1abc124341eef6a76c`
+- [x] Pin reviewed RFAuds2 revision `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`
 - [ ] [IN PROGRESS] PS2-only audio adapter for the common PCM contract — thin optional RFAuds2 mapping exists; runtime lifecycle remains
 - [ ] [IN PROGRESS] RFAuds2 asynchronous tail/backpressure handling — launch/poll and ordered retry are host verified; target validation remains
 - [ ] RFAuds2 FAT/Slim PS2 and long-duration validation

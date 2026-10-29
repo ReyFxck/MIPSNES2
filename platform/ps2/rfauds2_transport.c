@@ -21,7 +21,7 @@ static int rfauds2_launch(void *context,
     (void)context;
     if (frames == NULL || frame_count == 0U ||
         frame_count > RFAUDS2_ASYNC_MAX_FRAMES) {
-        return -1;
+        return RFAUDS2_ERROR_INVALID_ARGUMENT;
     }
     return rfauds2_submit_s16_async(
         (const s16 *)frames, (u32)frame_count);
@@ -34,7 +34,7 @@ static int rfauds2_poll(void *context, size_t *accepted_frames)
 
     (void)context;
     if (accepted_frames == NULL) {
-        return -1;
+        return RFAUDS2_ERROR_INVALID_ARGUMENT;
     }
     result = rfauds2_submit_poll(&accepted);
     if (result == 1) {

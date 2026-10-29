@@ -90,9 +90,9 @@ contract, bounded FIFO and machine attachment are recorded in the
 [PCM buffer audit](pcm-buffer-audit.md). The transport-side rational phase,
 integer interpolation and chunk/starvation contract are recorded in the
 [PCM resampler audit](pcm-resampler-audit.md).
-RFAuds2 is transport infrastructure only
-and must never become a core dependency or SNES timing source. The inspected candidate
-was RFAuds2 `0.1.0-alpha.1` at revision
-`f82e0967104fc96f37259e1abc124341eef6a76c`; an eventual dependency still requires an
-explicit reviewed pin. Before emulation implementation, record hardware references
-and independently authored regression evidence.
+RFAuds2 is transport infrastructure only and must never become a core dependency or
+SNES timing source. The initial audit covered `0.1.0-alpha.1` at
+`f82e0967104fc96f37259e1abc124341eef6a76c`; the reviewed PS2-only integration now
+pins merged `0.1.0-alpha.2` commit
+`38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`. Before emulation implementation,
+record hardware references and independently authored regression evidence.

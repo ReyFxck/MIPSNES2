@@ -3,70 +3,63 @@
 Date: 2026-10-29
 Repositories: `ReyFxck/RFAuds2` and `ReyFxck/MIPSNES2`
 
-## Branch map
+## Final branch map
 
-RFAuds2 currently has three visible branches:
+The relevant RFAuds2 history is now:
 
-- `main` at `f82e0967104fc96f37259e1abc124341eef6a76c`;
-- `fix/async-pcm-transport` at `9c5e5b4fe48e7f1afd89c5dde12325d8cd0f6076`;
-- `fix/comprehensive-hardening` at
-  `3b22578484ea3f7bb1b4d4dc6aeb6d8949a15856`.
+- `fix/async-pcm-transport` at
+  `9c5e5b4fe48e7f1afd89c5dde12325d8cd0f6076`, merged by
+  [RFAuds2 PR #1](https://github.com/ReyFxck/RFAuds2/pull/1);
+- final `fix/comprehensive-hardening` head
+  `7e7a0d0f0392f97330b680e754f9e587575ee57a`;
+- `main` merge commit `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`, produced by
+  [RFAuds2 PR #2](https://github.com/ReyFxck/RFAuds2/pull/2).
 
-The async branch is already an ancestor of `main`: it was merged by
-[RFAuds2 PR #1](https://github.com/ReyFxck/RFAuds2/pull/1). Its partial nonblocking
-admission and asynchronous stats work are therefore not missing from `main`.
+The final hardening head passed its
+[push CI](https://github.com/ReyFxck/RFAuds2/actions/runs/40960415541) and
+[PR CI](https://github.com/ReyFxck/RFAuds2/actions/runs/40960426182). Local GCC host
+tests, ASan+UBSan and `-fanalyzer` also passed. The resulting merge commit passed
+[main CI](https://github.com/ReyFxck/RFAuds2/actions/runs/40960573209). These establish
+deterministic host behavior and EE/IOP cross-build portability; they do not establish
+physical SPU2 timing.
 
-The comprehensive-hardening branch is the open
-[RFAuds2 PR #2](https://github.com/ReyFxck/RFAuds2/pull/2), two commits ahead of
-`main`. Its final head passed both its
-[push CI](https://github.com/ReyFxck/RFAuds2/actions/runs/37813570998) and
-[PR CI](https://github.com/ReyFxck/RFAuds2/actions/runs/37813709630). A fresh local
-GCC host run, ASan+UBSan run and `-fanalyzer` pass also succeeded. These results cover
-the host models and cross-build, not physical SPU2 scheduling.
+## Review findings and resolution
 
-## Review verdict
+The original branch review found four issues before merge. The final branch head
+resolves each one:
 
-The hardening branch is directionally good but is not selected for merge or as the
-MIPSNES2 pin yet. Useful fixes include:
+1. A playback lifecycle mutex now serializes the refill thread with `start()`,
+   `pause()`, `resume()`, `flush()`, `stop()` and `shutdown()`. An old refill cannot
+   cross a later stop/restart boundary and publish into the new playback generation.
+2. Missed-refill telemetry is synchronized under the ring mutex used by the playback
+   counters. Counter additions saturate instead of wrapping during a long run.
+3. The pending/ready/silence transition logic was extracted from SPU2 register access
+   into `refill_state.c`, which is both linked into the IRX and executed by deterministic
+   host tests covering ping-pong, deadline misses, silence recovery, stop/restart and
+   saturation.
+4. The translation-unit-wide `-Wno-unused-function` suppression and its unused mock
+   helpers were removed. Host tests retain `-Werror` without that exception.
 
-- cache writeback before publishing a refilled DMA half;
-- per-half pending/ready state and a dedicated silence source for missed deadlines;
-- protocol handshake and public constants;
-- partial-initialization cleanup, shutdown and rebind support;
-- transactional start priming and guarded latency shrink;
-- broader transport/lifecycle fixtures and pinned CI inputs.
+The merged code also retains the earlier useful changes: cache writeback before DMA
+half publication, dedicated silence instead of stale PCM replay, protocol-v2
+handshake, shutdown/rebind cleanup, transactional start priming, guarded latency
+shrink and pinned cross-build inputs.
 
-The following issues remain before that branch should replace `main`:
-
-1. `stop()` clears the low-level masks but does not synchronize with an already
-   running refill iteration. That iteration can finish after a restart and mark a
-   block ready in the new generation. A generation token or explicit refill-thread
-   quiescence/acknowledgement is required around stop/restart.
-2. `sync_missed_refills()` updates underrun and silent-frame counters without the
-   ring mutex while the playback thread updates the same counters under that mutex.
-   This permits lost or inconsistent diagnostic updates.
-3. The transport fixture replaces `spu2_direct.c` with mocks. It therefore does not
-   execute the new pending/ready/silence state machine; CI proves it cross-compiles,
-   not that its interrupt transitions are correct.
-4. The follow-up test commit uses translation-unit-wide `-Wno-unused-function` to
-   hide two unused mock helpers. Narrow annotations or compiling the relevant
-   low-level model would preserve warnings-as-errors more precisely.
-
-Physical FAT/Slim validation remains mandatory even after deterministic state-machine
-coverage is added.
+Physical FAT/Slim validation and long-duration lifecycle/underrun stress remain
+mandatory before production-readiness claims.
 
 ## MIPSNES2 pin and binding decision
 
-MIPSNES2 provisionally pins the already-merged RFAuds2 `main` commit
-`f82e0967104fc96f37259e1abc124341eef6a76c`. It exposes the required stable
-`rfauds2_submit_s16_async()` and `rfauds2_submit_poll()` behavior without depending on
-the unmerged protocol-v2 additions.
+MIPSNES2 pins the merged RFAuds2 `main` commit
+`38cd7ae09a1ad646c9009e5ff38f675ecc8ee584` exactly. This is RFAuds2
+`0.1.0-alpha.2` with the protocol-v2 and refill-lifecycle hardening reviewed above.
 
 The PS2 Makefile enables the external binding only with `MIPSNES2_RFAUDS2=1` and an
 `RFAUDS2_ROOT` whose Git HEAD exactly matches that SHA. PS2 CI fetches and builds the
-same exact commit before cross-linking MIPSNES2. No RFAuds2 implementation source is
-copied into MIPSNES2; the host fixture contains only the narrow public type/function
-surface needed to verify the mapping.
+same commit before cross-linking MIPSNES2. No RFAuds2 implementation source is copied
+into MIPSNES2; the host fixture models only the narrow public type/function surface
+needed to verify the binding.
 
 Next primary milestone: connect the pinned optional binding to the PS2 runtime
-lifecycle with fixed storage, explicit prebuffer/start/stop order and diagnostics.
+lifecycle with fixed storage, explicit IRX load/bind/prebuffer/start/stop order and
+on-screen diagnostics.

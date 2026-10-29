@@ -57,8 +57,9 @@ cannot establish audible output, latency, thread behavior or physical SPU2 stabi
 
 ## Open boundaries
 
-- Merged RFAuds2 `main` commit `f82e0967104fc96f37259e1abc124341eef6a76c`
-  is the exact provisional pin. The optional thin binding exists, but runtime
+- Merged RFAuds2 `main` commit `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`
+  is the exact pin after the protocol-v2/refill-lifecycle review. The optional thin
+  binding exists, but runtime
   lifecycle is not connected to the PS2 entry path.
 - Device-thread serialization, IOP/SPU2 startup, underrun concealment, shutdown and
   recovery remain platform-runtime work.
@@ -67,4 +68,5 @@ cannot establish audible output, latency, thread behavior or physical SPU2 stabi
 - PSP retains an independent audio backend and does not use this PS2 adapter.
 
 Next primary milestone: connect the pinned optional binding to the PS2 runtime
-lifecycle with fixed storage, explicit prebuffer/start/stop order and diagnostics.
+lifecycle with fixed storage, explicit IRX load/bind/prebuffer/start/stop order and
+diagnostics.

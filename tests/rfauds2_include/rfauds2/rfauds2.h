@@ -9,6 +9,7 @@ typedef uint32_t u32;
 
 #define RFAUDS2_OUTPUT_RATE 48000u
 #define RFAUDS2_ASYNC_MAX_FRAMES 960u
+#define RFAUDS2_ERROR_INVALID_ARGUMENT (-1)
 
 int rfauds2_submit_s16_async(const s16 *interleaved_stereo, u32 frames);
 int rfauds2_submit_poll(u32 *accepted_frames);
