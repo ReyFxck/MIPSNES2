@@ -174,7 +174,9 @@ SPU2/PSP audio receive emulated audio. They do not replace SNES PPU/DSP behavior
 RFAuds2 is the preferred future PS2 PCM transport behind a PS2-only adapter; it is
 not a core dependency and does not control emulated audio time. The shared bounded
 integer-linear converter only drains already-generated PCM into caller output blocks;
-it cannot drive emulation or call a device API.
+it cannot drive emulation or call a device API. The PS2 transport adapter adds a
+fixed-capacity 48 kHz block and retains any callback-unaccepted ordered tail before
+draining more PCM; the actual RFAuds2/SPU2 binding is still absent.
 Target-specific MIPS, MMI, scratchpad, DMA, VU and VFPU paths are encouraged only
 when correct, tested and measurably beneficial on their respective hardware.
 

@@ -959,11 +959,27 @@ and at most two source frames are retained across calls. Starvation returns only
 already-produced frames, output capacity bounds every call and saturating counters
 record source/output progress. Host fixtures cover identity conversion, the PS2
 32-to-48 kHz ratio, starvation/resume, extrema, chunk equivalence, reset and counter
-saturation. See the [PCM resampler audit](docs/pcm-resampler-audit.md). This is a
-reference transport utility, not an SPU2/RFAuds2 adapter or audible-output result.
+saturation. Revision `1c54b65` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40906234441),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40906234266) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40906234216). See the
+[PCM resampler audit](docs/pcm-resampler-audit.md). This is a reference transport
+utility, not an SPU2/RFAuds2 adapter or audible-output result.
 
-Next primary block: define the PS2-only 48 kHz device-adapter ownership and
-accepted-tail/backpressure contract before connecting the reviewed RFAuds2 revision.
+The PS2 backend now has a fixed-capacity 48 kHz transport adapter around that
+converter. One pump either retries its retained ordered tail or drains a new bounded
+block, then makes at most one callback that accepts a prefix. Zero/partial acceptance
+keeps the remainder for the next pump without consuming more source PCM; starvation
+does not synthesize silence or run the emulator. Caller-provided staging storage,
+explicit reports and saturating counters cover generation, offers, acceptance,
+starvation, backpressure and callback contract violations. Host fixtures verify exact
+32-to-48 kHz samples, multiple partial retries, source non-consumption while a tail is
+pending, reset and saturation. See the
+[PS2 audio-adapter audit](docs/ps2-audio-adapter-audit.md). No RFAuds2 dependency,
+SPU2 call, device pacing or audible-output result is claimed.
+
+Next primary block: pin and review the current RFAuds2 revision/API, then implement
+only the thin PS2 transport binding against the tested accepted-prefix contract.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2238,10 +2254,10 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Storage and ROM selection — explicit PS2 path adapter exists; mount lifecycle and picker absent
 - [ ] SRAM persistence
 - [ ] SPU2 output
-- [ ] Audio buffering
+- [ ] [IN PROGRESS] Audio buffering — bounded 48 kHz staging and retained-tail ownership are host verified; device buffering remains
 - [ ] Pin a reviewed RFAuds2 version/revision
 - [ ] PS2-only RFAuds2 adapter behind platform audio interface
-- [ ] RFAuds2 asynchronous accepted-tail/backpressure handling
+- [ ] [IN PROGRESS] RFAuds2 asynchronous accepted-tail/backpressure handling — generic accepted-prefix retry contract exists; RFAuds2 binding remains
 - [ ] RFAuds2 FAT/Slim real-hardware and long-duration validation
 - [ ] IOP service initialization
 - [ ] Error reporting

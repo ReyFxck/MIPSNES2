@@ -27,13 +27,14 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
-| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path to bounded CPU-only machine run and single-frame GS submission; GS runtime unverified |
+| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path, single-frame GS submission and bounded 48 kHz accepted-prefix audio adapter; GS/audio runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
 Directories without source contain an explicit scope README, not stub functions.
-There is a partial machine instance and an explicit-path PS2 ROM-file adapter,
-but no full ROM runner, complete renderer or platform audio adapter. `mipsnes2_machine_init` validates an image and constructs the
+There is a partial machine instance, an explicit-path PS2 ROM-file adapter and a
+host-verified PS2 audio transport contract, but no full ROM runner, complete renderer
+or device binding. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
 optional VRAM/CGRAM/OAM/ARAM bytes while resetting optional PCM queue state. An optional S-SMP map borrows 64 KiB ARAM
@@ -509,7 +510,11 @@ RFAuds2 behind a PS2-only audio interface. PSP and host retain independent backe
 RFAuds2 never enters `core/`, and its fixed SPU2 output rate never controls SNES time.
 The shared reference rate converter is integer-only and consumer-driven: it can
 drain queued 32 kHz frames to a bounded 48 kHz PS2 block, but it cannot request
-more emulation work, fabricate underrun silence or call a device API.
+more emulation work, fabricate underrun silence or call a device API. The PS2 adapter
+borrows fixed staging storage and offers at most one block per pump. Its callback
+accepts a prefix; any ordered tail remains owned by the adapter and must be retried
+before more source PCM is drained. Device pacing therefore cannot become an emulation
+clock. The future RFAuds2 binding is only the callback-side transport layer.
 
 ## Cartridge and enhancement boundaries
 

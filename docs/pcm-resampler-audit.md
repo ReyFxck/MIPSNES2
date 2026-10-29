@@ -54,19 +54,22 @@ without its executable mode; restoring that generated artifact's mode let the sa
 binary and the full suite pass, and no source workaround was added. Console
 cross-compilation and CI will establish only build portability; neither can prove
 audible polarity, device latency, underrun recovery or sustained SPU2 playback.
+Revision `1c54b65` subsequently passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40906234441),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40906234266) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40906234216).
 
 ## Open boundaries
 
 - This integer-linear reference policy is deterministic, not a claim of optimal
   reconstruction quality. Any optimized or higher-order target path needs measured
   benefit and reference-output or explicitly revised policy tests.
-- No PS2/PSP device adapter, asynchronous queue, accepted-tail retry or concealment
-  policy exists yet.
+- A PS2-only bounded adapter now owns 48 kHz staging and accepted-tail retry; actual
+  RFAuds2/SPU2 device binding and concealment policy remain absent.
 - RFAuds2 remains an external PS2-only transport candidate and must be pinned and
   reviewed before runtime integration.
 - Real PS2 FAT/Slim and PSP measurements remain authoritative for latency,
   throughput and audible-output decisions.
 
-Next primary milestone: define a PS2-only 48 kHz adapter ownership contract that
-retains unaccepted tails and measures underruns without allowing device demand to
-advance emulated time.
+The follow-up ownership milestone is recorded in the
+[PS2 audio-adapter audit](ps2-audio-adapter-audit.md).
