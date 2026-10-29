@@ -53,6 +53,7 @@ TEST_PS2_ROM_FILE = $(BUILD_DIR)/test-ps2-rom-file
 TEST_PS2_VIDEO_FRAME = $(BUILD_DIR)/test-ps2-video-frame
 TEST_PS2_AUDIO_ADAPTER = $(BUILD_DIR)/test-ps2-audio-adapter
 TEST_PS2_RFAUDS2_TRANSPORT = $(BUILD_DIR)/test-ps2-rfauds2-transport
+TEST_PS2_RFAUDS2_RUNTIME = $(BUILD_DIR)/test-ps2-rfauds2-runtime
 TEST_DMA_REGISTERS = $(BUILD_DIR)/test-dma-registers
 TEST_DMA_TRANSFER = $(BUILD_DIR)/test-dma-transfer
 TEST_HDMA = $(BUILD_DIR)/test-hdma
@@ -319,6 +320,9 @@ $(TEST_PS2_AUDIO_ADAPTER): tests/test_ps2_audio_adapter.c platform/ps2/audio_ada
 $(TEST_PS2_RFAUDS2_TRANSPORT): tests/test_ps2_rfauds2_transport.c tests/rfauds2_include/rfauds2/rfauds2.h platform/ps2/rfauds2_transport.c platform/ps2/rfauds2_transport.h platform/ps2/audio_adapter.c platform/ps2/audio_adapter.h core/apu/pcm.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) -Itests/rfauds2_include $(INCLUDES) tests/test_ps2_rfauds2_transport.c platform/ps2/rfauds2_transport.c platform/ps2/audio_adapter.c $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(TEST_PS2_RFAUDS2_RUNTIME): tests/test_ps2_rfauds2_runtime.c tests/rfauds2_include/rfauds2/rfauds2.h platform/ps2/rfauds2_runtime.c platform/ps2/rfauds2_runtime.h platform/ps2/rfauds2_transport.c platform/ps2/rfauds2_transport.h platform/ps2/audio_adapter.c platform/ps2/audio_adapter.h core/apu/pcm.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) -Itests/rfauds2_include $(INCLUDES) tests/test_ps2_rfauds2_runtime.c platform/ps2/rfauds2_runtime.c platform/ps2/rfauds2_transport.c platform/ps2/audio_adapter.c $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(TEST_DMA_REGISTERS): tests/test_dma_registers.c core/dma/registers.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -334,7 +338,7 @@ $(TEST_DMA_TIMING): tests/test_dma_timing.c core/scheduler/cpu_timing.h $(LIB)
 check:
 	$(PYTHON) tools/check_repository.py
 
-test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_DIFFERENTIAL) $(TEST_CPU_IO) $(TEST_APU_IO_PORTS) $(TEST_PCM) $(TEST_DSP) $(TEST_APU_TIMING) $(TEST_SMP_TIMERS) $(TEST_SMP_MEMORY) $(TEST_SPC700_CPU) $(TEST_SPC700_ALU) $(TEST_SPC700_COMPLETE) $(TEST_DMA_REGISTERS) $(TEST_DMA_TRANSFER) $(TEST_HDMA) $(TEST_DMA_TIMING) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG4_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_MODE1_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) $(TEST_PS2_VIDEO_FRAME) $(TEST_PS2_AUDIO_ADAPTER) $(TEST_PS2_RFAUDS2_TRANSPORT) check
+test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_DIFFERENTIAL) $(TEST_CPU_IO) $(TEST_APU_IO_PORTS) $(TEST_PCM) $(TEST_DSP) $(TEST_APU_TIMING) $(TEST_SMP_TIMERS) $(TEST_SMP_MEMORY) $(TEST_SPC700_CPU) $(TEST_SPC700_ALU) $(TEST_SPC700_COMPLETE) $(TEST_DMA_REGISTERS) $(TEST_DMA_TRANSFER) $(TEST_HDMA) $(TEST_DMA_TIMING) $(TEST_PPU_COUNTERS) $(TEST_PPU_VRAM) $(TEST_PPU_CGRAM) $(TEST_PPU_OAM) $(TEST_PPU_TILE4) $(TEST_PPU_SPRITE_SCANLINE) $(TEST_PPU_BG2_SCANLINE) $(TEST_PPU_BG4_SCANLINE) $(TEST_PPU_BG_REGISTERS) $(TEST_PPU_MODE0_MIX) $(TEST_PPU_MODE1_MIX) $(TEST_PPU_WINDOW_MASK) $(TEST_PPU_COLOR_MATH) $(TEST_HV_TIMING) $(TEST_INTERRUPT_LINES) $(TEST_MASTER_TIMING) $(TEST_SCHEDULER) $(TEST_SNES_BUS) $(TEST_CARTRIDGE) $(TEST_CARTRIDGE_IMAGE) $(TEST_CARTRIDGE_PREPARE) $(TEST_PS2_DIAGNOSTIC) $(TEST_MACHINE) $(TEST_PS2_ROM_FILE) $(TEST_PS2_VIDEO_FRAME) $(TEST_PS2_AUDIO_ADAPTER) $(TEST_PS2_RFAUDS2_TRANSPORT) $(TEST_PS2_RFAUDS2_RUNTIME) check
 	$(TEST)
 	$(TEST_NOLOG)
 	$(TEST_CPU_BUS)
@@ -381,6 +385,7 @@ test: all $(TEST) $(TEST_NOLOG) $(TEST_CPU_BUS) $(TEST_CPU_CYCLES) $(TEST_CPU_DI
 	$(TEST_PS2_VIDEO_FRAME)
 	$(TEST_PS2_AUDIO_ADAPTER)
 	$(TEST_PS2_RFAUDS2_TRANSPORT)
+	$(TEST_PS2_RFAUDS2_RUNTIME)
 	$(PYTHON) tests/test_host.py $(HOST)
 
 clean:

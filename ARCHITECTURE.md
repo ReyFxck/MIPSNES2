@@ -27,7 +27,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
-| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path, single-frame GS submission and bounded 48 kHz accepted-prefix audio adapter; GS/audio runtime unverified |
+| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path, single-frame GS submission and bounded 48 kHz accepted-prefix/RFAuds2 lifecycle diagnostic; GS/audio target runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
@@ -516,7 +516,10 @@ A launch copies one request; later polls report pending or a completed accepted
 prefix. Any ordered tail remains owned by the adapter and is relaunched before more
 source PCM is drained. Device pacing therefore cannot become an emulation clock. The
 optional RFAuds2 binding is PS2-only and maps exactly this two-phase contract; module
-lifecycle, prebuffer/start policy and physical-device behavior remain outside core.
+lifecycle and prebuffer/start policy are coordinated by fixed-storage PS2 code. The
+IRX is a generated build input, playback starts only after accepted-frame accounting,
+and stop/flush/shutdown remain outside core. The bounded diagnostic uses fixed
+absolute emulation horizons; target and physical-device behavior remain unverified.
 
 ## Cartridge and enhancement boundaries
 
@@ -777,5 +780,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   caller blocks at rates greater than or equal to 32 kHz. Its rational phase,
   signed rounding and starvation behavior are deterministic across chunk sizes;
   device transport, underrun concealment and audible output remain unresolved.
+- 2026-10-29: the PS2-only RFAuds2 coordinator now embeds the exact pinned IRX,
+  configures fixed storage, starts after accepted prebuffer frames and exposes
+  statistics before ordered stop/flush/shutdown. The ROM diagnostic keeps device
+  results outside its fixed emulated-time horizons; target execution remains open.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

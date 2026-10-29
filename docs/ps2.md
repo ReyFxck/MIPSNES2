@@ -12,10 +12,12 @@ fixtures exercise CPU instructions, scheduler horizons and explicit ABORT write
 qualification; `tests/test_ps2_diagnostic.c` runs the identical suite on the host.
 The optional `--rom PATH` entry reads an image through `fopen` from a filesystem
 that the launcher has already made available, constructs the shared machine and
-runs at most one NTSC H/V frame or 100,000 CPU sequences. It prints CPU and timing
+runs one bounded reference frame in the standalone build. The RFAuds2-enabled
+diagnostic instead makes eight bounded calls toward fixed absolute NTSC frame horizons, each with a
+100,000-sequence bound. It prints CPU and timing
 status and captures bounded reference lines in a static RGBA32 texture. If
 at least one line is available, it submits one image to the GS. This path
-has no console runtime validation, continuous frame loop, audio or SRAM
+has no console runtime validation, continuous frame loop, verified audio or SRAM
 persistence. It does not
 mount a USB device or provide a file picker. The original five-case diagnostic
 still runs without arguments; it is not a game or the final GS/video backend.
@@ -60,10 +62,10 @@ The inspected upstream source revision documents conventions; the archive digest
 identifies the actual SDK/toolchain used for builds. These are distinct records.
 No emulator implementation was copied. Scaffolding calls only standard C functions.
 
-## Preferred future PCM backend: RFAuds2
+## Experimental PCM backend: RFAuds2
 
-[ReyFxck/RFAuds2](https://github.com/ReyFxck/RFAuds2) is the preferred future PS2
-PCM transport, provided continued testing shows it is suitable. The decision was
+[ReyFxck/RFAuds2](https://github.com/ReyFxck/RFAuds2) is the preferred experimental
+PS2 PCM transport, provided continued testing shows it is suitable. The decision was
 recorded after inspecting RFAuds2 `0.1.0-alpha.1` at revision
 `f82e0967104fc96f37259e1abc124341eef6a76c` on 2026-10-10, including its README,
 API/architecture material and emulator-integration guidance. The later
@@ -75,8 +77,8 @@ integration pin on 2026-10-29; see the [branch review](rfauds2-branch-review.md)
 RFAuds2 is pre-1.0/experimental. Its current repository reports deterministic host
 regressions and PS2 cross-build coverage, plus audible testing in NetherSX2 inherited
 from its earlier audio path. Physical FAT/Slim PS2 validation and long emulator stress
-remain required. These facts make it a preferred candidate, not a completed MIPSNES2
-integration or a production-readiness claim.
+remain required. These facts and the bounded lifecycle integration make it a
+preferred candidate, not a production-readiness claim.
 
 The required boundary is:
 
@@ -99,9 +101,16 @@ S-DSP/sample generation must remain testable without RFAuds2 or physical SPU2.
 `rfauds2_submit_s16_async`/`rfauds2_submit_poll` API. It is enabled only with
 `MIPSNES2_RFAUDS2=1` and an external `RFAUDS2_ROOT` at the exact pinned commit;
 the Makefile rejects another checkout. The PS2 CI builds that exact external source,
-then cross-links the optional binding. Do not copy RFAuds2 source into unrelated
-`core/` directories. Runtime module load/bind/start/stop, IRX embedding, prebuffer and
-real-hardware underrun/backpressure validation remain. See the
+including its IRX against PS2SDK source commit
+`4996c6f63d42d2cf5d68dfa2f7bb74b9e3c653f5`. PS2SDK `bin2c` embeds that IRX as a
+generated, ignored C build artifact before the optional binding is cross-linked.
+`platform/ps2/rfauds2_runtime.c` coordinates init, latency/volume/stat reset,
+accepted-frame prebuffering, start, statistics, stop, flush and shutdown with fixed
+caller-owned storage. The ROM diagnostic advances eight predetermined emulated
+frame horizons regardless of device results; pumps and bounded final polls cannot
+advance the machine. Do not copy RFAuds2 source into unrelated `core/` directories.
+Target execution, continuous streaming and real-hardware underrun/backpressure
+validation remain. See the
 [PS2 audio-adapter audit](ps2-audio-adapter-audit.md).
 
 ## Dedicated optimization candidates
@@ -122,7 +131,7 @@ No optimization below has been implemented or benchmarked. These are research ga
 - [ ] VU1 candidate vector kernels and synchronization-cost review
 - [ ] SPU2 final audio buffering and underrun measurement
 - [x] Pin reviewed RFAuds2 revision `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`
-- [ ] [IN PROGRESS] PS2-only audio adapter for the common PCM contract — thin optional RFAuds2 mapping exists; runtime lifecycle remains
+- [ ] [IN PROGRESS] PS2-only audio adapter for the common PCM contract — fixed-storage lifecycle diagnostic is connected; target execution and continuous delivery remain
 - [ ] [IN PROGRESS] RFAuds2 asynchronous tail/backpressure handling — launch/poll and ordered retry are host verified; target validation remains
 - [ ] RFAuds2 FAT/Slim PS2 and long-duration validation
 - [ ] IOP platform services, storage and peripherals

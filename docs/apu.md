@@ -26,15 +26,16 @@ returns no frame; neither case changes emulated time. A separate bounded
 integer-linear converter now drains already-produced frames at output rates greater
 than or equal to 32 kHz. It keeps at most two source frames, emits only into
 caller-bounded blocks and returns no fabricated frame on starvation. There is still
-no audio-device output.
+no verified audio-device output. The PS2-only build has a bounded RFAuds2 lifecycle
+diagnostic, but no target execution or sustained-playback evidence.
 
 ## Design direction
 
 Keep port synchronization and sample-buffer ownership explicit. Platform pacing must not alter
 deterministic core state. The common boundary exposes typed emulated PCM without device
 APIs. The common rate converter is a deterministic reference utility, not an audio
-clock: it never runs the machine to satisfy a consumer. PS2 will prefer a PS2-only
-RFAuds2 adapter; PSP and host remain independent.
+clock: it never runs the machine to satisfy a consumer. PS2 uses an optional PS2-only
+RFAuds2 lifecycle/transport adapter; PSP and host remain independent.
 The SPU2/RFAuds2 output rate must never drive SPC700/S-DSP time. Decide output format,
 resampling and underrun policy from correctness and target latency measurements.
 
@@ -96,3 +97,7 @@ SNES timing source. The initial audit covered `0.1.0-alpha.1` at
 pins merged `0.1.0-alpha.2` commit
 `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`. Before emulation implementation,
 record hardware references and independently authored regression evidence.
+The PS2 coordinator embeds the pinned IRX, prebuffers only frames reported accepted,
+and performs start/statistics/stop/flush/shutdown outside `core/`. Its bounded ROM
+diagnostic advances predetermined machine horizons before pumping; no device result
+can select an emulated deadline or request more samples.

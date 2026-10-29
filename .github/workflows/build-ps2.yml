@@ -9,6 +9,7 @@ permissions:
   contents: read
 env:
   RFAUDS2_REF: 38cd7ae09a1ad646c9009e5ff38f675ecc8ee584
+  RFAUDS2_PS2SDK_REF: 4996c6f63d42d2cf5d68dfa2f7bb74b9e3c653f5
 jobs:
   build:
     name: PS2 diagnostic build
@@ -36,7 +37,16 @@ jobs:
           git -C "$RUNNER_TEMP/rfauds2" fetch --depth 1 origin "$RFAUDS2_REF"
           git -C "$RUNNER_TEMP/rfauds2" checkout --detach FETCH_HEAD
           test "$(git -C "$RUNNER_TEMP/rfauds2" rev-parse HEAD)" = "$RFAUDS2_REF"
-          make -C "$RUNNER_TEMP/rfauds2" build/librfauds2.a PS2DEV="$PS2DEV" PS2SDK="$PS2SDK"
+          git init "$RUNNER_TEMP/ps2sdk-src"
+          git -C "$RUNNER_TEMP/ps2sdk-src" remote add origin https://github.com/ps2dev/ps2sdk.git
+          git -C "$RUNNER_TEMP/ps2sdk-src" fetch --depth 1 origin "$RFAUDS2_PS2SDK_REF"
+          git -C "$RUNNER_TEMP/ps2sdk-src" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/ps2sdk-src" rev-parse HEAD)" = "$RFAUDS2_PS2SDK_REF"
+          make -C "$RUNNER_TEMP/rfauds2" \
+            build/librfauds2.a build/rfauds2.irx \
+            PS2DEV="$PS2DEV" PS2SDK="$PS2SDK" \
+            PS2SDKSRC="$RUNNER_TEMP/ps2sdk-src"
+          test -s "$RUNNER_TEMP/rfauds2/build/rfauds2.irx"
       - name: Cross-compile diagnostic
         env:
           PS2DEV: ${{ runner.temp }}/mipsnes2-toolchains/ps2dev
@@ -50,7 +60,7 @@ jobs:
           mkdir -p dist
           cp platform/ps2/mipsnes2-ps2.elf dist/
           cp LICENSE tools/toolchains.json dist/
-          printf '%s\n' "Commit: $GITHUB_SHA" "Five on-screen core checks; ROM execution unavailable; PS2 runtime unverified." > dist/BUILD.txt
+          printf '%s\n' "Commit: $GITHUB_SHA" "Five on-screen core checks; bounded ROM path includes an unverified RFAuds2 lifecycle diagnostic." > dist/BUILD.txt
           cd dist
           sha256sum mipsnes2-ps2.elf LICENSE toolchains.json BUILD.txt > SHA256SUMS
           sha256sum -c SHA256SUMS

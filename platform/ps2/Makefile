@@ -22,8 +22,9 @@ RFAUDS2_CHECKOUT_COMMIT = $(shell git -C $(RFAUDS2_ROOT) rev-parse HEAD 2>/dev/n
 ifneq ($(RFAUDS2_CHECKOUT_COMMIT),$(RFAUDS2_REQUIRED_COMMIT))
 $(error RFAUDS2_ROOT must be exact commit $(RFAUDS2_REQUIRED_COMMIT))
 endif
-EE_OBJS += rfauds2_transport.o
+EE_OBJS += rfauds2_transport.o rfauds2_runtime.o rfauds2_irx.o
 EE_INCS += -I$(RFAUDS2_ROOT)/include
+EE_CFLAGS += -DMIPSNES2_RFAUDS2=1
 EE_LDFLAGS += -L$(RFAUDS2_ROOT)/build
 EE_LIBS := -lrfauds2 $(EE_LIBS)
 endif
@@ -41,6 +42,15 @@ audio_adapter.o: audio_adapter.c audio_adapter.h ../../core/apu/pcm.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 rfauds2_transport.o: rfauds2_transport.c rfauds2_transport.h audio_adapter.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+rfauds2_runtime.o: rfauds2_runtime.c rfauds2_runtime.h rfauds2_transport.h audio_adapter.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+rfauds2_irx.c: $(RFAUDS2_ROOT)/build/rfauds2.irx
+	bin2c $< $@ rfauds2_irx
+
+rfauds2_irx.o: rfauds2_irx.c
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 log.o: ../../core/common/log.c ../../core/common/log.h
@@ -166,6 +176,7 @@ rom_file.o: rom_file.c rom_file.h
 
 clean:
 	rm -f $(EE_BIN) $(EE_OBJS)
+	rm -f rfauds2_irx.c
 
 include $(PS2SDK)/samples/Makefile.pref
 include $(PS2SDK)/samples/Makefile.eeglobal

@@ -4,6 +4,7 @@
 *.d
 *.a
 /platform/ps2/*.elf
+/platform/ps2/rfauds2_irx.c
 /platform/psp/*.elf
 /platform/psp/*.prx
 /platform/psp/*.PBP

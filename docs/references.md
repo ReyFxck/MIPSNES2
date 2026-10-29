@@ -113,7 +113,7 @@ independent tests or real-hardware observations before marking behavior verified
 - [fullsnes: SNES APU DSP BRR Pitch](https://problemkaputt.de/fullsnes.htm) — independent hardware specification cross-check for coefficient indices, per-product shifts, partial signed-16 wrap, final clamp/shift, pitch-counter fields and PMON's effect on BRR rather than the noise generator. Consulted 2026-10-28; no implementation source was used.
 - [Anomie's S-DSP Doc with updates by jwdonal, revision 1212](https://gist.github.com/nyanpasu64/a0d916ce6924912a7116682bf778e9a0) — independent hardware research for key polling, BRR/ring/pitch traversal, envelope/noise arithmetic, left-aligned 15-bit output, `OUTX`, signed volume `>>7`, staged signed PMON arithmetic and interpolation-position cap, Voice-0-to-7 mixing, the echo ring/FIR/feedback/output formula, `EDL=0`, delayed `ESA`, protected writes and mute continuation. Consulted 2026-10-28. Its Gaussian coefficient table is explicitly credited there to another emulator and was deliberately not imported; no emulator source was used.
 - [Anomie's document index](https://sneslab.net/wiki/List_of_Anomie%27s_Docs) — includes dedicated SPC700 cycle, boot ROM and S-DSP research documents.
-- [RFAuds2](https://github.com/ReyFxck/RFAuds2) — preferred experimental future PS2 PCM transport only. Pin a known revision before integration; never use it as an S-DSP timing or behavior source and never copy it into the shared core.
+- [RFAuds2](https://github.com/ReyFxck/RFAuds2) — preferred experimental PS2 PCM transport, pinned for the optional integration at merged commit `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`. Never use it as an S-DSP timing or behavior source and never copy it into the shared core.
 
 ## Independent SNES tests
 

@@ -991,12 +991,22 @@ state machine has deterministic host coverage, and the broad unused-function war
 suppression is gone. Its final branch push, PR and merged-main cross-build CIs passed.
 See the
 [PS2 audio-adapter audit](docs/ps2-audio-adapter-audit.md) and
-[RFAuds2 branch review](docs/rfauds2-branch-review.md). No SPU2 runtime call, device
-pacing or audible-output result is claimed.
+[RFAuds2 branch review](docs/rfauds2-branch-review.md).
 
-Next primary block: connect the pinned optional binding to the PS2 runtime lifecycle
-with fixed storage, explicit IRX load/bind/prebuffer/start/stop order and on-screen
-diagnostics.
+The optional PS2 build now cross-builds and embeds the pinned RFAuds2 IRX, then the
+ROM entry connects fixed native/staging storage to a PS2-only lifecycle coordinator.
+Initialization orders IRX load/bind, 43 ms latency, volume and statistic reset;
+playback starts only after completed asynchronous polls report at least 1,536
+accepted frames. A bounded statistics snapshot precedes ordered stop, flush and
+shutdown. The diagnostic always makes eight bounded machine calls toward predetermined
+absolute NTSC horizons, with one launch/poll after each; bounded final collection
+polls cannot run the machine. Synthetic host coverage verifies init/failure order, prebuffer/start,
+busy rules, diagnostics and shutdown. Cross-build success will establish only SDK
+portability: no target IRX/RPC/SPU2 execution, pacing, sustained delivery or audible
+output result is claimed.
+
+Next primary block: capture the bounded IRX init/prebuffer/start/statistics/shutdown
+diagnostic on an Android PS2 emulator with version/settings and ELF checksum.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2271,14 +2281,14 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Storage and ROM selection — explicit PS2 path adapter exists; mount lifecycle and picker absent
 - [ ] SRAM persistence
 - [ ] SPU2 output
-- [ ] [IN PROGRESS] Audio buffering — bounded 48 kHz staging and retained-tail ownership are host verified; device buffering remains
+- [ ] [IN PROGRESS] Audio buffering — bounded 48 kHz staging, retained-tail ownership and accepted-frame prebuffer policy are host verified; target device buffering remains
 - [x] Pin a reviewed RFAuds2 version/revision — merged `main` commit `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`
-- [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — thin optional binding exists; runtime lifecycle remains
+- [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — fixed-storage lifecycle diagnostic is connected; target execution and continuous streaming remain
 - [ ] [IN PROGRESS] RFAuds2 asynchronous accepted-tail/backpressure handling — two-phase launch/poll and ordered retry are host verified; target runtime remains
 - [ ] RFAuds2 FAT/Slim real-hardware and long-duration validation
-- [ ] IOP service initialization
-- [ ] Error reporting
-- [ ] Memory budget enforcement
+- [ ] [IN PROGRESS] IOP service initialization — embedded IRX init/bind path is modeled and built; target execution remains
+- [ ] [IN PROGRESS] Error reporting — bounded on-screen lifecycle/device/statistics results exist; user-facing recovery remains
+- [ ] [IN PROGRESS] Memory budget enforcement — fixed capacities replace heap use; linked/IRX and target peak measurements remain
 - [ ] Real PS2 boot test
 - [ ] Real PS2 integrated runtime test
 
