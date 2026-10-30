@@ -698,6 +698,18 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     return MIPSNES2_MACHINE_OK;
 }
 
+bool mipsnes2_machine_set_joypad(mipsnes2_machine *machine, uint8_t index,
+                                 uint16_t input, bool connected)
+{
+    if (machine == NULL || !machine->ready ||
+        index >= MIPSNES2_CPU_IO_JOYPAD_COUNT) {
+        return false;
+    }
+    return mipsnes2_cpu_io_set_joypad_input(&machine->io, index, input) &&
+           mipsnes2_cpu_io_set_joypad_connected(
+               &machine->io, index, connected);
+}
+
 mipsnes2_machine_result mipsnes2_machine_init(
     mipsnes2_machine *machine, const mipsnes2_machine_config *config)
 {

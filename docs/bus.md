@@ -60,7 +60,9 @@ NMITIMEN stores only the documented NMI, H/V IRQ-mode and automatic-joypad-enabl
 bits. The compare registers retain nine bits. The non-interlaced H/V timing component
 supplies separate VBlank, HBlank and delayed NMI-flag transitions. It also drives a
 deterministic automatic-joypad busy interval and result commit from caller-supplied
-logical input snapshots; no platform input API is used. The H/V component supplies
+logical input snapshots. `mipsnes2_machine_set_joypad` is the stable injection
+boundary; PS2, PSP and host backends still own physical sampling and translation.
+The H/V component supplies
 stable-register H/V
 timer-match signals. RDNMI/TIMEUP expose and acknowledge their latches, while HVBJOY
 reports current inputs. Reads combine implemented bits with the bus latch for
@@ -82,8 +84,9 @@ unverified; the current deterministic retrigger policy replaces the pending job.
 When NMITIMEN bit 0 is enabled, the H/V component snapshots four 16-bit logical
 controller lines at H=298 on the first VBlank line. `$4212` bit 0 remains set for
 4224 master clocks, after which all eight bytes at `$4218-$421F` update atomically.
-The live input setters are a machine-wiring contract: PS2, PSP and host backends must
-translate input independently before calling it. The fixed start phase and retaining
+The machine input setter is a wiring contract: PS2, PSP and host backends must
+translate physical state to the documented SNES serial-order word before calling it.
+The fixed start phase and retaining
 the old completed result while busy are deterministic foundation approximations;
 hardware research reports a varying phase and unreliable busy-time register data.
 

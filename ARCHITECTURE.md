@@ -127,8 +127,9 @@ The optional caller-owned `mipsnes2_cpu_io` state sits behind that CPU-I/O route
 implements NMITIMEN, the 9-bit H/V compare values, RDNMI, TIMEUP, HVBJOY and the
 unsigned 8x8 multiply/16-by-8 divide register set. It accepts four caller-owned
 logical 16-bit controller inputs and exposes completed automatic reads through
-`$4218-$421F`; input sampling remains outside the core and no platform controller API
-crosses this boundary. The same words feed the standard manual serial-port
+`$4218-$421F`. Platform backends translate physical state into SNES serial order
+and inject it through `mipsnes2_machine_set_joypad`; physical sampling remains
+outside the core. The same words feed the standard manual serial-port
 foundation: a `$4016` falling strobe snapshots all four lines, and `$4016`/`$4017`
 independently shift the paired first/third and second/fourth lines. This is
 platform-neutral CPU-I/O state, not a host controller backend. Math triggers retain old visible

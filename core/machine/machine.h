@@ -154,6 +154,11 @@ mipsnes2_machine_result mipsnes2_machine_init(
  * The timed RESET vector sequence is then performed by resume().
  */
 mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine);
+/* Inject one already-translated SNES serial-order standard-pad word. Physical
+ * PS2/PSP/host mapping stays in the platform backend. Power-on clears inputs,
+ * so a backend must refresh current state afterward. */
+bool mipsnes2_machine_set_joypad(mipsnes2_machine *machine, uint8_t index,
+                                 uint16_t input, bool connected);
 /* One RESET sequence or CPU instruction, resumable at an absolute horizon.
  * HORIZON_REACHED and event budget exhaustion preserve the active cursor.
  * The APU clock catches up to the shared scheduler time before return. Inspect

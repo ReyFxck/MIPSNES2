@@ -123,6 +123,10 @@ snapshot isolation, `$4218-$421F`, read-only writes and enable/complete transiti
 Manual-port cases cover live high-strobe B bits, falling-edge snapshots, independent
 port clocks, all 16 bits on all four lines, post-word connected padding, open/fixed
 return bits and deterministic coexistence with automatic polling. The
+machine-input fixture verifies the public machine injection boundary against both
+manual `$4016/$4017` shifts and the H/V-triggered automatic snapshot, including
+busy-time snapshot isolation, connectivity padding, invalid calls and power-on
+clearing. It does not exercise any physical PS2/PSP controller API. The
 programmable-I/O cases cover the `FF` initialization contract, write-only reads,
 wired-AND external levels, read-only writes, bit-7 falling edges and one-shot edge
 consumption. The
@@ -295,6 +299,8 @@ Automatic controller-read evidence is recorded in
 [auto-joypad-audit.md](auto-joypad-audit.md).
 Manual standard-controller serial-port evidence is recorded in
 [manual-joypad-audit.md](manual-joypad-audit.md).
+Machine-level standard-pad wiring evidence is recorded in
+[machine-input-integration-audit.md](machine-input-integration-audit.md).
 Programmable I/O-port evidence is recorded in
 [5a22-io-port-audit.md](5a22-io-port-audit.md).
 Non-interlaced PPU counter-register evidence is recorded in

@@ -29,7 +29,9 @@ CPU-I/O interrupt handoff evidence is in
 and controller evidence is in
 [docs/5a22-math-register-audit.md](docs/5a22-math-register-audit.md) and
 [docs/auto-joypad-audit.md](docs/auto-joypad-audit.md), with manual serial-port
-evidence in [docs/manual-joypad-audit.md](docs/manual-joypad-audit.md).
+evidence in [docs/manual-joypad-audit.md](docs/manual-joypad-audit.md) and
+machine-level injection evidence in
+[docs/machine-input-integration-audit.md](docs/machine-input-integration-audit.md).
 Programmable I/O-port evidence is in
 [docs/5a22-io-port-audit.md](docs/5a22-io-port-audit.md).
 The counter-register foundation is scoped in
@@ -410,6 +412,10 @@ clock before the third frame's first callback, with the H/V state agreeing acros
 both executions. This closes the host-verified event/scanline wiring, not missing
 PPU modes, mid-line effects, exact phases or console presentation. See the
 [machine PPU event audit](docs/machine-ppu-event-audit.md).
+Revision `655cd3f` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40994984067),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40994984131) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40994984169).
 
 The shared DMA foundation now holds the eight `$43x0-$43xB` channel banks,
 including the `$43xB/$43xF` alias, and routes them through the machine bus.
@@ -1588,6 +1594,16 @@ remain incomplete. Local and GitHub verification evidence is recorded in
 [docs/manual-joypad-audit.md](docs/manual-joypad-audit.md); no console runtime,
 compatibility or performance result is claimed.
 
+The Phase 9 machine-input integration on 2026-10-29 adds
+`mipsnes2_machine_set_joypad` as the platform-neutral boundary for four translated
+standard-pad words and connectivity flags. An executable machine fixture drives the
+same injected state through manual `$4016/$4017` serial reads and the automatic
+H/V-triggered `$4218-$421F` snapshot, verifies busy-time isolation and checks that
+power-on clears stale inputs. This closes only the core-to-machine wiring. Physical
+PS2/PSP controller sampling, button mapping, hotplug and target validation remain
+open, so the PS2 `Pad input` backend item is not claimed complete. Exact scope is in
+[docs/machine-input-integration-audit.md](docs/machine-input-integration-audit.md).
+
 The programmable I/O-port foundation on 2026-10-20 adds `$4201` WRIO and `$4213`
 RDIO. The caller owns external pin levels; reads combine them with the output latch
 using open-collector wired-AND behavior. Combined bit-7 falling edges are retained
@@ -2151,6 +2167,7 @@ platform persistence remains incomplete.
 - [x] VBlank auto-joypad busy window and atomic completion
 - [x] Standard manual joypad strobe and four serial data lines on `$4016/$4017`
 - [x] Independent manual port clocks, 16-bit order and connected padding
+- [x] Machine-level standard-pad injection drives manual and automatic paths
 - [x] WRIO/RDIO programmable I/O latch and wired-AND external levels
 - [x] Programmable I/O bit-7 falling-edge handoff
 - [ ] [IN PROGRESS] PPU H/V counter-latch consumption and register behavior — deterministic adapter exists; exact capture timing and held-low cases pending
