@@ -46,13 +46,15 @@ handshake, shutdown/rebind cleanup, transactional start priming, guarded latency
 shrink and pinned cross-build inputs.
 
 Physical FAT/Slim validation and long-duration lifecycle/underrun stress remain
-mandatory before production-readiness claims.
+valuable 1.0 release evidence. The supported transport path is stable and functional;
+those target checks remain separate from host/cross-build proof.
 
 ## MIPSNES2 pin and binding decision
 
-MIPSNES2 pins the merged RFAuds2 `main` commit
-`38cd7ae09a1ad646c9009e5ff38f675ecc8ee584` exactly. This is RFAuds2
-`0.1.0-alpha.2` with the protocol-v2 and refill-lifecycle hardening reviewed above.
+MIPSNES2 pins stable RFAuds2 `0.1.0` commit
+`257ca54afb08b9c8c2197c03d96fd32d5b15b2bc` exactly. It retains the protocol-v2
+and refill-lifecycle hardening reviewed above and passed
+[RFAuds2 CI](https://github.com/ReyFxck/RFAuds2/actions/runs/40993587920).
 
 The PS2 Makefile enables the external binding only with `MIPSNES2_RFAUDS2=1` and an
 `RFAUDS2_ROOT` whose Git HEAD exactly matches that SHA. PS2 CI fetches and builds the
@@ -60,6 +62,5 @@ same commit before cross-linking MIPSNES2. No RFAuds2 implementation source is c
 into MIPSNES2; the host fixture models only the narrow public type/function surface
 needed to verify the binding.
 
-Next primary milestone: connect the pinned optional binding to the PS2 runtime
-lifecycle with fixed storage, explicit IRX load/bind/prebuffer/start/stop order and
-on-screen diagnostics.
+Next primary milestone: capture the connected IRX init/prebuffer/start/statistics/
+shutdown diagnostic on an Android PS2 emulator with version/settings and ELF checksum.

@@ -62,23 +62,25 @@ The inspected upstream source revision documents conventions; the archive digest
 identifies the actual SDK/toolchain used for builds. These are distinct records.
 No emulator implementation was copied. Scaffolding calls only standard C functions.
 
-## Experimental PCM backend: RFAuds2
+## PCM backend: RFAuds2
 
-[ReyFxck/RFAuds2](https://github.com/ReyFxck/RFAuds2) is the preferred experimental
-PS2 PCM transport, provided continued testing shows it is suitable. The decision was
+[ReyFxck/RFAuds2](https://github.com/ReyFxck/RFAuds2) is the stable, functional PS2
+PCM transport selected for the optional backend. The decision was
 recorded after inspecting RFAuds2 `0.1.0-alpha.1` at revision
 `f82e0967104fc96f37259e1abc124341eef6a76c` on 2026-10-10, including its README,
 API/architecture material and emulator-integration guidance. The later
 `fix/comprehensive-hardening` work was corrected, re-reviewed and merged by
 [RFAuds2 PR #2](https://github.com/ReyFxck/RFAuds2/pull/2). Its `0.1.0-alpha.2`
-`main` merge commit `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584` became the exact
-integration pin on 2026-10-29; see the [branch review](rfauds2-branch-review.md).
+`main` merge commit `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584` supplied the reviewed
+code base; see the [branch review](rfauds2-branch-review.md). The current exact
+integration pin is stable source version `0.1.0` at
+`257ca54afb08b9c8c2197c03d96fd32d5b15b2bc`.
 
-RFAuds2 is pre-1.0/experimental. Its current repository reports deterministic host
-regressions and PS2 cross-build coverage, plus audible testing in NetherSX2 inherited
-from its earlier audio path. Physical FAT/Slim PS2 validation and long emulator stress
-remain required. These facts and the bounded lifecycle integration make it a
-preferred candidate, not a production-readiness claim.
+RFAuds2's supported 48 kHz stereo S16 path is stable and functional. Its repository
+has deterministic converter, mixer, transport, refill and lifecycle regressions plus
+PS2 cross-build coverage. Physical FAT/Slim validation and long emulator stress remain
+release-quality evidence gaps; MIPSNES2 does not convert build success into a target
+runtime claim.
 
 The required boundary is:
 
@@ -132,7 +134,7 @@ No optimization below has been implemented or benchmarked. These are research ga
 - [ ] VU0 candidate vector kernels and synchronization-cost review
 - [ ] VU1 candidate vector kernels and synchronization-cost review
 - [ ] SPU2 final audio buffering and underrun measurement
-- [x] Pin reviewed RFAuds2 revision `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`
+- [x] Pin stable RFAuds2 `0.1.0` revision `257ca54afb08b9c8c2197c03d96fd32d5b15b2bc`
 - [ ] [IN PROGRESS] PS2-only audio adapter for the common PCM contract — fixed-storage lifecycle diagnostic is connected; target execution and continuous delivery remain
 - [ ] [IN PROGRESS] RFAuds2 asynchronous tail/backpressure handling — launch/poll and ordered retry are host verified; target validation remains
 - [ ] RFAuds2 FAT/Slim PS2 and long-duration validation

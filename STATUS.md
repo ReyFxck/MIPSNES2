@@ -979,8 +979,9 @@ errors, reset and saturation. Revision `170b00f` passed
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40907886069) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40907886149).
 
-The merged RFAuds2 `main` revision
-`38cd7ae09a1ad646c9009e5ff38f675ecc8ee584` is now the exact pin.
+The stable RFAuds2 `0.1.0` revision
+`257ca54afb08b9c8c2197c03d96fd32d5b15b2bc` is now the exact pin. It retains the
+protocol-v2/refill-lifecycle implementation reviewed at merge commit `38cd7ae`.
 The optional PS2-only binding maps its `submit_s16_async`/`submit_poll` API to the
 adapter without copying RFAuds2 source into this repository. Host tests use a narrow
 API fixture, the PS2 workflow fetches and cross-builds that exact checkout, and the
@@ -2285,7 +2286,7 @@ platform persistence remains incomplete.
 - [ ] SRAM persistence
 - [ ] SPU2 output
 - [ ] [IN PROGRESS] Audio buffering — bounded 48 kHz staging, retained-tail ownership and accepted-frame prebuffer policy are host verified; target device buffering remains
-- [x] Pin a reviewed RFAuds2 version/revision — merged `main` commit `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`
+- [x] Pin a reviewed RFAuds2 version/revision — stable `0.1.0` commit `257ca54afb08b9c8c2197c03d96fd32d5b15b2bc`
 - [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — fixed-storage lifecycle diagnostic is connected; target execution and continuous streaming remain
 - [ ] [IN PROGRESS] RFAuds2 asynchronous accepted-tail/backpressure handling — two-phase launch/poll and ordered retry are host verified; target runtime remains
 - [ ] RFAuds2 FAT/Slim real-hardware and long-duration validation

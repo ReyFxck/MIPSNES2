@@ -79,9 +79,10 @@ cannot establish audible output, latency, thread behavior or physical SPU2 stabi
 
 ## Open boundaries
 
-- Merged RFAuds2 `main` commit `38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`
-  is the exact pin after the protocol-v2/refill-lifecycle review. The optional PS2
-  build now embeds its IRX and connects the bounded coordinator to the ROM path.
+- Stable RFAuds2 `0.1.0` commit
+  `257ca54afb08b9c8c2197c03d96fd32d5b15b2bc` is the exact pin. It retains the
+  protocol-v2/refill-lifecycle code reviewed at merge commit `38cd7ae`; the optional
+  PS2 build embeds its IRX and connects the bounded coordinator to the ROM path.
 - Cross-compilation and synthetic host tests do not prove that module loading,
   RPC binding, SPU2 startup, statistics or shutdown execute correctly on a target.
 - Underrun concealment, recovery and continuous streaming remain platform-runtime

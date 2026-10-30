@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 env:
-  RFAUDS2_REF: 38cd7ae09a1ad646c9009e5ff38f675ecc8ee584
+  RFAUDS2_REF: 257ca54afb08b9c8c2197c03d96fd32d5b15b2bc
   RFAUDS2_PS2SDK_REF: 4996c6f63d42d2cf5d68dfa2f7bb74b9e3c653f5
 jobs:
   build:

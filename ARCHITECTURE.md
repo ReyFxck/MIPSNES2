@@ -619,8 +619,8 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-10-17: Cartridge image layout and internal-header parsing are distinct from
   executable mapper configuration. Copier-prefix handling is an explicit caller policy;
   raw header fields are diagnostic evidence, never a title-based selection rule.
-- 2026-10-10: RFAuds2 is the preferred future PS2 PCM transport, isolated behind a
-  platform audio adapter and subject to pinning plus real-PS2 validation.
+- 2026-10-10: RFAuds2 is the selected PS2 PCM transport, isolated behind a platform
+  audio adapter and subject to an exact stable pin plus target validation.
 - 2026-10-19: The first H/V component uses caller-owned non-interlaced NTSC/PAL
   master-clock state and drives blank/NMI inputs independently. VBlank begins at H=0
   while RDNMI/NMI asserts at H=0.5; interlace remains explicit future work.

@@ -18,7 +18,7 @@ ifeq ($(MIPSNES2_RFAUDS2),1)
 ifeq ($(strip $(RFAUDS2_ROOT)),)
 $(error RFAUDS2_ROOT is unset; see docs/ps2.md)
 endif
-RFAUDS2_REQUIRED_COMMIT = 38cd7ae09a1ad646c9009e5ff38f675ecc8ee584
+RFAUDS2_REQUIRED_COMMIT = 257ca54afb08b9c8c2197c03d96fd32d5b15b2bc
 RFAUDS2_CHECKOUT_COMMIT = $(shell git -C $(RFAUDS2_ROOT) rev-parse HEAD 2>/dev/null)
 ifneq ($(RFAUDS2_CHECKOUT_COMMIT),$(RFAUDS2_REQUIRED_COMMIT))
 $(error RFAUDS2_ROOT must be exact commit $(RFAUDS2_REQUIRED_COMMIT))

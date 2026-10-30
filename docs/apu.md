@@ -92,11 +92,11 @@ contract, bounded FIFO and machine attachment are recorded in the
 integer interpolation and chunk/starvation contract are recorded in the
 [PCM resampler audit](pcm-resampler-audit.md).
 RFAuds2 is transport infrastructure only and must never become a core dependency or
-SNES timing source. The initial audit covered `0.1.0-alpha.1` at
+SNES timing source. The initial audit covered the earlier code at
 `f82e0967104fc96f37259e1abc124341eef6a76c`; the reviewed PS2-only integration now
-pins merged `0.1.0-alpha.2` commit
-`38cd7ae09a1ad646c9009e5ff38f675ecc8ee584`. Before emulation implementation,
-record hardware references and independently authored regression evidence.
+pins stable source version `0.1.0` commit
+`257ca54afb08b9c8c2197c03d96fd32d5b15b2bc`. Hardware references and independently
+authored regression evidence remain mandatory for emulated behavior.
 The PS2 coordinator embeds the pinned IRX, prebuffers only frames reported accepted,
 and performs start/statistics/stop/flush/shutdown outside `core/`. Its bounded ROM
 diagnostic advances predetermined machine horizons before pumping; no device result

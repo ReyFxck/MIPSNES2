@@ -43,12 +43,11 @@ does not establish runtime correctness. No performance measurement was made.
 
 ## RFAuds2 decision evidence
 
-The separate ReyFxck/RFAuds2 repository was inspected at version
-`0.1.0-alpha.1`, revision `f82e0967104fc96f37259e1abc124341eef6a76c`. Its README
-and emulator guidance identify it as pre-1.0/experimental, describe a fixed 48 kHz
-stereo S16 SPU2 boundary, keep emulated timing producer-owned, and require FAT/Slim
-PS2 plus long-duration validation. MIPSNES2 records it only as the preferred future
-PS2 PCM transport. No RFAuds2 source, dependency or runtime integration was added.
+The separate ReyFxck/RFAuds2 repository was initially inspected at revision
+`f82e0967104fc96f37259e1abc124341eef6a76c`. Its guidance described a fixed 48 kHz
+stereo S16 SPU2 boundary, kept emulated timing producer-owned, and required FAT/Slim
+plus long-duration validation. That early audit added no RFAuds2 source, dependency
+or runtime integration; later PS2-only integration work is recorded separately.
 
 ## Audit conclusions
 
