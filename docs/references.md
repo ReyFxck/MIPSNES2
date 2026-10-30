@@ -128,6 +128,7 @@ asset, re-check its license at the exact pinned revision and add a provenance re
 ## PlayStation 2 target
 
 - [PS2SDK documentation](https://ps2dev.github.io/ps2sdk/) and [PS2SDK source/API headers](https://github.com/ps2dev/ps2sdk) — authoritative for the open-source SDK interfaces MIPSNES2 actually compiles against. Pin releases/commits; do not invent APIs from memory.
+- [PS2SDK `libpad.h` and pad sample at revision `4996c6f`](https://github.com/ps2dev/ps2sdk/blob/4996c6f63d42d2cf5d68dfa2f7bb74b9e3c653f5/ee/rpc/pad/include/libpad.h) — authoritative active-low button masks, states, aligned 256-byte buffer contract and `padInit`/open/state/read API; the [sample](https://github.com/ps2dev/ps2sdk/blob/4996c6f63d42d2cf5d68dfa2f7bb74b9e3c653f5/ee/rpc/pad/samples/pad/pad.c) supplies the ROM-module initialization sequence. Consulted 2026-10-30 for the PS2 pad boundary; no upstream source was copied.
 - [ps2toolchain](https://github.com/ps2dev/ps2toolchain) — toolchain build source and version basis used by CI pinning.
 - [ps2dev portal](https://ps2dev.github.io/) — maintained installation and development entry point.
 - [ps2tek](https://israpps.github.io/ps2tek/) — independent EE, DMAC, GIF, GS, VIF, VU, IOP and SPU2 hardware documentation. Confirm hardware-sensitive optimization claims with real-console measurements.

@@ -27,7 +27,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
-| platform/ps2 | EE lifecycle, I/O, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path, single-frame GS submission and bounded 48 kHz accepted-prefix/RFAuds2 lifecycle diagnostic; GS/audio target runtime unverified |
+| platform/ps2 | EE lifecycle, I/O, pad acquisition, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path, bounded `libpad` sampling, single-frame GS submission and bounded 48 kHz accepted-prefix/RFAuds2 lifecycle diagnostic; target runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
@@ -200,7 +200,11 @@ The PS2 ROM adapter copies that callback into a PS2-only RGBA32 frame;
 PSP remains independent and has no presentation path yet.
 The PS2 backend can submit the captured buffer once to a GS framebuffer;
 there is no verified runtime display or frame loop. PSP still has no
-presentation path.
+presentation path. On the bounded PS2 ROM path, a PS2-only `libpad` adapter samples
+port 0 once before each emulated frame horizon and translates the digital face,
+direction, shoulder, Start and Select buttons into the machine's standard-pad word.
+The core contains no PS2SDK type or call, and target input execution remains
+unverified.
 
 WRIO writes are synchronized immediately at the bus boundary. External input setters
 require `mipsnes2_snes_bus_sync_hv_latch` before advancing emulated time. The pending

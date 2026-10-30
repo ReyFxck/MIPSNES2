@@ -17,7 +17,9 @@ diagnostic instead makes eight bounded calls toward fixed absolute NTSC frame ho
 100,000-sequence bound. It prints CPU and timing
 status and captures bounded reference lines in a static RGBA32 texture. If
 at least one line is available, it submits one image to the GS. This path
-has no console runtime validation, continuous frame loop, verified audio or SRAM
+also attempts a nonblocking port-0 `libpad` sample before each fixed frame horizon
+and injects the translated standard-pad word into the machine. It has no console
+runtime validation, continuous frame loop, verified input/audio or SRAM
 persistence. It does not
 mount a USB device or provide a file picker. The original five-case diagnostic
 still runs without arguments; it is not a game or the final GS/video backend.
@@ -60,7 +62,25 @@ Verified conventions: `EE_BIN`, `EE_OBJS`, `EE_LIBS`, `EE_INCS`, `EE_CFLAGS`,
 
 The inspected upstream source revision documents conventions; the archive digest
 identifies the actual SDK/toolchain used for builds. These are distinct records.
-No emulator implementation was copied. Scaffolding calls only standard C functions.
+No emulator implementation was copied. The original scaffold uses standard C
+functions; the isolated target adapters use only the documented PS2SDK APIs named
+in their audits.
+
+## Pad input
+
+The PS2 ROM diagnostic owns one fixed 256-byte, 64-byte-aligned `libpad` DMA area.
+It uses the PS2SDK's documented `SifLoadModule`, `padInit`, `padPortOpen`,
+`padGetState` and `padRead` sequence without blocking the emulator on controller
+readiness. Stable port-0 data is translated as Cross/Square/Circle/Triangle to SNES
+B/Y/A/X, direct directions and Start/Select, and L1/R1 to SNES L/R. L2/R2, stick
+buttons and analog axes are intentionally unused for the standard-pad profile.
+Unavailable reads inject a disconnected zero word rather than retaining stale input.
+
+Host tests cover the complete active-low digital translation. Pinned PS2SDK
+cross-builds prove only API/link compatibility; ARMSX2/NetherSX2 and physical PS2
+runtime behavior, hotplug recovery, continuous gameplay polling, second port,
+multitap and PSP mapping remain open. See the
+[PS2 pad-input audit](ps2-pad-input-audit.md).
 
 ## PCM backend: RFAuds2
 

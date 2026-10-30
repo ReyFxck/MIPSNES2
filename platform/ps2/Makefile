@@ -3,11 +3,11 @@ ifeq ($(strip $(PS2SDK)),)
 $(error PS2SDK is unset; see docs/ps2.md)
 endif
 EE_BIN = mipsnes2-ps2.elf
-EE_OBJS = main.o diagnostic_suite.o rom_file.o video_frame.o gs_present.o audio_adapter.o log.o bus.o cpu_io.o apu_io_ports.o pcm.o dsp.o smp_timers.o smp_memory.o spc700_cpu.o apu_timing.o dma_registers.o dma_transfer.o hdma.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg4_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_mode1_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
+EE_OBJS = main.o diagnostic_suite.o rom_file.o video_frame.o gs_present.o pad_mapping.o pad_input.o audio_adapter.o log.o bus.o cpu_io.o apu_io_ports.o pcm.o dsp.o smp_timers.o smp_memory.o spc700_cpu.o apu_timing.o dma_registers.o dma_transfer.o hdma.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg4_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_mode1_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
 	cartridge_prepare.o machine.o
-EE_LIBS = -ldraw -lgraph -lpacket -ldma -ldebug -lc
+EE_LIBS = -ldraw -lgraph -lpacket -ldma -ldebug -lpad -lc
 EE_INCS = -I../..
 EE_CFLAGS = -std=c99 -Wextra -Werror
 BIN2C ?= bin2c
@@ -37,6 +37,12 @@ video_frame.o: video_frame.c video_frame.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 gs_present.o: gs_present.c gs_present.h video_frame.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+pad_mapping.o: pad_mapping.c pad_mapping.h ../../core/bus/cpu_io.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+pad_input.o: pad_input.c pad_input.h pad_mapping.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 audio_adapter.o: audio_adapter.c audio_adapter.h ../../core/apu/pcm.h
@@ -168,7 +174,7 @@ cartridge_prepare.o: ../../core/cartridge/prepare.c ../../core/cartridge/prepare
 machine.o: ../../core/machine/machine.c ../../core/machine/machine.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
-main.o: main.c diagnostic_suite.h
+main.o: main.c diagnostic_suite.h pad_input.h
 
 diagnostic_suite.o: diagnostic_suite.c diagnostic_suite.h ../../core/bus/snes_bus.h ../../core/cpu/65c816/cpu.h ../../core/scheduler/cpu_timing.h
 

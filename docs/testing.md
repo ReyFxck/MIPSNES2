@@ -176,6 +176,11 @@ The machine-SRAM fixture executes two 65C816 long stores through a constructed
 LoROM machine, observes their live dirty/revision handoff, rejects a stale
 acknowledgement, accepts the current revision and checks power-on retention. It does
 not write a save file or exercise a target filesystem.
+The PS2 pad-mapping fixture exhausts the twelve mapped active-low digital buttons,
+their full combination, ignored L2/R2/L3/R3 inputs and a mixed-button word. The
+pad-input fixture uses narrow SDK stubs to cover module/init/open failures, aligned
+storage, connection/read states and cleanup; the real PS2SDK lifecycle is
+cross-compiled but cannot execute on the host.
 The cartridge-image regression executable covers clean and copier-prefixed view
 policies, malformed sizes, LoROM/HiROM/ExHiROM header offsets, raw 16-byte
 registration fields, normalized
@@ -327,6 +332,8 @@ SRAM persistence-handoff evidence is recorded in
 [cartridge-sram-persistence-audit.md](cartridge-sram-persistence-audit.md).
 Machine-level SRAM handoff evidence is recorded in
 [machine-sram-persistence-audit.md](machine-sram-persistence-audit.md).
+PS2 pad acquisition/mapping evidence is recorded in
+[ps2-pad-input-audit.md](ps2-pad-input-audit.md).
 
 ## End-of-task audit
 

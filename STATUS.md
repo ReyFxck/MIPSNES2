@@ -1599,8 +1599,8 @@ The Phase 9 machine-input integration on 2026-10-29 adds
 standard-pad words and connectivity flags. An executable machine fixture drives the
 same injected state through manual `$4016/$4017` serial reads and the automatic
 H/V-triggered `$4218-$421F` snapshot, verifies busy-time isolation and checks that
-power-on clears stale inputs. This closes only the core-to-machine wiring. Physical
-PS2/PSP controller sampling, button mapping, hotplug and target validation remain
+power-on clears stale inputs. This closes only the core-to-machine wiring. PSP
+controller sampling plus PS2 hotplug, continuous polling and target validation remain
 open, so the PS2 `Pad input` backend item is not claimed complete. Exact scope is in
 [docs/machine-input-integration-audit.md](docs/machine-input-integration-audit.md).
 Revision `c2e8bed` passed
@@ -1617,6 +1617,20 @@ survive machine power-on. This is not a filesystem backend: copying/coordinating
 live view, save paths, atomic replacement, debounce, errors and target storage tests
 remain open. See
 [docs/machine-sram-persistence-audit.md](docs/machine-sram-persistence-audit.md).
+Revision `3323ec4` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995929569),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995929448) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995929502).
+
+The PS2 bounded ROM path now has an initial physical-pad adapter. It loads the ROM
+`SIO2MAN`/`PADMAN` modules, opens port 0 with a fixed aligned DMA buffer and samples
+`libpad` once before each fixed emulated frame horizon. A host regression pins the
+digital mapping: Cross/Square/Circle/Triangle become SNES B/Y/A/X, directions and
+Start/Select are direct, L1/R1 become L/R, and analog/L2/R2/L3/R3 inputs are ignored.
+Disconnected or not-ready reads inject a disconnected zero word. The adapter is
+connected to `mipsnes2_machine_set_joypad`, but target execution, hotplug recovery,
+continuous polling, second port/multitap and PSP input remain absent. See
+[docs/ps2-pad-input-audit.md](docs/ps2-pad-input-audit.md).
 
 The programmable I/O-port foundation on 2026-10-20 adds `$4201` WRIO and `$4213`
 RDIO. The caller owns external pin levels; reads combine them with the output latch
@@ -2353,7 +2367,7 @@ platform persistence remains incomplete.
 - [ ] Video buffers and ownership
 - [ ] GIF packet lifetime
 - [ ] DMA cache coherency
-- [ ] Pad input
+- [ ] [IN PROGRESS] Pad input — port-0 `libpad` acquisition and host-verified digital mapping feed the bounded ROM path; target runtime/hotplug/continuous polling remain
 - [ ] [IN PROGRESS] Storage and ROM selection — explicit PS2 path adapter exists; mount lifecycle and picker absent
 - [ ] SRAM persistence
 - [ ] SPU2 output

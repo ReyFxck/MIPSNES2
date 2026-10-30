@@ -293,7 +293,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] CPU/bus/scheduler integration — ROM instruction/WRAM/H-V execution verified; remaining devices absent
 - [x] PPU event integration — two recurring machine frames deliver 448 ordered reference lines with a chunk-independent pixel hash
 - [x] APU sample integration — machine-clocked SPC700 register programming reaches deterministic non-zero DSP PCM with chunk-independent long hash
-- [x] Input integration — the machine API accepts translated standard-pad words and drives both manual and automatic reads; physical target mapping remains platform work
+- [x] Input integration — the machine API drives manual/automatic reads and a PS2 `libpad` mapper now feeds it; PS2 runtime and PSP mapping remain platform work
 - [ ] [IN PROGRESS] SRAM persistence integration — machine dirty-view/exact-acknowledgement boundary verified; durable platform file backends absent
 - [ ] Licensed test-ROM execution
 - [ ] Real PS2 runtime smoke

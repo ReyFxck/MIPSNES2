@@ -8,6 +8,7 @@
 
 #include "platform/ps2/diagnostic_suite.h"
 #include "platform/ps2/gs_present.h"
+#include "platform/ps2/pad_input.h"
 #include "platform/ps2/rom_file.h"
 #include "platform/ps2/video_frame.h"
 #ifdef MIPSNES2_RFAUDS2
@@ -44,6 +45,7 @@ static uint32_t video_pixels[MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS]
     __attribute__((aligned(64)));
 static mipsnes2_ps2_video_frame video_frame;
 static mipsnes2_machine machine;
+static mipsnes2_ps2_pad_input pad_input;
 #ifdef MIPSNES2_RFAUDS2
 static mipsnes2_pcm_frame pcm_frames[PS2_AUDIO_PCM_CAPACITY];
 static mipsnes2_pcm_frame audio_staging[PS2_AUDIO_STAGING_CAPACITY];
@@ -76,6 +78,12 @@ static void run_rom_path(const char *path)
     size_t steps;
     size_t total_steps = 0U;
     unsigned frame_index;
+    mipsnes2_ps2_pad_input_result pad_init_result;
+    mipsnes2_ps2_pad_input_result pad_poll_result =
+        MIPSNES2_PS2_PAD_INPUT_NOT_READY;
+    uint16_t pad_word = 0U;
+    unsigned pad_samples = 0U;
+    bool pad_connected = false;
 #ifdef MIPSNES2_RFAUDS2
     mipsnes2_ps2_rfauds2_runtime_report audio_report;
     mipsnes2_ps2_rfauds2_diagnostics audio_diagnostics;
@@ -129,6 +137,8 @@ static void run_rom_path(const char *path)
         scr_printf("ROM header/mapper unsupported.\n");
         return;
     }
+    pad_init_result = mipsnes2_ps2_pad_input_init(&pad_input);
+    scr_printf("Pad init: %u\n", (unsigned)pad_init_result);
 #ifdef MIPSNES2_RFAUDS2
     (void)memset(&audio_report, 0, sizeof(audio_report));
     (void)memset(&audio_diagnostics, 0, sizeof(audio_diagnostics));
@@ -151,6 +161,15 @@ static void run_rom_path(const char *path)
         mipsnes2_master_clock horizon =
             frame_clocks * (mipsnes2_master_clock)(frame_index + 1U);
 
+        if (pad_init_result == MIPSNES2_PS2_PAD_INPUT_OK) {
+            pad_poll_result = mipsnes2_ps2_pad_input_poll(
+                &pad_input, &pad_word, &pad_connected);
+            if (pad_poll_result == MIPSNES2_PS2_PAD_INPUT_OK) {
+                ++pad_samples;
+            }
+        }
+        (void)mipsnes2_machine_set_joypad(
+            &machine, 0U, pad_word, pad_connected);
         run_result = mipsnes2_machine_run_until(
             &machine, horizon, PS2_CPU_STEP_LIMIT, PS2_EVENT_BUDGET,
             &steps, &report, &timing_result);
@@ -173,6 +192,9 @@ static void run_rom_path(const char *path)
                (unsigned)report.cpu_result);
     scr_printf("PPU lines captured: %u / 224\n",
                (unsigned)video_frame.delivered_rows);
+    scr_printf("Pad: poll %u, samples %u, word %04X, connected %u\n",
+               (unsigned)pad_poll_result, pad_samples, (unsigned)pad_word,
+               pad_connected ? 1U : 0U);
 #ifdef MIPSNES2_RFAUDS2
     if (audio_ready) {
         unsigned poll_count;
@@ -212,6 +234,7 @@ static void run_rom_path(const char *path)
 #else
     scr_printf("No PS2 audio binding in this build.\n");
 #endif
+    mipsnes2_ps2_pad_input_end(&pad_input);
     scr_printf("Reference video path; gameplay incomplete.\n");
     (void)printf("MIPSNES2 PS2 ROM CPU: %lu sequences, %lu clocks, "
                  "run=%u, timing=%u, cpu=%u\n",
