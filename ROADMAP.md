@@ -281,7 +281,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Resampling policy — deterministic integer-linear conversion from native 32 kHz to bounded caller blocks at rates at or above 32 kHz
 - [x] Underflow/overflow behavior — empty read and drop-newest/count-full semantics are explicit
 - [ ] [IN PROGRESS] PS2 48 kHz transport contract — bounded asynchronous launch/poll, accepted-tail retry and fixed-storage RFAuds2 lifecycle are host verified; target/SPU2 validation remains
-- [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
+- [x] Host offline audio tests — bounded vectors plus a 65,536-frame PCM/ARAM hash regression pass across regular and irregular cycle chunks
 - [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP/PCM and machine fixtures exist; exact phases remain
 
 ## Phase 9 — Base SNES Integration

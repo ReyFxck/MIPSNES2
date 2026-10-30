@@ -1523,6 +1523,226 @@ static int test_pcm_handoff(void)
     return 0;
 }
 
+enum {
+    LONG_PCM_HASH_FRAMES = 65536,
+    LONG_PCM_FIFO_FRAMES = 128
+};
+
+typedef struct {
+    uint64_t pcm_hash;
+    uint64_t ram_hash;
+    uint64_t frame_count;
+    uint64_t smp_cycles;
+    uint64_t sample_count;
+    uint64_t enqueued_frames;
+    uint64_t consumed_frames;
+    uint64_t dropped_frames;
+    uint16_t noise_lfsr;
+    uint16_t envelope_counter;
+    uint16_t echo_offset;
+    int16_t last_left;
+    int16_t last_right;
+    uint8_t sample_phase;
+    uint8_t echo_history_index;
+} long_pcm_hash_result;
+
+static uint64_t fnv1a_byte(uint64_t hash, uint8_t value)
+{
+    return (hash ^ value) * UINT64_C(1099511628211);
+}
+
+static uint64_t hash_pcm_frame(uint64_t hash, mipsnes2_pcm_frame frame)
+{
+    uint16_t left = (uint16_t)frame.left;
+    uint16_t right = (uint16_t)frame.right;
+
+    hash = fnv1a_byte(hash, (uint8_t)left);
+    hash = fnv1a_byte(hash, (uint8_t)(left >> 8U));
+    hash = fnv1a_byte(hash, (uint8_t)right);
+    return fnv1a_byte(hash, (uint8_t)(right >> 8U));
+}
+
+static bool configure_long_pcm_hash(mipsnes2_dsp *dsp,
+                                    uint8_t ram[MIPSNES2_DSP_ARAM_SIZE])
+{
+    static const uint8_t fir[MIPSNES2_DSP_FIR_TAP_COUNT] = {
+        UINT8_C(12), UINT8_C(0xf8), UINT8_C(20), UINT8_C(32),
+        UINT8_C(0xf0), UINT8_C(8), UINT8_C(4), UINT8_C(48)
+    };
+    size_t index;
+
+    (void)memset(ram, 0, MIPSNES2_DSP_ARAM_SIZE);
+    for (index = 0U; index < 4096U; ++index) {
+        ram[UINT16_C(0x6000) + index] = (uint8_t)(
+            (index * 73U) + ((index >> 3U) * 19U) + 0x5aU);
+    }
+    mipsnes2_dsp_init(dsp);
+    if (!mipsnes2_dsp_attach_ram(dsp, ram, MIPSNES2_DSP_ARAM_SIZE) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_FLG, UINT8_C(0x1f)) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_NON, UINT8_C(3)) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_EON, UINT8_C(1)) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_ESA, UINT8_C(0x60)) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_EDL, UINT8_C(2)) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_MAIN_VOLUME_LEFT,
+                        UINT8_C(0x55)) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_MAIN_VOLUME_RIGHT,
+                        UINT8_C(0xb0)) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_ECHO_VOLUME_LEFT,
+                        UINT8_C(0x28)) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_ECHO_VOLUME_RIGHT,
+                        UINT8_C(0xe8)) ||
+        !write_register(dsp, MIPSNES2_DSP_REGISTER_ECHO_FEEDBACK,
+                        UINT8_C(0x35))) {
+        return false;
+    }
+    for (index = 0U; index < MIPSNES2_DSP_FIR_TAP_COUNT; ++index) {
+        if (!write_register(
+                dsp,
+                (uint8_t)(MIPSNES2_DSP_REGISTER_FIR_BASE +
+                          (index * MIPSNES2_DSP_VOICE_REGISTER_STRIDE)),
+                fir[index])) {
+            return false;
+        }
+    }
+    return write_register(dsp, MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT,
+                          UINT8_C(0x60)) &&
+           write_register(dsp, MIPSNES2_DSP_VOICE_REGISTER_VOLUME_RIGHT,
+                          UINT8_C(0xc0)) &&
+           write_register(dsp, MIPSNES2_DSP_VOICE_REGISTER_ADSR1, 0U) &&
+           write_register(dsp, MIPSNES2_DSP_VOICE_REGISTER_GAIN,
+                          UINT8_C(0x50)) &&
+           write_register(
+               dsp, MIPSNES2_DSP_VOICE_REGISTER_STRIDE +
+                        MIPSNES2_DSP_VOICE_REGISTER_VOLUME_LEFT,
+               UINT8_C(0xe0)) &&
+           write_register(
+               dsp, MIPSNES2_DSP_VOICE_REGISTER_STRIDE +
+                        MIPSNES2_DSP_VOICE_REGISTER_VOLUME_RIGHT,
+               UINT8_C(0x48)) &&
+           write_register(
+               dsp, MIPSNES2_DSP_VOICE_REGISTER_STRIDE +
+                        MIPSNES2_DSP_VOICE_REGISTER_ADSR1,
+               0U) &&
+           write_register(
+               dsp, MIPSNES2_DSP_VOICE_REGISTER_STRIDE +
+                        MIPSNES2_DSP_VOICE_REGISTER_GAIN,
+               UINT8_C(0x68)) &&
+           write_register(dsp, MIPSNES2_DSP_REGISTER_KON, UINT8_C(3));
+}
+
+static int run_long_pcm_hash(const uint64_t *chunks, size_t chunk_count,
+                             long_pcm_hash_result *result)
+{
+    uint8_t ram[MIPSNES2_DSP_ARAM_SIZE];
+    mipsnes2_pcm_frame fifo_storage[LONG_PCM_FIFO_FRAMES];
+    mipsnes2_pcm_frame output[LONG_PCM_FIFO_FRAMES];
+    mipsnes2_pcm_buffer pcm;
+    mipsnes2_dsp dsp;
+    uint64_t remaining =
+        ((uint64_t)LONG_PCM_HASH_FRAMES * MIPSNES2_DSP_SAMPLE_CYCLES) +
+        UINT64_C(19);
+    uint64_t pcm_hash = UINT64_C(14695981039346656037);
+    uint64_t frame_count = 0U;
+    uint64_t ram_hash = UINT64_C(14695981039346656037);
+    size_t chunk_index = 0U;
+    size_t index;
+
+    CHECK(chunks != NULL && chunk_count != 0U && result != NULL);
+    CHECK(configure_long_pcm_hash(&dsp, ram));
+    CHECK(mipsnes2_pcm_buffer_init(
+        &pcm, fifo_storage, LONG_PCM_FIFO_FRAMES));
+    CHECK(mipsnes2_dsp_attach_pcm(&dsp, &pcm));
+    while (remaining != 0U) {
+        uint64_t cycles = chunks[chunk_index % chunk_count];
+        size_t produced;
+
+        CHECK(cycles != 0U);
+        if (cycles > remaining) {
+            cycles = remaining;
+        }
+        CHECK(mipsnes2_dsp_advance(&dsp, cycles));
+        remaining -= cycles;
+        ++chunk_index;
+        produced = mipsnes2_pcm_buffer_read(
+            &pcm, output, LONG_PCM_FIFO_FRAMES);
+        for (index = 0U; index < produced; ++index) {
+            pcm_hash = hash_pcm_frame(pcm_hash, output[index]);
+        }
+        frame_count += produced;
+    }
+    for (index = 0U; index < MIPSNES2_DSP_ARAM_SIZE; ++index) {
+        ram_hash = fnv1a_byte(ram_hash, ram[index]);
+    }
+    result->pcm_hash = pcm_hash;
+    result->ram_hash = ram_hash;
+    result->frame_count = frame_count;
+    result->smp_cycles = dsp.smp_cycles;
+    result->sample_count = dsp.sample_count;
+    result->enqueued_frames = pcm.enqueued_frames;
+    result->consumed_frames = pcm.consumed_frames;
+    result->dropped_frames = pcm.dropped_frames;
+    result->noise_lfsr = dsp.noise_lfsr;
+    result->envelope_counter = dsp.envelope_counter;
+    result->echo_offset = dsp.echo.offset;
+    result->last_left = dsp.output.dac_sample.left;
+    result->last_right = dsp.output.dac_sample.right;
+    result->sample_phase = dsp.sample_phase;
+    result->echo_history_index = dsp.echo.history_index;
+    CHECK(pcm.count == 0U);
+    mipsnes2_dsp_detach_pcm(&dsp);
+    return 0;
+}
+
+static int test_long_pcm_hash(void)
+{
+    static const uint64_t regular_chunks[] = {UINT64_C(2048)};
+    static const uint64_t irregular_chunks[] = {
+        UINT64_C(1), UINT64_C(31), UINT64_C(63), UINT64_C(97),
+        UINT64_C(511), UINT64_C(1025), UINT64_C(7), UINT64_C(2047),
+        UINT64_C(13), UINT64_C(3)
+    };
+    long_pcm_hash_result regular;
+    long_pcm_hash_result irregular;
+
+    CHECK(run_long_pcm_hash(regular_chunks,
+                            sizeof(regular_chunks) /
+                                sizeof(regular_chunks[0]),
+                            &regular) == 0);
+    CHECK(run_long_pcm_hash(irregular_chunks,
+                            sizeof(irregular_chunks) /
+                                sizeof(irregular_chunks[0]),
+                            &irregular) == 0);
+    CHECK(regular.pcm_hash == irregular.pcm_hash);
+    CHECK(regular.ram_hash == irregular.ram_hash);
+    CHECK(regular.frame_count == irregular.frame_count);
+    CHECK(regular.smp_cycles == irregular.smp_cycles);
+    CHECK(regular.sample_count == irregular.sample_count);
+    CHECK(regular.enqueued_frames == irregular.enqueued_frames);
+    CHECK(regular.consumed_frames == irregular.consumed_frames);
+    CHECK(regular.dropped_frames == irregular.dropped_frames);
+    CHECK(regular.noise_lfsr == irregular.noise_lfsr);
+    CHECK(regular.envelope_counter == irregular.envelope_counter);
+    CHECK(regular.echo_offset == irregular.echo_offset);
+    CHECK(regular.last_left == irregular.last_left);
+    CHECK(regular.last_right == irregular.last_right);
+    CHECK(regular.sample_phase == irregular.sample_phase);
+    CHECK(regular.echo_history_index == irregular.echo_history_index);
+    CHECK(regular.frame_count == (uint64_t)LONG_PCM_HASH_FRAMES);
+    CHECK(regular.sample_count == (uint64_t)LONG_PCM_HASH_FRAMES);
+    CHECK(regular.sample_phase == UINT8_C(19));
+    CHECK(regular.dropped_frames == 0U);
+    if (regular.pcm_hash != UINT64_C(0x368899e61f053bab) ||
+        regular.ram_hash != UINT64_C(0x2fa2329372f44e6c)) {
+        (void)fprintf(stderr,
+                      "long PCM hash: %016llx; ARAM hash: %016llx\n",
+                      (unsigned long long)regular.pcm_hash,
+                      (unsigned long long)regular.ram_hash);
+    }
+    CHECK(regular.pcm_hash == UINT64_C(0x368899e61f053bab));
+    CHECK(regular.ram_hash == UINT64_C(0x2fa2329372f44e6c));
+    return 0;
+}
+
 int main(void)
 {
     mipsnes2_dsp dsp;
@@ -1606,8 +1826,9 @@ int main(void)
     CHECK(test_echo_fir() == 0);
     CHECK(test_echo_and_output() == 0);
     CHECK(test_pcm_handoff() == 0);
+    CHECK(test_long_pcm_hash() == 0);
 
     (void)puts(
-        "S-DSP Gaussian, echo/output and bounded PCM foundation: OK");
+        "S-DSP Gaussian, echo/output and deterministic PCM foundation: OK");
     return 0;
 }

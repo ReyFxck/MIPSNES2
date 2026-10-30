@@ -966,6 +966,16 @@ saturation. Revision `1c54b65` passed
 [PCM resampler audit](docs/pcm-resampler-audit.md). This is a reference transport
 utility, not an SPU2/RFAuds2 adapter or audible-output result.
 
+The host S-DSP suite now also runs 65,536 native PCM frames through two noise
+voices, signed dry mixing and a seeded writable echo/FIR ring. Canonical
+little-endian FNV-1a hashes pin both the complete PCM stream and final ARAM image.
+A regular 2,048-cycle schedule and an irregular schedule containing sub-sample
+increments produce identical hashes, counters and final observable state, with no
+FIFO drops; an extra 19 cycles also pins the retained sample phase. This is a
+deterministic regression for the existing independently checked short vectors,
+not a real-SNES audio oracle or an audible target result. See the
+[S-DSP long PCM hash audit](docs/sdsp-long-pcm-hash-audit.md).
+
 The PS2 backend now has a fixed-capacity 48 kHz asynchronous transport adapter around
 that converter. One pump performs at most one launch or poll. A successful launch
 owns a copied request until a later poll reports its accepted prefix; pending,
@@ -2267,7 +2277,7 @@ platform persistence remains incomplete.
 - [x] Platform-independent PCM output interface — bounded reads expose frames without device APIs
 - [x] Resampling policy — deterministic integer-linear conversion from native 32 kHz to bounded caller blocks at rates at or above 32 kHz
 - [x] Underflow/overflow behavior — empty reads return zero; full writes drop newest and count it
-- [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
+- [x] Host offline audio tests — bounded vectors plus a 65,536-frame PCM/ARAM hash regression pass across regular and irregular cycle chunks
 - [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP/PCM and machine fixtures exist; exact phases remain
 
 ## PS2 backend

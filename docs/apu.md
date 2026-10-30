@@ -60,7 +60,7 @@ implementation evidence before promotion.
 - [x] Platform-independent PCM output interface — bounded reads expose frames without device APIs
 - [x] Resampling policy — integer-linear native-rate conversion with bounded state and deterministic signed rounding
 - [x] Underflow/overflow behavior — empty reads return zero; full writes drop newest and count it
-- [ ] [IN PROGRESS] Host offline audio tests — PCM value/order/wrap/chunk vectors exist; long hashes remain
+- [x] Host offline audio tests — bounded vectors plus a 65,536-frame PCM/ARAM hash regression pass across regular and irregular cycle chunks
 - [ ] [IN PROGRESS] Integrated APU regression tests — clock chunking, CPU/timer/DSP cadence, PCM and machine execution are covered; exact phases remain
 
 ## Research and decisions
@@ -71,6 +71,8 @@ wait-state families. Nominal synchronized scheduling now exists. Exact bus phase
 interrupt/reset entry, cross-clock races, exact S-DSP microphases and PCM transport
 do not.
 See the [APU clock/DSP register audit](apu-clock-dsp-register-audit.md).
+The long offline output regression is recorded in the
+[S-DSP long PCM hash audit](sdsp-long-pcm-hash-audit.md).
 The first voice-control and decoder slice is recorded in the
 [S-DSP voice/BRR audit](sdsp-voice-brr-foundation-audit.md).
 The connected source traversal and pitch input are recorded in the
