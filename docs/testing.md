@@ -137,7 +137,8 @@ H/V regression executable covers non-interlaced NTSC/PAL scanline/frame totals,
 HBlank/VBlank boundaries, overscan, field toggling, the NTSC short line, delayed NMI
 assertion, every valid HTIME value, V/HV match positions, short/final-line exceptions,
 out-of-range compare values, exact-boundary enabling, TIMEUP acknowledgement, overflow
-rejection, exact 4224-clock automatic-joypad timing, normal/overscan start lines,
+rejection, exact clocks-to-next-frame queries from initial/mid-frame NTSC and PAL
+phases, exact 4224-clock automatic-joypad timing, normal/overscan start lines,
 late enable, disable while busy and one-shot/chunked determinism. Timed CPU fixtures verify a slow NOP,
 mixed FastROM-fetch/slow-WRAM LDA, an event timestamped inside an atomic instruction,
 emulation-mode NMI entry and visible bridge errors. The master-domain executable

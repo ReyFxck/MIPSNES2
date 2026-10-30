@@ -71,6 +71,12 @@ fixed phase is not claimed as final hardware behavior. See
 [master-timing fanout audit](master-timing-fanout-audit.md), plus the
 [automatic joypad audit](auto-joypad-audit.md).
 
+`mipsnes2_hv_clocks_until_frame_boundary` reports the exact distance from the
+current valid H/V phase to the next frame boundary without mutating state. It
+accounts for the field toggle at H=1/V=0 and the NTSC field-one short line, so a
+platform can request an absolute machine horizon without assuming every frame is
+`262 × 1364` clocks. It does not pace execution or consult a display/audio device.
+
 The optional PPU counter adapter reads this H/V snapshot at the bus boundary, not at
 individual electrical cycles within an operation. Its external edge handoff must be
 synchronized before advancing the shared domain. Exact capture latency and repeated/

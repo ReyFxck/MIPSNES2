@@ -223,6 +223,46 @@ static int test_ntsc_frame_lengths_and_field_toggle(void)
     return 0;
 }
 
+static int test_frame_boundary_distance(void)
+{
+    mipsnes2_hv_timing timing;
+    mipsnes2_cpu_io cpu_io;
+    uint64_t clocks = UINT64_C(0xfeedface);
+
+    CHECK(!mipsnes2_hv_clocks_until_frame_boundary(NULL, &clocks));
+    CHECK(clocks == UINT64_C(0xfeedface));
+    (void)memset(&timing, 0, sizeof(timing));
+    CHECK(!mipsnes2_hv_clocks_until_frame_boundary(&timing, &clocks));
+    CHECK(!mipsnes2_hv_clocks_until_frame_boundary(&timing, NULL));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_NTSC,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_clocks_until_frame_boundary(&timing, &clocks));
+    CHECK(clocks == UINT64_C(357364));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, UINT64_C(1000)) ==
+          MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_clocks_until_frame_boundary(&timing, &clocks));
+    CHECK(clocks == UINT64_C(356364));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io, clocks) ==
+          MIPSNES2_HV_OK);
+    CHECK(timing.frame_count == UINT64_C(1));
+    CHECK(timing.v_counter == 0U && timing.h_master_clock == 0U);
+    CHECK(mipsnes2_hv_clocks_until_frame_boundary(&timing, &clocks));
+    CHECK(clocks == UINT64_C(357368));
+
+    mipsnes2_cpu_io_init(&cpu_io, UINT8_C(2));
+    CHECK(mipsnes2_hv_timing_init(&timing, MIPSNES2_HV_STANDARD_PAL,
+                                  false, &cpu_io) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_clocks_until_frame_boundary(&timing, &clocks));
+    CHECK(clocks == UINT64_C(425568));
+    CHECK(mipsnes2_hv_timing_advance(&timing, &cpu_io,
+                                     UINT64_C(425567)) == MIPSNES2_HV_OK);
+    CHECK(mipsnes2_hv_clocks_until_frame_boundary(&timing, &clocks));
+    CHECK(clocks == UINT64_C(1));
+    return 0;
+}
+
 static int test_h_irq_normal_and_late_spill(void)
 {
     mipsnes2_hv_timing timing;
@@ -710,6 +750,7 @@ int main(void)
     CHECK(test_vblank_and_delayed_nmi_flag() == 0);
     CHECK(test_overscan_vblank_and_ntsc_short_line() == 0);
     CHECK(test_ntsc_frame_lengths_and_field_toggle() == 0);
+    CHECK(test_frame_boundary_distance() == 0);
     CHECK(test_h_irq_normal_and_late_spill() == 0);
     CHECK(test_all_h_irq_values() == 0);
     CHECK(test_v_and_hv_irq_positions() == 0);

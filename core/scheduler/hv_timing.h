@@ -56,6 +56,12 @@ mipsnes2_hv_result mipsnes2_hv_timing_advance(
 uint16_t mipsnes2_hv_scanline_master_clocks(
     const mipsnes2_hv_timing *timing);
 uint16_t mipsnes2_hv_frame_scanlines(const mipsnes2_hv_timing *timing);
+/* Exact distance from the current H/V state to the next frame boundary,
+ * including the NTSC short scanline selected by the active field. On failure
+ * clocks_out is unchanged.
+ */
+bool mipsnes2_hv_clocks_until_frame_boundary(
+    const mipsnes2_hv_timing *timing, uint64_t *clocks_out);
 uint16_t mipsnes2_hv_vblank_start_line(
     const mipsnes2_hv_timing *timing);
 bool mipsnes2_hv_ppu_horizontal(const mipsnes2_hv_timing *timing,

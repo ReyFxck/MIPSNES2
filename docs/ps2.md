@@ -13,13 +13,14 @@ qualification; `tests/test_ps2_diagnostic.c` runs the identical suite on the hos
 The optional `--rom PATH` entry reads an image through `fopen` from a filesystem
 that the launcher has already made available, constructs the shared machine and
 runs one bounded reference frame in the standalone build. The RFAuds2-enabled
-diagnostic instead makes eight bounded calls toward fixed absolute NTSC frame horizons, each with a
-100,000-sequence bound. It prints CPU and timing
+diagnostic instead makes up to eight bounded calls. Before each call it queries the
+shared H/V state for the exact next frame boundary, including the alternating NTSC
+short scanline, and supplies that absolute horizon with a 100,000-sequence bound. It prints CPU and timing
 status and captures bounded reference lines in a static RGBA32 texture. A persistent
-single-buffer GS presenter may upload one capture after each fixed horizon; its
+single-buffer GS presenter may upload one capture after each completed horizon; its
 vertical-sync wait occurs only after machine advancement and cannot set emulated
 time. This path
-also attempts a nonblocking port-0 `libpad` sample before each fixed frame horizon
+also attempts a nonblocking port-0 `libpad` sample before each frame horizon
 and injects the translated standard-pad word into the machine. It has no console
 runtime validation, continuous gameplay loop, verified input/audio or SRAM
 persistence. It does not
@@ -33,6 +34,8 @@ The original scaffold record is in
 See the [PS2 frame audit](ps2-video-frame-audit.md) for the capture format and
 its tested limits, and the [GS audit](ps2-gs-audit.md) for the unverified
 persistent presenter.
+The [frame-boundary audit](frame-boundary-horizon-audit.md) records why a constant
+`262 × 1364` step was incorrect and how device waits remain outside emulated time.
 
 The SDK's own [EE file-reading sample](https://github.com/ps2dev/ps2sdk/blob/2c670453980fcc3fe46ead6399b730b12c8556eb/ee/rpc/audsrv/samples/playwav/playwav.c)
 uses `sceSifInitRpc`, `fopen("host:...", "rb")` and `fread`. This adapter uses

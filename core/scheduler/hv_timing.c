@@ -127,6 +127,45 @@ uint16_t mipsnes2_hv_frame_scanlines(const mipsnes2_hv_timing *timing)
                : MIPSNES2_HV_PAL_SCANLINES;
 }
 
+bool mipsnes2_hv_clocks_until_frame_boundary(
+    const mipsnes2_hv_timing *timing, uint64_t *clocks_out)
+{
+    uint16_t frame_scanlines;
+    uint16_t line;
+    uint64_t clocks = 0U;
+    bool frame_field;
+
+    if (timing == NULL || clocks_out == NULL || !timing->initialized ||
+        !standard_is_valid(timing->standard)) {
+        return false;
+    }
+    frame_scanlines = mipsnes2_hv_frame_scanlines(timing);
+    if (timing->v_counter >= frame_scanlines ||
+        timing->h_master_clock >=
+            mipsnes2_hv_scanline_master_clocks(timing)) {
+        return false;
+    }
+
+    frame_field = timing->field;
+    if (timing->v_counter == 0U &&
+        timing->h_master_clock < MIPSNES2_HV_HBLANK_END_CLOCK) {
+        frame_field = !frame_field;
+    }
+    for (line = timing->v_counter; line < frame_scanlines; ++line) {
+        uint16_t length = MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+
+        if (timing->standard == MIPSNES2_HV_STANDARD_NTSC &&
+            frame_field && line == UINT16_C(240)) {
+            length = MIPSNES2_HV_NTSC_SHORT_SCANLINE_CLOCKS;
+        }
+        clocks += line == timing->v_counter
+                      ? (uint16_t)(length - timing->h_master_clock)
+                      : length;
+    }
+    *clocks_out = clocks;
+    return true;
+}
+
 uint16_t mipsnes2_hv_vblank_start_line(const mipsnes2_hv_timing *timing)
 {
     if (timing == NULL || !timing->initialized ||

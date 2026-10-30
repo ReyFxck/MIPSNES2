@@ -408,6 +408,20 @@ also passed. New target runtime evidence is absent. This remains a single
 buffer without scaling, double buffering or a continuous gameplay loop. No visual result in
 ARMSX2/NetherSX2 or physical PS2 is claimed. See the
 [GS audit](docs/ps2-gs-audit.md).
+Revision `6bc7603` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41084802006),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41084802266) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41084801973).
+
+The PS2 frame driver on 2026-10-30 stops using the incorrect constant
+`262 × 1364` horizon. A public H/V query now returns the exact remaining clocks to
+the next frame boundary from any valid phase, including the alternating NTSC
+line-240 short field. The launcher derives each absolute machine horizon from that
+state, aborts device work unless the machine actually reaches it, and only then
+pumps audio or waits for GS/DMA/vsync. Host regressions pin initial/mid-frame NTSC,
+alternating fields, PAL and invalid-state behavior. Device pacing still cannot
+advance emulated time. See
+[docs/frame-boundary-horizon-audit.md](docs/frame-boundary-horizon-audit.md).
 
 The machine PPU integration now has a two-frame event regression rather than
 only isolated line checks. A synthetic Mode 0 scene runs through recurring HBlank
