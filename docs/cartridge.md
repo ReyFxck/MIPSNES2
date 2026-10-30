@@ -67,7 +67,9 @@ only after durable output succeeds. A newer emulated write makes the old token s
 so acknowledgement fails and preserves dirty state. Revision wrap skips zero. The
 view is not a snapshot: asynchronous backends must copy it or coordinate emulation.
 The core does not select paths, perform I/O, define an on-disk format or schedule
-saves.
+saves. `mipsnes2_machine_sram_view_get` and
+`mipsnes2_machine_sram_acknowledge` expose this same contract without requiring a
+platform backend to reach into machine-owned cartridge state.
 
 ### Internal-header candidate analysis
 
@@ -216,7 +218,7 @@ unchecked until their complete verification gates are met.
 - [ ] ExLoROM — unofficial mapping remains research-only
 - [ ] [IN PROGRESS] ExHiROM — Mode 25/35 subset verified; board/runtime validation absent
 - [ ] [IN PROGRESS] SRAM — mapper read/write windows and revisioned dirty tracking verified
-- [ ] [IN PROGRESS] SRAM persistence — shared handoff verified; platform file backends absent
+- [ ] [IN PROGRESS] SRAM persistence — shared and machine-level handoff verified; platform file backends absent
 - [ ] [IN PROGRESS] Mapper tests — synthetic base/irregular/ExHiROM map/checksum/selection suite exists
 - [ ] [IN PROGRESS] Checksum handling where useful — base mirrored checksum exists; special variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds only

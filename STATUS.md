@@ -1603,6 +1603,20 @@ power-on clears stale inputs. This closes only the core-to-machine wiring. Physi
 PS2/PSP controller sampling, button mapping, hotplug and target validation remain
 open, so the PS2 `Pad input` backend item is not claimed complete. Exact scope is in
 [docs/machine-input-integration-audit.md](docs/machine-input-integration-audit.md).
+Revision `c2e8bed` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995531766),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995531823) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995531804).
+
+The Phase 9 SRAM persistence wiring on 2026-10-29 exposes the cartridge's live
+SRAM bytes, dirty flag and revision through the public machine boundary, plus an
+exact-revision acknowledgement after a backend reports durable success. A synthetic
+LoROM executes 65C816 long stores through the machine bus, proves stale-token
+rejection after a newer write and verifies that bytes, revision and clean state
+survive machine power-on. This is not a filesystem backend: copying/coordinating the
+live view, save paths, atomic replacement, debounce, errors and target storage tests
+remain open. See
+[docs/machine-sram-persistence-audit.md](docs/machine-sram-persistence-audit.md).
 
 The programmable I/O-port foundation on 2026-10-20 adds `$4201` WRIO and `$4213`
 RDIO. The caller owns external pin levels; reads combine them with the output latch
@@ -2070,7 +2084,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] ExLoROM — unofficial mapping remains research-only; no commercial-library requirement established
 - [ ] [IN PROGRESS] ExHiROM — Mode 25/35 ROM/SRAM mapping and conservative selection verified; board/runtime validation absent
 - [ ] [IN PROGRESS] SRAM — caller-owned mapper windows/read/write and revisioned dirty tracking verified; broader boards absent
-- [ ] [IN PROGRESS] SRAM persistence — shared handoff exists; platform file backends and target validation absent
+- [ ] [IN PROGRESS] SRAM persistence — shared and machine-level handoff exists; platform file backends and target validation absent
 - [ ] [IN PROGRESS] Mapper tests — synthetic base/irregular/ExHiROM maps, checksum, selection, ambiguity and bus/CPU integration covered; padded/ExLoROM/enhancement execution absent
 - [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board checksum variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config, image granularity and candidate bounds covered; file I/O absent
@@ -2108,6 +2122,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Mapper executable-size/alignment confidence gate
 - [x] Platform-neutral image-to-cartridge plan and caller-owned SRAM construction
 - [x] Revisioned SRAM dirty-state and exact-acknowledgement handoff
+- [x] Machine-level live SRAM view and exact-acknowledgement boundary
 
 Checksum/selection scope and local verification are recorded in
 [cartridge-mapper-selection-audit.md](docs/cartridge-mapper-selection-audit.md).

@@ -7,6 +7,7 @@ tests, deterministic scheduler/5A22 timing foundation tests, partial SNES WRAM/M
 HiROM power-of-two/irregular and ExHiROM mapping tests, copier-prefix/registration/
 header analysis, whole-image mapper selection and caller-owned construction tests,
 revisioned SRAM dirty-state/acknowledgement tests,
+machine-level CPU-to-SRAM persistence-handoff tests,
 black-box host CLI smoke tests and repository
 consistency checks.
 See [testing policy](../docs/testing.md). No external test ROM is committed yet.

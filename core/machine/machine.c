@@ -710,6 +710,21 @@ bool mipsnes2_machine_set_joypad(mipsnes2_machine *machine, uint8_t index,
                &machine->io, index, connected);
 }
 
+bool mipsnes2_machine_sram_view_get(
+    const mipsnes2_machine *machine, mipsnes2_cartridge_sram_view *view)
+{
+    return machine != NULL && machine->ready &&
+           mipsnes2_cartridge_sram_view_get(&machine->cartridge, view);
+}
+
+bool mipsnes2_machine_sram_acknowledge(
+    mipsnes2_machine *machine, uint64_t revision)
+{
+    return machine != NULL && machine->ready &&
+           mipsnes2_cartridge_sram_acknowledge(
+               &machine->cartridge, revision);
+}
+
 mipsnes2_machine_result mipsnes2_machine_init(
     mipsnes2_machine *machine, const mipsnes2_machine_config *config)
 {

@@ -159,6 +159,13 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine);
  * so a backend must refresh current state afterward. */
 bool mipsnes2_machine_set_joypad(mipsnes2_machine *machine, uint8_t index,
                                  uint16_t input, bool connected);
+/* Expose the cartridge's live SRAM persistence handoff without exposing machine
+ * internals. A backend must copy or coordinate the live bytes, write them
+ * durably, then acknowledge the exact saved revision. */
+bool mipsnes2_machine_sram_view_get(
+    const mipsnes2_machine *machine, mipsnes2_cartridge_sram_view *view);
+bool mipsnes2_machine_sram_acknowledge(
+    mipsnes2_machine *machine, uint64_t revision);
 /* One RESET sequence or CPU instruction, resumable at an absolute horizon.
  * HORIZON_REACHED and event budget exhaustion preserve the active cursor.
  * The APU clock catches up to the shared scheduler time before return. Inspect

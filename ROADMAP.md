@@ -113,7 +113,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] ExLoROM — unofficial mapping remains research-only
 - [ ] [IN PROGRESS] ExHiROM — Mode 25/35 ROM/SRAM mapping and selection verified; board/runtime validation pending
 - [ ] [IN PROGRESS] SRAM — mapper windows/read/write and revisioned dirty tracking verified; broader boards pending
-- [ ] [IN PROGRESS] SRAM persistence — shared revision/acknowledgement handoff verified; platform file backends absent
+- [ ] [IN PROGRESS] SRAM persistence — shared and machine-level revision/acknowledgement handoff verified; platform file backends absent
 - [ ] [IN PROGRESS] Mapper tests — synthetic base/irregular/ExHiROM map, checksum, selection and ambiguity suite exists; broader boards pending
 - [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board variants pending
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds covered; file I/O absent
@@ -294,7 +294,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] PPU event integration — two recurring machine frames deliver 448 ordered reference lines with a chunk-independent pixel hash
 - [x] APU sample integration — machine-clocked SPC700 register programming reaches deterministic non-zero DSP PCM with chunk-independent long hash
 - [x] Input integration — the machine API accepts translated standard-pad words and drives both manual and automatic reads; physical target mapping remains platform work
-- [ ] SRAM persistence integration
+- [ ] [IN PROGRESS] SRAM persistence integration — machine dirty-view/exact-acknowledgement boundary verified; durable platform file backends absent
 - [ ] Licensed test-ROM execution
 - [ ] Real PS2 runtime smoke
 - [ ] Real PSP runtime smoke

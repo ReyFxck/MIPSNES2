@@ -37,7 +37,10 @@ host-verified PS2 audio transport contract, but no full ROM runner, complete ren
 or device binding. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
-optional VRAM/CGRAM/OAM/ARAM bytes while resetting optional PCM queue state. An optional S-SMP map borrows 64 KiB ARAM
+optional VRAM/CGRAM/OAM/ARAM bytes while resetting optional PCM queue state. The
+machine exposes the cartridge's live SRAM view and exact revision acknowledgement
+as the platform persistence boundary; paths, copying, durable writes and scheduling
+remain backend responsibilities. An optional S-SMP map borrows 64 KiB ARAM
 and optional caller-provided 64-byte IPL; without the IPL, mapped high-page
 reads fail explicitly. PS2 reserves ARAM, while PSP merely compiles the same
 core. The S-SMP map and S-CPU bus meet through machine-owned directional
