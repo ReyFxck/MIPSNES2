@@ -975,6 +975,21 @@ FIFO drops; an extra 19 cycles also pins the retained sample phase. This is a
 deterministic regression for the existing independently checked short vectors,
 not a real-SNES audio oracle or an audible target result. See the
 [S-DSP long PCM hash audit](docs/sdsp-long-pcm-hash-audit.md).
+Revision `3b004c6` passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40994326767),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40994326797) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40994326838).
+
+A separate machine-level fixture now starts a synthetic SPC700 program at the
+caller-provided IPL, programs a keyed non-zero noise voice only through `$F2/$F3`,
+then sleeps while the 5A22 loop continues to advance the shared master clock.
+The machine-owned APU bridge and PCM FIFO emit 2,234 frames by the fixed
+1,500,019-master-clock horizon. Regular and irregular absolute-horizon slices,
+including one-clock boundaries, produce the same canonical PCM hash
+`412f0b445f6c4610`, counters and final DSP state with no dropped frames. This
+closes the Phase 9 APU sample-integration wiring on host, while exact S-DSP phases
+and target audio remain open. See the
+[machine APU/PCM audit](docs/machine-apu-pcm-audit.md).
 
 The PS2 backend now has a fixed-capacity 48 kHz asynchronous transport adapter around
 that converter. One pump performs at most one launch or poll. A successful launch
@@ -2278,7 +2293,7 @@ platform persistence remains incomplete.
 - [x] Resampling policy — deterministic integer-linear conversion from native 32 kHz to bounded caller blocks at rates at or above 32 kHz
 - [x] Underflow/overflow behavior — empty reads return zero; full writes drop newest and count it
 - [x] Host offline audio tests — bounded vectors plus a 65,536-frame PCM/ARAM hash regression pass across regular and irregular cycle chunks
-- [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP/PCM and machine fixtures exist; exact phases remain
+- [ ] [IN PROGRESS] Integrated APU regression tests — clock/CPU/timer/DSP cadence and a 2,234-frame machine PCM hash exist; exact phases remain
 
 ## PS2 backend
 

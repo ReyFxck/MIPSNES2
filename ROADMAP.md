@@ -292,7 +292,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Cartridge reset path — timed CPU reset and power cycle verified; complete hardware reset behavior remains open
 - [ ] [IN PROGRESS] CPU/bus/scheduler integration — ROM instruction/WRAM/H-V execution verified; remaining devices absent
 - [ ] PPU event integration
-- [ ] APU sample integration
+- [x] APU sample integration — machine-clocked SPC700 register programming reaches deterministic non-zero DSP PCM with chunk-independent long hash
 - [ ] Input integration
 - [ ] SRAM persistence integration
 - [ ] Licensed test-ROM execution
