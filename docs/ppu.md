@@ -150,6 +150,8 @@ The machine can pass each completed BGR555 reference line to a synchronous
 caller-owned callback. This is a copy-before-return handoff for future
 backends, not console display. See the
 [video-line audit](video-line-handoff-audit.md).
+Two complete recurring event sequences and their chunk-independent pixel stream
+are recorded in the [machine PPU event audit](machine-ppu-event-audit.md).
 
 ## 4bpp tile decode
 
@@ -202,7 +204,7 @@ remain incomplete; narrow verified counter behavior does not complete the PPU.
 - [ ] Overscan
 - [ ] [IN PROGRESS] Relevant latching behavior — H/V subset with explicit timing approximations
 - [ ] [IN PROGRESS] Relevant open-bus behavior — counter and CGRAM high-read PPU2 subset
-- [ ] Scanline integration
+- [x] Scanline integration — recurring machine events deliver ordered reference lines through the video callback
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths checked; access-window and mixed-port behavior pending
 - [ ] Sprite limits and overflow flags
 - [ ] Mid-frame register effects

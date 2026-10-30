@@ -400,6 +400,17 @@ buffer without scaling or a continuous frame loop. No visual result in
 ARMSX2/NetherSX2 or physical PS2 is claimed. See the
 [GS audit](docs/ps2-gs-audit.md).
 
+The machine PPU integration now has a two-frame event regression rather than
+only isolated line checks. A synthetic Mode 0 scene runs through recurring HBlank
+events, layer/color resolution and the synchronous video callback for 448 ordered
+lines. Regular 50,000-clock horizons and an irregular schedule that splits the
+first HBlank and scanline boundaries produce the same canonical BGR555 stream hash
+`911273792f0b2425`, including 43,008 non-black pixels. The fixed horizon stops one
+clock before the third frame's first callback, with the H/V state agreeing across
+both executions. This closes the host-verified event/scanline wiring, not missing
+PPU modes, mid-line effects, exact phases or console presentation. See the
+[machine PPU event audit](docs/machine-ppu-event-audit.md).
+
 The shared DMA foundation now holds the eight `$43x0-$43xB` channel banks,
 including the `$43xB/$43xF` alias, and routes them through the machine bus.
 Pure helpers plan all eight B-bus port sequences, A-address increment/fix/
@@ -990,6 +1001,10 @@ including one-clock boundaries, produce the same canonical PCM hash
 closes the Phase 9 APU sample-integration wiring on host, while exact S-DSP phases
 and target audio remain open. See the
 [machine APU/PCM audit](docs/machine-apu-pcm-audit.md).
+Revision `70da507` passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40994689507),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40994689446) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40994689483).
 
 The PS2 backend now has a fixed-capacity 48 kHz asynchronous transport adapter around
 that converter. One pump performs at most one launch or poll. A successful launch
@@ -2100,7 +2115,7 @@ platform persistence remains incomplete.
 - [x] Event tie ordering — timestamp, explicit priority, insertion token
 - [x] CPU event horizon — caller-owned in-flight operation state pauses at requested horizons or event-budget failures and resumes without restarting or duplicating the CPU/bus effect
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment, transactional H/V slices and provisional same-time ordering verified
-- [ ] PPU event integration
+- [x] PPU event integration — recurring HBlank callbacks deliver two chunk-independent reference frames
 - [ ] [IN PROGRESS] SPC700 synchronization — nominal rational budget and atomic admission integrated; exact phases/races pending
 - [ ] [IN PROGRESS] DSP synchronization — common cycle domain and sample-event cadence integrated; pipeline phases pending
 - [ ] DMA bus ownership
@@ -2227,7 +2242,7 @@ platform persistence remains incomplete.
 - [ ] Overscan
 - [ ] [IN PROGRESS] Relevant latching behavior — deterministic H/V subset; exact access timing pending
 - [ ] [IN PROGRESS] Relevant open-bus behavior — counter and CGRAM high-read PPU2 subset
-- [ ] Scanline integration
+- [x] Scanline integration — recurring machine events deliver ordered reference lines through the video callback
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write paths host-verified; access-window/mixed-port behavior pending
 - [ ] [IN PROGRESS] Sprite limits and overflow flags — 32 OBJ/34 sliver selection, scheduled sticky `$213E` and OBJ pixel line host tested; exact hardware phase absent
 - [ ] Mid-frame register effects

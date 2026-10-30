@@ -201,7 +201,7 @@ is not console execution; a foundation binary is not a test-ROM runner.
 |---|---|
 | CPU | Opcode/mode/flag/addressing/interrupt edge cases with sourced expectations |
 | Bus/cartridge | Synthetic mapping/mirror/MMIO/malformed-input fixtures |
-| PPU | State/port/priority/window/color and rendering reference vectors |
+| PPU | State/port/priority/window/color and rendering reference vectors plus the fixed two-frame machine event hash |
 | SPC700/DSP | Complete opcode/flag/addressing matrices, deterministic cadence coupling, key/source state, BRR/ring/traversal, ADSR/GAIN, noise, all Gaussian coefficients/arithmetic, left-aligned `OUTX`, PMON, ordered dry/echo saturation, FIR/feedback, mute, signed volume, bounded PCM vectors and the fixed 65,536-frame offline hash regression |
 | DMA/scheduler | Transfer boundaries, arbitration, event ties, drift and determinism |
 | Serialization | Round-trip state, version and malformed-input checks |

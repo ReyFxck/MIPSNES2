@@ -133,7 +133,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment and provisional same-time ordering verified
 - [x] Atomic CPU-I/O interrupt-line handoff — independent IRQ sources and NMI transfer verified
 - [ ] [IN PROGRESS] Resumable CPU cycle/micro-operation contract — exact-once foundation plus scheduler wiring for all 256 opcode values, boundary IRQ/NMI/ABORT entry, write-qualified ABORT subset and explicit RESET; signal-level RESET, dummy cycles and electrical ABORT exceptions pending
-- [ ] [IN PROGRESS] PPU event integration — SETINI overscan now moves shared VBlank, OAM reload and HDMA deactivation at a bounded frame-level cutoff; exact late-line behavior remains
+- [ ] [IN PROGRESS] PPU event integration — recurring HBlank frames and SETINI-dependent VBlank/OAM/HDMA cutoffs are host verified; exact late-line behavior remains
 - [ ] [IN PROGRESS] SPC700 synchronization — nominal rational budget and atomic admission integrated; exact phases/races pending
 - [ ] [IN PROGRESS] DSP synchronization — common cycle domain and sample-event cadence integrated; pipeline phases pending
 - [ ] DMA bus ownership
@@ -214,7 +214,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Overscan — `$2133` bit 2 drives VBlank, OAM reload and HDMA deactivation before V=225; renderer sizing and exact late-line effects remain
 - [ ] [IN PROGRESS] Relevant latching behavior — late SETINI overscan writes latch for the next frame; other register latches and electrical timing remain
 - [ ] Relevant open-bus behavior
-- [ ] Scanline integration
+- [x] Scanline integration — recurring machine events deliver two ordered reference frames with a chunk-independent pixel hash
 - [ ] [IN PROGRESS] VRAM port increment/remap behavior — read/write sides host-verified; active-display and mixed-port behavior pending
 - [ ] [IN PROGRESS] Sprite limits and overflow flags — scheduled 32 OBJ/34 sliver selection and sticky `$213E` verified on host; hardware phase and pixels absent
 - [ ] [IN PROGRESS] Mid-frame register effects — bounded SETINI frame cutoff plus existing scanline-driven BG/window state; exact dot-level effects remain
@@ -291,7 +291,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Machine ownership and lifecycle — stable caller-owned image/WRAM/SRAM and platform-neutral instance verified on host
 - [ ] [IN PROGRESS] Cartridge reset path — timed CPU reset and power cycle verified; complete hardware reset behavior remains open
 - [ ] [IN PROGRESS] CPU/bus/scheduler integration — ROM instruction/WRAM/H-V execution verified; remaining devices absent
-- [ ] PPU event integration
+- [x] PPU event integration — two recurring machine frames deliver 448 ordered reference lines with a chunk-independent pixel hash
 - [x] APU sample integration — machine-clocked SPC700 register programming reaches deterministic non-zero DSP PCM with chunk-independent long hash
 - [ ] Input integration
 - [ ] SRAM persistence integration
