@@ -391,14 +391,21 @@ and [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129509884).
 At that revision no GS upload or screen presentation was implemented. See the
 [PS2 frame audit](docs/ps2-video-frame-audit.md).
 
-The PS2 `--rom` path now submits a captured 256×256 RGBA32 image directly
-to a GS framebuffer when at least one reference line exists. The host
-conversion and machine-handoff tests pass. Revision `4ff9020` passed
+The PS2 `--rom` path can submit captured 256×256 RGBA32 images directly to one
+persistent GS framebuffer. Its presenter allocates one packet/framebuffer, resets
+and reuses the packet only after the previous DMA completes, flushes the separately
+referenced EE pixels, waits for vertical sync outside emulated time and releases
+packet, VRAM, graph and DMA state explicitly. The fixed diagnostic resets capture
+at each absolute emulated frame horizon and may upload each resulting image without
+letting GS pacing advance the machine. Host stubs cover lifecycle failures, invalid
+buffers, send failure, repeated reuse and idempotent cleanup; the existing conversion
+and machine-handoff tests also pass. Revision `4ff9020` passed the original one-shot
+baseline in
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898305)
 and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898337);
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898350)
-also passed. Target runtime evidence is absent. This is a static, single
-buffer without scaling or a continuous frame loop. No visual result in
+also passed. New target runtime evidence is absent. This remains a single
+buffer without scaling, double buffering or a continuous gameplay loop. No visual result in
 ARMSX2/NetherSX2 or physical PS2 is claimed. See the
 [GS audit](docs/ps2-gs-audit.md).
 
@@ -1644,6 +1651,10 @@ reuses the same executables as the full host suite and makes their combined gate
 explicit; it does not add emulator behavior or claim licensed-ROM, PS2 or PSP
 runtime coverage. Exact scope and validation are recorded in
 [docs/machine-base-regression-audit.md](docs/machine-base-regression-audit.md).
+Revision `caedbdc` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083872704),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083873079) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083873052).
 
 The programmable I/O-port foundation on 2026-10-20 adds `$4201` WRIO and `$4213`
 RDIO. The caller owns external pin levels; reads combine them with the output latch
@@ -2375,11 +2386,11 @@ platform persistence remains incomplete.
 - [x] User-captured ARMSX2 and NetherSX2 Turnip v1 diagnostic screens show five PASS results
 - [ ] [IN PROGRESS] Record ARMSX2 version/settings and optional on-device ELF checksum for reproducibility
 - [ ] SDK entry lifecycle runtime validation
-- [ ] GS framebuffer presentation
+- [ ] [IN PROGRESS] GS framebuffer presentation — persistent single-buffer uploads are host-lifecycle-tested and cross-built; target display remains unverified
 - [ ] Scaling and aspect policy
-- [ ] Video buffers and ownership
-- [ ] GIF packet lifetime
-- [ ] DMA cache coherency
+- [ ] [IN PROGRESS] Video buffers and ownership — aligned EE capture plus presenter-owned packet/framebuffer exist; double buffering remains
+- [ ] [IN PROGRESS] GIF packet lifetime — one packet is reset/reused after DMA completion and freed at shutdown; target validation remains
+- [ ] [IN PROGRESS] DMA cache coherency — separately referenced pixels are flushed before each chain; target validation remains
 - [ ] [IN PROGRESS] Pad input — port-0 `libpad` acquisition and host-verified digital mapping feed the bounded ROM path; target runtime/hotplug/continuous polling remain
 - [ ] [IN PROGRESS] Storage and ROM selection — explicit PS2 path adapter exists; mount lifecycle and picker absent
 - [ ] SRAM persistence

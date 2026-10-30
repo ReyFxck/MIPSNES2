@@ -184,6 +184,10 @@ their full combination, ignored L2/R2/L3/R3 inputs and a mixed-button word. The
 pad-input fixture uses narrow SDK stubs to cover module/init/open failures, aligned
 storage, connection/read states and cleanup; the real PS2SDK lifecycle is
 cross-compiled but cannot execute on the host.
+The PS2 GS-presenter fixture uses narrow SDK stubs to cover packet/VRAM/DMA/graph
+initialization failures, buffer validation, chain-send failure, repeated packet and
+framebuffer reuse, cache flush/wait ordering and idempotent cleanup. It cannot prove
+real GS output or target timing.
 The cartridge-image regression executable covers clean and copier-prefixed view
 policies, malformed sizes, LoROM/HiROM/ExHiROM header offsets, raw 16-byte
 registration fields, normalized

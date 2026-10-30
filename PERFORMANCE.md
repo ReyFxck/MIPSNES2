@@ -47,9 +47,10 @@ The reference color-math pass currently performs three channel operations and
 brightness divisions per pixel. PS2 and PSP cost remains unmeasured.
 The PS2 ROM path now reserves a 256×256 RGBA32 frame (256 KiB) and expands
 captured BGR555 lines on the EE. Its cost and cache/DMA behavior are unmeasured.
-The optional PS2 GS path now sends one 256 KiB RGBA32 buffer over GIF DMA
-after a bounded run. No throughput, transfer latency, cache-stall or frame
-budget measurement exists; it is not a continuous renderer.
+The optional PS2 GS path now allocates one packet/framebuffer at lifecycle start and
+reuses them to send one 256 KiB RGBA32 buffer after each fixed diagnostic horizon.
+There is no per-upload allocation, but no throughput, transfer latency, cache-stall
+or frame-budget measurement exists; it is not a continuous gameplay renderer.
 The color-window predicate adds one evaluation per pixel before arithmetic;
 the reference path has no target timing measurement.
 | DMA/HDMA | TBD | TBD | Shared bridge snapshots CPU/channel state for each slot; frame, line and VBlank HDMA events begin after a nonzero `$420C` write. PS2/PSP cost remains unmeasured. |

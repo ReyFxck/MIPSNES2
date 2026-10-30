@@ -1,0 +1,6 @@
+#ifndef MIPSNES2_TEST_PS2_GS_PSM_H
+#define MIPSNES2_TEST_PS2_GS_PSM_H
+
+#define GS_PSM_32 0
+
+#endif

@@ -15,11 +15,13 @@ that the launcher has already made available, constructs the shared machine and
 runs one bounded reference frame in the standalone build. The RFAuds2-enabled
 diagnostic instead makes eight bounded calls toward fixed absolute NTSC frame horizons, each with a
 100,000-sequence bound. It prints CPU and timing
-status and captures bounded reference lines in a static RGBA32 texture. If
-at least one line is available, it submits one image to the GS. This path
+status and captures bounded reference lines in a static RGBA32 texture. A persistent
+single-buffer GS presenter may upload one capture after each fixed horizon; its
+vertical-sync wait occurs only after machine advancement and cannot set emulated
+time. This path
 also attempts a nonblocking port-0 `libpad` sample before each fixed frame horizon
 and injects the translated standard-pad word into the machine. It has no console
-runtime validation, continuous frame loop, verified input/audio or SRAM
+runtime validation, continuous gameplay loop, verified input/audio or SRAM
 persistence. It does not
 mount a USB device or provide a file picker. The original five-case diagnostic
 still runs without arguments; it is not a game or the final GS/video backend.
@@ -30,7 +32,7 @@ The original scaffold record is in
 [ARMSX2 diagnostic guide](ps2-armsx2-diagnostic.md) for the mobile test.
 See the [PS2 frame audit](ps2-video-frame-audit.md) for the capture format and
 its tested limits, and the [GS audit](ps2-gs-audit.md) for the unverified
-single-frame submission.
+persistent presenter.
 
 The SDK's own [EE file-reading sample](https://github.com/ps2dev/ps2sdk/blob/2c670453980fcc3fe46ead6399b730b12c8556eb/ee/rpc/audsrv/samples/playwav/playwav.c)
 uses `sceSifInitRpc`, `fopen("host:...", "rb")` and `fread`. This adapter uses

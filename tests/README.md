@@ -13,6 +13,7 @@ header analysis, whole-image mapper selection and caller-owned construction test
 revisioned SRAM dirty-state/acknowledgement tests,
 machine-level CPU-to-SRAM persistence-handoff tests,
 PS2 active-low digital-pad translation tests,
+PS2 persistent GS presenter lifecycle tests,
 black-box host CLI smoke tests and repository
 consistency checks.
 See [testing policy](../docs/testing.md). No external test ROM is committed yet.
