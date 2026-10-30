@@ -183,10 +183,13 @@ typedef enum {
     MIPSNES2_MACHINE_RUN_INVALID_ARGUMENT
 } mipsnes2_machine_run_result;
 
-/* Bounded machine execution: report holds the final sequence or paused
- * operation, and sequences counts only fully completed RESET/instructions.
- * A horizon return retains the operation cursor for the next call. Callers
- * S-DSP sample synthesis and platform audio output remain separate work.
+/* Bounded machine execution: report holds the final sequence, idle wait or
+ * paused operation, and sequences counts only completed RESET/instruction or
+ * terminal CPU boundaries. WAI idle boundaries do not consume sequence_limit;
+ * shared time advances to exact scheduler/H-V wake boundaries or the requested
+ * horizon. STP remains a CPU stop. A horizon return retains any active
+ * operation cursor for the next call. S-DSP sample synthesis and platform
+ * audio output remain separate work.
  */
 mipsnes2_machine_run_result mipsnes2_machine_run_until(
     mipsnes2_machine *machine, mipsnes2_master_clock horizon,

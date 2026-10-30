@@ -29,8 +29,9 @@ The H/V regression checks null/uninitialized inputs, the initial 357,364-clock N
 field, a 1,000-clock partial phase, the following 357,368-clock field, a complete PAL
 frame and the final clock before its boundary. The complete host suite and repository
 boundary/link checker pass. A focused ASan+UBSan H/V suite and GCC `-fanalyzer` on
-the timing source also pass. PS2 CI is required after publication because the
-changed launcher cannot execute in the host fixture.
+the timing source also pass. Revision `38a3b15` passed GitHub Host, PS2 and PSP
+workflows after publication; the changed launcher still cannot execute in the host
+fixture.
 
 This fixes frame-horizon arithmetic only. It does not add a continuous gameplay
 loop, dynamic PAL/overscan selection, interlace, device-driven pacing, frameskip or

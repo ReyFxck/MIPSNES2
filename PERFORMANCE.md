@@ -56,7 +56,7 @@ the reference path has no target timing measurement.
 | DMA/HDMA | TBD | TBD | Shared bridge snapshots CPU/channel state for each slot; frame, line and VBlank HDMA events begin after a nonzero `$420C` write. PS2/PSP cost remains unmeasured. |
 | SPC700 | TBD | TBD | |
 | DSP | TBD | TBD | |
-| Scheduler | TBD | TBD | |
+| Scheduler | TBD | TBD | WAI uses a reference idle loop over relevant scheduler/H/V boundaries; target cost is unmeasured. |
 | Video upload | TBD | TBD | |
 | Audio output | TBD | TBD | |
 | Miscellaneous | TBD | TBD | |

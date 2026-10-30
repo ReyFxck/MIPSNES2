@@ -25,7 +25,9 @@ register H/V timer-match evidence is in
 scheduler/H/V advancement evidence is in
 [docs/master-timing-fanout-audit.md](docs/master-timing-fanout-audit.md), and atomic
 CPU-I/O interrupt handoff evidence is in
-[docs/interrupt-handoff-audit.md](docs/interrupt-handoff-audit.md). Ricoh 5A22 math
+[docs/interrupt-handoff-audit.md](docs/interrupt-handoff-audit.md). Deterministic
+machine-level WAI idle/wake evidence is in
+[docs/machine-wai-idle-audit.md](docs/machine-wai-idle-audit.md). Ricoh 5A22 math
 and controller evidence is in
 [docs/5a22-math-register-audit.md](docs/5a22-math-register-audit.md) and
 [docs/auto-joypad-audit.md](docs/auto-joypad-audit.md), with manual serial-port
@@ -422,6 +424,10 @@ pumps audio or waits for GS/DMA/vsync. Host regressions pin initial/mid-frame NT
 alternating fields, PAL and invalid-state behavior. Device pacing still cannot
 advance emulated time. See
 [docs/frame-boundary-horizon-audit.md](docs/frame-boundary-horizon-audit.md).
+Revision `38a3b15` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41085634153),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41085634366) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41085634234).
 
 The machine PPU integration now has a two-frame event regression rather than
 only isolated line checks. A synthetic Mode 0 scene runs through recurring HBlank
@@ -1659,8 +1665,9 @@ Revision `57a1743` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083279378).
 
 The Phase 9 base regression gate on 2026-10-30 adds `make machine-test` as a focused
-entry point over the five existing integrated fixtures: machine lifecycle, APU/PCM,
-recurring PPU frames, controller input and SRAM persistence handoff. The target
+entry point over six integrated fixtures: machine lifecycle, APU/PCM, recurring PPU
+frames, controller input, SRAM persistence handoff and deterministic WAI idle/wake.
+The target
 reuses the same executables as the full host suite and makes their combined gate
 explicit; it does not add emulator behavior or claim licensed-ROM, PS2 or PSP
 runtime coverage. Exact scope and validation are recorded in
@@ -1669,6 +1676,15 @@ Revision `caedbdc` passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083872704),
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083873079) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083873052).
+
+The resumable machine bridge now treats WAI as idle emulated time rather than a CPU
+stop. It advances to the earliest scheduler event, H/V transition, auto-joypad
+completion or caller horizon, samples NMI/IRQ there and preserves the event budget
+across the idle slice. Synthetic LoROM regressions pin NMI wake at V=225/H=2, a
+masked H-timer IRQ wake at H=414 without vector entry, no-interrupt horizon progress
+and unchanged STP stop behavior. The platform never supplies elapsed emulation time,
+and no real-console runtime, compatibility or performance result is claimed. See
+[docs/machine-wai-idle-audit.md](docs/machine-wai-idle-audit.md).
 
 The programmable I/O-port foundation on 2026-10-20 adds `$4201` WRIO and `$4213`
 RDIO. The caller owns external pin levels; reads combine them with the output latch
@@ -2196,7 +2212,7 @@ platform persistence remains incomplete.
 - [x] Master timestamp units — unsigned 64-bit SNES master clocks
 - [x] Clock ratio representation — exact reduced rational with carried remainder
 - [x] Event tie ordering — timestamp, explicit priority, insertion token
-- [x] CPU event horizon — caller-owned in-flight operation state pauses at requested horizons or event-budget failures and resumes without restarting or duplicating the CPU/bus effect
+- [x] CPU event horizon — in-flight operations resume exactly once, and WAI idles to exact scheduler/H/V wake boundaries or the caller horizon
 - [x] Shared scheduler/H/V master-clock fanout — checked alignment, transactional H/V slices and provisional same-time ordering verified
 - [x] PPU event integration — recurring HBlank callbacks deliver two chunk-independent reference frames
 - [ ] [IN PROGRESS] SPC700 synchronization — nominal rational budget and atomic admission integrated; exact phases/races pending

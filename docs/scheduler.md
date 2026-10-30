@@ -27,6 +27,7 @@ Implemented and host-verified behavior:
 - deterministic H/V-before-callback ordering at equal timestamps;
 - independent timer/cartridge/expansion IRQ-source aggregation;
 - CPU-I/O NMI-edge and IRQ-level delivery at instruction boundaries;
+- deterministic WAI idle advancement to exact event/H/V wake boundaries;
 - deterministic replay, event-budget retry and CPU IRQ/NMI boundary fixtures.
 
 This is not a complete SNES scheduler. The cursor does not expose every W65C816
@@ -76,6 +77,10 @@ current valid H/V phase to the next frame boundary without mutating state. It
 accounts for the field toggle at H=1/V=0 and the NTSC field-one short line, so a
 platform can request an absolute machine horizon without assuming every frame is
 `262 × 1364` clocks. It does not pace execution or consult a display/audio device.
+`mipsnes2_hv_clocks_until_next_boundary` similarly reports the next positive H/V
+state transition, including NMI/timer, blanking, line and automatic-joypad edges.
+The resumable bridge uses this query only while WAI is active so interrupt inputs are
+sampled at the transition that generated them rather than at a later frame horizon.
 
 The optional PPU counter adapter reads this H/V snapshot at the bus boundary, not at
 individual electrical cycles within an operation. Its external edge handoff must be
@@ -124,6 +129,15 @@ at the current boundary are dispatched before the cursor begins; a mid-operation
 cannot retroactively replace an already selected instruction. The following boundary
 retains the CPU's NMI-over-IRQ priority. This is a logical handoff, not an assertion
 about exact electrical sampling.
+
+When that variant begins with an inactive cursor and a CPU in WAI, it does not commit
+another empty CPU boundary immediately. It advances to the minimum of the next
+scheduler event, next H/V state transition and requested horizon, then samples and
+drives interrupt lines. NMI begins its normal boundary entry at that timestamp; an
+asserted masked IRQ releases WAI and continues with the next opcode, as owned by the
+CPU core. HDMA requests return to the normal timed-device path. A horizon with no
+wake returns with the CPU still waiting and the cursor inactive. STP never enters
+this idle path.
 
 ## Event and rollover contract
 
@@ -178,7 +192,7 @@ effects. A callback already dispatched before budget exhaustion cannot be rolled
 back. Callbacks must not mutate CPU/cursor/FastROM/bus counters during an in-flight
 operation; stale descriptors/counters are rejected before its commit. Active-cursor
 cancellation/checkpoint recovery is not implemented. The same resumable path now
-arbitrates CPU-triggered general DMA and WRAM refresh; HDMA remains absent.
+arbitrates CPU-triggered general DMA, timed HDMA and WRAM refresh.
 The timing-state ABORT pulse is a narrow exception: after opcode fetch it latches
 without mutating the active CPU descriptor. A pending write blocks at its original
 timed endpoint; a future write blocks before admission until the caller qualifies
@@ -244,7 +258,8 @@ HBlank/VBlank boundaries, delayed NMI assertion, overscan, field/short-line beha
 overflow handling, every valid HTIME value, V/HV match positions, short/final-line
 exceptions, out-of-range compares and one-shot/chunked determinism with IRQ enabled.
 It also covers exact automatic-joypad start/completion boundaries, normal/overscan
-VBlank selection, late enable, disable while busy, snapshots and chunk equivalence.
+VBlank selection, late enable, disable while busy, snapshots, chunk equivalence and
+non-mutating next-boundary distances for blanking, timer, NMI and auto-joypad state.
 `tests/test_master_timing.c` covers domain validation, plain and chunked advancement,
 H/V-before-callback observation at an equal timestamp, event-budget exhaustion,
 same-time insertion, reentrant-run rejection, failure-state alignment and exact
@@ -257,6 +272,9 @@ sampling, NMI edge transfer, TIMEUP acknowledgement with cartridge IRQ retained 
 CPU input driving. The SNES-bus integration fixture covers timer assertion after an
 atomic step, external-source preservation/clear, NMI delivery and simultaneous
 NMI-plus-IRQ priority into the existing NMI vector path.
+`tests/test_machine_wait.c` executes constructed LoROMs through the public machine
+boundary. It verifies no-interrupt WAI horizon progress, NMI wake at V=225/H=2,
+masked timer-IRQ wake at H=414 without vector entry and unchanged STP stopping.
 CPU-I/O and SNES-bus fixtures additionally cover 8/16-cycle math completion,
 old-result boundaries, division by zero, bus/internal-cycle advancement and an
 executed STA/NOP/LDA multiply sequence. They cover the four automatic-joypad result
@@ -276,10 +294,11 @@ remain incomplete or unverified; document implementation evidence before promoti
 - [x] Clock ratio representation
 - [x] Event tie ordering
 - [x] CPU event horizon — caller-owned in-flight operation state advances through events, pauses on requested horizons/errors and commits exactly once
-- [ ] PPU event integration
+- [x] WAI idle horizon — scheduler/H/V state advances to exact NMI/IRQ/device boundaries without synthetic CPU cycles
+- [ ] [IN PROGRESS] PPU event integration — recurring line/frame callbacks exist; exact late-line and subsystem tie behavior remains
 - [ ] [IN PROGRESS] SPC700 synchronization — rational machine-time budget and atomic instruction admission integrated; exact bus phases/races pending
 - [ ] [IN PROGRESS] DSP synchronization — common S-SMP cycle domain and 32-cycle event cadence integrated; pipeline phases pending
-- [ ] DMA bus ownership
+- [ ] [IN PROGRESS] DMA bus ownership — timed general DMA, HDMA and WRAM refresh arbitration exists; electrical overlap remains
 - [ ] Enhancement scheduling
 - [x] Determinism tests — scheduler foundation replay
 - [x] Shared CPU/scheduler/H/V domain — atomic fanout and failure alignment verified

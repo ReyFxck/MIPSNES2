@@ -23,7 +23,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/apu | S-CPU/S-SMP communication and timing | Directional ports plus nominal rational master-to-S-SMP clock bridge; electrical race order and oscillator drift pending |
 | core/apu/spc700 | S-SMP address map, timers and SPC700 execution/state | All 256 opcodes, ARAM/IPL, ports, `$F2/$F3` DSP route and three-stage timers under the APU clock; exact bus phases and interrupt/reset entry pending |
 | core/apu/dsp | Emulated SNES DSP and sample generation | Register/event cadence, eight BRR/noise voices, Gaussian interpolation, ADSR/GAIN, `OUTX`, `PMON`, signed voice/main volume, ordered dry mixing, ARAM echo/FIR/feedback, mute-gated final samples and optional bounded native PCM handoff; exact microphases and device transport absent |
-| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, interrupt-line aggregation and shared master-clock coordinator |
+| core/scheduler | Deterministic emulated time and ordered events | Fixed event queue, rational clocks, 5A22 access classes, resumable CPU-operation bridge plus atomic compatibility bridge, non-interlaced H/V phase, WAI idle-to-boundary advancement, interrupt-line aggregation and shared master-clock coordinator |
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
@@ -86,8 +86,11 @@ performs device output. Exact
 instruction bus phases, within-DSP-loop register visibility, mailbox races and
 physical oscillator drift remain open.
 `resume` advances one
-timed RESET sequence or instruction to a caller-specified horizon; `run_until`
-also bounds completed sequences and retains a paused cursor. The instance
+timed RESET sequence or instruction to a caller-specified horizon. When the CPU is
+in WAI, the same bridge advances the scheduler/H/V domain only to the next relevant
+state transition or requested horizon, samples interrupt lines there and begins the
+wake boundary without inventing CPU cycles; STP remains stopped. `run_until` also
+bounds completed sequences and retains a paused cursor. The instance
 has a stable address because its CPU and bus callbacks point into it; callers
 must not copy or move it. PS2 accepts a file path from an explicit command-line
 argument into preallocated EE memory, while PSP still has no file adapter. Neither

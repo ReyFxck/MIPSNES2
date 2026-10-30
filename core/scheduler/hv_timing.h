@@ -62,6 +62,15 @@ uint16_t mipsnes2_hv_frame_scanlines(const mipsnes2_hv_timing *timing);
  */
 bool mipsnes2_hv_clocks_until_frame_boundary(
     const mipsnes2_hv_timing *timing, uint64_t *clocks_out);
+/* Exact positive distance to the next H/V state transition considered by the
+ * timing engine, including timer/NMI, blanking, line and auto-joypad edges.
+ * The CPU-I/O state supplies the current programmable timer selection. On
+ * failure clocks_out is unchanged.
+ */
+bool mipsnes2_hv_clocks_until_next_boundary(
+    const mipsnes2_hv_timing *timing,
+    const mipsnes2_cpu_io *cpu_io,
+    uint64_t *clocks_out);
 uint16_t mipsnes2_hv_vblank_start_line(
     const mipsnes2_hv_timing *timing);
 bool mipsnes2_hv_ppu_horizontal(const mipsnes2_hv_timing *timing,

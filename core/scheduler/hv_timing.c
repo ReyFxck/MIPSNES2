@@ -266,6 +266,34 @@ static uint16_t next_horizontal_boundary(const mipsnes2_hv_timing *timing,
     return next;
 }
 
+bool mipsnes2_hv_clocks_until_next_boundary(
+    const mipsnes2_hv_timing *timing,
+    const mipsnes2_cpu_io *cpu_io,
+    uint64_t *clocks_out)
+{
+    uint16_t boundary;
+    uint16_t distance;
+
+    if (timing == NULL || cpu_io == NULL || clocks_out == NULL ||
+        !timing->initialized || !standard_is_valid(timing->standard) ||
+        timing->v_counter >= mipsnes2_hv_frame_scanlines(timing) ||
+        timing->h_master_clock >=
+            mipsnes2_hv_scanline_master_clocks(timing)) {
+        return false;
+    }
+    boundary = next_horizontal_boundary(timing, cpu_io);
+    if (boundary <= timing->h_master_clock) {
+        return false;
+    }
+    distance = (uint16_t)(boundary - timing->h_master_clock);
+    if (timing->auto_joypad_clocks_remaining != 0U &&
+        timing->auto_joypad_clocks_remaining < distance) {
+        distance = timing->auto_joypad_clocks_remaining;
+    }
+    *clocks_out = distance;
+    return true;
+}
+
 static void process_timer_boundary(mipsnes2_hv_timing *timing,
                                    mipsnes2_cpu_io *cpu_io)
 {

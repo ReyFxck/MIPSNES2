@@ -712,6 +712,112 @@ static bool hdma_requested(const mipsnes2_snes_bus *bus)
            (bus->hdma_frame_pending || bus->hdma_line_pending);
 }
 
+typedef struct {
+    size_t events_dispatched;
+    bool nmi_delivered;
+    bool irq_level_delivered;
+} mipsnes2_wait_idle_state;
+
+static void sample_waiting_interrupt_lines(
+    mipsnes2_cpu *cpu,
+    mipsnes2_snes_bus *bus,
+    mipsnes2_interrupt_lines *interrupt_lines,
+    mipsnes2_wait_idle_state *idle)
+{
+    bool delivered = false;
+
+    if (interrupt_lines == NULL) {
+        return;
+    }
+    (void)mipsnes2_interrupt_lines_sample_cpu_io(
+        interrupt_lines, bus->cpu_io_state);
+    if (bus->dma_request_mask == 0U) {
+        (void)mipsnes2_interrupt_lines_drive_cpu(
+            interrupt_lines, cpu, &delivered);
+        idle->nmi_delivered = idle->nmi_delivered || delivered;
+        idle->irq_level_delivered = cpu->irq_level;
+    }
+}
+
+static void fill_wait_idle_report(
+    const mipsnes2_wait_idle_state *idle,
+    const mipsnes2_scheduler *scheduler,
+    mipsnes2_cpu_timing_report *report)
+{
+    report->cpu_result = MIPSNES2_CPU_WAITING;
+    report->events_dispatched = idle->events_dispatched;
+    report->nmi_delivered = idle->nmi_delivered;
+    report->irq_level_delivered = idle->irq_level_delivered;
+    report->target_time = scheduler->now;
+}
+
+static mipsnes2_cpu_timing_result idle_waiting_cpu_until(
+    mipsnes2_cpu *cpu,
+    mipsnes2_snes_bus *bus,
+    mipsnes2_scheduler *scheduler,
+    mipsnes2_hv_timing *hv_timing,
+    mipsnes2_interrupt_lines *interrupt_lines,
+    mipsnes2_master_clock requested_horizon,
+    size_t *remaining_budget,
+    mipsnes2_wait_idle_state *idle,
+    mipsnes2_cpu_timing_report *report)
+{
+    sample_waiting_interrupt_lines(cpu, bus, interrupt_lines, idle);
+    for (;;) {
+        mipsnes2_master_clock target = requested_horizon;
+        mipsnes2_master_clock next_event;
+        size_t dispatched = 0U;
+        mipsnes2_cpu_timing_result result;
+
+        if (cpu->nmi_pending || cpu->irq_level || hdma_requested(bus)) {
+            return MIPSNES2_CPU_TIMING_OK;
+        }
+        if (scheduler->now == requested_horizon) {
+            fill_wait_idle_report(idle, scheduler, report);
+            return MIPSNES2_CPU_TIMING_HORIZON_REACHED;
+        }
+        if (mipsnes2_scheduler_next_event_time(scheduler, &next_event) &&
+            next_event < target) {
+            target = next_event;
+        }
+        if (hv_timing != NULL && interrupt_lines != NULL) {
+            uint64_t clocks;
+
+            if (!mipsnes2_hv_clocks_until_next_boundary(
+                    hv_timing, bus->cpu_io_state, &clocks)) {
+                report->hv_result = MIPSNES2_HV_INVALID_ARGUMENT;
+                fill_wait_idle_report(idle, scheduler, report);
+                return MIPSNES2_CPU_TIMING_HV_ERROR;
+            }
+            if (clocks > UINT64_MAX - scheduler->now) {
+                fill_wait_idle_report(idle, scheduler, report);
+                return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+            }
+            if (scheduler->now + clocks < target) {
+                target = scheduler->now + clocks;
+            }
+        }
+
+        result = run_until(scheduler, hv_timing, bus->cpu_io_state,
+                           target, *remaining_budget, &dispatched, report);
+        if (idle->events_dispatched > SIZE_MAX - dispatched) {
+            fill_wait_idle_report(idle, scheduler, report);
+            return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+        }
+        idle->events_dispatched += dispatched;
+        if (dispatched <= *remaining_budget) {
+            *remaining_budget -= dispatched;
+        } else {
+            *remaining_budget = 0U;
+        }
+        sample_waiting_interrupt_lines(cpu, bus, interrupt_lines, idle);
+        if (result != MIPSNES2_CPU_TIMING_OK) {
+            fill_wait_idle_report(idle, scheduler, report);
+            return result;
+        }
+    }
+}
+
 static mipsnes2_cpu_timing_result resume_hdma(
     mipsnes2_cpu *cpu, mipsnes2_snes_bus *bus,
     mipsnes2_scheduler *scheduler, mipsnes2_hv_timing *hv_timing,
@@ -969,6 +1075,7 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
 {
     size_t remaining_budget = event_budget;
     size_t dispatched = 0U;
+    mipsnes2_wait_idle_state idle = {0};
     mipsnes2_cpu_timing_result result;
 
     initialize_report(report);
@@ -983,18 +1090,33 @@ static mipsnes2_cpu_timing_result resumable_timed_step(
     }
 
     if (!state->active) {
+        if (cpu->waiting && !cpu->clock_stopped) {
+            result = idle_waiting_cpu_until(
+                cpu, bus, scheduler, hv_timing, interrupt_lines,
+                requested_horizon, &remaining_budget, &idle, report);
+            if (result != MIPSNES2_CPU_TIMING_OK) {
+                return result;
+            }
+        }
         result = run_until(scheduler, hv_timing, bus->cpu_io_state,
                            scheduler->now, remaining_budget,
                            &dispatched, report);
+        if (idle.events_dispatched > SIZE_MAX - dispatched) {
+            fill_wait_idle_report(&idle, scheduler, report);
+            return MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+        }
+        dispatched += idle.events_dispatched;
         report->events_dispatched = dispatched;
         report->target_time = scheduler->now;
         if (result != MIPSNES2_CPU_TIMING_OK) {
             return result;
         }
-        remaining_budget -= dispatched;
+        remaining_budget -= dispatched - idle.events_dispatched;
         bind_resumable_state(state, cpu, bus, scheduler, hv_timing,
                              interrupt_lines);
         state->events_dispatched = dispatched;
+        state->nmi_delivered = idle.nmi_delivered;
+        state->irq_level_delivered = idle.irq_level_delivered;
         sample_interrupt_lines(state, cpu, bus, interrupt_lines, true);
         if ((state->reset_sequence
                  ? mipsnes2_cpu_cycle_begin_reset(&state->cpu_cycle)

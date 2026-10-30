@@ -837,15 +837,13 @@ mipsnes2_machine_run_result mipsnes2_machine_run_until(
     size_t *sequences, mipsnes2_cpu_timing_report *report,
     mipsnes2_cpu_timing_result *timing_result)
 {
-    size_t completed;
-
     if (machine == NULL || !machine->ready || sequences == NULL ||
         report == NULL || timing_result == NULL || sequence_limit == 0U ||
         horizon < machine->scheduler.now) {
         return MIPSNES2_MACHINE_RUN_INVALID_ARGUMENT;
     }
     *sequences = 0U;
-    for (completed = 0U; completed < sequence_limit; ++completed) {
+    while (*sequences < sequence_limit) {
         *timing_result = mipsnes2_machine_resume(
             machine, horizon, event_budget, report);
         if (*timing_result == MIPSNES2_CPU_TIMING_HORIZON_REACHED) {
@@ -853,6 +851,9 @@ mipsnes2_machine_run_result mipsnes2_machine_run_until(
         }
         if (*timing_result != MIPSNES2_CPU_TIMING_OK) {
             return MIPSNES2_MACHINE_RUN_TIMING_ERROR;
+        }
+        if (report->cpu_result == MIPSNES2_CPU_WAITING) {
+            continue;
         }
         ++*sequences;
         if (report->cpu_result != MIPSNES2_CPU_OK) {

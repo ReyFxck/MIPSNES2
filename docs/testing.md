@@ -3,8 +3,8 @@
 ## Host tests
 
 Run `make machine-test` for the focused Phase 9 base-machine gate. It builds and
-runs the machine lifecycle, integrated APU/PCM, recurring PPU frame, input and SRAM
-handoff fixtures without implying licensed-ROM or target-console execution. Run
+runs the machine lifecycle, integrated APU/PCM, recurring PPU frame, input, SRAM
+handoff and WAI idle/wake fixtures without implying licensed-ROM or target-console execution. Run
 `make test` for the complete host suite. The contract test checks logical-address masks, all bank/offset
 combinations and logging sink semantics. A second executable compiles with logging
 disabled and verifies callbacks are absent. `test-ps2-diagnostic` runs the five
@@ -138,7 +138,7 @@ HBlank/VBlank boundaries, overscan, field toggling, the NTSC short line, delayed
 assertion, every valid HTIME value, V/HV match positions, short/final-line exceptions,
 out-of-range compare values, exact-boundary enabling, TIMEUP acknowledgement, overflow
 rejection, exact clocks-to-next-frame queries from initial/mid-frame NTSC and PAL
-phases, exact 4224-clock automatic-joypad timing, normal/overscan start lines,
+phases, exact next-state-boundary queries, exact 4224-clock automatic-joypad timing, normal/overscan start lines,
 late enable, disable while busy and one-shot/chunked determinism. Timed CPU fixtures verify a slow NOP,
 mixed FastROM-fetch/slow-WRAM LDA, an event timestamped inside an atomic instruction,
 emulation-mode NMI entry and visible bridge errors. The master-domain executable
@@ -180,6 +180,11 @@ The machine-SRAM fixture executes two 65C816 long stores through a constructed
 LoROM machine, observes their live dirty/revision handoff, rejects a stale
 acknowledgement, accepts the current revision and checks power-on retention. It does
 not write a save file or exercise a target filesystem.
+The machine-WAI fixture verifies that the public bounded runner advances an idle CPU
+to the caller horizon without synthetic CPU cycles, starts NMI at V=225/H=2, wakes
+from a masked H-timer IRQ at H=414 without taking the IRQ vector and still reports
+STP as a CPU stop. It is deterministic host evidence, not electrical sampling or
+target-runtime validation.
 The PS2 pad-mapping fixture exhausts the twelve mapped active-low digital buttons,
 their full combination, ignored L2/R2/L3/R3 inputs and a mixed-button word. The
 pad-input fixture uses narrow SDK stubs to cover module/init/open failures, aligned

@@ -1,18 +1,19 @@
 # Tests
 
 `make machine-test` runs the focused Phase 9 base-machine regression gate: lifecycle,
-integrated APU/PCM, recurring PPU frames, input and SRAM handoff. It uses constructed
+integrated APU/PCM, recurring PPU frames, input, SRAM handoff and WAI idle/wake. It uses constructed
 fixtures and does not claim licensed-ROM or console execution.
 
 `make test` executes the address/logging contracts with logging enabled and disabled,
 the logical-bus and 256-opcode CPU regressions, the initial exact-once/resumable CPU
 operation-contract regressions, Ricoh 5A22 CPU-I/O register/latch
-tests, deterministic scheduler/5A22 timing and exact frame-boundary-distance tests,
+tests, deterministic scheduler/5A22 timing and exact frame/next-boundary-distance tests,
 partial SNES WRAM/MMIO/timed-CPU integration tests, base LoROM/
 HiROM power-of-two/irregular and ExHiROM mapping tests, copier-prefix/registration/
 header analysis, whole-image mapper selection and caller-owned construction tests,
 revisioned SRAM dirty-state/acknowledgement tests,
 machine-level CPU-to-SRAM persistence-handoff tests,
+machine-level deterministic WAI NMI/IRQ/horizon tests,
 PS2 active-low digital-pad translation tests,
 PS2 persistent GS presenter lifecycle tests,
 black-box host CLI smoke tests and repository
