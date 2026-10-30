@@ -1,5 +1,9 @@
 # Tests
 
+`make machine-test` runs the focused Phase 9 base-machine regression gate: lifecycle,
+integrated APU/PCM, recurring PPU frames, input and SRAM handoff. It uses constructed
+fixtures and does not claim licensed-ROM or console execution.
+
 `make test` executes the address/logging contracts with logging enabled and disabled,
 the logical-bus and 256-opcode CPU regressions, the initial exact-once/resumable CPU
 operation-contract regressions, Ricoh 5A22 CPU-I/O register/latch

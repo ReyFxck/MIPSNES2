@@ -298,7 +298,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] Licensed test-ROM execution
 - [ ] Real PS2 runtime smoke
 - [ ] Real PSP runtime smoke
-- [ ] Base regression suite
+- [x] Base regression suite — focused machine lifecycle, APU/PCM, recurring PPU, input and SRAM-handoff tests pass deterministically
 
 ## Phase 10 — PS2 Performance Pass
 

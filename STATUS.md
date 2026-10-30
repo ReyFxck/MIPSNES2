@@ -1632,6 +1632,19 @@ connected to `mipsnes2_machine_set_joypad`, but target execution, hotplug recove
 continuous polling, second port/multitap and PSP input remain absent. See
 [docs/ps2-pad-input-audit.md](docs/ps2-pad-input-audit.md).
 
+Revision `57a1743` passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083279317),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083279324) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083279378).
+
+The Phase 9 base regression gate on 2026-10-30 adds `make machine-test` as a focused
+entry point over the five existing integrated fixtures: machine lifecycle, APU/PCM,
+recurring PPU frames, controller input and SRAM persistence handoff. The target
+reuses the same executables as the full host suite and makes their combined gate
+explicit; it does not add emulator behavior or claim licensed-ROM, PS2 or PSP
+runtime coverage. Exact scope and validation are recorded in
+[docs/machine-base-regression-audit.md](docs/machine-base-regression-audit.md).
+
 The programmable I/O-port foundation on 2026-10-20 adds `$4201` WRIO and `$4213`
 RDIO. The caller owns external pin levels; reads combine them with the output latch
 using open-collector wired-AND behavior. Combined bit-7 falling edges are retained

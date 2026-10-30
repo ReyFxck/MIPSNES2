@@ -2,7 +2,10 @@
 
 ## Host tests
 
-Run `make test`. The contract test checks logical-address masks, all bank/offset
+Run `make machine-test` for the focused Phase 9 base-machine gate. It builds and
+runs the machine lifecycle, integrated APU/PCM, recurring PPU frame, input and SRAM
+handoff fixtures without implying licensed-ROM or target-console execution. Run
+`make test` for the complete host suite. The contract test checks logical-address masks, all bank/offset
 combinations and logging sink semantics. A second executable compiles with logging
 disabled and verifies callbacks are absent. `test-ps2-diagnostic` runs the five
 embedded PS2 diagnostic cases through the same platform-neutral suite linked into
