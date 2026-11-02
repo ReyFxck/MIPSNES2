@@ -77,7 +77,8 @@ No host or target throughput/latency claim has been measured for this path.
 
 The PS2 ROM path reserves 64 KiB of static EE memory for ARAM. Its optional RFAuds2
 build also reserves a 4,096-frame native PCM FIFO (16 KiB), a 960-frame conversion
-array (3,840 bytes) and coordinator state; the embedded IRX and linked client add
+array (3,840 bytes), a separate 2,048-frame ROM-free diagnostic source (8 KiB) and
+coordinator state; the embedded IRX and linked client add
 unmeasured binary/runtime cost. These are compile-time capacities, not a target peak
 memory or throughput measurement. The PSP build links the map but does not allocate
 an ARAM runtime buffer yet.

@@ -356,8 +356,8 @@ $(TEST_PS2_AUDIO_ADAPTER): tests/test_ps2_audio_adapter.c platform/ps2/audio_ada
 $(TEST_PS2_RFAUDS2_TRANSPORT): tests/test_ps2_rfauds2_transport.c tests/rfauds2_include/rfauds2/rfauds2.h platform/ps2/rfauds2_transport.c platform/ps2/rfauds2_transport.h platform/ps2/audio_adapter.c platform/ps2/audio_adapter.h core/apu/pcm.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) -Itests/rfauds2_include $(INCLUDES) tests/test_ps2_rfauds2_transport.c platform/ps2/rfauds2_transport.c platform/ps2/audio_adapter.c $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
-$(TEST_PS2_RFAUDS2_RUNTIME): tests/test_ps2_rfauds2_runtime.c tests/rfauds2_include/rfauds2/rfauds2.h platform/ps2/rfauds2_runtime.c platform/ps2/rfauds2_runtime.h platform/ps2/rfauds2_transport.c platform/ps2/rfauds2_transport.h platform/ps2/audio_adapter.c platform/ps2/audio_adapter.h core/apu/pcm.h $(LIB)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) -Itests/rfauds2_include $(INCLUDES) tests/test_ps2_rfauds2_runtime.c platform/ps2/rfauds2_runtime.c platform/ps2/rfauds2_transport.c platform/ps2/audio_adapter.c $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+$(TEST_PS2_RFAUDS2_RUNTIME): tests/test_ps2_rfauds2_runtime.c tests/rfauds2_include/rfauds2/rfauds2.h platform/ps2/audio_diagnostic.c platform/ps2/audio_diagnostic.h platform/ps2/rfauds2_runtime.c platform/ps2/rfauds2_runtime.h platform/ps2/rfauds2_transport.c platform/ps2/rfauds2_transport.h platform/ps2/audio_adapter.c platform/ps2/audio_adapter.h core/apu/pcm.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) -Itests/rfauds2_include $(INCLUDES) tests/test_ps2_rfauds2_runtime.c platform/ps2/audio_diagnostic.c platform/ps2/rfauds2_runtime.c platform/ps2/rfauds2_transport.c platform/ps2/audio_adapter.c $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
 $(TEST_DMA_REGISTERS): tests/test_dma_registers.c core/dma/registers.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@

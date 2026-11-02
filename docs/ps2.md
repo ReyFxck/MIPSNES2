@@ -142,6 +142,20 @@ Target execution, continuous streaming and real-hardware underrun/backpressure
 validation remain. See the
 [PS2 audio-adapter audit](ps2-audio-adapter-audit.md).
 
+With `MIPSNES2_RFAUDS2=1`, opening the ELF without arguments runs a ROM-free
+RFAuds2 lifecycle diagnostic. It feeds 2,048 fixed signed stereo frames into the
+native FIFO, makes at most 32 launch/poll attempts, and reports init, accepted
+prebuffer, start, queue/underrun statistics and shutdown on screen and stdout.
+`--audio-diag` selects the same path explicitly; `--core-diag` selects the original
+five-case CPU screen. The standalone build without RFAuds2 keeps its original
+default. The ROM path remains `--rom PATH`; the synthetic diagnostic does not
+execute the machine or prove its S-DSP output. A pending RPC at the attempt limit
+leaves the device bound and reports `BUSY`, retaining the static buffers until exit.
+For Android capture, record emulator build/version, BIOS region, settings, ELF
+SHA-256 and the screen/log. `PASS` reports lifecycle completion only; audible
+output and target compatibility still require observation. See
+[the ROM-free capture audit](ps2-audio-lifecycle-diagnostic-audit.md).
+
 ## Dedicated optimization candidates
 
 No optimization below has been implemented or benchmarked. These are research gates.

@@ -27,7 +27,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
-| platform/ps2 | EE lifecycle, I/O, pad acquisition, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path, bounded `libpad` sampling, persistent single-buffer GS uploads and bounded 48 kHz accepted-prefix/RFAuds2 lifecycle diagnostic; target runtime unverified |
+| platform/ps2 | EE lifecycle, I/O, pad acquisition, GS presentation, final SPU2 output | Default five-case diagnostic in standalone build; optional RFAuds2 build defaults to a ROM-free fixed-PCM lifecycle diagnostic, retains explicit ROM path, bounded `libpad` sampling and persistent single-buffer GS uploads; target runtime unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 

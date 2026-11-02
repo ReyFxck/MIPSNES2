@@ -1082,8 +1082,17 @@ busy rules, diagnostics and shutdown. Revision `5c0a8c7` passed
 only SDK build/link portability: no target IRX/RPC/SPU2 execution, pacing, sustained
 delivery or audible output result is claimed.
 
-Next primary block: capture the bounded IRX init/prebuffer/start/statistics/shutdown
-diagnostic on an Android PS2 emulator with version/settings and ELF checksum.
+The optional RFAuds2 build now exposes a bounded ROM-free lifecycle diagnostic
+as its no-argument ELF entry. It uses 2,048 synthetic native PCM frames and at
+most 32 asynchronous attempts to report init, accepted prebuffer/start,
+statistics and shutdown on screen and stdout. The standalone five-case default
+is unchanged, and `--core-diag` selects it in the optional build. Host fixtures
+cover success, permanently pending RPC, init failure and invalid capacity;
+see [the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md). The
+Android emulator capture and real PS2 execution remain unverified.
+
+Next primary block: capture the ROM-free bounded IRX init/prebuffer/start/statistics/
+shutdown diagnostic on an Android PS2 emulator with version/settings and ELF checksum.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
