@@ -27,7 +27,7 @@ EE_OBJS += rfauds2_transport.o rfauds2_runtime.o audio_diagnostic.o iop_module_l
 EE_INCS += -I$(RFAUDS2_ROOT)/include
 EE_CFLAGS += -DMIPSNES2_RFAUDS2=1
 EE_LDFLAGS += -L$(RFAUDS2_ROOT)/build
-EE_LIBS := -lrfauds2 -lsbv $(EE_LIBS)
+EE_LIBS := -lrfauds2 -lpatches $(EE_LIBS)
 endif
 
 .PHONY: all clean

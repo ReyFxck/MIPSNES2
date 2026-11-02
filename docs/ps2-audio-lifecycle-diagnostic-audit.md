@@ -118,6 +118,10 @@ execute permission; only that generated file was made executable and the full
 suite rerun. GCC `-fanalyzer` compiled the loader and its fixture;
 `tools/check_repository.py` and `git diff --check` passed. PS2/PSP compilers
 are unavailable locally, so the optional SDK link and ELF require CI.
+The first PS2 CI attempt failed at link because the integration requested
+`-lsbv`; the pinned PS2SDK `ee/sbv/Makefile` names this archive
+`libpatches.a`. The link was corrected to `-lpatches` without changing the
+SBV implementation or vendoring it. This attempt did not produce a new ELF.
 
 ## Why this entry exists
 

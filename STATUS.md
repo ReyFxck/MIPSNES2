@@ -1149,6 +1149,10 @@ after restoring the execute permission on one generated `test-ppu-oam` ELF
 and rerunning. GCC `-fanalyzer` compiled the changed loader and fixture;
 `tools/check_repository.py` and `git diff --check` passed. No PS2/PSP compiler
 is installed locally. PS2/PSP cross-build and target behavior are pending.
+PS2 CI run `41501817629` failed at link because the archive was named
+`libpatches.a`, not `libsbv.a`; the Makefile has been corrected to
+`-lpatches`. That failed run produced no ELF. PSP CI run `41501817662` passed;
+the corrected PS2 link remains to be checked by CI.
 
 Next primary block: verify the SBV-prepared RFAuds2 load and RPC lifecycle in
 NetherSX2 with a capture of the corrected ELF and its on-device checksum.
