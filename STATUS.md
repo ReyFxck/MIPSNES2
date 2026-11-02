@@ -1110,9 +1110,24 @@ The follow-up implementation tree passed
 The PS2 artifact ELF SHA-256 is
 `af8eed4ec399a85eb6c9ccbac60233d5a71bf3739337fcc084cada5e31f0353c`.
 
-Next primary block: resolve or isolate the RFAuds2 RPC server bind failure in
-NetherSX2 with a repeat capture of the bounded diagnostic, emulator settings,
-on-device ELF checksum and IOP module result.
+The user-supplied second NetherSX2 Turnip screen shows that both delayed
+rebinds still returned `-2000`: no PCM pump or device start occurred. Its IOP
+name lookup displayed zero, but this single value lacks the IRX load ID,
+`_start` result and immediate post-load search needed to isolate the failure.
+The updated ROM-free launcher records those values and the search result before
+load and after bind, then calls the bind-only runtime after exactly one IRX
+load. A failed load/start skips binding. The host fixture verifies the loaded
+path never calls the load mock. Local `make BUILD_DIR=build/audio-load-full -j2
+test`, the focused fixture, GCC `-fanalyzer`, `tools/check_repository.py` and
+`git diff --check` passed. The full ASan/UBSan suite passed after restoring the
+execute bit on one generated `test-ppu-window-mask` ELF that had been created
+non-executable in this workspace. PS2/PSP toolchains are unavailable locally;
+cross-build and a new target capture remain pending. See
+[the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+
+Next primary block: resolve the RFAuds2 RPC server bind failure using the
+loader ID, `_start` result and before/after IOP name searches from a repeat
+NetherSX2 capture of the new ELF, with the on-device checksum.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.

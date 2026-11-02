@@ -533,6 +533,8 @@ lifecycle and prebuffer/start policy are coordinated by fixed-storage PS2 code. 
 IRX is a generated build input, playback starts only after accepted-frame accounting,
 and stop/flush/shutdown remain outside core. The bounded diagnostic uses fixed
 absolute emulation horizons; target and physical-device behavior remain unverified.
+The optional ROM-free loader probe records the IRX ID and `_start` result before
+entering the same bind-only coordinator; it never loads the IRX a second time.
 
 ## Cartridge and enhancement boundaries
 

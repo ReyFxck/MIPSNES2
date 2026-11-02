@@ -28,6 +28,8 @@ typedef struct {
  * number of asynchronous operations. No ROM, machine, clock or heap involved.
  * An optional caller pause after each fourth pending attempt lets target RPC
  * progress without advancing the SNES machine. If the final RPC is still
+ * Pass NULL/0 for an IRX already loaded by the caller (with its load result
+ * checked); this binds without loading the module again. If the final RPC is
  * pending, end reports BUSY and the device remains
  * bound; caller must retain storage until process exit or a later poll. */
 bool mipsnes2_ps2_audio_diagnostic_run(

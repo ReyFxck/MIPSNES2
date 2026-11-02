@@ -421,6 +421,20 @@ static int test_rom_free_diagnostic(void)
           !report.device_bound);
     CHECK(call_count == 3U && call_log[0] == MOCK_INIT &&
           call_log[1] == MOCK_BIND && call_log[2] == MOCK_BIND);
+
+    reset_mocks();
+    mock_stats.queued_frames = 1536U;
+    mock_stats.started = 1U;
+    CHECK(mipsnes2_ps2_audio_diagnostic_run(
+        NULL, 0U, source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(report.begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK &&
+          report.report.started && report.end == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK);
+    CHECK(call_log[0] == MOCK_BIND);
+    for (i = 0U; i < call_count; ++i) {
+        CHECK(call_log[i] != MOCK_INIT);
+    }
     return 0;
 }
 

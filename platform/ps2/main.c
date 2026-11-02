@@ -1,5 +1,6 @@
 /* MIPSNES2 PS2 diagnostic launcher. See LICENSE for GPL-3.0 terms. */
 #include <stdio.h>
+#include <limits.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -318,17 +319,27 @@ int main(int argc, char **argv)
     if (argc == 1 || (argc == 2 && argv != NULL && argv[1] != NULL &&
                       strcmp(argv[1], "--audio-diag") == 0)) {
         mipsnes2_ps2_audio_diagnostic_report audio;
-        bool ran = mipsnes2_ps2_audio_diagnostic_run(
-            rfauds2_irx, (uint32_t)size_rfauds2_irx,
-            audio_diag_source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
-            audio_staging, PS2_AUDIO_STAGING_CAPACITY,
-            audio_pending_pause, NULL, &audio);
+        int before_id = SifSearchModuleByName("rfauds2");
+        int start_result = INT_MIN;
+        int load_id = SifExecModuleBuffer(
+            rfauds2_irx, (uint32_t)size_rfauds2_irx, 0, NULL,
+            &start_result);
+        int loaded_id = SifSearchModuleByName("rfauds2");
+        bool ran = load_id >= 0 && start_result == 0 &&
+            mipsnes2_ps2_audio_diagnostic_run(
+                NULL, 0U, audio_diag_source,
+                MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+                audio_staging, PS2_AUDIO_STAGING_CAPACITY,
+                audio_pending_pause, NULL, &audio);
         bool passed = ran && audio.report.started &&
             audio.snapshot == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK &&
             audio.end == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK;
         int module_id = SifSearchModuleByName("rfauds2");
 
         scr_printf("MIPSNES2 RFAuds2 DIAGNOSTIC\n\n");
+        scr_printf("IRX load: %d  start: %d\n", load_id, start_result);
+        scr_printf("IOP name: %d > %d > %d\n",
+                   before_id, loaded_id, module_id);
         if (ran) {
             scr_printf("Init: %u  first: %d  retry: %u\n",
                        (unsigned)audio.begin, audio.initial_device_result,
@@ -346,13 +357,14 @@ int main(int argc, char **argv)
             scr_printf("End: %u  device: %d  bound: %u\n",
                        (unsigned)audio.end, audio.device_result,
                        audio.device_bound ? 1U : 0U);
-            scr_printf("IOP module: %d\n", module_id);
         }
         scr_printf("RESULT: %s\n", passed ? "PASS" : "INCOMPLETE");
         scr_printf("Synthetic PCM; no SNES ROM or clock.\n");
-        (void)printf("MIPSNES2 AUDIO: ran=%u init=%u first=%d retry=%u pump=%u calls=%u "
+        (void)printf("MIPSNES2 AUDIO: load=%d start=%d before=%d loaded=%d after=%d "
+                     "ran=%u init=%u first=%d retry=%u pump=%u calls=%u "
                      "accepted=%lu started=%u stats=%u queued=%lu "
-                     "underruns=%lu end=%u device=%d bound=%u module=%d result=%s\n",
+                     "underruns=%lu end=%u device=%d bound=%u result=%s\n",
+                     load_id, start_result, before_id, loaded_id, module_id,
                      ran ? 1U : 0U, ran ? (unsigned)audio.begin : 0U,
                      ran ? audio.initial_device_result : 0,
                      ran ? audio.rebind_attempts : 0U,
@@ -366,7 +378,6 @@ int main(int argc, char **argv)
                      ran ? (unsigned)audio.end : 0U,
                      ran ? audio.device_result : 0,
                      ran && audio.device_bound ? 1U : 0U,
-                     module_id,
                      passed ? "PASS" : "INCOMPLETE");
         (void)fflush(stdout);
         for (;;) {

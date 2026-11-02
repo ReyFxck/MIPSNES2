@@ -154,6 +154,10 @@ leaves the device bound and reports `BUSY`, retaining the static buffers until e
 After the first NetherSX2 capture failed at RFAuds2 RPC bind (`-2000`), the
 diagnostic also records the first error, the IOP module search result and up to
 two delayed bind attempts against the same loaded IRX. This is a bounded probe;
+the second NetherSX2 screen still showed `-2000` after both retries and an IOP
+name lookup of zero. The current diagnostic records the IRX load ID, its `_start`
+result and name lookups before load, immediately after load and after bind. It
+loads once and uses the bind-only runtime path. A failed load/start skips bind;
 target success is not yet established.
 For Android capture, record emulator build/version, BIOS region, settings, ELF
 SHA-256 and the screen/log. `PASS` reports lifecycle completion only; audible

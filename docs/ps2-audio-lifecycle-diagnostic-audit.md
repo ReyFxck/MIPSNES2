@@ -45,6 +45,41 @@ independent extraction hash agree on ELF SHA-256
 `af8eed4ec399a85eb6c9ccbac60233d5a71bf3739337fcc084cada5e31f0353c`.
 The Android retry result remains pending.
 
+## Second Android capture and loader boundary
+
+The follow-up NetherSX2 Turnip screenshot shows `first: -2000`, `retry: 2`,
+`device: -2000`, `IOP module: 0`, no pump calls and `INCOMPLETE`. The pasted
+stdout line has the first build's field layout, so it cannot be identified as
+the follow-up run; the screenshot itself has the new fields. The second bind
+attempts did not expose an RPC server. The value `0` from a name lookup alone
+does not establish whether the IRX was retained, because the loader's module
+ID, its `_start` result and a lookup immediately after loading were not
+recorded. No new performance or audible-output result follows from this image.
+
+The next diagnostic executes the embedded IRX once at the launcher boundary,
+records `SifExecModuleBuffer`'s module ID and `_start` result, and records the
+name lookup before loading, immediately after loading and after the bounded
+bind/PCM attempt. It binds through the existing runtime's loaded-module path,
+so this observation does not trigger a second load. A failed load or start is
+reported as `INCOMPLETE` without binding. The displayed `INT_MIN` start value
+means the loader did not write a start result; it is not an IOP error code.
+An ID and start value of zero still need interpretation alongside the three
+search results and RPC outcome. The PS2SDK loadfile API returns the module ID
+separately from the `_start` result; its search wrapper returns the IOP loader's
+ID field or a transport error. See `docs/references.md` for the SDK source.
+
+Local verification of this loader probe: `make BUILD_DIR=build/audio-load-verify
+-j2 build/audio-load-verify/test-ps2-rfauds2-runtime` and its executable passed;
+`make BUILD_DIR=build/audio-load-full -j2 test` passed the clean host suite and
+repository checks. The full ASan/UBSan suite with `ASAN_OPTIONS=detect_leaks=0`,
+`BUILD_DIR=build/audio-load-san`, `CFLAGS='-O1 -g -std=c99
+-fsanitize=address,undefined -fno-omit-frame-pointer'` and matching `LDFLAGS`
+passed after the generated `test-ppu-window-mask` ELF lacked execute permission;
+only that generated file was made executable, then the entire suite was rerun.
+GCC `-fanalyzer` compiled the changed diagnostic and fixture, and
+`tools/check_repository.py` plus `git diff --check` passed. The target build
+and Android capture of this revision are pending.
+
 ## Why this entry exists
 
 An Android emulator library can launch an ELF without a command line. The prior

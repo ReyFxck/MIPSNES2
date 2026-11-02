@@ -46,9 +46,17 @@ bool mipsnes2_ps2_audio_diagnostic_run(
         }
     }
 
-    report->begin = mipsnes2_ps2_rfauds2_runtime_begin(
-        &runtime, irx, irx_size, staging,
-        MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES, 43U, 1536U);
+    /* A NULL image means the caller has already loaded the IRX and captured
+     * its load ID and _start result. Never load the same module twice. */
+    if (irx == NULL && irx_size == 0U) {
+        report->begin = mipsnes2_ps2_rfauds2_runtime_bind_loaded(
+            &runtime, staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+            43U, 1536U);
+    } else {
+        report->begin = mipsnes2_ps2_rfauds2_runtime_begin(
+            &runtime, irx, irx_size, staging,
+            MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES, 43U, 1536U);
+    }
     report->initial_device_result = runtime.last_device_result;
     if (report->begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_DEVICE_ERROR &&
         report->initial_device_result == RFAUDS2_BIND_TIMEOUT) {
