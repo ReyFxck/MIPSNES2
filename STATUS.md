@@ -1103,6 +1103,12 @@ result and resident IOP module ID, then makes at most two delayed bind-only
 attempts without reloading the IRX. Host coverage simulates late and persistent
 binding; actual target recovery remains unverified. See the
 [capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+The follow-up implementation tree passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559468),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559662) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559447).
+The PS2 artifact ELF SHA-256 is
+`af8eed4ec399a85eb6c9ccbac60233d5a71bf3739337fcc084cada5e31f0353c`.
 
 Next primary block: resolve or isolate the RFAuds2 RPC server bind failure in
 NetherSX2 with a repeat capture of the bounded diagnostic, emulator settings,

@@ -36,8 +36,14 @@ build initially produced one unrelated non-executable test file (`test-ps2-pad-i
 and stopped at shell `Permission denied`. Its ELF bytes were present; restoring
 only that generated file's execute bit and rerunning the full ASan/UBSan suite
 passed. This is a local artifact-permission anomaly, not an observed test assertion.
-PS2/PSP cross-build and Android retry results for the follow-up revision are
-pending until CI and a new device capture, respectively.
+The follow-up implementation tree passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559468),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559662)
+and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559447).
+The PS2 workflow uploaded artifact `13162271771`; its `SHA256SUMS` entry and
+independent extraction hash agree on ELF SHA-256
+`af8eed4ec399a85eb6c9ccbac60233d5a71bf3739337fcc084cada5e31f0353c`.
+The Android retry result remains pending.
 
 ## Why this entry exists
 
