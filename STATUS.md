@@ -94,10 +94,11 @@ cross-builds and host CI pass at `2d2a836`; target runtime behavior of that
 revision remains unverified. At that revision there was no PPU
 reference renderer, APU, DMA or game runtime.
 
-The PS2 backend now accepts `--rom PATH` as an explicit file path on an already
+The PS2 backend accepts `--rom PATH` as an explicit file path on an already
 available target filesystem, reads at most 8 MiB plus an optional copier prefix,
-and feeds the bytes to the shared machine. It runs only a bounded NTSC CPU/H-V
-slice and reports its result on the debug screen. The five-case diagnostic stays
+and feeds the bytes to the shared machine. Its initial revision ran only a
+bounded NTSC CPU/H-V slice and reported the result. It now uses the continuous
+frame loop documented below. The five-case diagnostic stays
 the default when no path is passed. Host file-boundary and bounded-run fixtures
 pass; PS2/PSP cross-builds and host CI also pass at `8261563`. Target runtime
 and mounted-device/launcher arguments have not been checked.
@@ -407,7 +408,8 @@ baseline in
 and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898337);
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898350)
 also passed. New target runtime evidence is absent. This remains a single
-buffer without scaling, double buffering or a continuous gameplay loop. No visual result in
+buffer without scaling or double buffering; the later continuous frame loop
+has no target runtime result. No visual result in
 ARMSX2/NetherSX2 or physical PS2 is claimed. See the
 [GS audit](docs/ps2-gs-audit.md).
 Revision `6bc7603` passed
@@ -1072,8 +1074,9 @@ ROM entry connects fixed native/staging storage to a PS2-only lifecycle coordina
 Initialization orders IRX load/bind, 43 ms latency, volume and statistic reset;
 playback starts only after completed asynchronous polls report at least 1,536
 accepted frames. A bounded statistics snapshot precedes ordered stop, flush and
-shutdown. The diagnostic always makes eight bounded machine calls toward predetermined
-absolute NTSC horizons, with one launch/poll after each; bounded final collection
+shutdown. At revision `5c0a8c7`, the ROM path made eight bounded machine calls
+toward predetermined absolute NTSC horizons, with one launch/poll after each;
+the later continuous frame loop replaced that limit. Bounded final collection
 polls cannot run the machine. Synthetic host coverage verifies init/failure order, prebuffer/start,
 busy rules, diagnostics and shutdown. Revision `5c0a8c7` passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40971768192),
@@ -1754,14 +1757,14 @@ Revision `3323ec4` passed
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995929448) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995929502).
 
-The PS2 bounded ROM path now has an initial physical-pad adapter. It loads the ROM
+The PS2 ROM path has an initial physical-pad adapter. It loads the ROM
 `SIO2MAN`/`PADMAN` modules, opens port 0 with a fixed aligned DMA buffer and samples
-`libpad` once before each fixed emulated frame horizon. A host regression pins the
+`libpad` once before each emulated frame horizon. A host regression pins the
 digital mapping: Cross/Square/Circle/Triangle become SNES B/Y/A/X, directions and
 Start/Select are direct, L1/R1 become L/R, and analog/L2/R2/L3/R3 inputs are ignored.
 Disconnected or not-ready reads inject a disconnected zero word. The adapter is
 connected to `mipsnes2_machine_set_joypad`, but target execution, hotplug recovery,
-continuous polling, second port/multitap and PSP input remain absent. See
+second port/multitap and PSP input remain absent. See
 [docs/ps2-pad-input-audit.md](docs/ps2-pad-input-audit.md).
 
 Revision `57a1743` passed
