@@ -1179,6 +1179,12 @@ LoROM fixture checks continuation after an eight-sequence cap and three NTSC
 frame boundaries with alternating short lines. This is a software path only:
 there is no console ROM-loop capture, verified gameplay or performance result.
 See [the PS2 ROM-frame audit](docs/ps2-continuous-rom-frame-audit.md).
+The published implementation commit `bf87bda` passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166778),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166766) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166665).
+The PS2 run uploaded an ELF artifact (ID `13180069608`); this confirms a
+cross-build, not a target runtime result.
 The 65C816 and SPC700 already dispatch all 256 byte values; their remaining
 instruction work concerns electrical phases, RESET/ABORT and independent vectors.
 The owner has reprioritized away from audio integration.

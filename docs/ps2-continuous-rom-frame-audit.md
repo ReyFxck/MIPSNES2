@@ -57,3 +57,24 @@ modes, electrical CPU cycles, ROM selection and durable SRAM remain open.
 Clang, PS2SDK and PSPSDK are unavailable in this checkout; target cross-builds
 must be read from actual CI runs on the published PR. No emulator or physical
 console execution was performed in this block.
+
+The implementation tree `5d663ba5e1335a16479a4e07176b4ca1fdfc9b6e`
+was published as commit
+[`bf87bda`](https://github.com/ReyFxck/MIPSNES2/commit/bf87bda6fe421e8e16140bcb7b925d9876fa9537)
+on [PR #52](https://github.com/ReyFxck/MIPSNES2/pull/52). The PR targets
+the existing #51 branch so its diff is limited to this frame block; neither
+PR was merged in this task. Its actual workflow runs completed successfully:
+
+- [Host CI 41529166778](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166778)
+  — GCC and Clang release tests, sanitizers and artifact uploads passed;
+- [PS2 CI 41529166766](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166766)
+  — pinned cross-compile and upload passed; artifact
+  [13180069608](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166766/artifacts/13180069608)
+  contains `mipsnes2-ps2.elf` and checked `SHA256SUMS`;
+- [PSP CI 41529166665](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166665)
+  — pinned cross-compile, checksum and artifact upload passed.
+
+The PS2 artifact ZIP digest is
+`sha256:17d06e40eff9fc02298ec131334881fee433c1158b6fc6fabc6d12a771ef4a99`;
+this is the archive digest, not the ELF digest. The ELF has not been run on an
+emulator or physical PS2 in this milestone.
