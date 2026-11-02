@@ -43,7 +43,7 @@ and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559447).
 The PS2 workflow uploaded artifact `13162271771`; its `SHA256SUMS` entry and
 independent extraction hash agree on ELF SHA-256
 `af8eed4ec399a85eb6c9ccbac60233d5a71bf3739337fcc084cada5e31f0353c`.
-The Android retry result remains pending.
+The Android retry result was pending at this point; the next section records it.
 
 ## Second Android capture and loader boundary
 
@@ -86,7 +86,8 @@ and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138633).
 The uploaded PS2 artifact `13164862861` contains a PS2 ELF with SHA-256
 `58e50f0d50bd06f8789168701c39f86aaeaf3e57b21897d682bd7b04fbfa3eda`,
 confirmed by extracting and hashing it against the artifact's `SHA256SUMS`.
-An emulator capture of this exact ELF remains pending.
+An emulator capture of this ELF was pending at this point; the next section
+records its diagnostic layout and result.
 
 ## Third Android capture and buffer-loader correction
 
@@ -94,9 +95,8 @@ The user ran the v3 ELF in NetherSX2 Turnip. Its screen showed `IRX load:
 282624`, `start: 0`, `IOP name: 0 > 0 > 0`, `first: -2000`, two failed
 bind-only retries and no PCM pump. The start result of zero is not sufficient
 proof of a resident IRX when the module ID looks like an IOP address and the
-RPC server never appears. The user reports that another project of theirs,
-SNESticle, integrates RFAuds2; we did not inspect or reuse that emulator's
-source. The capture does not contain an on-device checksum or IOP debug log.
+RPC server never appears. The capture does not contain an on-device checksum
+or IOP debug log.
 
 The pinned PS2SDK's SBV documentation states that ROM LOADFILE may lack the
 `LoadModuleBuffer` RPC used by `SifExecModuleBuffer`, and that
@@ -129,7 +129,27 @@ The corrected implementation tree passed
 PS2 artifact `13169126880` was extracted and independently hashed; its ELF
 matches `SHA256SUMS` at
 `cc569d603dd7d10e1298bad36c702d7167510aa6bdcb7fc14c53ea30da7f0dcc`.
-The corrected executable has no NetherSX2 or physical-console result yet.
+The corrected executable was subsequently run in NetherSX2; see the result
+below. Physical-console execution remains unavailable.
+
+## Corrected ELF on NetherSX2
+
+The user supplied a screenshot of the no-argument diagnostic on NetherSX2
+v2.2n-4248 (Patched), Motorola fogos, after the SBV correction. Its exact
+on-screen values are `LMB patch: 0`, `IRX load: 25`, `start: 0`,
+`IOP name: 2 > 0 > 52`, `Init: 0`, `first: 0`, `retry: 0`,
+`Pump: 5 (9 calls)`, `Accepted: 1920`, `started: 1`,
+`Stats: 0`, `queued: 896`, `underruns: 0`, `End: 0`,
+`device: 0`, `bound: 0`, and `RESULT: PASS`.
+
+This is direct emulator evidence that the embedded IRX loaded and the RPC
+lifecycle accepted synthetic PCM, reached the prebuffer/start threshold,
+returned statistics, and completed shutdown. The name-search values are
+reported verbatim; their `2 > 0 > 52` sequence does not establish a stable
+module identity. The screenshot matches the corrected ELF's field layout,
+but no on-device SHA-256 was supplied. It does not establish audible output,
+the SNES SPC700/S-DSP signal, sustained streaming, device latency, real PS2
+behavior, or full-speed performance. No commercial ROM was used.
 
 ## Why this entry exists
 
@@ -199,9 +219,8 @@ PR #51's implementation tree passed
 `13160575689` was listed as present and unexpired with ZIP digest
 `sha256:dc0b12115b07be07d534096a959002ca37ba60af4d1bfd6c20f237bcf47b735d`.
 That is the archive digest; read the artifact's `SHA256SUMS` for the ELF checksum
-used in an Android capture. No emulator or hardware result is claimed until a
-captured run with checksum is added.
+used in an Android capture. A screenshot can establish only the values it
+displays; an on-device checksum is still needed for exact byte identity.
 
-Next primary milestone: resolve or isolate the RFAuds2 RPC bind failure in
-NetherSX2 through the new module/rebind diagnostic, with emulator settings,
-on-device ELF checksum, screen and log.
+Next primary milestone: bounded continuous SNES PCM delivery through the PS2
+32-to-48 kHz/RFAuds2 path without device-driven emulated time.

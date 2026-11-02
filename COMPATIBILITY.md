@@ -5,6 +5,13 @@ Host scaffold tests do not establish game compatibility.
 
 ## PlayStation 2
 
+A ROM-free synthetic RFAuds2 lifecycle diagnostic reported `PASS` in one
+NetherSX2 v2.2n-4248 (Patched) screenshot on Motorola fogos after SBV loader
+preparation: 1,920 PCM frames accepted, start/statistics/shutdown succeeded.
+This is not a game compatibility or audible-output result; there is no game
+entry, real-PS2 result or sustained timing claim. See
+[the PS2 audio lifecycle audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+
 | Game/test | Region | Enhancement chip | Revision | State | Issues | Real hardware/model | Evidence |
 |---|---|---|---|---|---|---|---|
 

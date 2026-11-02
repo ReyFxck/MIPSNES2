@@ -1093,7 +1093,7 @@ The implementation tree in PR #51 passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996434),
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996433) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996438).
-The complete audio lifecycle on Android and real PS2 execution remain unverified.
+At that revision, the audio lifecycle on Android and real PS2 remained unverified.
 
 The first user-provided NetherSX2 v2.2n-4248 (Patched) screen/log shows that
 the optional ELF reaches the diagnostic but RFAuds2 returns `-2000` while
@@ -1158,10 +1158,22 @@ The corrected implementation tree passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163536).
 The extracted PS2 artifact ELF matches its uploaded `SHA256SUMS`:
 `cc569d603dd7d10e1298bad36c702d7167510aa6bdcb7fc14c53ea30da7f0dcc`.
-This proves cross-build/link only; the corrected ELF has not yet run on target.
+The cross-build alone proves SDK/link portability. The user subsequently
+captured the corrected no-argument ELF in NetherSX2 v2.2n-4248 (Patched) on
+Motorola fogos: `LMB patch: 0`, `IRX load: 25`, `start: 0`,
+`IOP name: 2 > 0 > 52`, `Init: 0`, `first: 0`, `retry: 0`,
+`Pump: 5 (9 calls)`, 1,920 accepted synthetic frames, `started: 1`,
+`Stats: 0`, 896 queued, zero underruns, `End: 0`, `device: 0`,
+`bound: 0`, `RESULT: PASS`. This explicitly verifies a bounded IRX/RPC
+load, submission, start, statistics and shutdown lifecycle in that emulator.
+The name-search sequence is only a raw observation; the screenshot does not
+provide an on-device SHA-256. It does not verify audible output, actual SNES
+audio, sustained streaming, device latency, physical PS2 or full speed. The
+earlier bind failure is resolved within this synthetic NetherSX2 diagnostic.
+See [the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
 
-Next primary block: verify the SBV-prepared RFAuds2 load and RPC lifecycle in
-NetherSX2 with a capture of the corrected ELF and its on-device checksum.
+Next primary block: implement and verify bounded continuous SNES PCM delivery
+through the PS2 32-to-48 kHz/RFAuds2 path without device-driven emulated time.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2505,11 +2517,11 @@ platform persistence remains incomplete.
 - [ ] SPU2 output
 - [ ] [IN PROGRESS] Audio buffering — bounded 48 kHz staging, retained-tail ownership and accepted-frame prebuffer policy are host verified; target device buffering remains
 - [x] Pin a reviewed RFAuds2 version/revision — stable `0.1.0` commit `257ca54afb08b9c8c2197c03d96fd32d5b15b2bc`
-- [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — fixed-storage lifecycle diagnostic is connected; target execution and continuous streaming remain
+- [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — fixed-storage synthetic lifecycle passed one NetherSX2 capture; continuous SNES streaming and physical PS2 remain
 - [ ] [IN PROGRESS] RFAuds2 asynchronous accepted-tail/backpressure handling — two-phase launch/poll and ordered retry are host verified; target runtime remains
 - [ ] RFAuds2 FAT/Slim real-hardware and long-duration validation
-- [ ] [IN PROGRESS] IOP service initialization — embedded IRX init/bind path is modeled and built; target execution remains
-- [ ] [IN PROGRESS] Error reporting — bounded on-screen lifecycle/device/statistics results exist; user-facing recovery remains
+- [ ] [IN PROGRESS] IOP service initialization — embedded IRX load/bind/start/statistics/shutdown passed the bounded synthetic NetherSX2 diagnostic after SBV preparation; physical PS2 and sustained streaming remain
+- [ ] [IN PROGRESS] Error reporting — bounded on-screen lifecycle/device/statistics results captured the bind failure and subsequent NetherSX2 success; user-facing recovery remains
 - [ ] [IN PROGRESS] Memory budget enforcement — fixed capacities replace heap use; linked/IRX and target peak measurements remain
 - [ ] Real PS2 boot test
 - [ ] Real PS2 integrated runtime test

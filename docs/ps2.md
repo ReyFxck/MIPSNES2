@@ -157,18 +157,20 @@ two delayed bind attempts against the same loaded IRX. This is a bounded probe;
 the second NetherSX2 screen still showed `-2000` after both retries and an IOP
 name lookup of zero. The current diagnostic records the IRX load ID, its `_start`
 result and name lookups before load, immediately after load and after bind. It
-loads once and uses the bind-only runtime path. A failed load/start skips bind;
-target success is not yet established.
+loads once and uses the bind-only runtime path. A failed load/start skips bind.
 The third NetherSX2 capture reported a large load value (`282624`), a zero
 start result, zero for each name search, and another `-2000` bind failure.
 The optional launcher now calls PS2SDK's `sbv_patch_enable_lmb()` once after
 SIF RPC initialization and before loading the embedded IRX in either entry.
-Its return code is displayed; a nonzero result stops the IRX load. This corrects
-the documented ROM LOADFILE buffer-loading prerequisite, but needs a repeat
-target run before RPC registration or sound can be claimed.
+Its return code is displayed; a nonzero result stops the IRX load. A user
+capture on NetherSX2 Turnip subsequently showed `LMB patch: 0`, IRX ID `25`,
+`Init: 0`, 1,920 accepted synthetic frames, start/statistics/shutdown success
+and `RESULT: PASS`. This validates the bounded RFAuds2 RPC lifecycle in that
+emulator, not audible output, the SNES audio path, sustained streaming or a
+physical PS2. See the capture audit for all displayed values and limits.
 For Android capture, record emulator build/version, BIOS region, settings, ELF
 SHA-256 and the screen/log. `PASS` reports lifecycle completion only; audible
-output and target compatibility still require observation. See
+output and continuous SNES-audio compatibility still require observation. See
 [the ROM-free capture audit](ps2-audio-lifecycle-diagnostic-audit.md).
 
 ## Dedicated optimization candidates
