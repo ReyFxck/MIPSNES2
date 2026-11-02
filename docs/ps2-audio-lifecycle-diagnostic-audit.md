@@ -122,6 +122,14 @@ The first PS2 CI attempt failed at link because the integration requested
 `-lsbv`; the pinned PS2SDK `ee/sbv/Makefile` names this archive
 `libpatches.a`. The link was corrected to `-lpatches` without changing the
 SBV implementation or vendoring it. This attempt did not produce a new ELF.
+The corrected implementation tree passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163448),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163364) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163536).
+PS2 artifact `13169126880` was extracted and independently hashed; its ELF
+matches `SHA256SUMS` at
+`cc569d603dd7d10e1298bad36c702d7167510aa6bdcb7fc14c53ea30da7f0dcc`.
+The corrected executable has no NetherSX2 or physical-console result yet.
 
 ## Why this entry exists
 

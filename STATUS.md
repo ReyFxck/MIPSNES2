@@ -1148,11 +1148,17 @@ The local `make BUILD_DIR=build/lmb-full -j2 test` suite and focused
 after restoring the execute permission on one generated `test-ppu-oam` ELF
 and rerunning. GCC `-fanalyzer` compiled the changed loader and fixture;
 `tools/check_repository.py` and `git diff --check` passed. No PS2/PSP compiler
-is installed locally. PS2/PSP cross-build and target behavior are pending.
+is installed locally; cross-build evidence follows, while target behavior is pending.
 PS2 CI run `41501817629` failed at link because the archive was named
 `libpatches.a`, not `libsbv.a`; the Makefile has been corrected to
-`-lpatches`. That failed run produced no ELF. PSP CI run `41501817662` passed;
-the corrected PS2 link remains to be checked by CI.
+`-lpatches`. That failed run produced no ELF. PSP CI run `41501817662` passed.
+The corrected implementation tree passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163448),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163364) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163536).
+The extracted PS2 artifact ELF matches its uploaded `SHA256SUMS`:
+`cc569d603dd7d10e1298bad36c702d7167510aa6bdcb7fc14c53ea30da7f0dcc`.
+This proves cross-build/link only; the corrected ELF has not yet run on target.
 
 Next primary block: verify the SBV-prepared RFAuds2 load and RPC lifecycle in
 NetherSX2 with a capture of the corrected ELF and its on-device checksum.
