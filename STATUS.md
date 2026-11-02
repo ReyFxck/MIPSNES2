@@ -1093,10 +1093,20 @@ The implementation tree in PR #51 passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996434),
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996433) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996438).
-The Android emulator capture and real PS2 execution remain unverified.
+The complete audio lifecycle on Android and real PS2 execution remain unverified.
 
-Next primary block: capture the ROM-free bounded IRX init/prebuffer/start/statistics/
-shutdown diagnostic on an Android PS2 emulator with version/settings and ELF checksum.
+The first user-provided NetherSX2 v2.2n-4248 (Patched) screen/log shows that
+the optional ELF reaches the diagnostic but RFAuds2 returns `-2000` while
+binding its RPC server: no pump or PCM acceptance occurs. This does not
+implicate the SNES audio core. The follow-up diagnostic records the first
+result and resident IOP module ID, then makes at most two delayed bind-only
+attempts without reloading the IRX. Host coverage simulates late and persistent
+binding; actual target recovery remains unverified. See the
+[capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+
+Next primary block: resolve or isolate the RFAuds2 RPC server bind failure in
+NetherSX2 with a repeat capture of the bounded diagnostic, emulator settings,
+on-device ELF checksum and IOP module result.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.

@@ -18,6 +18,8 @@ typedef struct {
     mipsnes2_ps2_rfauds2_runtime_report report;
     mipsnes2_ps2_rfauds2_diagnostics diagnostics;
     unsigned int pump_attempts;
+    unsigned int rebind_attempts;
+    int initial_device_result;
     int device_result;
     bool device_bound;
 } mipsnes2_ps2_audio_diagnostic_report;

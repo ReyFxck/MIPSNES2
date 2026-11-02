@@ -151,6 +151,10 @@ five-case CPU screen. The standalone build without RFAuds2 keeps its original
 default. The ROM path remains `--rom PATH`; the synthetic diagnostic does not
 execute the machine or prove its S-DSP output. A pending RPC at the attempt limit
 leaves the device bound and reports `BUSY`, retaining the static buffers until exit.
+After the first NetherSX2 capture failed at RFAuds2 RPC bind (`-2000`), the
+diagnostic also records the first error, the IOP module search result and up to
+two delayed bind attempts against the same loaded IRX. This is a bounded probe;
+target success is not yet established.
 For Android capture, record emulator build/version, BIOS region, settings, ELF
 SHA-256 and the screen/log. `PASS` reports lifecycle completion only; audible
 output and target compatibility still require observation. See

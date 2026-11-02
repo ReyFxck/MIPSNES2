@@ -3,6 +3,42 @@
 Date: 2026-11-02. Scope: optional PS2 RFAuds2 build, launcher entry and host
 mock; no S-DSP algorithm or console timing change.
 
+## First Android result and bind follow-up
+
+The user supplied a NetherSX2 Turnip screenshot and emulator log on 2026-11-02.
+The ELF was loaded (emulator CRC `913F8406`, entry `0x00100F58`) and reached the
+on-screen diagnostic. It printed `init=7`, `device=-2000`, `calls=0`,
+`accepted=0`, `started=0`, `result=INCOMPLETE`. The screenshot labels the
+emulator NetherSX2 v2.2n-4248 (Patched) on a Motorola fogos. No on-device ELF
+SHA-256, complete settings, physical-PS2 result or audible output was supplied.
+This is a real emulator failure at RPC binding, before PCM submission.
+
+At the pinned RFAuds2 `0.1.0` revision, `src/ee/client.c` returns `-2000`
+only when the RPC server remains absent after 5,000 bind attempts. That path
+occurs after `SifExecModuleBuffer` returned a module ID and accepted the IRX
+start result. The code does not prove that the IRX's RPC thread remains alive or
+that the emulator implements every relevant IOP behavior. The PS2SDK
+`loadfile.h` documents `SifExecModuleBuffer` and `SifSearchModuleByName`; these
+diagnostics concern module loading, not the SNES core.
+
+The follow-up build records the first device result and makes up to two delayed
+`rfauds2_bind()` calls without reloading the IRX. Each attempt is bounded by the
+pinned client. It also prints the IOP module search result. If binding later
+succeeds, normal configuration and the original fixed PCM flow continue; if it
+stays absent, `INCOMPLETE` and `-2000` remain visible. A successful build or a
+retry is not evidence that this specific emulator fault was repaired.
+
+Follow-up verification on the local feature tree: `make BUILD_DIR=build/audio-bind
+-j2 test` passed; the focused RFAuds2 fixture passed under ASan/UBSan; GCC
+`-fanalyzer` passed on the diagnostic, runtime and fixture;
+`tools/check_repository.py` and `git diff --check` passed. A clean sanitizer
+build initially produced one unrelated non-executable test file (`test-ps2-pad-input`)
+and stopped at shell `Permission denied`. Its ELF bytes were present; restoring
+only that generated file's execute bit and rerunning the full ASan/UBSan suite
+passed. This is a local artifact-permission anomaly, not an observed test assertion.
+PS2/PSP cross-build and Android retry results for the follow-up revision are
+pending until CI and a new device capture, respectively.
+
 ## Why this entry exists
 
 An Android emulator library can launch an ELF without a command line. The prior
@@ -44,6 +80,8 @@ observations, not a quality or latency verdict.
 synthetic RFAuds2 API. It checks four-call accepted prebuffer/start, diagnostics
 and ordered stop/flush/shutdown, plus a permanently pending RPC (32 attempts,
 busy snapshot/end without shutdown), init failure cleanup and undersized storage.
+The follow-up adds synthetic first-bind-timeout/rebind-success and persistent-
+timeout cases, asserting no duplicate IRX load and the reported attempt count.
 The source waveform, state and buffers are fixed; there is no heap allocation.
 Local verification on the feature tree (host `cc`, C99, 2026-11-02):
 
@@ -72,5 +110,6 @@ That is the archive digest; read the artifact's `SHA256SUMS` for the ELF checksu
 used in an Android capture. No emulator or hardware result is claimed until a
 captured run with checksum is added.
 
-Next primary milestone: capture this ELF on an Android PS2 emulator with version,
-settings, checksum, screen and log.
+Next primary milestone: resolve or isolate the RFAuds2 RPC bind failure in
+NetherSX2 through the new module/rebind diagnostic, with emulator settings,
+on-device ELF checksum, screen and log.

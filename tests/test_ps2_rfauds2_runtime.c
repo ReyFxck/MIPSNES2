@@ -14,6 +14,7 @@
 
 enum mock_call {
     MOCK_INIT = 1,
+    MOCK_BIND,
     MOCK_LATENCY,
     MOCK_VOLUME,
     MOCK_RESET_STATS,
@@ -29,6 +30,7 @@ enum mock_call {
 static enum mock_call call_log[64];
 static size_t call_count;
 static int init_result;
+static int bind_result;
 static int latency_result;
 static int volume_result;
 static int reset_stats_result;
@@ -62,6 +64,7 @@ static void reset_mocks(void)
     (void)memset(call_log, 0, sizeof(call_log));
     call_count = 0U;
     init_result = 0;
+    bind_result = 0;
     latency_result = 0;
     volume_result = 0;
     reset_stats_result = 0;
@@ -83,6 +86,12 @@ int rfauds2_init(const void *irx, u32 irx_size)
     record(MOCK_INIT);
     CHECK(irx != NULL && irx_size == 4U);
     return init_result;
+}
+
+int rfauds2_bind(void)
+{
+    record(MOCK_BIND);
+    return bind_result;
 }
 
 int rfauds2_set_latency_ms(u32 latency_ms)
@@ -385,6 +394,33 @@ static int test_rom_free_diagnostic(void)
         staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
         pause_pending, NULL, &report));
     CHECK(call_count == 0U);
+
+    reset_mocks();
+    init_result = -2000;
+    CHECK(mipsnes2_ps2_audio_diagnostic_run(
+        irx, sizeof(irx), source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(report.initial_device_result == -2000 &&
+          report.rebind_attempts == 1U && pause_count == 1U);
+    CHECK(report.begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK &&
+          report.report.started && report.end == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK);
+    CHECK(call_log[0] == MOCK_INIT && call_log[1] == MOCK_BIND);
+
+    reset_mocks();
+    init_result = -2000;
+    bind_result = -2000;
+    CHECK(mipsnes2_ps2_audio_diagnostic_run(
+        irx, sizeof(irx), source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(report.initial_device_result == -2000 &&
+          report.rebind_attempts == 2U && pause_count == 2U);
+    CHECK(report.begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_DEVICE_ERROR &&
+          report.device_result == -2000 && report.pump_attempts == 0U &&
+          !report.device_bound);
+    CHECK(call_count == 3U && call_log[0] == MOCK_INIT &&
+          call_log[1] == MOCK_BIND && call_log[2] == MOCK_BIND);
     return 0;
 }
 

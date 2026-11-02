@@ -3,6 +3,10 @@
 
 #include <string.h>
 
+/* Exact pinned RFAuds2 0.1.0 client returns this after 5,000 bind attempts
+ * without a visible RPC server. It has already loaded the IRX at this point. */
+enum { RFAUDS2_BIND_TIMEOUT = -2000, AUDIO_DIAG_REBINDS = 2 };
+
 bool mipsnes2_ps2_audio_diagnostic_run(
     const void *irx, uint32_t irx_size,
     mipsnes2_pcm_frame *source_storage, size_t source_capacity,
@@ -45,6 +49,23 @@ bool mipsnes2_ps2_audio_diagnostic_run(
     report->begin = mipsnes2_ps2_rfauds2_runtime_begin(
         &runtime, irx, irx_size, staging,
         MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES, 43U, 1536U);
+    report->initial_device_result = runtime.last_device_result;
+    if (report->begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_DEVICE_ERROR &&
+        report->initial_device_result == RFAUDS2_BIND_TIMEOUT) {
+        for (index = 0U; index < AUDIO_DIAG_REBINDS; ++index) {
+            if (pause_pending != NULL) {
+                pause_pending(pause_context);
+            }
+            ++report->rebind_attempts;
+            report->begin = mipsnes2_ps2_rfauds2_runtime_bind_loaded(
+                &runtime, staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+                43U, 1536U);
+            if (report->begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK ||
+                runtime.last_device_result != RFAUDS2_BIND_TIMEOUT) {
+                break;
+            }
+        }
+    }
     if (report->begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK) {
         for (index = 0U; index < MIPSNES2_PS2_AUDIO_DIAG_MAX_PUMPS;
              ++index) {

@@ -35,11 +35,11 @@ static void fill_report(
     report->started = runtime->started;
 }
 
-mipsnes2_ps2_rfauds2_runtime_result mipsnes2_ps2_rfauds2_runtime_begin(
+static mipsnes2_ps2_rfauds2_runtime_result begin_common(
     mipsnes2_ps2_rfauds2_runtime *runtime,
     const void *irx, uint32_t irx_size,
     mipsnes2_pcm_frame *staging, size_t staging_capacity,
-    uint32_t latency_ms, size_t prebuffer_frames)
+    uint32_t latency_ms, size_t prebuffer_frames, bool bind_loaded)
 {
     int result;
 
@@ -47,7 +47,7 @@ mipsnes2_ps2_rfauds2_runtime_result mipsnes2_ps2_rfauds2_runtime_begin(
         return MIPSNES2_PS2_RFAUDS2_RUNTIME_INVALID_ARGUMENT;
     }
     (void)memset(runtime, 0, sizeof(*runtime));
-    if (irx == NULL || irx_size == 0U || staging == NULL ||
+    if ((!bind_loaded && (irx == NULL || irx_size == 0U)) || staging == NULL ||
         staging_capacity == 0U ||
         staging_capacity > RFAUDS2_ASYNC_MAX_FRAMES ||
         latency_ms == 0U ||
@@ -56,7 +56,7 @@ mipsnes2_ps2_rfauds2_runtime_result mipsnes2_ps2_rfauds2_runtime_begin(
         return MIPSNES2_PS2_RFAUDS2_RUNTIME_INVALID_ARGUMENT;
     }
 
-    result = rfauds2_init(irx, (u32)irx_size);
+    result = bind_loaded ? rfauds2_bind() : rfauds2_init(irx, (u32)irx_size);
     runtime->last_device_result = result;
     if (result < 0) {
         return MIPSNES2_PS2_RFAUDS2_RUNTIME_DEVICE_ERROR;
@@ -85,6 +85,25 @@ mipsnes2_ps2_rfauds2_runtime_result mipsnes2_ps2_rfauds2_runtime_begin(
     runtime->prebuffer_frames = prebuffer_frames;
     runtime->last_device_result = 0;
     return MIPSNES2_PS2_RFAUDS2_RUNTIME_OK;
+}
+
+mipsnes2_ps2_rfauds2_runtime_result mipsnes2_ps2_rfauds2_runtime_begin(
+    mipsnes2_ps2_rfauds2_runtime *runtime,
+    const void *irx, uint32_t irx_size,
+    mipsnes2_pcm_frame *staging, size_t staging_capacity,
+    uint32_t latency_ms, size_t prebuffer_frames)
+{
+    return begin_common(runtime, irx, irx_size, staging, staging_capacity,
+                        latency_ms, prebuffer_frames, false);
+}
+
+mipsnes2_ps2_rfauds2_runtime_result mipsnes2_ps2_rfauds2_runtime_bind_loaded(
+    mipsnes2_ps2_rfauds2_runtime *runtime,
+    mipsnes2_pcm_frame *staging, size_t staging_capacity,
+    uint32_t latency_ms, size_t prebuffer_frames)
+{
+    return begin_common(runtime, NULL, 0U, staging, staging_capacity,
+                        latency_ms, prebuffer_frames, true);
 }
 
 static mipsnes2_ps2_rfauds2_runtime_result map_pump_result(

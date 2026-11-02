@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <debug.h>
+#include <loadfile.h>
 #include <sifrpc.h>
 
 #include "platform/ps2/diagnostic_suite.h"
@@ -325,11 +326,15 @@ int main(int argc, char **argv)
         bool passed = ran && audio.report.started &&
             audio.snapshot == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK &&
             audio.end == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK;
+        int module_id = SifSearchModuleByName("rfauds2");
 
         scr_printf("MIPSNES2 RFAuds2 DIAGNOSTIC\n\n");
         if (ran) {
-            scr_printf("Init: %u  pump: %u (%u calls)\n",
-                       (unsigned)audio.begin, (unsigned)audio.pump,
+            scr_printf("Init: %u  first: %d  retry: %u\n",
+                       (unsigned)audio.begin, audio.initial_device_result,
+                       audio.rebind_attempts);
+            scr_printf("Pump: %u (%u calls)\n",
+                       (unsigned)audio.pump,
                        audio.pump_attempts);
             scr_printf("Accepted: %lu  started: %u\n",
                        (unsigned long)audio.report.accepted_frames,
@@ -341,13 +346,16 @@ int main(int argc, char **argv)
             scr_printf("End: %u  device: %d  bound: %u\n",
                        (unsigned)audio.end, audio.device_result,
                        audio.device_bound ? 1U : 0U);
+            scr_printf("IOP module: %d\n", module_id);
         }
         scr_printf("RESULT: %s\n", passed ? "PASS" : "INCOMPLETE");
         scr_printf("Synthetic PCM; no SNES ROM or clock.\n");
-        (void)printf("MIPSNES2 AUDIO: ran=%u init=%u pump=%u calls=%u "
+        (void)printf("MIPSNES2 AUDIO: ran=%u init=%u first=%d retry=%u pump=%u calls=%u "
                      "accepted=%lu started=%u stats=%u queued=%lu "
-                     "underruns=%lu end=%u device=%d bound=%u result=%s\n",
+                     "underruns=%lu end=%u device=%d bound=%u module=%d result=%s\n",
                      ran ? 1U : 0U, ran ? (unsigned)audio.begin : 0U,
+                     ran ? audio.initial_device_result : 0,
+                     ran ? audio.rebind_attempts : 0U,
                      ran ? (unsigned)audio.pump : 0U,
                      ran ? audio.pump_attempts : 0U,
                      ran ? (unsigned long)audio.report.accepted_frames : 0UL,
@@ -358,6 +366,7 @@ int main(int argc, char **argv)
                      ran ? (unsigned)audio.end : 0U,
                      ran ? audio.device_result : 0,
                      ran && audio.device_bound ? 1U : 0U,
+                     module_id,
                      passed ? "PASS" : "INCOMPLETE");
         (void)fflush(stdout);
         for (;;) {

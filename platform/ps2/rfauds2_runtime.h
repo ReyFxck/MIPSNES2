@@ -67,6 +67,13 @@ mipsnes2_ps2_rfauds2_runtime_result mipsnes2_ps2_rfauds2_runtime_begin(
     mipsnes2_pcm_frame *staging, size_t staging_capacity,
     uint32_t latency_ms, size_t prebuffer_frames);
 
+/* Binds to an IRX already loaded by a previous begin attempt. Intended for
+ * bounded diagnosis after a bind timeout; it never reloads the module. */
+mipsnes2_ps2_rfauds2_runtime_result mipsnes2_ps2_rfauds2_runtime_bind_loaded(
+    mipsnes2_ps2_rfauds2_runtime *runtime,
+    mipsnes2_pcm_frame *staging, size_t staging_capacity,
+    uint32_t latency_ms, size_t prebuffer_frames);
+
 /* Performs at most one asynchronous launch or poll. It never runs the
  * machine and never fabricates source PCM. */
 mipsnes2_ps2_rfauds2_runtime_result mipsnes2_ps2_rfauds2_runtime_pump(
