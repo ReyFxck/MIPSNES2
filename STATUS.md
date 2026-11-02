@@ -1132,9 +1132,26 @@ The PS2 artifact ELF SHA-256, checked against its uploaded `SHA256SUMS`, is
 `58e50f0d50bd06f8789168701c39f86aaeaf3e57b21897d682bd7b04fbfa3eda`.
 No Android or physical-PS2 execution of this revision has been observed.
 
-Next primary block: resolve the RFAuds2 RPC server bind failure using the
-loader ID, `_start` result and before/after IOP name searches from a repeat
-NetherSX2 capture of the new ELF, with the on-device checksum.
+The user then ran this exact diagnostic layout in NetherSX2 Turnip: it printed
+load value `282624`, `_start` result `0`, name searches `0 > 0 > 0`, and
+another `-2000` after two rebinds. No PCM was submitted. The PS2SDK documents
+an SBV patch needed to enable ROM LOADFILE's EE-buffer module load RPC on
+affected BIOS versions. The optional PS2 launcher now calls
+`sbv_patch_enable_lmb()` once after SIF RPC init and before either embedded IRX
+load path. A nonzero patch result is displayed and prevents loading. The
+buffer-load boundary is isolated to `platform/ps2`; a host SDK mock checks
+patch-before-load order and failure gating. This is a plausible correction
+from SDK documentation and target evidence, not a verified target fix. See
+[the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+The local `make BUILD_DIR=build/lmb-full -j2 test` suite and focused
+`test-ps2-iop-module-loader` passed; the full ASan/UBSan suite also passed
+after restoring the execute permission on one generated `test-ppu-oam` ELF
+and rerunning. GCC `-fanalyzer` compiled the changed loader and fixture;
+`tools/check_repository.py` and `git diff --check` passed. No PS2/PSP compiler
+is installed locally. PS2/PSP cross-build and target behavior are pending.
+
+Next primary block: verify the SBV-prepared RFAuds2 load and RPC lifecycle in
+NetherSX2 with a capture of the corrected ELF and its on-device checksum.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.

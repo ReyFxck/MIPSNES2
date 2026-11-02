@@ -88,6 +88,37 @@ The uploaded PS2 artifact `13164862861` contains a PS2 ELF with SHA-256
 confirmed by extracting and hashing it against the artifact's `SHA256SUMS`.
 An emulator capture of this exact ELF remains pending.
 
+## Third Android capture and buffer-loader correction
+
+The user ran the v3 ELF in NetherSX2 Turnip. Its screen showed `IRX load:
+282624`, `start: 0`, `IOP name: 0 > 0 > 0`, `first: -2000`, two failed
+bind-only retries and no PCM pump. The start result of zero is not sufficient
+proof of a resident IRX when the module ID looks like an IOP address and the
+RPC server never appears. The user reports that another project of theirs,
+SNESticle, integrates RFAuds2; we did not inspect or reuse that emulator's
+source. The capture does not contain an on-device checksum or IOP debug log.
+
+The pinned PS2SDK's SBV documentation states that ROM LOADFILE may lack the
+`LoadModuleBuffer` RPC used by `SifExecModuleBuffer`, and that
+`sbv_patch_enable_lmb()` prepares this service before an EE-embedded IRX load.
+The MIPSNES2 optional launcher had not called it. The PS2-only launcher now
+prepares LOADFILE once after SIF RPC initialization and before either its ROM
+or ROM-free embedded-IRX path. A nonzero patch result skips the IRX load and is
+reported on screen/stdout; it is not mistaken for a successful module start.
+The diagnostic still records load/start/search results when the patch succeeds.
+The host fixture mocks the SDK calls to verify patch-before-load order and
+that a patch failure prevents a load. This is a reasoned correction of the
+initialization sequence, pending another target capture; it does not yet prove
+RPC or audible playback on NetherSX2 or a physical PS2.
+
+Local checks: `make BUILD_DIR=build/lmb-full -j2 test` and the focused
+`test-ps2-iop-module-loader` passed. The full ASan/UBSan suite in
+`build/lmb-san` passed after the generated `test-ppu-oam` ELF was found without
+execute permission; only that generated file was made executable and the full
+suite rerun. GCC `-fanalyzer` compiled the loader and its fixture;
+`tools/check_repository.py` and `git diff --check` passed. PS2/PSP compilers
+are unavailable locally, so the optional SDK link and ELF require CI.
+
 ## Why this entry exists
 
 An Android emulator library can launch an ELF without a command line. The prior

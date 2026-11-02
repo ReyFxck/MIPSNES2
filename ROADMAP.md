@@ -280,7 +280,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Platform-independent PCM output interface — bounded typed reads without device APIs
 - [x] Resampling policy — deterministic integer-linear conversion from native 32 kHz to bounded caller blocks at rates at or above 32 kHz
 - [x] Underflow/overflow behavior — empty read and drop-newest/count-full semantics are explicit
-- [ ] [IN PROGRESS] PS2 48 kHz transport contract — bounded asynchronous launch/poll, accepted-tail retry and fixed-storage RFAuds2 lifecycle are host verified; NetherSX2 bind failure is being isolated with loader/start telemetry; target/SPU2 validation remains
+- [ ] [IN PROGRESS] PS2 48 kHz transport contract — bounded asynchronous launch/poll, accepted-tail retry and fixed-storage RFAuds2 lifecycle are host verified; ROM LOADFILE buffer-loading preparation was added after a NetherSX2 bind failure, and target/SPU2 validation remains
 - [x] Host offline audio tests — bounded vectors plus a 65,536-frame PCM/ARAM hash regression pass across regular and irregular cycle chunks
 - [ ] [IN PROGRESS] Integrated APU regression tests — executable clock/CPU/timer/DSP/PCM and machine fixtures exist; exact phases remain
 

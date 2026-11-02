@@ -159,6 +159,13 @@ name lookup of zero. The current diagnostic records the IRX load ID, its `_start
 result and name lookups before load, immediately after load and after bind. It
 loads once and uses the bind-only runtime path. A failed load/start skips bind;
 target success is not yet established.
+The third NetherSX2 capture reported a large load value (`282624`), a zero
+start result, zero for each name search, and another `-2000` bind failure.
+The optional launcher now calls PS2SDK's `sbv_patch_enable_lmb()` once after
+SIF RPC initialization and before loading the embedded IRX in either entry.
+Its return code is displayed; a nonzero result stops the IRX load. This corrects
+the documented ROM LOADFILE buffer-loading prerequisite, but needs a repeat
+target run before RPC registration or sound can be claimed.
 For Android capture, record emulator build/version, BIOS region, settings, ELF
 SHA-256 and the screen/log. `PASS` reports lifecycle completion only; audible
 output and target compatibility still require observation. See

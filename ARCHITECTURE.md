@@ -535,6 +535,9 @@ and stop/flush/shutdown remain outside core. The bounded diagnostic uses fixed
 absolute emulation horizons; target and physical-device behavior remain unverified.
 The optional ROM-free loader probe records the IRX ID and `_start` result before
 entering the same bind-only coordinator; it never loads the IRX a second time.
+The optional PS2 launcher prepares the ROM LOADFILE buffer-loading RPC through
+SBV once before either entry loads the embedded IRX. A failed preparation
+blocks that load; this platform step has no effect on emulated time or core.
 
 ## Cartridge and enhancement boundaries
 
