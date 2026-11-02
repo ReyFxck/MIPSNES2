@@ -1122,8 +1122,15 @@ test`, the focused fixture, GCC `-fanalyzer`, `tools/check_repository.py` and
 `git diff --check` passed. The full ASan/UBSan suite passed after restoring the
 execute bit on one generated `test-ppu-window-mask` ELF that had been created
 non-executable in this workspace. PS2/PSP toolchains are unavailable locally;
-cross-build and a new target capture remain pending. See
+a new target capture remains pending. See
 [the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+The implementation tree in PR #51 passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138888),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138639)
+and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138633).
+The PS2 artifact ELF SHA-256, checked against its uploaded `SHA256SUMS`, is
+`58e50f0d50bd06f8789168701c39f86aaeaf3e57b21897d682bd7b04fbfa3eda`.
+No Android or physical-PS2 execution of this revision has been observed.
 
 Next primary block: resolve the RFAuds2 RPC server bind failure using the
 loader ID, `_start` result and before/after IOP name searches from a repeat

@@ -77,8 +77,16 @@ repository checks. The full ASan/UBSan suite with `ASAN_OPTIONS=detect_leaks=0`,
 passed after the generated `test-ppu-window-mask` ELF lacked execute permission;
 only that generated file was made executable, then the entire suite was rerun.
 GCC `-fanalyzer` compiled the changed diagnostic and fixture, and
-`tools/check_repository.py` plus `git diff --check` passed. The target build
-and Android capture of this revision are pending.
+`tools/check_repository.py` plus `git diff --check` passed. Android capture of
+this revision is pending.
+The implementation tree passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138888),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138639)
+and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138633).
+The uploaded PS2 artifact `13164862861` contains a PS2 ELF with SHA-256
+`58e50f0d50bd06f8789168701c39f86aaeaf3e57b21897d682bd7b04fbfa3eda`,
+confirmed by extracting and hashing it against the artifact's `SHA256SUMS`.
+An emulator capture of this exact ELF remains pending.
 
 ## Why this entry exists
 
