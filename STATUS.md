@@ -1088,8 +1088,12 @@ most 32 asynchronous attempts to report init, accepted prebuffer/start,
 statistics and shutdown on screen and stdout. The standalone five-case default
 is unchanged, and `--core-diag` selects it in the optional build. Host fixtures
 cover success, permanently pending RPC, init failure and invalid capacity;
-see [the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md). The
-Android emulator capture and real PS2 execution remain unverified.
+see [the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+The implementation tree in PR #51 passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996434),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996433) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996438).
+The Android emulator capture and real PS2 execution remain unverified.
 
 Next primary block: capture the ROM-free bounded IRX init/prebuffer/start/statistics/
 shutdown diagnostic on an Android PS2 emulator with version/settings and ELF checksum.

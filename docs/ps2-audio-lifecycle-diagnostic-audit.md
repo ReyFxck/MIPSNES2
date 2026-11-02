@@ -59,8 +59,18 @@ Local verification on the feature tree (host `cc`, C99, 2026-11-02):
 - `python3 tools/check_repository.py` and `git diff --check`: pass.
 
 No local PS2/PSP cross compiler or Android emulator is present in this executor.
-Record CI run URLs and artifact inspection when the branch is published. No emulator
-or hardware result is claimed until a captured run with checksum is added.
+PR #51's implementation tree passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996434)
+(GCC and Clang release/sanitizer jobs),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996433)
+(pinned RFAuds2 IRX/client, cross-link, checksum and artifact upload) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996438)
+(scaffold cross-link and artifact upload). The PS2 workflow artifact ID
+`13160575689` was listed as present and unexpired with ZIP digest
+`sha256:dc0b12115b07be07d534096a959002ca37ba60af4d1bfd6c20f237bcf47b735d`.
+That is the archive digest; read the artifact's `SHA256SUMS` for the ELF checksum
+used in an Android capture. No emulator or hardware result is claimed until a
+captured run with checksum is added.
 
 Next primary milestone: capture this ELF on an Android PS2 emulator with version,
 settings, checksum, screen and log.
