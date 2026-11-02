@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "core/machine/machine.h"
+#include "platform/ps2/rom_frame.h"
 
 #define CHECK(value) do { if (!(value)) { \
     (void)fprintf(stderr, "line %d: %s\n", __LINE__, #value); \
@@ -208,6 +209,76 @@ static int run_machine_ppu(const uint64_t *chunks, size_t chunk_count,
     return 0;
 }
 
+static int test_ps2_continuous_frame_slices(void)
+{
+    const mipsnes2_master_clock normal_frame =
+        (mipsnes2_master_clock)MIPSNES2_HV_NTSC_SCANLINES *
+        MIPSNES2_HV_NORMAL_SCANLINE_CLOCKS;
+    mipsnes2_machine_config config;
+    mipsnes2_cpu_timing_report report;
+    mipsnes2_cpu_timing_result timing;
+    frame_capture capture = {0};
+    size_t count;
+    unsigned frame;
+
+    CHECK(make_image() == 0);
+    make_scene();
+    (void)memset(wram, 0, sizeof(wram));
+    (void)memset(sram, 0, sizeof(sram));
+    (void)memset(&config, 0, sizeof(config));
+    config.image = rom;
+    config.image_size = sizeof(rom);
+    config.copier_policy = MIPSNES2_COPIER_HEADER_REJECT;
+    config.wram = wram;
+    config.wram_size = sizeof(wram);
+    config.sram = sram;
+    config.sram_capacity = sizeof(sram);
+    config.vram = vram;
+    config.vram_size = sizeof(vram);
+    config.cgram = cgram;
+    config.cgram_size = sizeof(cgram);
+    config.standard = MIPSNES2_HV_STANDARD_NTSC;
+    config.video_line = capture_line;
+    config.video_context = &capture;
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    CHECK(!mipsnes2_ps2_rom_exit_requested(0U, true));
+    CHECK(!mipsnes2_ps2_rom_exit_requested(
+        MIPSNES2_JOYPAD_START, true));
+    CHECK(!mipsnes2_ps2_rom_exit_requested(
+        MIPSNES2_JOYPAD_START | MIPSNES2_JOYPAD_SELECT, false));
+    CHECK(mipsnes2_ps2_rom_exit_requested(
+        MIPSNES2_JOYPAD_START | MIPSNES2_JOYPAD_SELECT, true));
+    CHECK(mipsnes2_ps2_rom_frame_run(&machine, 0U, 3U, 64U, &count,
+                                     &report, &timing) ==
+          MIPSNES2_MACHINE_RUN_INVALID_ARGUMENT);
+    CHECK(machine.scheduler.now == 0U);
+    CHECK(mipsnes2_ps2_rom_frame_run(&machine, 8U, 3U, 64U, &count,
+                                     &report, &timing) ==
+          MIPSNES2_MACHINE_RUN_SEQUENCE_LIMIT);
+    CHECK(count == 8U && machine.scheduler.now < normal_frame);
+
+    for (frame = 1U; frame <= 3U; ++frame) {
+        mipsnes2_master_clock expected =
+            normal_frame * frame - 4U * ((frame + 1U) / 2U);
+
+        CHECK(mipsnes2_ps2_rom_frame_run(
+                  &machine, RUN_SEQUENCE_LIMIT, 1024U, RUN_EVENT_BUDGET,
+                  &count, &report, &timing) ==
+              MIPSNES2_MACHINE_RUN_HORIZON);
+        CHECK(timing == MIPSNES2_CPU_TIMING_HORIZON_REACHED);
+        CHECK(count != 0U);
+        if (machine.scheduler.now != expected) {
+            (void)fprintf(stderr, "frame %u: got %llu, expected %llu\n",
+                          frame, (unsigned long long)machine.scheduler.now,
+                          (unsigned long long)expected);
+        }
+        CHECK(machine.scheduler.now == expected);
+        CHECK(machine.hv.frame_count == frame);
+        CHECK(capture.line_count == (uint64_t)frame * VISIBLE_LINES);
+    }
+    return 0;
+}
+
 int main(void)
 {
     static const uint64_t regular_chunks[] = {UINT64_C(50000)};
@@ -247,6 +318,7 @@ int main(void)
                       (unsigned long long)regular.nonzero_pixels);
     }
     CHECK(regular.hash == UINT64_C(0x911273792f0b2425));
+    CHECK(test_ps2_continuous_frame_slices() == 0);
     (void)puts("machine PPU frame-event integration: OK");
     return 0;
 }

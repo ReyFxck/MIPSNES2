@@ -320,8 +320,8 @@ $(TEST_MACHINE): tests/test_machine.c core/machine/machine.h $(LIB)
 $(TEST_MACHINE_APU_PCM): tests/test_machine_apu_pcm.c core/machine/machine.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
-$(TEST_MACHINE_PPU_FRAME): tests/test_machine_ppu_frame.c core/machine/machine.h $(LIB)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
+$(TEST_MACHINE_PPU_FRAME): tests/test_machine_ppu_frame.c platform/ps2/rom_frame.c platform/ps2/rom_frame.h core/machine/machine.h $(LIB)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) tests/test_machine_ppu_frame.c platform/ps2/rom_frame.c $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
 
 $(TEST_MACHINE_INPUT): tests/test_machine_input.c core/machine/machine.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@

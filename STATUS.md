@@ -1172,11 +1172,20 @@ audio, sustained streaming, device latency, physical PS2 or full speed. The
 earlier bind failure is resolved within this synthetic NetherSX2 diagnostic.
 See [the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
 
-Next primary block: implement and verify bounded continuous SNES PCM delivery
-through the PS2 32-to-48 kHz/RFAuds2 path without device-driven emulated time.
-Refining DMA/HDMA
-electrical bus phases and post-HDMA CPU alignment remains
-evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
+The PS2 `--rom PATH` loop now runs successive exact H/V frame horizons until
+Start+Select on a connected pad or an execution error, using resumable
+4,096-sequence slices and a 100,000-sequence cap per frame. A host synthetic
+LoROM fixture checks continuation after an eight-sequence cap and three NTSC
+frame boundaries with alternating short lines. This is a software path only:
+there is no console ROM-loop capture, verified gameplay or performance result.
+See [the PS2 ROM-frame audit](docs/ps2-continuous-rom-frame-audit.md).
+The 65C816 and SPC700 already dispatch all 256 byte values; their remaining
+instruction work concerns electrical phases, RESET/ABORT and independent vectors.
+The owner has reprioritized away from audio integration.
+
+Next primary block: run an original, redistributable video/input test ROM through
+the PS2 continuous path and resolve the first observed core/PPU blocker using
+hardware documentation, with a recorded emulator capture.
 
 The existing bounded DMA cursor already keeps A1B fixed while incrementing,
 decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
@@ -2511,7 +2520,8 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Video buffers and ownership — aligned EE capture plus presenter-owned packet/framebuffer exist; double buffering remains
 - [ ] [IN PROGRESS] GIF packet lifetime — one packet is reset/reused after DMA completion and freed at shutdown; target validation remains
 - [ ] [IN PROGRESS] DMA cache coherency — separately referenced pixels are flushed before each chain; target validation remains
-- [ ] [IN PROGRESS] Pad input — port-0 `libpad` acquisition and host-verified digital mapping feed the bounded ROM path; target runtime/hotplug/continuous polling remain
+- [ ] [IN PROGRESS] Pad input — port-0 `libpad` acquisition and host-verified digital mapping feed the continuous ROM path; target runtime/hotplug remain
+- [ ] [IN PROGRESS] Explicit-ROM PS2 frame loop — host multi-frame boundaries, sequence slicing and pad exit wired; console runtime and gameplay unverified
 - [ ] [IN PROGRESS] Storage and ROM selection — explicit PS2 path adapter exists; mount lifecycle and picker absent
 - [ ] SRAM persistence
 - [ ] SPU2 output

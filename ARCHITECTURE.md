@@ -202,12 +202,14 @@ buffer stays machine-owned and can be reused after the callback returns.
 The PS2 ROM adapter copies that callback into a PS2-only RGBA32 frame;
 PSP remains independent and has no presentation path yet.
 The PS2 backend queries the shared H/V state for each exact next-frame boundary,
-then owns one GS packet/framebuffer across those bounded diagnostic horizons and
-can upload each completed capture without reallocating either;
-there is no verified runtime display or continuous gameplay loop. PSP still has no
-presentation path. On the bounded PS2 ROM path, a PS2-only `libpad` adapter samples
+then owns one GS packet/framebuffer across a continuous explicit-ROM loop and
+can upload each completed capture without reallocating either. A fixed per-frame
+sequence cap and smaller resumable slices stop on failure rather than discarding
+machine state. There is no verified runtime display or gameplay. PSP still has no
+presentation path. On the PS2 ROM path, a PS2-only `libpad` adapter samples
 port 0 once before each emulated frame horizon and translates the digital face,
 direction, shoulder, Start and Select buttons into the machine's standard-pad word.
+Start+Select on a connected pad exits the loop at a frame boundary.
 The core contains no PS2SDK type or call, and target input execution remains
 unverified.
 
