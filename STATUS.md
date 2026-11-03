@@ -1258,6 +1258,17 @@ staged checksum and uploads a nonempty artifact; the PSP job likewise passes its
 pinned cross-build, checksum stage and nonempty artifact upload. These are build
 and host-conformance results, not PS2/PSP runtime or commercial-game evidence.
 
+Published COP correction `4f42ed0` passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41705022870),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41705022710) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41705022800). Host GCC
+and Clang release/sanitizer jobs passed; GCC again completed all 1,107 pinned basic
+cases and checksum-verified both host executables. The PS2 job compiled the changed
+CPU, linked and checksum-verified `mipsnes2-ps2.elf`, and uploaded a 952,101-byte
+artifact. PSP compiled the same core, generated and checksum-verified `EBOOT.PBP`,
+and uploaded a 167,596-byte artifact. These are cross-build and host-conformance
+results, not target-runtime validation.
+
 Next primary block: correct the full-suite `$03C4` emulation-mode `PEI ($FF)`
 16-bit stack-wrap behavior generically, add aggregate and resumable regressions, and
 advance the pinned full 65C816 ROM to its next deterministic failure.

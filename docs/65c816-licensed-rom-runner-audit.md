@@ -113,6 +113,17 @@ the GCC checksum log includes both `mipsnes2-host` and `mipsnes2-rom-runner`. Th
 console job logs show the changed core cross-compiled by the pinned PS2/PSP
 toolchains, checksum-verified staging and nonempty artifact uploads.
 
+Published COP correction `4f42ed0` passed the inspected
+[host](https://github.com/ReyFxck/MIPSNES2/actions/runs/41705022870),
+[PS2](https://github.com/ReyFxck/MIPSNES2/actions/runs/41705022710) and
+[PSP](https://github.com/ReyFxck/MIPSNES2/actions/runs/41705022800) workflows. Host
+GCC and Clang again passed release and sanitizer suites; the GCC licensed-ROM step
+completed 1,107/1,107 basic cases and checksum-verified both host executables. PS2
+compiled the changed CPU into a checksum-verified `mipsnes2-ps2.elf` and uploaded a
+952,101-byte artifact. PSP compiled the same core into a checksum-verified
+`EBOOT.PBP` and uploaded a 167,596-byte artifact. This does not add PS2/PSP runtime
+evidence or make the full-ROM frontier a passing suite.
+
 This is host test infrastructure, not a desktop emulator frontend. No PS2, PSP,
 PCSX2/NetherSX2 or PPSSPP runtime was performed by this runner block. No target
 performance or commercial-ROM compatibility claim is made.
