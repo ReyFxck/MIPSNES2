@@ -1241,6 +1241,18 @@ executable and rerunning the identical suite passed without a sanitizer finding.
 No local `mips64r5900el-ps2-elf-gcc`, `psp-gcc` or `psp-config` was available, so
 PS2/PSP cross-build evidence remains the published CI gate for this revision.
 
+Published implementation `a8bb91e` passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41649717078),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41649717556) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41649717624). Host GCC
+and Clang release/sanitizer jobs passed and uploaded nonempty artifacts containing
+both host executables; the GCC log confirms the prepared-ROM hash, `Success` at
+`$0452`, all 1,107 cases and checksum verification of `mipsnes2-rom-runner`.
+The PS2 log cross-compiles the changed CPU into `mipsnes2-ps2.elf`, verifies its
+staged checksum and uploads a nonempty artifact; the PSP job likewise passes its
+pinned cross-build, checksum stage and nonempty artifact upload. These are build
+and host-conformance results, not PS2/PSP runtime or commercial-game evidence.
+
 Next primary block: correct the full-suite `$0103` emulation-mode `COP` stack/vector
 behavior generically, add aggregate and resumable regressions, and advance the pinned
 full 65C816 ROM to its next deterministic failure.

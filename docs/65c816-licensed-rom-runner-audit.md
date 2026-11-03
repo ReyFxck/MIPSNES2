@@ -85,6 +85,18 @@ environment denies the required `/proc` access. No local PS2SDK or PSP toolchain
 available, so the pinned PS2/PSP Actions cross-builds are required publication
 evidence rather than being inferred from workflow files.
 
+Published implementation `a8bb91e` passed the inspected
+[host](https://github.com/ReyFxck/MIPSNES2/actions/runs/41649717078),
+[PS2](https://github.com/ReyFxck/MIPSNES2/actions/runs/41649717556) and
+[PSP](https://github.com/ReyFxck/MIPSNES2/actions/runs/41649717624) workflows.
+The host matrix passed release and sanitizer tests under GCC and Clang; the GCC
+licensed-ROM step recorded prepared SHA-256
+`793a4425569649314b200d6bcdc21ea8e69684f9b99ad0a41ba6a4a526d28c3b`,
+`Success` at `$0452` and 1,107 completed tests. Its two artifacts are nonempty and
+the GCC checksum log includes both `mipsnes2-host` and `mipsnes2-rom-runner`. The
+console job logs show the changed core cross-compiled by the pinned PS2/PSP
+toolchains, checksum-verified staging and nonempty artifact uploads.
+
 This is host test infrastructure, not a desktop emulator frontend. No PS2, PSP,
 PCSX2/NetherSX2 or PPSSPP runtime was performed by this runner block. No target
 performance or commercial-ROM compatibility claim is made.
