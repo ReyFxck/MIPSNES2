@@ -56,13 +56,16 @@ registers. Machine integration uploads and executes an original one-byte `SLEEP`
 program, verifies delayed clock-domain attachment and repeats power-on. The PS2
 configuration enables the same path without carrying firmware bytes.
 
-Exact local commands and GitHub CI results are recorded in the published
-revision's status entry.
-
 The local clean host command
 `make BUILD_DIR=build/cartridge-boot-full -j2 test` passed. The full ASan/UBSan
 suite also passed with `ASAN_OPTIONS=detect_leaks=0` because LeakSanitizer cannot
 inspect `/proc` in this managed environment. GCC `-fanalyzer` compiled the changed
 core and focused boot/cartridge/machine fixtures; `tools/check_repository.py` and
-`git diff --check` passed. PS2SDK and the PSP toolchain are not installed locally,
-so console builds require inspected GitHub CI and do not establish target runtime.
+`git diff --check` passed. PS2SDK and the PSP toolchain are not installed locally.
+Published implementation `f23fb2d` passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41568320637),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41568320743) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41568320631). GitHub's
+run metadata reports nonempty artifacts for both host compilers and both console
+cross-builds. This establishes compiler/link portability, not execution in an
+emulator or on physical hardware.

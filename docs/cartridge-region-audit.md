@@ -62,6 +62,13 @@ including repository checks. The complete ASan/UBSan suite passed with
 cannot inspect `/proc` in this managed environment. GCC `-fanalyzer` compiled the
 changed core and focused fixtures, and `git diff --check` passed.
 
-No PS2SDK or PSP toolchain is installed locally. GitHub cross-build results must
-therefore be inspected after publication; no target-runtime result is implied by
-the host evidence.
+No PS2SDK or PSP toolchain is installed locally. Published implementation
+`f23fb2d` passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41568320637),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41568320743) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41568320631). The
+uploaded GCC/Clang, PS2 and PSP artifacts were inspected through GitHub's run
+metadata and are nonempty. The PS2 artifact is 952,544 bytes with archive digest
+`sha256:4f5e2dc5a5853eafad6d6113c08a24a4117bc6915dccf6936215c733f7670a56`.
+These cross-builds establish compiler/link portability only; no emulator or
+physical-target runtime result is implied.
