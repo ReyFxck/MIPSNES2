@@ -4,7 +4,11 @@
 
 Run `make machine-test` for the focused Phase 9 base-machine gate. It builds and
 runs the machine lifecycle, integrated APU/PCM, recurring PPU frame, input, SRAM
-handoff and WAI idle/wake fixtures without implying licensed-ROM or target-console execution. Run
+handoff, WAI idle/wake and synthetic cartridge-boot fixtures without implying
+licensed-ROM or target-console execution. The cartridge fixture boots a generated
+LoROM, performs the clean-room S-SMP upload through 65C816 MMIO and captures a
+complete Mode 1 frame; see the
+[synthetic cartridge boot audit](machine-cartridge-boot-audit.md). Run
 `make test` for the complete host suite. The contract test checks logical-address masks, all bank/offset
 combinations and logging sink semantics. A second executable compiles with logging
 disabled and verifies callbacks are absent. `test-ps2-diagnostic` runs the five

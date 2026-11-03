@@ -293,12 +293,13 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] CPU/bus/scheduler integration — ROM instruction/WRAM/H-V execution plus deterministic WAI idle/wake verified; remaining devices absent
 - [x] PPU event integration — two recurring machine frames deliver 448 ordered reference lines with a chunk-independent pixel hash
 - [x] APU sample integration — machine-clocked SPC700 register programming reaches deterministic non-zero DSP PCM with chunk-independent long hash
+- [x] Synthetic cartridge boot integration — one generated LoROM drives 65C816 reset, S-SMP upload and a complete Mode 1 frame through the shared machine
 - [x] Input integration — the machine API drives manual/automatic reads and a PS2 `libpad` mapper now feeds it; PS2 runtime and PSP mapping remain platform work
 - [ ] [IN PROGRESS] SRAM persistence integration — machine dirty-view/exact-acknowledgement boundary verified; durable platform file backends absent
 - [ ] Licensed test-ROM execution
 - [ ] Real PS2 runtime smoke
 - [ ] Real PSP runtime smoke
-- [x] Base regression suite — focused machine lifecycle, APU/PCM, recurring PPU, input, SRAM-handoff and WAI idle/wake tests pass deterministically
+- [x] Base regression suite — focused machine lifecycle, APU/PCM, recurring PPU, input, SRAM-handoff, WAI idle/wake and cartridge-boot tests pass deterministically
 
 ## Phase 10 — PS2 Performance Pass
 

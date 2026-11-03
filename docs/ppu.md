@@ -145,6 +145,10 @@ Mode 1 reuses the same source/color lines. Its BG1/BG2 pixels come from a
 pure 4bpp scanline helper; BG3 remains 2bpp. The mixer implements the Mode 1
 priority chart including `$2105` bit 3. See the
 [Mode 1 audit](ppu-mode1-audit.md).
+An original generated LoROM now writes the Mode 1, BG1, VRAM and CGRAM state through
+65C816 MMIO and produces one exact 224-line frame; see the
+[synthetic cartridge boot audit](machine-cartridge-boot-audit.md). It does not add
+mid-line timing or target presentation evidence.
 
 The machine can pass each completed BGR555 reference line to a synchronous
 caller-owned callback. This is a copy-before-return handoff for future

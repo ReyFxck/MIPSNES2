@@ -23,9 +23,14 @@ this workspace. At revision `2d2a836668441f64006b5899b6abfd0c2b913027`,
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40050336316)
 completed successfully. Target runtime was not verified for this revision.
 
+The later [synthetic cartridge boot audit](machine-cartridge-boot-audit.md) extends
+this foundation with a generated LoROM that performs its own S-SMP upload and Mode 1
+initialization through normal 65C816 MMIO before a complete reference frame.
+
 The CPU-I/O and PPU counter revisions initialized here are deterministic
 foundation defaults (2 and 3); full console revision selection is outstanding.
 Power-on clears scheduled events and does not reset external PPU/APU/DMA callback
-implementations. The latter have no complete implementations yet. No ROM-file
-adapter, renderer, sample generator or licensed test-ROM runner exists. These
-limits prevent claiming a playable emulator or hardware-correct reset.
+implementations. The latter have no complete implementations yet. A PS2 ROM-file
+adapter and partial reference render/sample paths now exist, but no licensed
+test-ROM runner exists. These limits prevent claiming a playable emulator or
+hardware-correct reset.

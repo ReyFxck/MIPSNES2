@@ -1200,9 +1200,22 @@ passed
 metadata confirms nonempty GCC, Clang, PS2 and PSP artifacts. These results do not
 claim commercial-ROM boot, console runtime, audible output or target performance.
 
-Next primary block: add an original end-to-end synthetic cartridge ROM fixture that
-boots the 65C816, completes the CPU-to-S-SMP upload and reaches a rendered Mode 1
-frame through the shared machine without commercial ROM bytes.
+An original generated LoROM now closes that integration gap without commercial or
+licensed ROM bytes. Through the public machine runner, its 65C816 program observes
+the clean-room `$AA/$BB` signature, uploads and starts `MOV A,#$42; SLEEP` at
+S-SMP `$0200`, initializes Mode 1 BG1 through `$21xx`, fills tile/CGRAM state,
+releases forced blank and reaches a complete 224-line reference frame. Regular and
+irregular horizon chunks produce the same CPU/SPC700 state and exact BGR555 stream
+hash `0c68c1b754439e25`; every pixel is `$03E0`. The fixture is part of both
+`machine-test` and `make test`. The clean host suite, full ASan/UBSan suite, release
+build, GCC `-fanalyzer`, repository checker and whitespace check pass locally. See
+the [synthetic cartridge boot audit](docs/machine-cartridge-boot-audit.md). This is
+end-to-end foundation evidence, not licensed-ROM compatibility, target execution or
+playability.
+
+Next primary block: add a host runner for one pinned redistributable 65C816 test ROM
+from `docs/references.md`, execute it through the shared machine and record the first
+deterministic hardware-behavior failure without ROM-specific logic.
 
 The existing bounded DMA cursor already keeps A1B fixed while incrementing,
 decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
@@ -1558,7 +1571,16 @@ verified for Host GCC/Clang plus pinned PS2/PSP cross-builds, and all downloaded
 artifact archives and internal checksums were inspected.
 
 The memory read-modify-write and shift/rotate milestone on 2026-10-16 adds all
-thirty-six ASL/LSR/ROL/R…1512 tokens truncated…it.md. No commercial ROM or runtime result is claimed.
+thirty-six ASL/LSR/ROL/ROR accumulator/memory, memory INC/DEC, TSB/TRB and STZ
+opcodes. Host regressions cover both M widths, C/N/Z isolation, TSB/TRB overlap
+semantics, B and unrelated-state preservation, Direct Page bank/DL rules, absolute
+and indexed 24-bit carry, 16-bit memory access, exact aggregate cycles and missing
+write-bus diagnostics. W65C816 bus-cycle dummy writes and lock signaling remain
+outside the current instruction-level timing contract. Local evidence is in
+docs/65c816-memory-rmw-shifts-audit.md. GitHub Host GCC/Clang and pinned PS2/PSP
+cross-build workflows passed for implementation head
+`7649664d488687436daeac1a41969cd8af402610`; artifact metadata/digests were inspected,
+but archive download inspection was blocked by repeated HTTP 502 responses.
 
 The checksum/base-selection milestone on 2026-10-18 adds normalized whole-payload
 checksums, unambiguous smaller-tail mirroring and conservative base LoROM/HiROM
@@ -1781,8 +1803,9 @@ Revision `57a1743` passed
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41083279378).
 
 The Phase 9 base regression gate on 2026-10-30 adds `make machine-test` as a focused
-entry point over six integrated fixtures: machine lifecycle, APU/PCM, recurring PPU
-frames, controller input, SRAM persistence handoff and deterministic WAI idle/wake.
+entry point, extended on 2026-11-03 to seven integrated fixtures: machine lifecycle,
+APU/PCM, recurring PPU frames, controller input, SRAM persistence handoff,
+deterministic WAI idle/wake and synthetic cartridge-driven CPU/APU/PPU startup.
 The target
 reuses the same executables as the full host suite and makes their combined gate
 explicit; it does not add emulator behavior or claim licensed-ROM, PS2 or PSP

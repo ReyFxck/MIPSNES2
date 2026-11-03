@@ -62,6 +62,12 @@ SLEEP/STOP halt instruction execution. Machine configuration can copy an explici
 SPC700 register seed; otherwise only the boot protocol's documented resulting
 entry state is created. Undocumented general reset registers are not fabricated.
 
+One original generated LoROM integration fixture now exercises this composition
+without post-initialization state injection. Its 65C816 program performs the
+clean-room S-SMP upload, initializes Mode 1 BG1 through CPU MMIO and reaches one
+complete deterministic reference frame. This is a machine-boundary regression,
+not a bundled runtime ROM, licensed-ROM compatibility claim or platform loop.
+
 The S-DSP layer exposes `$F2/$F3`, a 128-byte register file, bit-7 write
 inhibition, `ENDX` clear, internal `FLG` reset state and a 32-S-SMP-cycle sample
 event. Its eight voice records poll `KON`/`KOFF` every other sample, latch
@@ -816,5 +822,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   configures fixed storage, starts after accepted prebuffer frames and exposes
   statistics before ordered stop/flush/shutdown. The ROM diagnostic keeps device
   results outside its fixed emulated-time horizons; target execution remains open.
+- 2026-11-03: an original generated LoROM now drives timed 65C816 reset, the
+  clean-room CPU-to-S-SMP transfer, SPC700 execution, Mode 1 VRAM/CGRAM setup and
+  one complete reference frame through the shared machine. Regular and irregular
+  horizon chunks are state/pixel equivalent; licensed ROMs and target runtime
+  remain separate validation gates.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
