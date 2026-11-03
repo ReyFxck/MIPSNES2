@@ -14,8 +14,10 @@ buffers. The first cartridge foundation now provides:
 - integration through the SNES bus into CPU reset/fetch/timing;
 - an immutable image view with explicit 512-byte copier-prefix policy;
 - raw registration/internal-header parsing at LoROM, HiROM and ExHiROM candidates;
-- mirrored whole-image checksum calculation and conservative mapper selection.
-- an allocation-free plan/construction contract over caller-owned ROM/SRAM storage.
+- mirrored whole-image checksum calculation and conservative mapper selection;
+- conservative `UNKNOWN`/`NTSC`/`PAL` classification of the selected header's
+  destination byte;
+- an allocation-free plan/construction contract over caller-owned ROM/SRAM storage;
 - revisioned dirty-state handoff for platform-owned SRAM persistence.
 
 The PS2 has an explicit-path file adapter, but no device selection, general board
@@ -137,6 +139,21 @@ mapper. Missing/undersized SRAM and inconsistent plans are rejected. Constructio
 failures leave the destination cartridge unchanged. The caller must keep source and
 SRAM buffers alive for the cartridge lifetime.
 
+### Region selection
+
+The image parser classifies the selected header's destination byte as `UNKNOWN`,
+`NTSC` or `PAL`, and the preparation plan carries that value without selecting a
+platform policy. Machine configuration may explicitly opt into a known cartridge
+region; an unknown or ambiguous destination preserves the caller's configured
+fallback. The PS2 explicit-ROM path opts in with NTSC fallback.
+
+This selection changes the machine standard as one unit: H/V geometry, `$213F`
+region status and the existing regional APU ratio agree. It does not infer behavior
+from title, game code, checksum or CRC. Chinese, Common, Other Variation and
+unassigned destination values remain unknown because Nintendo's destination table
+does not define one universal timing conversion for them. See the
+[region audit](cartridge-region-audit.md) for the exact groups and evidence.
+
 ### Base LoROM subset
 
 LoROM uses 32 KiB ROM banks: cartridge ROM address bits preserve CPU A0-A14 and
@@ -223,7 +240,7 @@ unchecked until their complete verification gates are met.
 - [ ] [IN PROGRESS] Checksum handling where useful — base mirrored checksum exists; special variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds only
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix
-- [ ] Region detection
+- [x] Conservative destination-region classification and machine timing selection
 - [x] Platform-neutral image-to-cartridge construction contract
 - [x] SRAM dirty/revision persistence handoff
 
@@ -247,6 +264,11 @@ Sources:
   2026-10-18, provide the checksum mirroring process, header verification evidence and
   an independent file/header boundary cross-check. The checksum page cites Nintendo's
   development manual Book 1 pages 1-2-10 and 1-2-21; no manual copy is committed.
+- [Nintendo SNES Development Manual, Book I](https://floating.muncher.se/bot/manual/book1_text.pdf),
+  ROM Registration Data Specification pages 1-2-14 through 1-2-20 and PPU register
+  page 2-27-23, defines the destination byte and the console's NTSC/PAL status bit.
+  The conservative grouping and unresolved values are recorded in the
+  [region audit](cartridge-region-audit.md); no manual asset is committed.
 - [Super Famicom Development Wiki non-power-of-two ROM size](https://wiki.superfamicom.org/non-power-of-two-rom-size),
   inspected 2026-10-18, describes the larger-chip-first and smaller-chip repetition
   patterns conventionally written `ABCC` and `ABCDEEEE`;

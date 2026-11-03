@@ -1,5 +1,4 @@
 /* MIPSNES2 PS2 diagnostic launcher. See LICENSE for GPL-3.0 terms. */
-#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -14,7 +13,6 @@
 #include "platform/ps2/gs_present.h"
 #include "platform/ps2/pad_input.h"
 #include "platform/ps2/rom_file.h"
-#include "platform/ps2/rom_frame.h"
 #include "platform/ps2/video_frame.h"
 #ifdef MIPSNES2_RFAUDS2
 #include "platform/ps2/audio_diagnostic.h"
@@ -27,14 +25,16 @@ enum {
     PS2_ROM_CAPACITY = MIPSNES2_EXHIROM_MAX_SIZE + MIPSNES2_COPIER_HEADER_SIZE,
     PS2_SRAM_CAPACITY = MIPSNES2_LOROM_SRAM_MAX_SIZE,
     PS2_CPU_STEP_LIMIT = 100000,
-    PS2_CPU_SLICE_LIMIT = 4096,
     PS2_EVENT_BUDGET = 64,
 #ifdef MIPSNES2_RFAUDS2
     PS2_AUDIO_PCM_CAPACITY = 4096,
     PS2_AUDIO_STAGING_CAPACITY = 960,
     PS2_AUDIO_PREBUFFER_FRAMES = 1536,
     PS2_AUDIO_LATENCY_MS = 43,
+    PS2_AUDIO_DIAGNOSTIC_FRAMES = 8,
     PS2_AUDIO_FINAL_POLLS = 8
+#else
+    PS2_AUDIO_DIAGNOSTIC_FRAMES = 1
 #endif
 };
 
@@ -90,9 +90,9 @@ static void run_rom_path(const char *path)
     size_t rom_size;
     size_t steps;
     size_t total_steps = 0U;
+    unsigned frame_index;
     unsigned completed_frames = 0U;
     unsigned presented_frames = 0U;
-    bool stopped_by_pad = false;
     mipsnes2_ps2_pad_input_result pad_init_result;
     mipsnes2_ps2_pad_input_result pad_poll_result =
         MIPSNES2_PS2_PAD_INPUT_NOT_READY;
@@ -136,11 +136,13 @@ static void run_rom_path(const char *path)
     config.oam_size = sizeof(oam);
     config.aram = aram;
     config.aram_size = sizeof(aram);
+    config.use_smp_boot_protocol = true;
 #ifdef MIPSNES2_RFAUDS2
     config.pcm_frames = pcm_frames;
     config.pcm_capacity = PS2_AUDIO_PCM_CAPACITY;
 #endif
     config.standard = MIPSNES2_HV_STANDARD_NTSC;
+    config.use_cartridge_region = true;
     if (!mipsnes2_ps2_video_frame_init(
             &video_frame, video_pixels,
             MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS, 224U)) {
@@ -179,43 +181,52 @@ static void run_rom_path(const char *path)
     run_result = MIPSNES2_MACHINE_RUN_HORIZON;
     timing_result = MIPSNES2_CPU_TIMING_HORIZON_REACHED;
     (void)memset(&report, 0, sizeof(report));
-    for (;;) {
-        if (!mipsnes2_ps2_video_frame_init(
-                &video_frame, video_pixels,
-                MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS, 224U)) {
-            run_result = MIPSNES2_MACHINE_RUN_INVALID_ARGUMENT;
-            timing_result = MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+    for (frame_index = 0U;
+         frame_index < PS2_AUDIO_DIAGNOSTIC_FRAMES;
+         ++frame_index) {
+        mipsnes2_master_clock clocks_to_boundary;
+        mipsnes2_master_clock horizon;
+
+        if (!mipsnes2_hv_clocks_until_frame_boundary(
+                &machine.hv, &clocks_to_boundary)) {
+            run_result = MIPSNES2_MACHINE_RUN_TIMING_ERROR;
+            timing_result = MIPSNES2_CPU_TIMING_HV_ERROR;
             break;
+        }
+        if (clocks_to_boundary > UINT64_MAX - machine.scheduler.now) {
+            run_result = MIPSNES2_MACHINE_RUN_TIMING_ERROR;
+            timing_result = MIPSNES2_CPU_TIMING_CLOCK_OVERFLOW;
+            break;
+        }
+        horizon = machine.scheduler.now + clocks_to_boundary;
+
+        if (frame_index != 0U) {
+            if (!mipsnes2_ps2_video_frame_init(
+                    &video_frame, video_pixels,
+                    MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS, 224U)) {
+                run_result = MIPSNES2_MACHINE_RUN_INVALID_ARGUMENT;
+                timing_result = MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
+                break;
+            }
         }
         if (pad_init_result == MIPSNES2_PS2_PAD_INPUT_OK) {
             pad_poll_result = mipsnes2_ps2_pad_input_poll(
                 &pad_input, &pad_word, &pad_connected);
-            if (pad_poll_result == MIPSNES2_PS2_PAD_INPUT_OK &&
-                pad_samples != UINT_MAX) {
+            if (pad_poll_result == MIPSNES2_PS2_PAD_INPUT_OK) {
                 ++pad_samples;
             }
         }
-        if (mipsnes2_ps2_rom_exit_requested(pad_word, pad_connected)) {
-            stopped_by_pad = true;
-            break;
-        }
         (void)mipsnes2_machine_set_joypad(
             &machine, 0U, pad_word, pad_connected);
-        run_result = mipsnes2_ps2_rom_frame_run(
-            &machine, PS2_CPU_STEP_LIMIT, PS2_CPU_SLICE_LIMIT,
-            PS2_EVENT_BUDGET, &steps, &report, &timing_result);
-        if (steps <= SIZE_MAX - total_steps) {
-            total_steps += steps;
-        } else {
-            total_steps = SIZE_MAX;
-        }
+        run_result = mipsnes2_machine_run_until(
+            &machine, horizon, PS2_CPU_STEP_LIMIT, PS2_EVENT_BUDGET,
+            &steps, &report, &timing_result);
+        total_steps += steps;
         if (run_result != MIPSNES2_MACHINE_RUN_HORIZON ||
             timing_result != MIPSNES2_CPU_TIMING_HORIZON_REACHED) {
             break;
         }
-        if (completed_frames != UINT_MAX) {
-            ++completed_frames;
-        }
+        ++completed_frames;
 #ifdef MIPSNES2_RFAUDS2
         if (audio_ready) {
             audio_pump_result = mipsnes2_ps2_rfauds2_runtime_pump(
@@ -226,9 +237,7 @@ static void run_rom_path(const char *path)
             mipsnes2_ps2_gs_presenter_present(
                 &gs_presenter, video_pixels,
                 MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS)) {
-            if (presented_frames != UINT_MAX) {
-                ++presented_frames;
-            }
+            ++presented_frames;
         }
     }
     scr_printf("CPU: %lu sequences, %lu clocks\n",
@@ -247,13 +256,14 @@ static void run_rom_path(const char *path)
                pad_connected ? 1U : 0U);
     scr_printf("GS frames submitted: %u / %u\n",
                presented_frames, completed_frames);
-    scr_printf("Frames completed: %u; pad exit: %u\n",
-               completed_frames, stopped_by_pad ? 1U : 0U);
+    scr_printf("Frames completed: %u / %u\n", completed_frames,
+               (unsigned)PS2_AUDIO_DIAGNOSTIC_FRAMES);
 #ifdef MIPSNES2_RFAUDS2
     if (audio_ready) {
         unsigned poll_count;
 
-        /* Collect an outstanding RPC after emulation stops. */
+        /* These fixed attempts only collect an outstanding RPC after the
+         * fixed emulation horizons above; they cannot advance machine time. */
         for (poll_count = 0U;
              poll_count < PS2_AUDIO_FINAL_POLLS &&
                  audio_runtime.adapter.request_in_flight;
@@ -297,7 +307,7 @@ static void run_rom_path(const char *path)
                  (unsigned)run_result, (unsigned)timing_result,
                  (unsigned)report.cpu_result);
     (void)fflush(stdout);
-    (void)printf("MIPSNES2 PS2 GS: %u/%u frames submitted\n",
+    (void)printf("MIPSNES2 PS2 GS: %u/%u bounded frames submitted\n",
                  presented_frames, completed_frames);
     (void)fflush(stdout);
 }

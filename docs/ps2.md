@@ -12,17 +12,26 @@ fixtures exercise CPU instructions, scheduler horizons and explicit ABORT write
 qualification; `tests/test_ps2_diagnostic.c` runs the identical suite on the host.
 The optional `--rom PATH` entry reads an image through `fopen` from a filesystem
 that the launcher has already made available, constructs the shared machine and
-continues over successive reference frames until a connected port-0 controller
-reports Start+Select or a run error occurs. Each frame queries the shared H/V
-state for the exact next boundary, including alternating NTSC short lines.
-Execution resumes through 4,096-sequence slices with a 100,000-sequence cap per
-frame; the cap stops a pathological run rather than silently skipping a frame.
-It prints CPU and timing status after exit and captures reference lines in a
-static RGBA32 texture. A persistent single-buffer GS presenter uploads each
-completed capture; its vertical-sync wait occurs only after machine advancement
-and cannot set emulated time. A nonblocking port-0 `libpad` sample before each
-frame supplies the translated standard-pad word. It has no console runtime
-validation, verified gameplay, audio or SRAM persistence. It does not
+runs one bounded reference frame in the standalone build. A known destination code
+from the selected cartridge header chooses the shared machine's NTSC/PAL timing;
+unknown or ambiguous codes retain the explicit NTSC fallback. The path also enables
+the firmware-free shared S-SMP upload protocol, allowing
+cartridge code to perform the standard `$2140-$2143` startup handshake without an
+embedded IPL image. This is deterministic core behavior, not a claim that a game
+boots on target.
+
+The RFAuds2-enabled
+diagnostic instead makes up to eight bounded calls. Before each call it queries the
+shared H/V state for the exact next frame boundary, including the alternating NTSC
+short scanline, and supplies that absolute horizon with a 100,000-sequence bound. It prints CPU and timing
+status and captures bounded reference lines in a static RGBA32 texture. A persistent
+single-buffer GS presenter may upload one capture after each completed horizon; its
+vertical-sync wait occurs only after machine advancement and cannot set emulated
+time. This path
+also attempts a nonblocking port-0 `libpad` sample before each frame horizon
+and injects the translated standard-pad word into the machine. It has no console
+runtime validation, continuous gameplay loop, verified input/audio or SRAM
+persistence. It does not
 mount a USB device or provide a file picker. The original five-case diagnostic
 still runs without arguments; it is not a game or the final GS/video backend.
 The new ROM path has no console runtime evidence. The default diagnostic has
@@ -35,8 +44,6 @@ its tested limits, and the [GS audit](ps2-gs-audit.md) for the unverified
 persistent presenter.
 The [frame-boundary audit](frame-boundary-horizon-audit.md) records why a constant
 `262 × 1364` step was incorrect and how device waits remain outside emulated time.
-The [continuous ROM-frame audit](ps2-continuous-rom-frame-audit.md) records the
-frame-slice limit, control exit and synthetic multi-frame host fixture.
 
 The SDK's own [EE file-reading sample](https://github.com/ps2dev/ps2sdk/blob/2c670453980fcc3fe46ead6399b730b12c8556eb/ee/rpc/audsrv/samples/playwav/playwav.c)
 uses `sceSifInitRpc`, `fopen("host:...", "rb")` and `fread`. This adapter uses
@@ -84,7 +91,7 @@ Unavailable reads inject a disconnected zero word rather than retaining stale in
 
 Host tests cover the complete active-low digital translation. Pinned PS2SDK
 cross-builds prove only API/link compatibility; ARMSX2/NetherSX2 and physical PS2
-runtime behavior, hotplug recovery, second port,
+runtime behavior, hotplug recovery, continuous gameplay polling, second port,
 multitap and PSP mapping remain open. See the
 [PS2 pad-input audit](ps2-pad-input-audit.md).
 
@@ -136,9 +143,9 @@ CI builds the host tool from that same PS2SDK source checkout instead of assumin
 the binary toolchain archive installed it.
 `platform/ps2/rfauds2_runtime.c` coordinates init, latency/volume/stat reset,
 accepted-frame prebuffering, start, statistics, stop, flush and shutdown with fixed
-caller-owned storage. The explicit ROM path advances frames until a controller
-exit or error; each optional pump follows a completed frame and cannot advance
-the machine. Do not copy RFAuds2 source into unrelated `core/` directories.
+caller-owned storage. The ROM diagnostic advances eight predetermined emulated
+frame horizons regardless of device results; pumps and bounded final polls cannot
+advance the machine. Do not copy RFAuds2 source into unrelated `core/` directories.
 Target execution, continuous streaming and real-hardware underrun/backpressure
 validation remain. See the
 [PS2 audio-adapter audit](ps2-audio-adapter-audit.md).

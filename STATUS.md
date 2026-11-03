@@ -94,11 +94,10 @@ cross-builds and host CI pass at `2d2a836`; target runtime behavior of that
 revision remains unverified. At that revision there was no PPU
 reference renderer, APU, DMA or game runtime.
 
-The PS2 backend accepts `--rom PATH` as an explicit file path on an already
+The PS2 backend now accepts `--rom PATH` as an explicit file path on an already
 available target filesystem, reads at most 8 MiB plus an optional copier prefix,
-and feeds the bytes to the shared machine. Its initial revision ran only a
-bounded NTSC CPU/H-V slice and reported the result. It now uses the continuous
-frame loop documented below. The five-case diagnostic stays
+and feeds the bytes to the shared machine. It runs only a bounded NTSC CPU/H-V
+slice and reports its result on the debug screen. The five-case diagnostic stays
 the default when no path is passed. Host file-boundary and bounded-run fixtures
 pass; PS2/PSP cross-builds and host CI also pass at `8261563`. Target runtime
 and mounted-device/launcher arguments have not been checked.
@@ -408,8 +407,7 @@ baseline in
 and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898337);
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40129898350)
 also passed. New target runtime evidence is absent. This remains a single
-buffer without scaling or double buffering; the later continuous frame loop
-has no target runtime result. No visual result in
+buffer without scaling, double buffering or a continuous gameplay loop. No visual result in
 ARMSX2/NetherSX2 or physical PS2 is claimed. See the
 [GS audit](docs/ps2-gs-audit.md).
 Revision `6bc7603` passed
@@ -1074,9 +1072,8 @@ ROM entry connects fixed native/staging storage to a PS2-only lifecycle coordina
 Initialization orders IRX load/bind, 43 ms latency, volume and statistic reset;
 playback starts only after completed asynchronous polls report at least 1,536
 accepted frames. A bounded statistics snapshot precedes ordered stop, flush and
-shutdown. At revision `5c0a8c7`, the ROM path made eight bounded machine calls
-toward predetermined absolute NTSC horizons, with one launch/poll after each;
-the later continuous frame loop replaced that limit. Bounded final collection
+shutdown. The diagnostic always makes eight bounded machine calls toward predetermined
+absolute NTSC horizons, with one launch/poll after each; bounded final collection
 polls cannot run the machine. Synthetic host coverage verifies init/failure order, prebuffer/start,
 busy rules, diagnostics and shutdown. Revision `5c0a8c7` passed
 [host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40971768192),
@@ -1175,26 +1172,27 @@ audio, sustained streaming, device latency, physical PS2 or full speed. The
 earlier bind failure is resolved within this synthetic NetherSX2 diagnostic.
 See [the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
 
-The PS2 `--rom PATH` loop now runs successive exact H/V frame horizons until
-Start+Select on a connected pad or an execution error, using resumable
-4,096-sequence slices and a 100,000-sequence cap per frame. A host synthetic
-LoROM fixture checks continuation after an eight-sequence cap and three NTSC
-frame boundaries with alternating short lines. This is a software path only:
-there is no console ROM-loop capture, verified gameplay or performance result.
-See [the PS2 ROM-frame audit](docs/ps2-continuous-rom-frame-audit.md).
-The published implementation commit `bf87bda` passed
-[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166778),
-[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166766) and
-[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41529166665).
-The PS2 run uploaded an ELF artifact (ID `13180069608`); this confirms a
-cross-build, not a target runtime result.
-The 65C816 and SPC700 already dispatch all 256 byte values; their remaining
-instruction work concerns electrical phases, RESET/ABORT and independent vectors.
-The owner has reprioritized away from audio integration.
+The owner reprioritized cartridge execution above further audio-device work. The
+selected header's destination byte is now classified conservatively and propagated
+through preparation into an opt-in machine policy. Known NTSC/PAL destinations select
+the existing H/V geometry, `$213F` region bit and regional APU ratio together; unknown
+or ambiguous values retain the caller's fallback. The PS2 explicit-ROM path opts in
+with NTSC fallback. Generated fixtures cover classification, plan propagation,
+opt-out, both standards, unknown fallback, reset and recalculated checksums. See the
+[cartridge region audit](docs/cartridge-region-audit.md).
 
-Next primary block: run an original, redistributable video/input test ROM through
-the PS2 continuous path and resolve the first observed core/PPU blocker using
-hardware documentation, with a recorded emulator capture.
+The PS2 cartridge path also no longer requires protected IPL bytes to get past a
+standard CPU-to-APU startup transfer. An optional shared-core state machine publishes
+the `$AA/$BB` ready signature, accepts `$CC`, receives indexed blocks into the S-SMP
+map, supports address/index wrap and further blocks, then attaches the complete
+SPC700 at the requested entry point after the current APU catch-up boundary. It is
+mutually exclusive with a caller-supplied IPL/seed and contains no firmware image.
+Pure and machine fixtures use only original generated bytes. See the
+[clean-room S-SMP boot audit](docs/smp-boot-protocol-audit.md).
+
+Next primary block: add an original end-to-end synthetic cartridge ROM fixture that
+boots the 65C816, completes the CPU-to-S-SMP upload and reaches a rendered Mode 1
+frame through the shared machine without commercial ROM bytes.
 
 The existing bounded DMA cursor already keeps A1B fixed while incrementing,
 decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
@@ -1757,14 +1755,14 @@ Revision `3323ec4` passed
 [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995929448) and
 [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/40995929502).
 
-The PS2 ROM path has an initial physical-pad adapter. It loads the ROM
+The PS2 bounded ROM path now has an initial physical-pad adapter. It loads the ROM
 `SIO2MAN`/`PADMAN` modules, opens port 0 with a fixed aligned DMA buffer and samples
-`libpad` once before each emulated frame horizon. A host regression pins the
+`libpad` once before each fixed emulated frame horizon. A host regression pins the
 digital mapping: Cross/Square/Circle/Triangle become SNES B/Y/A/X, directions and
 Start/Select are direct, L1/R1 become L/R, and analog/L2/R2/L3/R3 inputs are ignored.
 Disconnected or not-ready reads inject a disconnected zero word. The adapter is
 connected to `mipsnes2_machine_set_joypad`, but target execution, hotplug recovery,
-second port/multitap and PSP input remain absent. See
+continuous polling, second port/multitap and PSP input remain absent. See
 [docs/ps2-pad-input-audit.md](docs/ps2-pad-input-audit.md).
 
 Revision `57a1743` passed
@@ -2265,7 +2263,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board checksum variants absent
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config, image granularity and candidate bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
-- [ ] Region detection
+- [x] Conservative destination-region classification and machine timing selection
 
 ### Verified cartridge foundation subset
 
@@ -2473,8 +2471,8 @@ platform persistence remains incomplete.
 - [x] Multiply/divide
 - [x] Sleep and stop
 - [ ] [IN PROGRESS] Instruction timing — documented aggregate 2-12-cycle costs and taken-branch deltas feed timers atomically; exact bus phases absent
-- [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM, optional IPL overlay and DSP route verified; TEST/reset policy pending
-- [ ] IPL provenance decision
+- [ ] [IN PROGRESS] RAM and IPL mapping — bounded ARAM, optional IPL overlay, clean-room upload protocol and DSP route verified; TEST behavior and hardware validation pending
+- [x] IPL provenance decision — no protected firmware bytes; behavioral upload protocol or explicit caller-owned IPL
 - [ ] [IN PROGRESS] I/O registers — `$F1-$FF` timer/port/DSP routes exist except `$F0` TEST and `$F1` read behavior
 - [ ] [IN PROGRESS] Timers — three-stage counters run from machine-derived S-SMP cycles; electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` clear verified; cross-clock timing pending
@@ -2529,8 +2527,7 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Video buffers and ownership — aligned EE capture plus presenter-owned packet/framebuffer exist; double buffering remains
 - [ ] [IN PROGRESS] GIF packet lifetime — one packet is reset/reused after DMA completion and freed at shutdown; target validation remains
 - [ ] [IN PROGRESS] DMA cache coherency — separately referenced pixels are flushed before each chain; target validation remains
-- [ ] [IN PROGRESS] Pad input — port-0 `libpad` acquisition and host-verified digital mapping feed the continuous ROM path; target runtime/hotplug remain
-- [ ] [IN PROGRESS] Explicit-ROM PS2 frame loop — host multi-frame boundaries, sequence slicing and pad exit wired; console runtime and gameplay unverified
+- [ ] [IN PROGRESS] Pad input — port-0 `libpad` acquisition and host-verified digital mapping feed the bounded ROM path; target runtime/hotplug/continuous polling remain
 - [ ] [IN PROGRESS] Storage and ROM selection — explicit PS2 path adapter exists; mount lifecycle and picker absent
 - [ ] SRAM persistence
 - [ ] SPU2 output

@@ -3,6 +3,9 @@
 `memory.[ch]` owns the bounded S-SMP address map over caller-owned 64 KiB ARAM,
 an optional caller-supplied 64-byte IPL image, the communication mailbox and
 the `$F1-$FF` implemented register routes, including `$F2/$F3` into S-DSP.
+`boot.[ch]` is an optional clean-room behavioral implementation of the documented
+power-on upload handshake; it contains no IPL bytes and is mutually exclusive
+with explicit firmware execution.
 `timers.[ch]` owns the three-stage
 timer state and an explicit S-SMP-cycle advance API. `cpu.[ch]` owns caller-provided
 register state plus bounded instruction-atomic fetch/dispatch for all 256 opcode
@@ -12,6 +15,7 @@ timers and S-DSP cadence. TEST MMIO, interrupt/reset entry, exact per-cycle bus
 phases, electrical mailbox races and full S-DSP audio remain unimplemented.
 
 See the [memory-map audit](../../../docs/smp-memory-map-audit.md),
+[clean-room boot audit](../../../docs/smp-boot-protocol-audit.md),
 [timer audit](../../../docs/smp-timer-audit.md) and
 [execution audit](../../../docs/spc700-execution-foundation-audit.md), the
 [register/immediate MOV audit](../../../docs/spc700-mov-foundation-audit.md), the

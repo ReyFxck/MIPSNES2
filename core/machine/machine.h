@@ -3,6 +3,7 @@
 #define MIPSNES2_MACHINE_H
 
 #include "core/apu/io_ports.h"
+#include "core/apu/spc700/boot.h"
 #include "core/apu/timing.h"
 #include "core/apu/spc700/memory.h"
 #include "core/cartridge/prepare.h"
@@ -59,6 +60,12 @@ typedef struct {
     /* Optional explicit SPC700 reset seed. Hardware A/X/Y/SP/PSW reset values
      * are not invented when this is absent. */
     const mipsnes2_spc700_registers *smp_initial_registers;
+    /* Firmware-free behavioral implementation of the documented S-CPU/S-SMP
+     * power-on upload handshake. Mutually exclusive with IPL/seeded startup. */
+    bool use_smp_boot_protocol;
+    /* When true, a known cartridge destination selects NTSC/PAL. Unknown
+     * destinations retain standard as the caller's explicit fallback. */
+    bool use_cartridge_region;
     mipsnes2_hv_standard standard;
     bool overscan;
     mipsnes2_bus_interface ppu;
@@ -85,6 +92,7 @@ typedef struct {
     mipsnes2_dsp dsp;
     mipsnes2_pcm_buffer pcm;
     mipsnes2_smp_memory smp_memory;
+    mipsnes2_smp_boot smp_boot;
     mipsnes2_spc700 smp_cpu;
     mipsnes2_apu_timing apu_timing;
     mipsnes2_apu_timing_report apu_report;
@@ -128,10 +136,15 @@ typedef struct {
     size_t smp_ipl_size;
     mipsnes2_spc700_registers smp_initial_registers;
     mipsnes2_hv_standard standard;
+    mipsnes2_cartridge_region cartridge_region;
     bool overscan;
     bool ppu_forced_blank;
     bool hdma_events_scheduled;
+    bool smp_cpu_seeded;
     bool smp_cpu_enabled;
+    bool smp_boot_protocol_enabled;
+    bool smp_boot_start_pending;
+    bool smp_boot_failed;
     uint8_t ppu_brightness;
     uint8_t ppu_setini;
     uint8_t ppu1_open_bus;

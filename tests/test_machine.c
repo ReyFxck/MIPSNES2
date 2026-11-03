@@ -75,6 +75,25 @@ static int make_image(void)
     return 0;
 }
 
+static int set_image_destination(uint8_t destination)
+{
+    mipsnes2_cartridge_image_view view;
+    uint8_t *header = rom + MIPSNES2_LOROM_HEADER_OFFSET;
+    uint16_t checksum;
+    size_t mirrored;
+
+    header[0x19] = destination;
+    CHECK(mipsnes2_cartridge_image_view_init(
+        &view, rom, sizeof(rom), MIPSNES2_COPIER_HEADER_REJECT) ==
+        MIPSNES2_CARTRIDGE_IMAGE_OK);
+    CHECK(mipsnes2_cartridge_checksum_calculate(
+        &view, MIPSNES2_CARTRIDGE_LOROM, &checksum, &mirrored) ==
+        MIPSNES2_CARTRIDGE_IMAGE_OK);
+    put16(header + 0x1c, (uint16_t)(checksum ^ UINT16_C(0xffff)));
+    put16(header + 0x1e, checksum);
+    return 0;
+}
+
 int main(void)
 {
     mipsnes2_machine_config config;
@@ -96,6 +115,7 @@ int main(void)
     config.sram_capacity = sizeof(sram);
     config.standard = MIPSNES2_HV_STANDARD_NTSC;
     CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    CHECK(machine.cartridge_region == MIPSNES2_CARTRIDGE_REGION_NTSC);
     CHECK(mipsnes2_machine_resume(&machine, 1U, 0U, &report) ==
           MIPSNES2_CPU_TIMING_HORIZON_REACHED);
     CHECK(machine.cpu.pc != UINT16_C(0x8000));
@@ -182,6 +202,22 @@ int main(void)
     config.sram_capacity = sizeof(sram);
     CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
     CHECK(machine.hv.standard == MIPSNES2_HV_STANDARD_PAL);
+    config.use_cartridge_region = true;
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    CHECK(machine.cartridge_region == MIPSNES2_CARTRIDGE_REGION_NTSC);
+    CHECK(machine.hv.standard == MIPSNES2_HV_STANDARD_NTSC);
+    CHECK(set_image_destination(UINT8_C(0x02)) == 0);
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    CHECK(machine.cartridge_region == MIPSNES2_CARTRIDGE_REGION_PAL);
+    CHECK(machine.hv.standard == MIPSNES2_HV_STANDARD_PAL);
+    CHECK(set_image_destination(UINT8_C(0x0e)) == 0);
+    config.standard = MIPSNES2_HV_STANDARD_NTSC;
+    CHECK(mipsnes2_machine_init(&machine, &config) == MIPSNES2_MACHINE_OK);
+    CHECK(machine.cartridge_region == MIPSNES2_CARTRIDGE_REGION_UNKNOWN);
+    CHECK(machine.hv.standard == MIPSNES2_HV_STANDARD_NTSC);
+    CHECK(make_image() == 0);
+    config.use_cartridge_region = false;
+    config.standard = MIPSNES2_HV_STANDARD_PAL;
     config.vram = vram;
     config.vram_size = sizeof(vram) - 1U;
     CHECK(mipsnes2_machine_init(&machine, &config) ==
@@ -1320,6 +1356,10 @@ int main(void)
         CHECK(mipsnes2_machine_init(&machine, &config) ==
               MIPSNES2_MACHINE_INVALID_ARGUMENT);
         config.smp_ipl_size = sizeof(synthetic_ipl);
+        config.use_smp_boot_protocol = true;
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_INVALID_ARGUMENT);
+        config.use_smp_boot_protocol = false;
         config.apu = mipsnes2_apu_io_ports_make_cpu_interface(
             &machine.apu_ports);
         CHECK(mipsnes2_machine_init(&machine, &config) ==
@@ -1394,6 +1434,59 @@ int main(void)
         CHECK(machine.smp_cpu.wait_state == MIPSNES2_SPC700_SLEEPING);
         CHECK(machine.dsp.registers[UINT8_C(0x0c)] == UINT8_C(0x44));
         CHECK(machine.smp_memory.dsp == &machine.dsp);
+
+        /* The firmware-free boot protocol exposes the standard ready signal,
+         * receives a block and starts the complete SPC700 at the uploaded
+         * entry point on the next deterministic APU boundary. */
+        config.smp_ipl = NULL;
+        config.smp_ipl_size = 0U;
+        config.smp_initial_registers = NULL;
+        config.use_smp_boot_protocol = true;
+        (void)memset(aram, UINT8_C(0x5a), sizeof(aram));
+        CHECK(mipsnes2_machine_init(&machine, &config) ==
+              MIPSNES2_MACHINE_OK);
+        CHECK(!machine.smp_cpu_enabled &&
+              machine.smp_boot.state == MIPSNES2_SMP_BOOT_WAIT_COMMAND);
+        CHECK(mipsnes2_snes_bus_read(&machine.bus,
+                                     UINT32_C(0x002140)) == UINT8_C(0xaa));
+        CHECK(mipsnes2_snes_bus_read(&machine.bus,
+                                     UINT32_C(0x002141)) == UINT8_C(0xbb));
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002142), 0U);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002143),
+                                UINT8_C(0x02));
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002141), 1U);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002140),
+                                UINT8_C(0xcc));
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002141),
+                                UINT8_C(0xef)); /* SLEEP */
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002140), 0U);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002142), 0U);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002143),
+                                UINT8_C(0x02));
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002141), 0U);
+        mipsnes2_snes_bus_write(&machine.bus, UINT32_C(0x002140), 2U);
+        CHECK(aram[0x0200] == UINT8_C(0xef));
+        CHECK(machine.smp_cpu_enabled && machine.smp_boot_start_pending &&
+              machine.apu_timing.cpu == NULL &&
+              machine.smp_cpu.registers.pc == UINT16_C(0x0200));
+        CHECK(mipsnes2_machine_resume(&machine, UINT64_MAX, 0U, &report) ==
+              MIPSNES2_CPU_TIMING_OK);
+        CHECK(!machine.smp_boot_start_pending &&
+              machine.apu_timing.cpu == &machine.smp_cpu);
+        for (apu_attempts = 0U;
+             apu_attempts < 64U &&
+             machine.smp_cpu.wait_state == MIPSNES2_SPC700_RUNNING;
+             ++apu_attempts) {
+            CHECK(mipsnes2_machine_resume(
+                      &machine, UINT64_MAX, 0U, &report) ==
+                  MIPSNES2_CPU_TIMING_OK);
+        }
+        CHECK(machine.smp_cpu.wait_state == MIPSNES2_SPC700_SLEEPING);
+        CHECK(mipsnes2_machine_power_on(&machine) == MIPSNES2_MACHINE_OK);
+        CHECK(!machine.smp_cpu_enabled &&
+              machine.smp_boot.state == MIPSNES2_SMP_BOOT_WAIT_COMMAND &&
+              mipsnes2_snes_bus_read(&machine.bus,
+                                     UINT32_C(0x002140)) == UINT8_C(0xaa));
     }
     (void)puts("machine integration: OK");
     return 0;

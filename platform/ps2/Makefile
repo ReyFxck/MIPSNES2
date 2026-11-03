@@ -3,7 +3,7 @@ ifeq ($(strip $(PS2SDK)),)
 $(error PS2SDK is unset; see docs/ps2.md)
 endif
 EE_BIN = mipsnes2-ps2.elf
-EE_OBJS = main.o diagnostic_suite.o rom_file.o rom_frame.o video_frame.o gs_present.o pad_mapping.o pad_input.o audio_adapter.o log.o bus.o cpu_io.o apu_io_ports.o pcm.o dsp.o smp_timers.o smp_memory.o spc700_cpu.o apu_timing.o dma_registers.o dma_transfer.o hdma.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg4_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_mode1_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
+EE_OBJS = main.o diagnostic_suite.o rom_file.o video_frame.o gs_present.o pad_mapping.o pad_input.o audio_adapter.o log.o bus.o cpu_io.o apu_io_ports.o pcm.o dsp.o smp_timers.o smp_memory.o smp_boot.o spc700_cpu.o apu_timing.o dma_registers.o dma_transfer.o hdma.o ppu_counters.o ppu_vram.o ppu_cgram.o ppu_oam.o ppu_tile4.o ppu_sprite_scanline.o ppu_bg2_scanline.o ppu_bg4_scanline.o ppu_bg_registers.o ppu_mode0_mix.o ppu_mode1_mix.o ppu_window_mask.o ppu_color_math.o snes_bus.o cpu.o scheduler.o 5a22_timing.o \
 	hv_timing.o interrupt_lines.o master_timing.o cpu_timing.o cartridge.o \
 	cartridge_image.o \
 	cartridge_prepare.o machine.o
@@ -88,6 +88,9 @@ smp_timers.o: ../../core/apu/spc700/timers.c ../../core/apu/spc700/timers.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 smp_memory.o: ../../core/apu/spc700/memory.c ../../core/apu/spc700/memory.h ../../core/apu/spc700/timers.h ../../core/apu/io_ports.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+smp_boot.o: ../../core/apu/spc700/boot.c ../../core/apu/spc700/boot.h ../../core/apu/spc700/cpu.h ../../core/apu/spc700/memory.h ../../core/apu/io_ports.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 spc700_cpu.o: ../../core/apu/spc700/cpu.c ../../core/apu/spc700/cpu.h ../../core/apu/spc700/memory.h
@@ -185,9 +188,6 @@ main.o: main.c diagnostic_suite.h pad_input.h
 diagnostic_suite.o: diagnostic_suite.c diagnostic_suite.h ../../core/bus/snes_bus.h ../../core/cpu/65c816/cpu.h ../../core/scheduler/cpu_timing.h
 
 rom_file.o: rom_file.c rom_file.h
-	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
-
-rom_frame.o: rom_frame.c rom_frame.h ../../core/machine/machine.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 clean:

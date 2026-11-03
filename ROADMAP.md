@@ -118,7 +118,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Checksum handling where useful — mirrored base-image checksum verified; special-board variants pending
 - [ ] [IN PROGRESS] Truncated and malformed input rejection — mapper config and image/header bounds covered; file I/O absent
 - [x] Copier-header policy — explicit detect/reject/require for a single 512-byte prefix; other layouts rejected
-- [ ] Region detection
+- [x] Conservative destination-region classification and machine timing selection
 - [x] Platform-neutral image-to-cartridge construction contract
 - [x] SRAM dirty/revision persistence handoff
 
@@ -239,8 +239,8 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Multiply/divide
 - [x] Sleep and stop
 - [ ] [IN PROGRESS] Instruction timing — documented aggregate 2-12-cycle costs and taken-branch deltas advance timers atomically; exact bus phases remain
-- [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay, write-through and DSP route tested; TEST/reset policy and hardware validation pending
-- [ ] IPL provenance decision
+- [ ] [IN PROGRESS] RAM and IPL mapping — caller-owned 64 KiB ARAM, optional IPL read overlay, clean-room upload protocol, write-through and DSP route tested; TEST behavior and hardware validation pending
+- [x] IPL provenance decision — no protected firmware bytes; behavioral upload protocol or explicit caller-owned IPL
 - [ ] [IN PROGRESS] I/O registers — `$F1-$FF` timer/port/DSP routes exist except `$F0` TEST and `$F1` read behavior
 - [ ] [IN PROGRESS] Timers — three-stage counters run from machine-derived S-SMP cycles; electrical races pending
 - [ ] [IN PROGRESS] Communication ports — four directional latches each way, CPU mirrors, S-SMP `$F4-$F7` and `$F1` input-pair clear verified; cross-clock timing pending
@@ -294,7 +294,6 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] PPU event integration — two recurring machine frames deliver 448 ordered reference lines with a chunk-independent pixel hash
 - [x] APU sample integration — machine-clocked SPC700 register programming reaches deterministic non-zero DSP PCM with chunk-independent long hash
 - [x] Input integration — the machine API drives manual/automatic reads and a PS2 `libpad` mapper now feeds it; PS2 runtime and PSP mapping remain platform work
-- [ ] [IN PROGRESS] PS2 explicit-ROM frame loop — bounded resumable frames and pad exit pass host multi-frame tests; PS2 runtime and gameplay remain unverified
 - [ ] [IN PROGRESS] SRAM persistence integration — machine dirty-view/exact-acknowledgement boundary verified; durable platform file backends absent
 - [ ] Licensed test-ROM execution
 - [ ] Real PS2 runtime smoke

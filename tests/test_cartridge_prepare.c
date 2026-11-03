@@ -243,6 +243,7 @@ static int test_exhirom_construction(void)
           MIPSNES2_CARTRIDGE_IMAGE_OK);
     CHECK(plan.selection.selected_mapper == MIPSNES2_CARTRIDGE_EXHIROM);
     CHECK(plan.required_sram_size == 0U);
+    CHECK(plan.region == MIPSNES2_CARTRIDGE_REGION_NTSC);
     CHECK(mipsnes2_cartridge_construct(&cartridge, &plan, NULL, 0U) ==
           MIPSNES2_CARTRIDGE_OK);
     CHECK(mipsnes2_cartridge_read(&cartridge, UINT32_C(0xc00000), &value));

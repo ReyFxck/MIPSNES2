@@ -39,6 +39,30 @@ static mipsnes2_cartridge_header_map classify_map(uint8_t map_mode)
     return MIPSNES2_HEADER_MAP_OTHER;
 }
 
+mipsnes2_cartridge_region mipsnes2_cartridge_region_from_destination(
+    uint8_t destination_code)
+{
+    switch (destination_code) {
+    case UINT8_C(0x00): /* Japan */
+    case UINT8_C(0x01): /* North America */
+    case UINT8_C(0x0d): /* South Korea */
+    case UINT8_C(0x0f): /* Canada */
+    case UINT8_C(0x10): /* Brazil / Nintendo Gateway */
+        return MIPSNES2_CARTRIDGE_REGION_NTSC;
+    case UINT8_C(0x02): /* Europe */
+    case UINT8_C(0x03): /* Scandinavia */
+    case UINT8_C(0x06): /* French Europe */
+    case UINT8_C(0x07): /* Netherlands */
+    case UINT8_C(0x08): /* Spain */
+    case UINT8_C(0x09): /* Germany */
+    case UINT8_C(0x0a): /* Italy */
+    case UINT8_C(0x11): /* Australia */
+        return MIPSNES2_CARTRIDGE_REGION_PAL;
+    default:
+        return MIPSNES2_CARTRIDGE_REGION_UNKNOWN;
+    }
+}
+
 static bool header_offset_for_mapper(mipsnes2_cartridge_mapper mapper,
                                      size_t *offset)
 {
@@ -215,6 +239,8 @@ mipsnes2_cartridge_image_result mipsnes2_cartridge_header_parse(
     header->checksum = read16(data + 0x1e);
     header->reset_vector = read16(data + 0x3c);
     header->map = classify_map(header->map_mode);
+    header->region = mipsnes2_cartridge_region_from_destination(
+        header->destination_code);
     header->fastrom = (header->map_mode & UINT8_C(0x10)) != 0U;
     header->checksum_pair_valid =
         (uint16_t)(header->checksum ^ header->checksum_complement) ==

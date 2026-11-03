@@ -522,6 +522,55 @@ static void machine_ppu_write(void *context, mipsnes2_address address,
     }
 }
 
+static uint8_t machine_apu_read(void *context, mipsnes2_address address)
+{
+    mipsnes2_machine *machine = context;
+    uint8_t value = 0U;
+
+    (void)mipsnes2_apu_io_ports_cpu_read(
+        &machine->apu_ports, (uint16_t)address, &value);
+    return value;
+}
+
+static void machine_apu_write(void *context, mipsnes2_address address,
+                              uint8_t value)
+{
+    mipsnes2_machine *machine = context;
+    mipsnes2_smp_boot_event event;
+
+    if (!machine->smp_boot_protocol_enabled) {
+        (void)mipsnes2_apu_io_ports_cpu_write(
+            &machine->apu_ports, (uint16_t)address, value);
+        return;
+    }
+    if (!mipsnes2_smp_boot_cpu_write(
+            &machine->smp_boot, (uint16_t)address, value, &event)) {
+        machine->smp_boot_failed = true;
+        return;
+    }
+    if (event.start_cpu) {
+        if (!mipsnes2_spc700_init(
+                &machine->smp_cpu, &machine->smp_memory,
+                &event.registers)) {
+            machine->smp_boot_failed = true;
+            return;
+        }
+        machine->smp_cpu_enabled = true;
+        machine->smp_boot_start_pending = true;
+    }
+}
+
+static mipsnes2_bus_interface machine_apu_interface(
+    mipsnes2_machine *machine)
+{
+    mipsnes2_bus_interface interface;
+
+    interface.context = machine;
+    interface.read8 = machine_apu_read;
+    interface.write8 = machine_apu_write;
+    return interface;
+}
+
 mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
 {
     mipsnes2_snes_bus_config config;
@@ -541,8 +590,12 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
         }
     }
     machine->smp_cpu = (mipsnes2_spc700){0};
+    machine->smp_boot = (mipsnes2_smp_boot){0};
     machine->apu_timing = (mipsnes2_apu_timing){0};
     machine->apu_report = (mipsnes2_apu_timing_report){0};
+    machine->smp_cpu_enabled = machine->smp_cpu_seeded;
+    machine->smp_boot_start_pending = false;
+    machine->smp_boot_failed = false;
     if (machine->aram != NULL &&
         !mipsnes2_smp_memory_init(&machine->smp_memory, machine->aram,
                                  machine->aram_size, &machine->apu_ports,
@@ -553,12 +606,15 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     if (machine->aram != NULL &&
         (!mipsnes2_smp_memory_attach_dsp(&machine->smp_memory,
                                          &machine->dsp) ||
-         (machine->smp_cpu_enabled &&
+         (machine->smp_boot_protocol_enabled &&
+          !mipsnes2_smp_boot_init(&machine->smp_boot,
+                                  &machine->smp_memory)) ||
+         (machine->smp_cpu_seeded &&
           !mipsnes2_spc700_init(&machine->smp_cpu, &machine->smp_memory,
                                 &machine->smp_initial_registers)) ||
          !mipsnes2_apu_timing_init(
              &machine->apu_timing, machine->standard,
-             machine->smp_cpu_enabled ? &machine->smp_cpu : NULL,
+             machine->smp_cpu_seeded ? &machine->smp_cpu : NULL,
              &machine->smp_memory, &machine->dsp))) {
         machine->ready = false;
         return MIPSNES2_MACHINE_TIMING_ERROR;
@@ -638,7 +694,10 @@ mipsnes2_machine_result mipsnes2_machine_power_on(mipsnes2_machine *machine)
     config.ppu.write8 = machine_ppu_write;
     config.apu = machine->apu.read8 != NULL || machine->apu.write8 != NULL
         ? machine->apu
-        : mipsnes2_apu_io_ports_make_cpu_interface(&machine->apu_ports);
+        : (machine->smp_boot_protocol_enabled
+               ? machine_apu_interface(machine)
+               : mipsnes2_apu_io_ports_make_cpu_interface(
+                     &machine->apu_ports));
     config.dma = machine->dma;
     config.dma_registers = &machine->dma_registers;
     config.hdma_state = &machine->hdma_state;
@@ -759,6 +818,9 @@ mipsnes2_machine_result mipsnes2_machine_init(
           (config->aram == NULL ||
            config->smp_ipl_size != MIPSNES2_SMP_IPL_SIZE))) ||
         (config->smp_initial_registers != NULL && config->aram == NULL) ||
+        (config->use_smp_boot_protocol &&
+         (config->aram == NULL || config->smp_ipl != NULL ||
+          config->smp_initial_registers != NULL)) ||
         (config->aram != NULL &&
          (config->apu.read8 != NULL || config->apu.write8 != NULL)) ||
         (config->standard != MIPSNES2_HV_STANDARD_NTSC &&
@@ -794,11 +856,19 @@ mipsnes2_machine_result mipsnes2_machine_init(
     }
     machine->smp_ipl = config->smp_ipl;
     machine->smp_ipl_size = config->smp_ipl_size;
-    machine->smp_cpu_enabled = config->smp_initial_registers != NULL;
-    if (machine->smp_cpu_enabled) {
+    machine->smp_cpu_seeded = config->smp_initial_registers != NULL;
+    machine->smp_boot_protocol_enabled = config->use_smp_boot_protocol;
+    if (machine->smp_cpu_seeded) {
         machine->smp_initial_registers = *config->smp_initial_registers;
     }
+    machine->cartridge_region = plan.region;
     machine->standard = config->standard;
+    if (config->use_cartridge_region &&
+        plan.region != MIPSNES2_CARTRIDGE_REGION_UNKNOWN) {
+        machine->standard = plan.region == MIPSNES2_CARTRIDGE_REGION_PAL
+                                ? MIPSNES2_HV_STANDARD_PAL
+                                : MIPSNES2_HV_STANDARD_NTSC;
+    }
     machine->overscan = config->overscan;
     machine->ppu = config->ppu;
     machine->apu = config->apu;
@@ -818,6 +888,10 @@ mipsnes2_cpu_timing_result mipsnes2_machine_resume(
     if (machine == NULL || !machine->ready || report == NULL) {
         return MIPSNES2_CPU_TIMING_INVALID_ARGUMENT;
     }
+    if (machine->smp_boot_failed) {
+        machine->ready = false;
+        return MIPSNES2_CPU_TIMING_APU_ERROR;
+    }
     result = mipsnes2_cpu_timed_resume_hv_interrupts(
         &machine->cpu, &machine->bus, &machine->scheduler, &machine->hv,
         &machine->interrupts, &machine->cursor, horizon, event_budget, report);
@@ -827,6 +901,10 @@ mipsnes2_cpu_timing_result mipsnes2_machine_resume(
             &machine->apu_report) != MIPSNES2_APU_TIMING_OK) {
         machine->ready = false;
         return MIPSNES2_CPU_TIMING_APU_ERROR;
+    }
+    if (machine->smp_boot_start_pending) {
+        machine->apu_timing.cpu = &machine->smp_cpu;
+        machine->smp_boot_start_pending = false;
     }
     return result;
 }

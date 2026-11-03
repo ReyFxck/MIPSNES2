@@ -186,6 +186,7 @@ static int test_lorom_header_parse(void)
     CHECK(header.rom_size_exponent == UINT8_C(8));
     CHECK(header.sram_size_exponent == UINT8_C(5));
     CHECK(header.destination_code == UINT8_C(0x01));
+    CHECK(header.region == MIPSNES2_CARTRIDGE_REGION_NTSC);
     CHECK(header.developer_id == UINT8_C(0x33));
     CHECK(header.version == UINT8_C(0x07));
     CHECK(header.checksum_complement == UINT16_C(0x4567));
@@ -204,6 +205,37 @@ static int test_lorom_header_parse(void)
               &view, MIPSNES2_CARTRIDGE_LOROM, &header) ==
           MIPSNES2_CARTRIDGE_IMAGE_OK);
     CHECK(!header.checksum_pair_valid);
+    return 0;
+}
+
+static int test_destination_region_classification(void)
+{
+    static const uint8_t ntsc_codes[] = {
+        0x00U, 0x01U, 0x0dU, 0x0fU, 0x10U
+    };
+    static const uint8_t pal_codes[] = {
+        0x02U, 0x03U, 0x06U, 0x07U, 0x08U,
+        0x09U, 0x0aU, 0x11U
+    };
+    static const uint8_t unknown_codes[] = {
+        0x04U, 0x05U, 0x0bU, 0x0cU, 0x0eU,
+        0x12U, 0x13U, 0x14U, 0xffU
+    };
+    size_t index;
+
+    for (index = 0U; index < sizeof(ntsc_codes); ++index) {
+        CHECK(mipsnes2_cartridge_region_from_destination(ntsc_codes[index]) ==
+              MIPSNES2_CARTRIDGE_REGION_NTSC);
+    }
+    for (index = 0U; index < sizeof(pal_codes); ++index) {
+        CHECK(mipsnes2_cartridge_region_from_destination(pal_codes[index]) ==
+              MIPSNES2_CARTRIDGE_REGION_PAL);
+    }
+    for (index = 0U; index < sizeof(unknown_codes); ++index) {
+        CHECK(mipsnes2_cartridge_region_from_destination(
+                  unknown_codes[index]) ==
+              MIPSNES2_CARTRIDGE_REGION_UNKNOWN);
+    }
     return 0;
 }
 
@@ -703,6 +735,7 @@ int main(void)
 {
     CHECK(test_image_view_validation() == 0);
     CHECK(test_lorom_header_parse() == 0);
+    CHECK(test_destination_region_classification() == 0);
     CHECK(test_hirom_and_candidate_boundaries() == 0);
     CHECK(test_copier_offset_and_size_overflow() == 0);
     CHECK(test_checksum_calculation() == 0);

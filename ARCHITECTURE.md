@@ -42,8 +42,12 @@ machine exposes the cartridge's live SRAM view and exact revision acknowledgemen
 as the platform persistence boundary; paths, copying, durable writes and scheduling
 remain backend responsibilities. An optional S-SMP map borrows 64 KiB ARAM
 and optional caller-provided 64-byte IPL; without the IPL, mapped high-page
-reads fail explicitly. PS2 reserves ARAM, while PSP merely compiles the same
-core. The S-SMP map and S-CPU bus meet through machine-owned directional
+reads fail explicitly. A mutually exclusive clean-room state machine can instead
+provide the documented power-on upload handshake without exposing firmware bytes.
+It clears `$0000-$00EF`, publishes `$AA/$BB`, receives indexed blocks and starts
+the SPC700 at the requested entry on the next explicit APU boundary. PS2 enables
+that policy for its ROM path; PSP merely compiles the same core. The S-SMP map
+and S-CPU bus meet through machine-owned directional
 ports. The map also owns three APU-clock-driven timers, with an explicit unit-test
 advance API: timer 0/1 observe a
 shared 128-cycle stage-1 edge and timer 2 each 16-cycle subdivision; `$F1`
@@ -55,7 +59,8 @@ The APU bridge converts absolute machine master time to nominal 1.024 MHz S-SMP
 cycles with a carried rational remainder. It conservatively admits whole atomic
 instructions, advances timers and S-DSP cadence, and keeps running devices while
 SLEEP/STOP halt instruction execution. Machine configuration can copy an explicit
-SPC700 register seed; undocumented reset registers are not fabricated.
+SPC700 register seed; otherwise only the boot protocol's documented resulting
+entry state is created. Undocumented general reset registers are not fabricated.
 
 The S-DSP layer exposes `$F2/$F3`, a 128-byte register file, bit-7 write
 inhibition, `ENDX` clear, internal `FLG` reset state and a 32-S-SMP-cycle sample
@@ -202,14 +207,12 @@ buffer stays machine-owned and can be reused after the callback returns.
 The PS2 ROM adapter copies that callback into a PS2-only RGBA32 frame;
 PSP remains independent and has no presentation path yet.
 The PS2 backend queries the shared H/V state for each exact next-frame boundary,
-then owns one GS packet/framebuffer across a continuous explicit-ROM loop and
-can upload each completed capture without reallocating either. A fixed per-frame
-sequence cap and smaller resumable slices stop on failure rather than discarding
-machine state. There is no verified runtime display or gameplay. PSP still has no
-presentation path. On the PS2 ROM path, a PS2-only `libpad` adapter samples
+then owns one GS packet/framebuffer across those bounded diagnostic horizons and
+can upload each completed capture without reallocating either;
+there is no verified runtime display or continuous gameplay loop. PSP still has no
+presentation path. On the bounded PS2 ROM path, a PS2-only `libpad` adapter samples
 port 0 once before each emulated frame horizon and translates the digital face,
 direction, shoulder, Start and Select buttons into the machine's standard-pad word.
-Start+Select on a connected pad exits the loop at a frame boundary.
 The core contains no PS2SDK type or call, and target input execution remains
 unverified.
 
@@ -265,6 +268,13 @@ selection plan. The plan reports header-declared SRAM bytes; construction then b
 the selected mapper to caller-owned ROM/SRAM storage and reuses the executable
 mapper's validation. Failed analysis/construction leaves destination objects
 unchanged. Paths, file handles, allocation and persistence remain platform concerns.
+
+The selected plan also carries a conservative `UNKNOWN`/`NTSC`/`PAL` classification
+of the header destination byte. Machine configuration decides whether to use a known
+cartridge region; unknown or ambiguous values retain its explicit fallback. When
+enabled, the selected standard drives the existing H/V geometry, PPU region status
+and regional APU clock ratio together. The PS2 explicit-ROM path enables this policy
+with NTSC fallback. No title, game code, checksum or CRC selects timing.
 
 SRAM contents also remain caller-owned. The mapper marks only value-changing SRAM
 writes dirty and advances a revision token. Platform persistence code reads a live
