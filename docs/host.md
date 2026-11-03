@@ -1,13 +1,21 @@
 # Host development target
 
-The host is for compilation, unit/regression tests, future test-ROM execution,
+The host is for compilation, unit/regression tests, test-ROM execution,
 fuzzing, debugging and tooling only. No GUI, SDL, desktop emulator UX or desktop-led
-architecture is introduced. The binary identifies the CPU/bus foundation and rejects
-arguments; it does not load ROMs.
+architecture is introduced. The `mipsnes2-host` probe still identifies the
+foundation and rejects arguments. The separate `mipsnes2-rom-runner` development
+tool loads an explicit ROM into fixed storage, advances the shared machine for a
+bounded frame count and can report bounded WRAM/VRAM ranges.
 
-Host tests exercise the platform-neutral cartridge preparation contract using
-generated in-memory data. That does not add file loading or ROM execution to the host
-binary.
+The runner is not a product backend or desktop frontend. File I/O, option parsing and
+diagnostic printing stay in `platform/host`; the core remains platform-neutral. It
+does not select behavior by title, CRC or ROM hash.
+
+`make licensed-rom-test` fetches the exact MIT-licensed gilyon `snes-tests` v1.4
+archive, verifies its archive/ROM/text/license hashes, normalizes only the released
+checksum placeholder in ignored build output and runs all 1,107 `cputest-basic`
+cases. No external test asset is stored in the repository. See the
+[licensed-ROM runner audit](65c816-licensed-rom-runner-audit.md).
 
 Future host audio work is for deterministic offline sample tests and diagnostics
 behind the common PCM contract. It remains independent of RFAuds2 and must be able to

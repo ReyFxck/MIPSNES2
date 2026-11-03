@@ -82,7 +82,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Direct Page edge cases
 - [ ] [IN PROGRESS] Timing model — resumable 5A22 operation timing is integrated; exact dummy/electrical sequencing pending
 - [x] CPU automated tests for all 256 opcode values
-- [ ] [IN PROGRESS] CPU regression tests — broader independent vectors/test ROMs pending
+- [ ] [IN PROGRESS] CPU regression tests — pinned basic 65C816 ROM passes 1,107 cases and the full ROM defines the next failure frontier; broader independent vectors/test ROM completion pending
 - [ ] [IN PROGRESS] Complete interpreter integration — all 256 opcode values, boundary IRQ/NMI/ABORT entry, RESET vector reads and scheduler/5A22 cursor wiring are resumable; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
 
 ## Phase 3 — Bus and Cartridge
@@ -296,7 +296,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Synthetic cartridge boot integration — one generated LoROM drives 65C816 reset, S-SMP upload and a complete Mode 1 frame through the shared machine
 - [x] Input integration — the machine API drives manual/automatic reads and a PS2 `libpad` mapper now feeds it; PS2 runtime and PSP mapping remain platform work
 - [ ] [IN PROGRESS] SRAM persistence integration — machine dirty-view/exact-acknowledgement boundary verified; durable platform file backends absent
-- [ ] Licensed test-ROM execution
+- [x] Licensed test-ROM execution — pinned MIT basic 65C816 ROM completes 1,107 cases through the shared machine; full-suite conformance remains CPU work
 - [ ] Real PS2 runtime smoke
 - [ ] Real PSP runtime smoke
 - [x] Base regression suite — focused machine lifecycle, APU/PCM, recurring PPU, input, SRAM-handoff, WAI idle/wake and cartridge-boot tests pass deterministically

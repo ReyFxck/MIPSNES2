@@ -1219,9 +1219,31 @@ logs contain the new fixture in both release and sanitizer runs for GCC and Clan
 the console logs confirm pinned-toolchain cross-builds plus checksum-verified,
 nonempty uploaded artifacts. No emulator or physical-target execution was performed.
 
-Next primary block: add a host runner for one pinned redistributable 65C816 test ROM
-from `docs/references.md`, execute it through the shared machine and record the first
-deterministic hardware-behavior failure without ROM-specific logic.
+A separate bounded host runner now loads explicit files into fixed storage and drives
+the same shared machine without adding a desktop backend. A pinned/hash-verified
+MIT `snes-tests` v1.4 fetch path keeps all upstream assets in ignored build output;
+its basic 65C816 ROM completes all 1,107 cases and reports `Success` at `$0452`.
+The full ROM first failed at `$0027`, exposing the E-mode `(direct,X)` unaligned-D
+pointer-high wrap. Aggregate and resumable CPU paths now implement the page wrap and
+synthetic tests verify the `$02FF -> $0200` reads, result and seven-cycle sequence.
+The full ROM advances beyond that case and stops at the next deterministic failure,
+`COP #$DB` test `$0103`. No ROM name, CRC or hash affects core behavior, and no
+external ROM/source is committed. See the
+[licensed-ROM runner audit](docs/65c816-licensed-rom-runner-audit.md).
+
+Local verification on 2026-11-03 passes the focused aggregate/resumable CPU
+executables, `make clean && make test`, `make licensed-rom-test`, the complete
+ASan/UBSan suite with leak inspection disabled for the managed environment's
+`/proc` restriction, a focused GCC `-fanalyzer` build plus execution, repository
+checker and whitespace check. One sanitizer-build executable was created without
+its user execute bit by the managed filesystem; making that ignored build artifact
+executable and rerunning the identical suite passed without a sanitizer finding.
+No local `mips64r5900el-ps2-elf-gcc`, `psp-gcc` or `psp-config` was available, so
+PS2/PSP cross-build evidence remains the published CI gate for this revision.
+
+Next primary block: correct the full-suite `$0103` emulation-mode `COP` stack/vector
+behavior generically, add aggregate and resumable regressions, and advance the pinned
+full 65C816 ROM to its next deterministic failure.
 
 The existing bounded DMA cursor already keeps A1B fixed while incrementing,
 decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
@@ -1940,7 +1962,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
 - [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET, WRAM refresh and HDMA priority; signal-level RESET, exact dummy/internal sequencing and electrical overlap phases are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
-- [ ] [IN PROGRESS] CPU regression tests — deterministic host suite exists; broader independent vectors/test ROMs pending
+- [ ] [IN PROGRESS] CPU regression tests — deterministic host suite plus a 1,107-case pinned basic ROM pass exist; the full ROM currently stops at `COP` test `$0103`
 - [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, boundary IRQ/NMI/ABORT entry, RESET vector reads and opt-in scheduler/5A22 cursor wiring exist; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
 
 ### Verified 65C816 foundation subset
@@ -2609,7 +2631,7 @@ platform persistence remains incomplete.
 - [ ] DSP sample fixtures
 - [x] Scheduler fixtures — event order/error paths, rational clocks, 5A22 classes/math and joypad timing, shared H/V fanout, IRQ-source aggregation and timed CPU boundaries
 - [ ] DMA/HDMA fixtures
-- [ ] Licensed test-ROM runner
+- [x] Licensed test-ROM runner — bounded generic runner plus pinned/hash-verified MIT basic suite completes 1,107 cases; full-suite conformance remains open
 - [ ] Deterministic replay harness
 - [ ] Sanitizer regression coverage
 - [ ] Malformed ROM fuzzing

@@ -1536,6 +1536,43 @@ static int test_load_store_family_cycles(void)
     return 0;
 }
 
+static int test_direct_indexed_indirect_emulation_wrap_cycles(void)
+{
+    static const expected_operation expected[] = {
+        {MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e8600), 0U},
+        {MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e8601), 0U},
+        {MIPSNES2_CPU_OPERATION_INTERNAL, 0U, UINT8_C(1)},
+        {MIPSNES2_CPU_OPERATION_INTERNAL, 0U, UINT8_C(2)},
+        {MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x0002ff), 0U},
+        {MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x000200), 0U},
+        {MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7f1234), 0U}
+    };
+    trace_context trace;
+    mipsnes2_cpu cpu;
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8600)) == 0);
+    bank7e[0x8600] = UINT8_C(0xa1); /* LDA ($f7,X) */
+    bank7e[0x8601] = UINT8_C(0xf7);
+    cpu.d = UINT16_C(0x011a);
+    cpu.dbr = UINT8_C(0x7f);
+    cpu.a = UINT16_C(0xbeef);
+    cpu.x = UINT16_C(0x00ee);
+    bank00[0x02ff] = UINT8_C(0x34);
+    bank00[0x0200] = UINT8_C(0x12);
+    bank00[0x0300] = UINT8_C(0x56);
+    bank7f[0x1234] = UINT8_C(0xed);
+    CHECK(run_expected_instruction(
+              &cpu, expected, sizeof(expected) / sizeof(expected[0])) == 0);
+    CHECK(cpu.a == UINT16_C(0xbeed));
+    CHECK(cpu.pc == UINT16_C(0x8602));
+    CHECK(cpu.instruction_cycles == UINT64_C(7));
+    CHECK(trace.count == 5U);
+    CHECK(trace.accesses[2].address == UINT32_C(0x0002ff));
+    CHECK(trace.accesses[3].address == UINT32_C(0x000200));
+    CHECK(trace.accesses[4].address == UINT32_C(0x7f1234));
+    return 0;
+}
+
 static int test_load_store_missing_write_preflight(void)
 {
     static const uint8_t opcodes[] = {
@@ -3975,6 +4012,7 @@ int main(void)
     CHECK(test_memory_rmw_missing_write_preflight() == 0);
     CHECK(test_memory_rmw_stale_internal() == 0);
     CHECK(test_load_store_family_cycles() == 0);
+    CHECK(test_direct_indexed_indirect_emulation_wrap_cycles() == 0);
     CHECK(test_load_store_missing_write_preflight() == 0);
     CHECK(test_load_store_stale_internal() == 0);
     CHECK(test_lda_immediate_cycles() == 0);

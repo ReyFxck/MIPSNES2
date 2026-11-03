@@ -24,15 +24,19 @@ jobs:
         run: make CC=${{ matrix.compiler }} BUILD_DIR=build/release CFLAGS='-O2 -g -DNDEBUG' test
       - name: Build and test with sanitizers
         run: make CC=${{ matrix.compiler }} BUILD_DIR=build/sanitize CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer' test
+      - name: Run pinned licensed 65C816 test ROM
+        if: matrix.compiler == 'gcc'
+        run: make CC=gcc BUILD_DIR=build/release licensed-rom-test
       - name: Stage host development artifact
         run: |
           mkdir -p dist
           cp build/release/mipsnes2-host dist/
+          cp build/release/mipsnes2-rom-runner dist/
           cp LICENSE dist/
-          printf '%s\n' "Commit: $GITHUB_SHA" "Partial CPU/bus foundation; ROM execution unavailable." > dist/BUILD.txt
+          printf '%s\n' "Commit: $GITHUB_SHA" "Host probe plus bounded development/test-ROM runner; no desktop emulator UX." > dist/BUILD.txt
           ${{ matrix.compiler }} --version >> dist/BUILD.txt
           cd dist
-          sha256sum mipsnes2-host BUILD.txt LICENSE > SHA256SUMS
+          sha256sum mipsnes2-host mipsnes2-rom-runner BUILD.txt LICENSE > SHA256SUMS
           sha256sum -c SHA256SUMS
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

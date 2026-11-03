@@ -2,6 +2,15 @@
 
 ## Host tests
 
+`make licensed-rom-test` is the independent 65C816 conformance gate. It downloads
+only the pinned, hash-verified MIT test release into `build/test-roms`, runs the basic
+ROM through `mipsnes2-rom-runner`, reads its WRAM test counter and tilemap status, and
+requires `Success` at `$0452` (1,107 tests). The generic C runner contains no
+suite-specific or game-specific identity logic; the Python adapter owns the test
+protocol. The full ROM is a manual frontier check: it now advances beyond the fixed
+`ADC ($F7,X)` case `$0027` and stops at the still-open `COP #$DB` case `$0103`.
+See the [licensed-ROM runner audit](65c816-licensed-rom-runner-audit.md).
+
 Run `make machine-test` for the focused Phase 9 base-machine gate. It builds and
 runs the machine lifecycle, integrated APU/PCM, recurring PPU frame, input, SRAM
 handoff, WAI idle/wake and synthetic cartridge-boot fixtures without implying

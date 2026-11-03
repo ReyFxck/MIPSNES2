@@ -29,11 +29,11 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
 | platform/ps2 | EE lifecycle, I/O, pad acquisition, GS presentation, final SPU2 output | Default five-case diagnostic in standalone build; optional RFAuds2 build defaults to a ROM-free fixed-PCM lifecycle diagnostic, retains explicit ROM path, bounded `libpad` sampling and persistent single-buffer GS uploads; bounded RFAuds2 RPC lifecycle passed in one NetherSX2 capture, while continuous audio and real hardware remain unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
-| platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
+| platform/host | Headless tests/tools, never product architecture | Foundation smoke executable plus bounded shared-machine ROM runner |
 
 Directories without source contain an explicit scope README, not stub functions.
 There is a partial machine instance, an explicit-path PS2 ROM-file adapter and a
-host-verified PS2 audio transport contract, but no full ROM runner, complete renderer
+host-verified PS2 audio transport contract and a bounded host test-ROM runner, but no product runtime loop, complete renderer
 or device binding. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
@@ -67,6 +67,11 @@ without post-initialization state injection. Its 65C816 program performs the
 clean-room S-SMP upload, initializes Mode 1 BG1 through CPU MMIO and reaches one
 complete deterministic reference frame. This is a machine-boundary regression,
 not a bundled runtime ROM, licensed-ROM compatibility claim or platform loop.
+A separate host-only runner composes the same machine around fixed buffers and an
+explicit file path. Its generic diagnostics expose bounded WRAM/VRAM ranges; a
+suite-specific adapter kept outside the core fetches a pinned MIT test release and
+interprets its documented status. No external ROM is committed and no hash/title
+selects emulated behavior.
 
 The S-DSP layer exposes `$F2/$F3`, a 128-byte register file, bit-7 write
 inhibition, `ENDX` clear, internal `FLG` reset state and a 32-S-SMP-cycle sample
@@ -572,8 +577,9 @@ Host C tests use explicit failures, not `assert` disabled by NDEBUG. Tests link 
 same core sources; a separate logging-disabled build checks that configuration.
 The Python standard-library consistency checker checks foundation files, license,
 local Markdown links, checkbox syntax and forbidden core dependencies. It is a
-heuristic guard, not proof of emulation correctness. Integration tests and licensed
-ROM fixtures come later. Console cross-compilation is distinct from runtime and
+heuristic guard, not proof of emulation correctness. Synthetic integration tests and
+one pinned licensed 65C816 ROM now exercise the shared machine; the full suite remains
+an explicit failure frontier. Console cross-compilation is distinct from runtime and
 real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 
 ## Decisions
@@ -825,7 +831,12 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-11-03: an original generated LoROM now drives timed 65C816 reset, the
   clean-room CPU-to-S-SMP transfer, SPC700 execution, Mode 1 VRAM/CGRAM setup and
   one complete reference frame through the shared machine. Regular and irregular
-  horizon chunks are state/pixel equivalent; licensed ROMs and target runtime
-  remain separate validation gates.
+  horizon chunks are state/pixel equivalent; target runtime remains a separate
+  validation gate.
+- 2026-11-03: a bounded host runner executes hash-verified redistributable test ROMs
+  through the shared machine without adding a desktop backend. The pinned gilyon
+  basic suite completes 1,107 cases. Its full suite exposed and now passes the first
+  E-mode `(direct,X)` pointer-high page-wrap failure; `COP` test `$0103` is the next
+  documented frontier.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.
