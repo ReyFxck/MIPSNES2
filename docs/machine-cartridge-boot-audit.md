@@ -59,8 +59,22 @@ was restored, and each affected suite was resumed successfully. No tracked file
 permission changed.
 
 Local PS2SDK and PSP toolchains are unavailable. Cross-build and artifact evidence
-must therefore come from the pinned GitHub workflows after publication; no target
-runtime result is claimed here.
+comes from published implementation `a0c3d36`:
+
+- [Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41570282278) passed
+  GCC and Clang release/sanitizer builds; each job log records the new fixture
+  passing twice, and both host artifacts are nonempty;
+- [PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41570282288) installed
+  the verified pinned toolchain, built pinned RFAuds2, cross-compiled the diagnostic,
+  verified its internal `SHA256SUMS` and uploaded a 952,543-byte artifact with
+  archive digest `sha256:6e327daf2c52ef6acf1a5e0673ec1c20632729a99a9955db71eedbeb15a055c2`;
+- [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41570282248) installed
+  the verified pinned toolchain, cross-compiled `EBOOT.PBP`, verified its internal
+  `SHA256SUMS` and uploaded a 167,640-byte artifact with archive digest
+  `sha256:d72c5094ee00c5d9b6ef7d56cdea7b3f3fe892ef7276f5719321398baea290a3`.
+
+These cross-builds establish compiler/link portability only. No emulator or physical
+target runtime result is claimed here.
 
 ## Primary next milestone
 

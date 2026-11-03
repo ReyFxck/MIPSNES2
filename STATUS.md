@@ -1211,7 +1211,13 @@ hash `0c68c1b754439e25`; every pixel is `$03E0`. The fixture is part of both
 build, GCC `-fanalyzer`, repository checker and whitespace check pass locally. See
 the [synthetic cartridge boot audit](docs/machine-cartridge-boot-audit.md). This is
 end-to-end foundation evidence, not licensed-ROM compatibility, target execution or
-playability.
+playability. Published implementation `a0c3d36` passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41570282278),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41570282288) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41570282248). The host
+logs contain the new fixture in both release and sanitizer runs for GCC and Clang;
+the console logs confirm pinned-toolchain cross-builds plus checksum-verified,
+nonempty uploaded artifacts. No emulator or physical-target execution was performed.
 
 Next primary block: add a host runner for one pinned redistributable 65C816 test ROM
 from `docs/references.md`, execute it through the shared machine and record the first
