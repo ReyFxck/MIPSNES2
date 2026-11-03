@@ -48,6 +48,7 @@ mipsnes2_cartridge_image_result mipsnes2_cartridge_plan_create(
         return MIPSNES2_CARTRIDGE_IMAGE_NO_CONFIDENT_HEADER;
     }
     prepared.required_sram_size = candidate->header.declared_sram_size;
+    prepared.region = candidate->header.region;
     *plan = prepared;
     return MIPSNES2_CARTRIDGE_IMAGE_OK;
 }

@@ -215,11 +215,36 @@ static mipsnes2_address direct_data_next_address(const mipsnes2_cpu *cpu,
     return next;
 }
 
+/* Indexed-indirect has one additional E-mode quirk: when DL is nonzero the
+ * D+operand+X calculation remains linear, but the pointer high-byte fetch
+ * wraps inside the page selected by that calculation. */
+static mipsnes2_address direct_indexed_indirect_next_address(
+    const mipsnes2_cpu *cpu, mipsnes2_address address)
+{
+    uint16_t next = (uint16_t)(address + UINT32_C(1));
+
+    if (cpu->emulation) {
+        next = (uint16_t)((address & UINT32_C(0xff00)) |
+                          (next & UINT16_C(0x00ff)));
+    }
+    return next;
+}
+
 static uint16_t read16_direct(const mipsnes2_cpu *cpu,
                               mipsnes2_address address)
 {
     uint16_t low = read8(cpu, address);
     uint16_t high = read8(cpu, direct_data_next_address(cpu, address));
+    return (uint16_t)(low | (uint16_t)(high << 8));
+}
+
+static uint16_t read16_direct_indexed_indirect(
+    const mipsnes2_cpu *cpu, mipsnes2_address address)
+{
+    uint16_t low = read8(cpu, address);
+    uint16_t high = read8(
+        cpu, direct_indexed_indirect_next_address(cpu, address));
+
     return (uint16_t)(low | (uint16_t)(high << 8));
 }
 
@@ -1390,6 +1415,14 @@ static mipsnes2_address direct_indirect_address(mipsnes2_cpu *cpu,
                               post_index);
 }
 
+static mipsnes2_address direct_indexed_indirect_address(mipsnes2_cpu *cpu)
+{
+    mipsnes2_address address = direct_address(cpu, cpu->x);
+    uint16_t pointer = read16_direct_indexed_indirect(cpu, address);
+
+    return mipsnes2_address_make(cpu->dbr, pointer);
+}
+
 static mipsnes2_address direct_indirect_long_address(mipsnes2_cpu *cpu,
                                                      uint16_t post_index)
 {
@@ -1966,7 +1999,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
         (void)fetch8(cpu);
         return enter_interrupt(cpu, INTERRUPT_BRK);
     case 0x01: /* ORA (direct,X) */
-        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        address = direct_indexed_indirect_address(cpu);
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_OR,
@@ -2183,7 +2216,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
         break;
     }
     case 0x21: /* AND (direct,X) */
-        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        address = direct_indexed_indirect_address(cpu);
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_AND,
@@ -2403,7 +2436,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
                                                    : UINT64_C(7);
         break;
     case 0x41: /* EOR (direct,X) */
-        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        address = direct_indexed_indirect_address(cpu);
         logic_accumulator(cpu,
                           read_accumulator_operand(cpu, address, false),
                           ACCUMULATOR_LOGIC_XOR,
@@ -2618,7 +2651,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
         cpu->instruction_cycles += UINT64_C(6);
         break;
     case 0x61: /* ADC (direct,X), binary/decimal modes */
-        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        address = direct_indexed_indirect_address(cpu);
         arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), false,
             direct_penalized_cycles(cpu, UINT64_C(6)));
@@ -2850,7 +2883,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
             cpu->stop_reason = MIPSNES2_CPU_INVALID_BUS;
             return cpu->stop_reason;
         }
-        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        address = direct_indexed_indirect_address(cpu);
         store_memory(cpu, address, cpu->a, !accumulator_is_8_bit(cpu),
                      direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
@@ -3088,7 +3121,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
         load_index_immediate(cpu, &cpu->y);
         break;
     case 0xa1: /* LDA (direct,X) */
-        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        address = direct_indexed_indirect_address(cpu);
         load_accumulator_memory(cpu, address,
                                 direct_penalized_cycles(cpu, UINT64_C(6)));
         break;
@@ -3226,7 +3259,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
                       !index_is_8_bit(cpu), UINT64_C(2));
         break;
     case 0xc1: /* CMP (direct,X) */
-        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        address = direct_indexed_indirect_address(cpu);
         compare_value(cpu, cpu->a,
                       read_accumulator_operand(cpu, address, false),
                       !accumulator_is_8_bit(cpu),
@@ -3440,7 +3473,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
                       !index_is_8_bit(cpu), UINT64_C(2));
         break;
     case 0xe1: /* SBC (direct,X), binary/decimal modes */
-        address = direct_indirect_address(cpu, cpu->x, 0U, NULL);
+        address = direct_indexed_indirect_address(cpu);
         arithmetic_accumulator(
             cpu, read_accumulator_operand(cpu, address, false), true,
             direct_penalized_cycles(cpu, UINT64_C(6)));
@@ -3848,6 +3881,9 @@ static mipsnes2_address load_store_pointer_high_address(
         mode == LOAD_STORE_DIRECT_INDIRECT_LONG_Y ||
         mode == LOAD_STORE_STACK_RELATIVE_INDIRECT_Y) {
         return (uint16_t)(state->pointer + UINT16_C(1));
+    }
+    if (mode == LOAD_STORE_DIRECT_INDEXED_INDIRECT_X) {
+        return direct_indexed_indirect_next_address(cpu, state->pointer);
     }
     return direct_data_next_address(cpu, state->pointer);
 }

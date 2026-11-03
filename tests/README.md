@@ -1,8 +1,9 @@
 # Tests
 
 `make machine-test` runs the focused Phase 9 base-machine regression gate: lifecycle,
-integrated APU/PCM, recurring PPU frames, input, SRAM handoff and WAI idle/wake. It uses constructed
-fixtures and does not claim licensed-ROM or console execution.
+integrated APU/PCM, recurring PPU frames, input, SRAM handoff, WAI idle/wake and an
+end-to-end synthetic cartridge boot. It uses constructed fixtures and does not claim
+licensed-ROM or console execution.
 
 `make test` executes the address/logging contracts with logging enabled and disabled,
 the logical-bus and 256-opcode CPU regressions, the initial exact-once/resumable CPU
@@ -28,6 +29,16 @@ operand/effective-address wrap, N/Z transitions, mapped MMIO, unavailable
 operands/targets, cycle overflow and
 instruction-to-timer advancement. It does not claim a complete interpreter or
 per-cycle bus sequencing.
+
+`test-smp-boot` verifies the firmware-free behavioral upload protocol: power-on
+ready values and zero-page clear, command and byte acknowledgements, signed index
+ordering, multi-block transfer, address wrap, reset, mapped-write failure and the
+exact deterministic SPC700 entry seed. `test-machine` additionally uploads and
+executes an original one-byte S-SMP program through the real `$2140-$2143` route.
+`test-machine-cartridge-boot` goes through the cartridge RESET vector: its generated
+65C816 program completes the acknowledged upload, starts an original three-byte
+SPC700 program, initializes Mode 1 through PPU MMIO and produces one exact 224-line
+frame under regular and irregular execution chunks.
 
 `test-dsp` verifies the 128-byte S-DSP register/address boundary, inhibited
 writes, `ENDX` clear, internal `FLG` state, 32-S-SMP-cycle events, eight-voice

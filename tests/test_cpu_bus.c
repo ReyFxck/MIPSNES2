@@ -945,7 +945,8 @@ static int test_direct_indirect_emulation_pointer_rules(void)
         0xa7, 0xff,             /* LDA [$ff] */
         0x87, 0xff,             /* STA [$ff] */
         0xb7, 0xff,             /* LDA [$ff],Y */
-        0x97, 0xff              /* STA [$ff],Y */
+        0x97, 0xff,             /* STA [$ff],Y */
+        0xa1, 0xf7              /* LDA ($f7,X), unaligned D wrap */
     };
     cpu_fixture fixture;
     mipsnes2_cpu *cpu = &fixture.cpu;
@@ -1017,7 +1018,17 @@ static int test_direct_indirect_emulation_pointer_rules(void)
     CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
     CHECK(bank80[0x3001] == UINT8_C(0x66));
     CHECK(cpu->instruction_cycles == UINT64_C(57));
-    CHECK(cpu->pc == UINT16_C(0x8f14));
+
+    cpu->d = UINT16_C(0x011a);
+    cpu->x = UINT16_C(0x00ee);
+    bank00[0x02ff] = UINT8_C(0x34);
+    bank00[0x0200] = UINT8_C(0x12);
+    bank00[0x0300] = UINT8_C(0x56);
+    bank7f[0x1234] = UINT8_C(0xed);
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->a == UINT16_C(0x5aed));
+    CHECK(cpu->instruction_cycles == UINT64_C(64));
+    CHECK(cpu->pc == UINT16_C(0x8f16));
     return 0;
 }
 

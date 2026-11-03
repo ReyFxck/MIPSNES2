@@ -1,10 +1,10 @@
 # Phase 9 base machine regression audit
 
-Date: 2026-10-30
+Date: 2026-10-30; extended 2026-11-03
 
 ## Scope
 
-This milestone adds a focused `make machine-test` gate over six
+This milestone adds a focused `make machine-test` gate over seven
 platform-neutral machine fixtures:
 
 - `test-machine`: lifecycle, constructed cartridge ownership and bounded CPU run;
@@ -13,6 +13,8 @@ platform-neutral machine fixtures:
 - `test-machine-input`: manual and automatic standard-pad paths through the machine;
 - `test-machine-sram`: live dirty/revision handoff and exact acknowledgement;
 - `test-machine-wait`: deterministic WAI NMI/IRQ/horizon advancement and STP stop.
+- `test-machine-cartridge-boot`: generated LoROM reset, clean-room S-SMP upload,
+  cartridge-driven Mode 1 setup and a complete deterministic frame.
 
 The target is intentionally smaller than `make test`. It provides one repeatable
 Phase 9 base-machine gate while preserving the full suite as the repository-wide
@@ -20,7 +22,7 @@ verification command.
 
 ## Claims and limits
 
-The six constructed fixtures pass together and remain deterministic on the host.
+The seven constructed fixtures pass together and remain deterministic on the host.
 The gate does not execute a licensed
 test ROM, a commercial game, a PS2 or PSP binary, a durable save backend, or a
 physical controller/audio/video device. It therefore does not close the Phase 9 exit
@@ -41,5 +43,5 @@ unchanged.
 
 ## Primary next milestone
 
-Capture the existing RFAuds2 lifecycle diagnostic in the Android PS2 emulator with
-emulator version/settings and on-device ELF checksum recorded.
+Execute one pinned redistributable 65C816 test ROM through a host-side shared-machine
+runner and record the first hardware-behavior failure without ROM-specific logic.

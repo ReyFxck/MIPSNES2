@@ -1,7 +1,17 @@
 # Compatibility
 
-**No games or SNES test ROMs have been executed.** No entries are claimed as working.
-Host scaffold tests do not establish game compatibility.
+**No commercial games have been executed and no game is claimed as working.**
+One pinned redistributable CPU test ROM has been executed on the host as a
+conformance check; it does not establish game or target-console compatibility.
+
+## Host conformance
+
+| Test | Revision | Scope | Result | Evidence |
+|---|---|---|---|---|
+| gilyon `cputest-basic` | `snes-tests` v1.4 / `5ecdf555da920f0bd7b157542141965a8120186d` | 65C816 instruction behavior through the shared machine | Pass, 1,107/1,107 cases; host only | [licensed-ROM runner audit](docs/65c816-licensed-rom-runner-audit.md) |
+
+The full variant is deliberately tracked as a failure frontier, not a pass: it
+currently reaches test `$0103`, an emulation-mode `COP` stack/vector case.
 
 ## PlayStation 2
 

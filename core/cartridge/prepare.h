@@ -12,6 +12,7 @@ typedef struct {
     mipsnes2_cartridge_image_view image;
     mipsnes2_cartridge_header_selection selection;
     size_t required_sram_size;
+    mipsnes2_cartridge_region region;
 } mipsnes2_cartridge_plan;
 
 /*

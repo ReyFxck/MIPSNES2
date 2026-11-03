@@ -47,6 +47,12 @@ typedef enum {
     MIPSNES2_HEADER_MAP_EXHIROM
 } mipsnes2_cartridge_header_map;
 
+typedef enum {
+    MIPSNES2_CARTRIDGE_REGION_UNKNOWN = 0,
+    MIPSNES2_CARTRIDGE_REGION_NTSC,
+    MIPSNES2_CARTRIDGE_REGION_PAL
+} mipsnes2_cartridge_region;
+
 typedef struct {
     const uint8_t *data;
     size_t size;
@@ -76,6 +82,7 @@ typedef struct {
     size_t declared_rom_size;
     size_t declared_sram_size;
     mipsnes2_cartridge_header_map map;
+    mipsnes2_cartridge_region region;
     bool fastrom;
     bool checksum_pair_valid;
     bool declared_rom_size_representable;
@@ -105,6 +112,11 @@ typedef struct {
     /* Valid only when selection returns MIPSNES2_CARTRIDGE_IMAGE_OK. */
     mipsnes2_cartridge_mapper selected_mapper;
 } mipsnes2_cartridge_header_selection;
+
+/* Conservative timing classification from Nintendo's FFD9 destination byte.
+ * Unassigned/common/variation codes remain UNKNOWN for caller fallback. */
+mipsnes2_cartridge_region mipsnes2_cartridge_region_from_destination(
+    uint8_t destination_code);
 
 mipsnes2_cartridge_image_result mipsnes2_cartridge_image_view_init(
     mipsnes2_cartridge_image_view *view,

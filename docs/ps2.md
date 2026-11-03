@@ -12,7 +12,15 @@ fixtures exercise CPU instructions, scheduler horizons and explicit ABORT write
 qualification; `tests/test_ps2_diagnostic.c` runs the identical suite on the host.
 The optional `--rom PATH` entry reads an image through `fopen` from a filesystem
 that the launcher has already made available, constructs the shared machine and
-runs one bounded reference frame in the standalone build. The RFAuds2-enabled
+runs one bounded reference frame in the standalone build. A known destination code
+from the selected cartridge header chooses the shared machine's NTSC/PAL timing;
+unknown or ambiguous codes retain the explicit NTSC fallback. The path also enables
+the firmware-free shared S-SMP upload protocol, allowing
+cartridge code to perform the standard `$2140-$2143` startup handshake without an
+embedded IPL image. This is deterministic core behavior, not a claim that a game
+boots on target.
+
+The RFAuds2-enabled
 diagnostic instead makes up to eight bounded calls. Before each call it queries the
 shared H/V state for the exact next frame boundary, including the alternating NTSC
 short scanline, and supplies that absolute horizon with a 100,000-sequence bound. It prints CPU and timing

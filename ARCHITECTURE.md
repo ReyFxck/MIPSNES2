@@ -29,11 +29,11 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
 | platform/ps2 | EE lifecycle, I/O, pad acquisition, GS presentation, final SPU2 output | Default five-case diagnostic in standalone build; optional RFAuds2 build defaults to a ROM-free fixed-PCM lifecycle diagnostic, retains explicit ROM path, bounded `libpad` sampling and persistent single-buffer GS uploads; bounded RFAuds2 RPC lifecycle passed in one NetherSX2 capture, while continuous audio and real hardware remain unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
-| platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
+| platform/host | Headless tests/tools, never product architecture | Foundation smoke executable plus bounded shared-machine ROM runner |
 
 Directories without source contain an explicit scope README, not stub functions.
 There is a partial machine instance, an explicit-path PS2 ROM-file adapter and a
-host-verified PS2 audio transport contract, but no full ROM runner, complete renderer
+host-verified PS2 audio transport contract and a bounded host test-ROM runner, but no product runtime loop, complete renderer
 or device binding. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
@@ -42,8 +42,12 @@ machine exposes the cartridge's live SRAM view and exact revision acknowledgemen
 as the platform persistence boundary; paths, copying, durable writes and scheduling
 remain backend responsibilities. An optional S-SMP map borrows 64 KiB ARAM
 and optional caller-provided 64-byte IPL; without the IPL, mapped high-page
-reads fail explicitly. PS2 reserves ARAM, while PSP merely compiles the same
-core. The S-SMP map and S-CPU bus meet through machine-owned directional
+reads fail explicitly. A mutually exclusive clean-room state machine can instead
+provide the documented power-on upload handshake without exposing firmware bytes.
+It clears `$0000-$00EF`, publishes `$AA/$BB`, receives indexed blocks and starts
+the SPC700 at the requested entry on the next explicit APU boundary. PS2 enables
+that policy for its ROM path; PSP merely compiles the same core. The S-SMP map
+and S-CPU bus meet through machine-owned directional
 ports. The map also owns three APU-clock-driven timers, with an explicit unit-test
 advance API: timer 0/1 observe a
 shared 128-cycle stage-1 edge and timer 2 each 16-cycle subdivision; `$F1`
@@ -55,7 +59,19 @@ The APU bridge converts absolute machine master time to nominal 1.024 MHz S-SMP
 cycles with a carried rational remainder. It conservatively admits whole atomic
 instructions, advances timers and S-DSP cadence, and keeps running devices while
 SLEEP/STOP halt instruction execution. Machine configuration can copy an explicit
-SPC700 register seed; undocumented reset registers are not fabricated.
+SPC700 register seed; otherwise only the boot protocol's documented resulting
+entry state is created. Undocumented general reset registers are not fabricated.
+
+One original generated LoROM integration fixture now exercises this composition
+without post-initialization state injection. Its 65C816 program performs the
+clean-room S-SMP upload, initializes Mode 1 BG1 through CPU MMIO and reaches one
+complete deterministic reference frame. This is a machine-boundary regression,
+not a bundled runtime ROM, licensed-ROM compatibility claim or platform loop.
+A separate host-only runner composes the same machine around fixed buffers and an
+explicit file path. Its generic diagnostics expose bounded WRAM/VRAM ranges; a
+suite-specific adapter kept outside the core fetches a pinned MIT test release and
+interprets its documented status. No external ROM is committed and no hash/title
+selects emulated behavior.
 
 The S-DSP layer exposes `$F2/$F3`, a 128-byte register file, bit-7 write
 inhibition, `ENDX` clear, internal `FLG` reset state and a 32-S-SMP-cycle sample
@@ -263,6 +279,13 @@ selection plan. The plan reports header-declared SRAM bytes; construction then b
 the selected mapper to caller-owned ROM/SRAM storage and reuses the executable
 mapper's validation. Failed analysis/construction leaves destination objects
 unchanged. Paths, file handles, allocation and persistence remain platform concerns.
+
+The selected plan also carries a conservative `UNKNOWN`/`NTSC`/`PAL` classification
+of the header destination byte. Machine configuration decides whether to use a known
+cartridge region; unknown or ambiguous values retain its explicit fallback. When
+enabled, the selected standard drives the existing H/V geometry, PPU region status
+and regional APU clock ratio together. The PS2 explicit-ROM path enables this policy
+with NTSC fallback. No title, game code, checksum or CRC selects timing.
 
 SRAM contents also remain caller-owned. The mapper marks only value-changing SRAM
 writes dirty and advances a revision token. Platform persistence code reads a live
@@ -554,8 +577,9 @@ Host C tests use explicit failures, not `assert` disabled by NDEBUG. Tests link 
 same core sources; a separate logging-disabled build checks that configuration.
 The Python standard-library consistency checker checks foundation files, license,
 local Markdown links, checkbox syntax and forbidden core dependencies. It is a
-heuristic guard, not proof of emulation correctness. Integration tests and licensed
-ROM fixtures come later. Console cross-compilation is distinct from runtime and
+heuristic guard, not proof of emulation correctness. Synthetic integration tests and
+one pinned licensed 65C816 ROM now exercise the shared machine; the full suite remains
+an explicit failure frontier. Console cross-compilation is distinct from runtime and
 real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 
 ## Decisions
@@ -804,5 +828,15 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   configures fixed storage, starts after accepted prebuffer frames and exposes
   statistics before ordered stop/flush/shutdown. The ROM diagnostic keeps device
   results outside its fixed emulated-time horizons; target execution remains open.
+- 2026-11-03: an original generated LoROM now drives timed 65C816 reset, the
+  clean-room CPU-to-S-SMP transfer, SPC700 execution, Mode 1 VRAM/CGRAM setup and
+  one complete reference frame through the shared machine. Regular and irregular
+  horizon chunks are state/pixel equivalent; target runtime remains a separate
+  validation gate.
+- 2026-11-03: a bounded host runner executes hash-verified redistributable test ROMs
+  through the shared machine without adding a desktop backend. The pinned gilyon
+  basic suite completes 1,107 cases. Its full suite exposed and now passes the first
+  E-mode `(direct,X)` pointer-high page-wrap failure; `COP` test `$0103` is the next
+  documented frontier.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

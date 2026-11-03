@@ -136,11 +136,13 @@ static void run_rom_path(const char *path)
     config.oam_size = sizeof(oam);
     config.aram = aram;
     config.aram_size = sizeof(aram);
+    config.use_smp_boot_protocol = true;
 #ifdef MIPSNES2_RFAUDS2
     config.pcm_frames = pcm_frames;
     config.pcm_capacity = PS2_AUDIO_PCM_CAPACITY;
 #endif
     config.standard = MIPSNES2_HV_STANDARD_NTSC;
+    config.use_cartridge_region = true;
     if (!mipsnes2_ps2_video_frame_init(
             &video_frame, video_pixels,
             MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS, 224U)) {
