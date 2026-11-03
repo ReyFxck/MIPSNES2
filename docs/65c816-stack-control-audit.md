@@ -48,8 +48,8 @@ The host regressions cover:
   plus emulation width enforcement and accumulator-B preservation;
 - PLP mode invariants, PLB/PLD/PLA/PLX/PLY N/Z effects and unrelated-state
   preservation;
-- PER signed target formation from the advanced PC, PEI Direct Page wrapping and
-  nonzero-DL cycle addition, and PEA immediate word order;
+- PER signed target formation from the advanced PC, PEI's WDC 7.2 linear pointer
+  high-byte exception and nonzero-DL cycle addition, and PEA immediate word order;
 - absolute, long, bank-zero indirect and PBR-indexed-indirect target formation;
 - JSR/JSL saved return addresses, RTS/RTL increment, PBR preservation/restoration,
   instruction lengths and aggregate cycle totals;

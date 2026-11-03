@@ -11,7 +11,8 @@ conformance check; it does not establish game or target-console compatibility.
 | gilyon `cputest-basic` | `snes-tests` v1.4 / `5ecdf555da920f0bd7b157542141965a8120186d` | 65C816 instruction behavior through the shared machine | Pass, 1,107/1,107 cases; host only | [licensed-ROM runner audit](docs/65c816-licensed-rom-runner-audit.md) |
 
 The full variant is deliberately tracked as a failure frontier, not a pass: it
-currently reaches test `$03C4`, an emulation-mode `PEI ($FF)` stack-wrap case.
+currently reaches test `$03D9`, an undocumented emulation-mode `PLB` stack-address
+case.
 
 ## PlayStation 2
 

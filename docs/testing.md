@@ -8,8 +8,9 @@ ROM through `mipsnes2-rom-runner`, reads its WRAM test counter and tilemap statu
 requires `Success` at `$0452` (1,107 tests). The generic C runner contains no
 suite-specific or game-specific identity logic; the Python adapter owns the test
 protocol. The full ROM is a manual frontier check: it now advances beyond the fixed
-`ADC ($F7,X)` case `$0027` and emulation-mode `COP #$DB` case `$0103`, then stops
-at the still-open `PEI ($FF)` stack-wrap case `$03C4`.
+`ADC ($F7,X)` case `$0027`, emulation-mode `COP #$DB` case `$0103` and `PEI ($FF)`
+linear pointer-high case `$03C4`, then stops at the still-open undocumented `PLB`
+case `$03D9`.
 See the [licensed-ROM runner audit](65c816-licensed-rom-runner-audit.md).
 
 Run `make machine-test` for the focused Phase 9 base-machine gate. It builds and
@@ -79,9 +80,10 @@ Stack/control regressions execute every PHP/PHD/PHA/PHK/PHY/PHB/PHX, PLP/PLD/PLA
 PLY/PLB/PLX, PEA/PEI/PER, JMP/JML, JSR/JSL and RTS/RTL form. They cover emulation
 and native modes, M/X-selected 8/16-bit width, high/low byte order, status and N/Z,
 ordinary `01xx` wrapping, WDC's linear multi-byte stack exceptions, PC/PBR return
-rules, Direct Page pointer wrapping and DL timing, indirect-table bank selection,
-aggregate cycles and missing-write-bus stops. A tracing bus verifies the meaningful
-operand/stack/pointer callback order and count for JSL and JSR `(absolute,X)`; the
+rules, PEI's Direct Page pointer-high exception and DL timing, indirect-table bank
+selection, aggregate cycles and missing-write-bus stops. A tracing bus verifies the
+meaningful operand/stack/pointer callback order and count for JSL and JSR
+`(absolute,X)`; the
 current contract still omits internal dummy reads and signal-level bus cycles.
 Final-dispatch regressions cover BRK/COP/RTI/WDM/MVP/MVN/WAI/STP, software and
 hardware interrupt vectors, native/emulation stack layouts, signature bytes,

@@ -2773,9 +2773,9 @@ static int test_effective_address_push_cycles(void)
         { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e8600), 0U },
         { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e8601), 0U },
         { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x0002ff), 0U },
-        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x000200), 0U },
-        { MIPSNES2_CPU_OPERATION_WRITE, UINT32_C(0x000100), UINT8_C(0x56) },
-        { MIPSNES2_CPU_OPERATION_WRITE, UINT32_C(0x0000ff), UINT8_C(0x78) }
+        { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x000300), 0U },
+        { MIPSNES2_CPU_OPERATION_WRITE, UINT32_C(0x000100), UINT8_C(0x76) },
+        { MIPSNES2_CPU_OPERATION_WRITE, UINT32_C(0x0000ff), UINT8_C(0x54) }
     };
     static const expected_operation pei_unaligned[] = {
         { MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e8700), 0U },
@@ -2813,14 +2813,26 @@ static int test_effective_address_push_cycles(void)
 
     CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8600)) == 0);
     cpu.s = UINT16_C(0x0100);
+    cpu.a = UINT16_C(0x1234);
+    cpu.x = UINT16_C(0x0056);
+    cpu.y = UINT16_C(0x0078);
     cpu.d = UINT16_C(0x0200);
+    cpu.dbr = UINT8_C(0x7f);
+    cpu.p = UINT8_C(0xff);
     bank7e[0x8600] = UINT8_C(0xd4);
     bank7e[0x8601] = UINT8_C(0xff);
-    bank00[0x02ff] = UINT8_C(0x78);
-    bank00[0x0200] = UINT8_C(0x56);
+    bank00[0x02ff] = UINT8_C(0x54);
+    bank00[0x0200] = UINT8_C(0xa5);
+    bank00[0x0300] = UINT8_C(0x76);
     CHECK(run_expected_instruction(
               &cpu, pei_aligned,
               sizeof(pei_aligned) / sizeof(pei_aligned[0])) == 0);
+    CHECK(cpu.a == UINT16_C(0x1234));
+    CHECK(cpu.x == UINT16_C(0x0056));
+    CHECK(cpu.y == UINT16_C(0x0078));
+    CHECK(cpu.d == UINT16_C(0x0200));
+    CHECK(cpu.dbr == UINT8_C(0x7f));
+    CHECK(cpu.p == UINT8_C(0xff));
     CHECK(cpu.s == UINT16_C(0x01fe));
     CHECK(cpu.instruction_cycles == UINT64_C(6));
     CHECK(trace.count == 6U);

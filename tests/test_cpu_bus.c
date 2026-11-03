@@ -5126,14 +5126,26 @@ static int test_effective_address_pushes(void)
     cpu->pc = UINT16_C(0x8600);
     cpu->instruction_cycles = 0U;
     cpu->s = UINT16_C(0x0100);
+    cpu->a = UINT16_C(0x1234);
+    cpu->x = UINT16_C(0x0056);
+    cpu->y = UINT16_C(0x0078);
     cpu->d = UINT16_C(0x0200);
+    cpu->dbr = UINT8_C(0x7f);
+    cpu->p = UINT8_C(0xff);
     bank7e[0x8600] = UINT8_C(0xd4); /* PEI ($ff) */
     bank7e[0x8601] = UINT8_C(0xff);
-    bank00[0x02ff] = UINT8_C(0x78);
-    bank00[0x0200] = UINT8_C(0x56);
+    bank00[0x02ff] = UINT8_C(0x54);
+    bank00[0x0200] = UINT8_C(0xa5);
+    bank00[0x0300] = UINT8_C(0x76);
     CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
-    CHECK(bank00[0x0100] == UINT8_C(0x56));
-    CHECK(bank00[0x00ff] == UINT8_C(0x78));
+    CHECK(cpu->a == UINT16_C(0x1234));
+    CHECK(cpu->x == UINT16_C(0x0056));
+    CHECK(cpu->y == UINT16_C(0x0078));
+    CHECK(cpu->d == UINT16_C(0x0200));
+    CHECK(cpu->dbr == UINT8_C(0x7f));
+    CHECK(cpu->p == UINT8_C(0xff));
+    CHECK(bank00[0x0100] == UINT8_C(0x76));
+    CHECK(bank00[0x00ff] == UINT8_C(0x54));
     CHECK(cpu->s == UINT16_C(0x01fe));
     CHECK(cpu->instruction_cycles == UINT64_C(6));
 

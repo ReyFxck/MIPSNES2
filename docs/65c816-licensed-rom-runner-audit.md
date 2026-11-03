@@ -73,31 +73,42 @@ Exact aggregate and resumable regressions start at `$7E:8000` with `S=$0100`, re
 `$FFF4/$FFF5`, finish with `S=$01FD`, live P `$37` and seven cycles. No ROM identity
 affects the implementation.
 
-With that correction the full ROM passes `$0103` and reaches the next deterministic
-failure at `$03C4`, `PEI ($FF)`, an emulation-mode 16-bit stack-wrap case. That
-remaining failure defines the next CPU-conformance frontier; the full suite is not
-claimed to pass.
+With that correction the full ROM passed `$0103` and reached `$03C4`, `PEI ($FF)`,
+with E=1, DL=0 and the Direct pointer low byte at `$02FF`. The existing generic
+Direct-word helper wrapped the high-byte read within the `$02xx` page to `$0200`.
+WDC section 7.2 explicitly makes PEI an exception: its high-byte read advances
+linearly to `$0300`. This is separate from section 7.1, under which PEI's two stack
+writes already advance linearly from `$0100` to `$00FF` before restoring `SH=01`.
+
+Aggregate and resumable PEI paths now share the instruction-specific pointer-next
+rule. Exact regressions place a conflicting sentinel at `$0200`, require reads from
+`$02FF/$0300`, writes to `$0100/$00FF`, preserved registers/status and six cycles.
+The full ROM passes `$03C4` and reaches the next deterministic failure at `$03D9`,
+`PLB`. The suite itself identifies that new case as undocumented; it defines the
+next research frontier rather than a hardware claim. The full suite is not claimed
+to pass.
 
 ## Verification and limits
 
 The following local gates passed on 2026-11-03:
 
-- `build/cop-analyzer/test-cpu-bus` and `build/cop-analyzer/test-cpu-cycles` after a
+- `build/pei-analyzer/test-cpu-bus` and `build/pei-analyzer/test-cpu-cycles` after a
   `-fanalyzer` build of those tests and `mipsnes2-rom-runner`;
 - `make clean && make test` with the default GCC toolchain;
 - `make licensed-rom-test`, completing 1,107/1,107 basic cases;
-- the full-ROM manual frontier run, passing `$0103` and stopping at `$03C4`;
-- `ASAN_OPTIONS=detect_leaks=0 make BUILD_DIR=build/cop-sanitize clean test
+- the full-ROM manual frontier run, passing `$0103` and `$03C4` before stopping at
+  `$03D9`;
+- `ASAN_OPTIONS=detect_leaks=0 make BUILD_DIR=build/pei-sanitize clean test
   CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer'
   LDFLAGS='-fsanitize=address,undefined'`;
 - `python3 tools/check_repository.py` and `git diff --check`.
 
-The managed filesystem created three sanitizer executables without their user
-execute bit: `test-contracts-nolog`, `test-machine-apu-pcm` and `test-smp-memory`.
-After setting that bit on those ignored build artifacts, the identical suite passed
-with no ASan/UBSan finding; this was not a source or test failure. Leak inspection
-remained disabled because the managed environment denies the required `/proc`
-access. No local PS2SDK or PSP toolchain was available, so the pinned PS2/PSP Actions
+The managed filesystem created clean-host `test-cpu-bus` and sanitizer
+`test-smp-boot`/`test-ppu-color-math` without their user execute bit. After setting
+that bit on those ignored build artifacts, the identical suites passed with no
+ASan/UBSan finding; this was not a source or test failure. Leak inspection remained
+disabled because the managed environment denies the required `/proc` access. No
+local PS2SDK or PSP toolchain was available, so the pinned PS2/PSP Actions
 cross-builds are required publication evidence rather than being inferred from
 workflow files.
 

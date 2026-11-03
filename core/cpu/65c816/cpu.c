@@ -215,6 +215,13 @@ static mipsnes2_address direct_data_next_address(const mipsnes2_cpu *cpu,
     return next;
 }
 
+/* PEI is the Direct Page word-fetch exception documented by WDC 7.2: its
+ * pointer high byte advances linearly even when E=1 and DL=0. */
+static mipsnes2_address pei_pointer_next_address(mipsnes2_address address)
+{
+    return (uint16_t)(address + UINT32_C(1));
+}
+
 /* Indexed-indirect has one additional E-mode quirk: when DL is nonzero the
  * D+operand+X calculation remains linear, but the pointer high-byte fetch
  * wraps inside the page selected by that calculation. */
@@ -235,6 +242,15 @@ static uint16_t read16_direct(const mipsnes2_cpu *cpu,
 {
     uint16_t low = read8(cpu, address);
     uint16_t high = read8(cpu, direct_data_next_address(cpu, address));
+    return (uint16_t)(low | (uint16_t)(high << 8));
+}
+
+static uint16_t read16_pei_pointer(const mipsnes2_cpu *cpu,
+                                   mipsnes2_address address)
+{
+    uint16_t low = read8(cpu, address);
+    uint16_t high = read8(cpu, pei_pointer_next_address(address));
+
     return (uint16_t)(low | (uint16_t)(high << 8));
 }
 
@@ -3384,7 +3400,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
             return cpu->stop_reason;
         }
         address = direct_address(cpu, 0U);
-        value = read16_direct(cpu, address);
+        value = read16_pei_pointer(cpu, address);
         stack_push16_linear(cpu, value);
         cpu->instruction_cycles += direct_penalized_cycles(
             cpu, UINT64_C(6));
@@ -4524,7 +4540,7 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
         break;
     case CPU_CYCLE_PHASE_PEI_POINTER_HIGH:
         set_operation(operation, MIPSNES2_CPU_OPERATION_READ,
-                      direct_data_next_address(cpu, state->pointer), 0U);
+                      pei_pointer_next_address(state->pointer), 0U);
         break;
     case CPU_CYCLE_PHASE_EFFECTIVE_PUSH_HIGH:
         set_operation(operation, MIPSNES2_CPU_OPERATION_WRITE, cpu->s,
