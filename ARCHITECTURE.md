@@ -836,7 +836,7 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 - 2026-11-03: a bounded host runner executes hash-verified redistributable test ROMs
   through the shared machine without adding a desktop backend. The pinned gilyon
   basic suite completes 1,107 cases. Its full suite exposed and now passes the first
-  E-mode `(direct,X)` pointer-high page-wrap failure; `COP` test `$0103` is the next
-  documented frontier.
+  E-mode `(direct,X)` pointer-high page-wrap failure and the emulation-mode `COP`
+  pushed-status failure; `PEI ($FF)` test `$03C4` is the next documented frontier.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

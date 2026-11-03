@@ -8,7 +8,8 @@ ROM through `mipsnes2-rom-runner`, reads its WRAM test counter and tilemap statu
 requires `Success` at `$0452` (1,107 tests). The generic C runner contains no
 suite-specific or game-specific identity logic; the Python adapter owns the test
 protocol. The full ROM is a manual frontier check: it now advances beyond the fixed
-`ADC ($F7,X)` case `$0027` and stops at the still-open `COP #$DB` case `$0103`.
+`ADC ($F7,X)` case `$0027` and emulation-mode `COP #$DB` case `$0103`, then stops
+at the still-open `PEI ($FF)` stack-wrap case `$03C4`.
 See the [licensed-ROM runner audit](65c816-licensed-rom-runner-audit.md).
 
 Run `make machine-test` for the focused Phase 9 base-machine gate. It builds and

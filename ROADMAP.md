@@ -82,7 +82,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Direct Page edge cases
 - [ ] [IN PROGRESS] Timing model — resumable 5A22 operation timing is integrated; exact dummy/electrical sequencing pending
 - [x] CPU automated tests for all 256 opcode values
-- [ ] [IN PROGRESS] CPU regression tests — pinned basic 65C816 ROM passes 1,107 cases and the full ROM defines the next failure frontier; broader independent vectors/test ROM completion pending
+- [ ] [IN PROGRESS] CPU regression tests — pinned basic 65C816 ROM passes 1,107 cases; the full ROM passes corrected `(direct,X)` and emulation-mode `COP` cases before stopping at `PEI ($FF)` `$03C4`; broader independent vectors/test ROM completion pending
 - [ ] [IN PROGRESS] Complete interpreter integration — all 256 opcode values, boundary IRQ/NMI/ABORT entry, RESET vector reads and scheduler/5A22 cursor wiring are resumable; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
 
 ## Phase 3 — Bus and Cartridge

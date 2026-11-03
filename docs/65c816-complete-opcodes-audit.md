@@ -36,7 +36,7 @@ is committed by this milestone.
 - BRK/COP are two-byte instructions and stack the PC after the signature.
 - Emulation entry pushes PCH/PCL/P with `01xx` wrapping; native entry first pushes PBR.
 - BRK, COP, IRQ and NMI clear D, set I, force PBR to zero and use their mode-specific vectors.
-- Emulation-mode BRK stacks bit 4 set; COP and hardware interrupt entry stack it clear.
+- Emulation-mode BRK and COP stack bit 4 set; hardware interrupt entry stacks it clear.
 - RTI restores P and PC, restores PBR only in native mode and reapplies E/M/X invariants.
 - WDM consumes one signature byte and otherwise preserves processor state.
 - MVP/MVN fetch destination then source bank, set DBR, update A/X/Y and consume seven cycles per byte.
@@ -88,3 +88,8 @@ The byte decoder now has explicit behavior for all 256 W65C816 opcode values. Th
 completes opcode enumeration, not the entire SNES CPU subsystem. Phase 2 remains
 open for ABORT, RESET/bus-cycle fidelity, independent validation and integration
 with the future deterministic scheduler and Ricoh 5A22 timing model.
+
+The original audit incorrectly grouped emulation-mode COP with hardware interrupt
+entry for the stacked bit-4 value. The independently reproduced gilyon full-ROM
+case `$0103` exposed that error; the current aggregate and resumable implementations
+now follow WDC section 2.8 and Table 5-7 entry 22j and have exact synthetic coverage.

@@ -26,7 +26,8 @@ mid-instruction sampling, restart and write suppression are not claimed.
 Instruction behavior, vectors, stack layout and aggregate cycle totals are
 implemented from the [Western Design Center W65C816S Datasheet, revision March 13,
 2024](https://www.westerndesigncenter.com/wdc/documentation/w65c816s.pdf), especially
-sections 2.13, 7.4, 7.13 and 7.19, Tables 5-2 and 5-3, and Table 5-7 entry 22a.
+sections 2.8, 2.13, 7.4, 7.13 and 7.19, Tables 5-2 and 5-3, and Table 5-7 entries 22a
+and 22j.
 Existing MIPSNES2 interrupt behavior and invariants remain those documented in
 [65c816.md](65c816.md) and
 [the ABORT audit](65c816-abort-foundation-audit.md). The datasheet
@@ -41,7 +42,7 @@ by this software cursor. No emulator implementation was consulted or copied.
 - retained lower-priority NMI after a simultaneous accepted `ABORT`;
 - accepted cause and entry state remain stable throughout a partial entry;
 - emulation/native stack byte order, PBR handling and stack-pointer decrement;
-- BRK-only emulation pushed-status break bit and hardware/COP clear behavior;
+- BRK/COP emulation pushed-status bit 4 and hardware-entry clear behavior;
 - interrupt-disable set, decimal clear and native PBR clear at the established point;
 - emulation/native vectors and low-before-high vector fetch;
 - no opcode read before hardware entry and one signature read for BRK/COP;

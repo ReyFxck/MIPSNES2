@@ -59,31 +59,47 @@ Direct-indirect modes retain their existing DL-dependent behavior and long point
 remain linear. Synthetic tests cover the exact `$02FF -> $0200` access order,
 result, cycle count and both CPU entry points.
 
-After the fix, the full ROM passes `$0027` and reaches the next deterministic
-failure at `$0103`, `COP #$DB`, an emulation-mode stack/vector case. That remaining
-failure defines the next CPU-conformance frontier; the full suite is not claimed to
-pass.
+After the first fix, the full ROM passed `$0027` and reached `$0103`, `COP #$DB`,
+with `E=1`, `S=$0100` and input P logically `$3B` after E-mode invariants. The WDC
+W65C816S datasheet section 2.8 specifies bit 4 set in the status stacked by an
+emulation-mode interrupt; Tables 5-2/5-3 and Table 5-7 entry 22j establish the COP
+vector, PCH/PCL/P order and seven-cycle emulation entry. The aggregate and resumable
+paths had incorrectly reserved the set bit for BRK and cleared it for COP.
+
+The generic correction classifies both BRK and COP as software interrupts when
+forming the emulation-mode stacked status; hardware IRQ/NMI/ABORT still clear bit 4.
+Exact aggregate and resumable regressions start at `$7E:8000` with `S=$0100`, read
+`COP #$DB`, write `$80` to `$0100`, `$02` to `$01FF` and `$3B` to `$01FE`, fetch
+`$FFF4/$FFF5`, finish with `S=$01FD`, live P `$37` and seven cycles. No ROM identity
+affects the implementation.
+
+With that correction the full ROM passes `$0103` and reaches the next deterministic
+failure at `$03C4`, `PEI ($FF)`, an emulation-mode 16-bit stack-wrap case. That
+remaining failure defines the next CPU-conformance frontier; the full suite is not
+claimed to pass.
 
 ## Verification and limits
 
 The following local gates passed on 2026-11-03:
 
-- `build/analyzer/test-cpu-bus` and `build/analyzer/test-cpu-cycles` after a
+- `build/cop-analyzer/test-cpu-bus` and `build/cop-analyzer/test-cpu-cycles` after a
   `-fanalyzer` build of those tests and `mipsnes2-rom-runner`;
 - `make clean && make test` with the default GCC toolchain;
 - `make licensed-rom-test`, completing 1,107/1,107 basic cases;
-- `ASAN_OPTIONS=detect_leaks=0 make BUILD_DIR=build/sanitize clean test
+- the full-ROM manual frontier run, passing `$0103` and stopping at `$03C4`;
+- `ASAN_OPTIONS=detect_leaks=0 make BUILD_DIR=build/cop-sanitize clean test
   CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer'
   LDFLAGS='-fsanitize=address,undefined'`;
 - `python3 tools/check_repository.py` and `git diff --check`.
 
-The managed filesystem initially created only `test-ps2-pad-input` in the sanitizer
-build without its user execute bit. After setting that bit on the ignored build
-artifact, the identical suite passed with no ASan/UBSan finding; this was not a
-source or test failure. Leak inspection remained disabled because the managed
-environment denies the required `/proc` access. No local PS2SDK or PSP toolchain was
-available, so the pinned PS2/PSP Actions cross-builds are required publication
-evidence rather than being inferred from workflow files.
+The managed filesystem created three sanitizer executables without their user
+execute bit: `test-contracts-nolog`, `test-machine-apu-pcm` and `test-smp-memory`.
+After setting that bit on those ignored build artifacts, the identical suite passed
+with no ASan/UBSan finding; this was not a source or test failure. Leak inspection
+remained disabled because the managed environment denies the required `/proc`
+access. No local PS2SDK or PSP toolchain was available, so the pinned PS2/PSP Actions
+cross-builds are required publication evidence rather than being inferred from
+workflow files.
 
 Published implementation `a8bb91e` passed the inspected
 [host](https://github.com/ReyFxck/MIPSNES2/actions/runs/41649717078),

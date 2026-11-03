@@ -1879,7 +1879,7 @@ static mipsnes2_cpu_result enter_interrupt(mipsnes2_cpu *cpu,
 
     if (!cpu->emulation) {
         stack_push8(cpu, cpu->pbr);
-    } else if (kind == INTERRUPT_BRK) {
+    } else if (kind == INTERRUPT_BRK || kind == INTERRUPT_COP) {
         pushed_status |= MIPSNES2_CPU_FLAG_X;
     } else {
         pushed_status &= (uint8_t)~MIPSNES2_CPU_FLAG_X;
@@ -3976,7 +3976,8 @@ static void prepare_incremental_interrupt(
     state->interrupt_vector = interrupt_vector(cpu, kind);
     state->interrupt_pbr = cpu->pbr;
     state->interrupt_emulation = cpu->emulation;
-    if (cpu->emulation && kind == INTERRUPT_BRK) {
+    if (cpu->emulation &&
+        (kind == INTERRUPT_BRK || kind == INTERRUPT_COP)) {
         pushed_status |= MIPSNES2_CPU_FLAG_X;
     } else if (cpu->emulation) {
         pushed_status &= (uint8_t)~MIPSNES2_CPU_FLAG_X;

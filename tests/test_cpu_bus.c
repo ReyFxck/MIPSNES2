@@ -5436,22 +5436,44 @@ static int test_software_interrupts_and_rti(void)
     CHECK(trace.accesses[6].address == UINT32_C(0x00ffe4));
     CHECK(trace.accesses[7].address == UINT32_C(0x00ffe5));
 
-    CHECK(initialize_trace_cpu(&cpu, &trace, UINT16_C(0x8150)) == 0);
+    CHECK(initialize_trace_cpu(&cpu, &trace, UINT16_C(0x8000)) == 0);
     cpu.pbr = UINT8_C(0x7e);
-    cpu.s = UINT16_C(0x01ff);
-    bank7e[0x8150] = UINT8_C(0x02);
-    bank7e[0x8151] = UINT8_C(0x11);
+    cpu.a = UINT16_C(0x1234);
+    cpu.x = UINT16_C(0x0056);
+    cpu.y = UINT16_C(0x0078);
+    cpu.s = UINT16_C(0x0100);
+    cpu.p = UINT8_C(0x3b);
+    bank7e[0x8000] = UINT8_C(0x02);
+    bank7e[0x8001] = UINT8_C(0xdb);
     bank00[0xfff4] = UINT8_C(0x44);
     bank00[0xfff5] = UINT8_C(0x33);
     CHECK(mipsnes2_cpu_step(&cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu.a == UINT16_C(0x1234));
+    CHECK(cpu.x == UINT16_C(0x0056));
+    CHECK(cpu.y == UINT16_C(0x0078));
     CHECK(cpu.pc == UINT16_C(0x3344));
     CHECK(cpu.pbr == 0U);
-    CHECK(cpu.s == UINT16_C(0x01fc));
+    CHECK(cpu.p == UINT8_C(0x37));
+    CHECK(cpu.s == UINT16_C(0x01fd));
     CHECK(cpu.instruction_cycles == UINT64_C(7));
-    CHECK(bank00[0x01fd] ==
-          (uint8_t)((MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X |
-                     MIPSNES2_CPU_FLAG_I) &
-                    (uint8_t)~MIPSNES2_CPU_FLAG_X));
+    CHECK(trace.count == 7U);
+    CHECK(!trace.accesses[0].write &&
+          trace.accesses[0].address == UINT32_C(0x7e8000));
+    CHECK(!trace.accesses[1].write &&
+          trace.accesses[1].address == UINT32_C(0x7e8001));
+    CHECK(trace.accesses[2].write &&
+          trace.accesses[2].address == UINT32_C(0x000100) &&
+          trace.accesses[2].value == UINT8_C(0x80));
+    CHECK(trace.accesses[3].write &&
+          trace.accesses[3].address == UINT32_C(0x0001ff) &&
+          trace.accesses[3].value == UINT8_C(0x02));
+    CHECK(trace.accesses[4].write &&
+          trace.accesses[4].address == UINT32_C(0x0001fe) &&
+          trace.accesses[4].value == UINT8_C(0x3b));
+    CHECK(!trace.accesses[5].write &&
+          trace.accesses[5].address == UINT32_C(0x00fff4));
+    CHECK(!trace.accesses[6].write &&
+          trace.accesses[6].address == UINT32_C(0x00fff5));
 
     CHECK(initialize_trace_cpu(&cpu, &trace, UINT16_C(0x8180)) == 0);
     cpu.emulation = false;

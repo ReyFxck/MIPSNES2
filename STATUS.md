@@ -1226,20 +1226,25 @@ its basic 65C816 ROM completes all 1,107 cases and reports `Success` at `$0452`.
 The full ROM first failed at `$0027`, exposing the E-mode `(direct,X)` unaligned-D
 pointer-high wrap. Aggregate and resumable CPU paths now implement the page wrap and
 synthetic tests verify the `$02FF -> $0200` reads, result and seven-cycle sequence.
-The full ROM advances beyond that case and stops at the next deterministic failure,
-`COP #$DB` test `$0103`. No ROM name, CRC or hash affects core behavior, and no
-external ROM/source is committed. See the
+The full ROM then exposed emulation-mode `COP #$DB` test `$0103`: both CPU paths
+incorrectly cleared bit 4 in the stacked status. They now classify BRK and COP as
+software interrupts, while hardware entries retain bit 4 clear. Exact aggregate and
+resumable regressions verify `S=$0100` wrap, PCH/PCL/P writes, `$FFF4/$FFF5` vector
+reads, live status and seven cycles. The full ROM advances to the next deterministic
+failure, `PEI ($FF)` test `$03C4`. No ROM name, CRC or hash affects core behavior,
+and no external ROM/source is committed. See the
 [licensed-ROM runner audit](docs/65c816-licensed-rom-runner-audit.md).
 
 Local verification on 2026-11-03 passes the focused aggregate/resumable CPU
 executables, `make clean && make test`, `make licensed-rom-test`, the complete
 ASan/UBSan suite with leak inspection disabled for the managed environment's
-`/proc` restriction, a focused GCC `-fanalyzer` build plus execution, repository
-checker and whitespace check. One sanitizer-build executable was created without
-its user execute bit by the managed filesystem; making that ignored build artifact
-executable and rerunning the identical suite passed without a sanitizer finding.
-No local `mips64r5900el-ps2-elf-gcc`, `psp-gcc` or `psp-config` was available, so
-PS2/PSP cross-build evidence remains the published CI gate for this revision.
+`/proc` restriction, a focused GCC `-fanalyzer` build plus execution, the full-ROM
+frontier run through `$0103` to `$03C4`, repository checker and whitespace check.
+Three sanitizer-build executables were created without their user execute bit by
+the managed filesystem; making those ignored build artifacts executable and
+rerunning the identical suite passed without a sanitizer finding. No local
+`mips64r5900el-ps2-elf-gcc`, `psp-gcc` or `psp-config` was available, so PS2/PSP
+cross-build evidence remains the published CI gate for this revision.
 
 Published implementation `a8bb91e` passed
 [Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41649717078),
@@ -1253,9 +1258,9 @@ staged checksum and uploads a nonempty artifact; the PSP job likewise passes its
 pinned cross-build, checksum stage and nonempty artifact upload. These are build
 and host-conformance results, not PS2/PSP runtime or commercial-game evidence.
 
-Next primary block: correct the full-suite `$0103` emulation-mode `COP` stack/vector
-behavior generically, add aggregate and resumable regressions, and advance the pinned
-full 65C816 ROM to its next deterministic failure.
+Next primary block: correct the full-suite `$03C4` emulation-mode `PEI ($FF)`
+16-bit stack-wrap behavior generically, add aggregate and resumable regressions, and
+advance the pinned full 65C816 ROM to its next deterministic failure.
 
 The existing bounded DMA cursor already keeps A1B fixed while incrementing,
 decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
@@ -1974,7 +1979,7 @@ remaining admin work are recorded in docs/bootstrap-audit.md and docs/github-set
 - [x] Direct Page edge cases — E/DL wrap, long-pointer exception, unaligned-D carry and bank-zero wrap verified
 - [ ] [IN PROGRESS] Timing model — the caller-owned operation bridge advances 6/8/12-clock accesses and 6-clock internal operations through scheduler/H/V horizons for all cursor paths including explicit RESET, WRAM refresh and HDMA priority; signal-level RESET, exact dummy/internal sequencing and electrical overlap phases are pending
 - [x] CPU automated tests — all 256 opcode values and implemented behavior covered
-- [ ] [IN PROGRESS] CPU regression tests — deterministic host suite plus a 1,107-case pinned basic ROM pass exist; the full ROM currently stops at `COP` test `$0103`
+- [ ] [IN PROGRESS] CPU regression tests — deterministic host suite plus a 1,107-case pinned basic ROM pass exist; the full ROM passes corrected `(direct,X)` and emulation-mode `COP` cases before stopping at `PEI ($FF)` test `$03C4`
 - [ ] [IN PROGRESS] Complete interpreter integration — opcode dispatch, all 256 resumable opcode sequences, boundary IRQ/NMI/ABORT entry, RESET vector reads and opt-in scheduler/5A22 cursor wiring exist; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
 
 ### Verified 65C816 foundation subset
