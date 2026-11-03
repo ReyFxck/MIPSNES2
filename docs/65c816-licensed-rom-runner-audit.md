@@ -83,34 +83,42 @@ writes already advance linearly from `$0100` to `$00FF` before restoring `SH=01`
 Aggregate and resumable PEI paths now share the instruction-specific pointer-next
 rule. Exact regressions place a conflicting sentinel at `$0200`, require reads from
 `$02FF/$0300`, writes to `$0100/$00FF`, preserved registers/status and six cycles.
-The full ROM passes `$03C4` and reaches the next deterministic failure at `$03D9`,
-`PLB`. The suite itself identifies that new case as undocumented; it defines the
-next research frontier rather than a hardware claim. The full suite is not claimed
-to pass.
+The full ROM then reached `$03D9`, `PLB`, with E=1 and S=`$01FF`. WDC documents the
+generic increment-before-read operation but omits this exception from caveat 7.1.
+The pinned test README and Avery Lee's Altirra Hardware Reference independently
+record that 65C816-added stack operations including PLB may temporarily read above
+page one before `SH=01` is restored. PLB therefore reads `$0200`, not `$0100`, and
+finishes with S=`$0100`.
+
+Aggregate and resumable PLB paths now form the read address from linear S+1 and
+reapply E-mode invariants only after the transfer. Exact regressions place a
+conflicting sentinel at `$0100`, require the `$0200` read, DBR=`$3D`, preserved
+A/D/P, normalized X/Y and four cycles. Ordinary PLA/PLX/PLY/PLP pulls retain their
+page-one wrapping. With this correction the full ROM reports `Success` at `$0649`
+and completes all 1,610 cases. No ROM name, hash or test number affects core
+behavior.
 
 ## Verification and limits
 
 The following local gates passed on 2026-11-03:
 
-- `build/pei-analyzer/test-cpu-bus` and `build/pei-analyzer/test-cpu-cycles` after a
+- `build/plb-analyzer/test-cpu-bus` and `build/plb-analyzer/test-cpu-cycles` after a
   `-fanalyzer` build of those tests and `mipsnes2-rom-runner`;
 - `make clean && make test` with the default GCC toolchain;
-- `make licensed-rom-test`, completing 1,107/1,107 basic cases;
-- the full-ROM manual frontier run, passing `$0103` and `$03C4` before stopping at
-  `$03D9`;
-- `ASAN_OPTIONS=detect_leaks=0 make BUILD_DIR=build/pei-sanitize clean test
+- `make BUILD_DIR=build/plb-conformance licensed-rom-test`, completing 1,107/1,107
+  basic and 1,610/1,610 full cases;
+- `ASAN_OPTIONS=detect_leaks=0 make BUILD_DIR=build/plb-sanitize clean test
   CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer'
   LDFLAGS='-fsanitize=address,undefined'`;
 - `python3 tools/check_repository.py` and `git diff --check`.
 
-The managed filesystem created clean-host `test-cpu-bus` and sanitizer
-`test-smp-boot`/`test-ppu-color-math` without their user execute bit. After setting
-that bit on those ignored build artifacts, the identical suites passed with no
-ASan/UBSan finding; this was not a source or test failure. Leak inspection remained
-disabled because the managed environment denies the required `/proc` access. No
-local PS2SDK or PSP toolchain was available, so the pinned PS2/PSP Actions
-cross-builds are required publication evidence rather than being inferred from
-workflow files.
+The managed filesystem created sanitizer `test-machine-ppu-frame` and
+`test-ps2-rom-file` without their user execute bit. After setting that bit on those
+ignored build artifacts, the identical suite passed with no ASan/UBSan finding;
+this was not a source or test failure. Leak inspection remained disabled because
+the managed environment denies the required `/proc` access. No local PS2SDK or PSP
+toolchain was available, so the pinned PS2/PSP Actions cross-builds are required
+publication evidence rather than being inferred from workflow files.
 
 Published implementation `a8bb91e` passed the inspected
 [host](https://github.com/ReyFxck/MIPSNES2/actions/runs/41649717078),
@@ -133,7 +141,17 @@ completed 1,107/1,107 basic cases and checksum-verified both host executables. P
 compiled the changed CPU into a checksum-verified `mipsnes2-ps2.elf` and uploaded a
 952,101-byte artifact. PSP compiled the same core into a checksum-verified
 `EBOOT.PBP` and uploaded a 167,596-byte artifact. This does not add PS2/PSP runtime
-evidence or make the full-ROM frontier a passing suite.
+evidence.
+
+Published PEI correction `2605abe` passed the inspected
+[host](https://github.com/ReyFxck/MIPSNES2/actions/runs/41707926087),
+[PS2](https://github.com/ReyFxck/MIPSNES2/actions/runs/41707926242) and
+[PSP](https://github.com/ReyFxck/MIPSNES2/actions/runs/41707925706) workflows. Host
+GCC and Clang passed release and sanitizer suites; the GCC licensed-ROM step again
+completed 1,107/1,107 basic cases and checksum-verified both host executables. PS2
+and PSP compiled the changed CPU, checksum-verified `mipsnes2-ps2.elf` and
+`EBOOT.PBP`, and uploaded 952,452-byte and 167,643-byte artifacts respectively.
+This is cross-build and host-conformance evidence, not target execution.
 
 This is host test infrastructure, not a desktop emulator frontend. No PS2, PSP,
 PCSX2/NetherSX2 or PPSSPP runtime was performed by this runner block. No target

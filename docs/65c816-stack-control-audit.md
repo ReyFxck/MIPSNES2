@@ -44,10 +44,12 @@ The host regressions cover:
 - ordinary emulation-mode `01xx` wrapping and native 16-bit S wrapping;
 - WDC's linear multi-byte exceptions for JSL, JSR `(a,X)`, PEA, PEI, PER, PHD,
   PLD and RTL, including accesses outside `01xx` before `SH=01` is restored;
+- the independently documented `PLB` single-byte exception: E-mode `S=$01FF`
+  reads `$0200` linearly and then finishes with architectural `S=$0100`;
 - M-selected PHA/PLA and X-selected PHX/PLX/PHY/PLY at native 8/16-bit widths,
   plus emulation width enforcement and accumulator-B preservation;
-- PLP mode invariants, PLB/PLD/PLA/PLX/PLY N/Z effects and unrelated-state
-  preservation;
+- PLP mode invariants, PLB/PLD/PLA/PLX/PLY N/Z effects, exact PLB boundary
+  addressing and unrelated-state preservation;
 - PER signed target formation from the advanced PC, PEI's WDC 7.2 linear pointer
   high-byte exception and nonzero-DL cycle addition, and PEA immediate word order;
 - absolute, long, bank-zero indirect and PBR-indexed-indirect target formation;

@@ -163,6 +163,18 @@ static uint8_t stack_pull8(mipsnes2_cpu *cpu)
     return read8(cpu, cpu->s);
 }
 
+/* PLB is an observed 65C816 exception omitted from WDC caveat 7.1: while E=1
+ * it reads from linear S+1, then restores SH to 01 after the transfer. */
+static uint8_t stack_pull8_linear(mipsnes2_cpu *cpu)
+{
+    uint16_t initial = cpu->s;
+    uint8_t value = read8(cpu, (uint16_t)(initial + UINT16_C(1)));
+
+    cpu->s = (uint16_t)(initial + UINT16_C(1));
+    apply_mode_invariants(cpu);
+    return value;
+}
+
 static void stack_push16(mipsnes2_cpu *cpu, uint16_t value)
 {
     stack_push8(cpu, (uint8_t)(value >> 8));
@@ -966,9 +978,14 @@ static bool stack_transfer_is_wide(const mipsnes2_cpu *cpu, uint8_t opcode)
     }
 }
 
-static bool stack_transfer_is_linear(uint8_t opcode)
+static bool stack_push_is_linear(uint8_t opcode)
 {
-    return opcode == UINT8_C(0x0b) || opcode == UINT8_C(0x2b);
+    return opcode == UINT8_C(0x0b);
+}
+
+static bool stack_pull_is_linear(uint8_t opcode)
+{
+    return opcode == UINT8_C(0x2b) || opcode == UINT8_C(0xab);
 }
 
 static uint16_t stack_push_value(const mipsnes2_cpu *cpu, uint8_t opcode)
@@ -3178,7 +3195,7 @@ static mipsnes2_cpu_result execute_fetched_opcode(mipsnes2_cpu *cpu)
         transfer_to_index(cpu, &cpu->x, cpu->a);
         break;
     case 0xab: /* PLB */
-        cpu->dbr = stack_pull8(cpu);
+        cpu->dbr = stack_pull8_linear(cpu);
         set_nz8(cpu, cpu->dbr);
         cpu->instruction_cycles += UINT64_C(4);
         break;
@@ -4529,7 +4546,7 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_peek(
         break;
     case CPU_CYCLE_PHASE_STACK_PULL_LOW:
     case CPU_CYCLE_PHASE_STACK_PULL_HIGH:
-        address = stack_transfer_is_linear(state->opcode)
+        address = stack_pull_is_linear(state->opcode)
                       ? (uint16_t)(cpu->s + UINT16_C(1))
                       : stack_next_address(cpu);
         set_operation(operation, MIPSNES2_CPU_OPERATION_READ, address, 0U);
@@ -5211,7 +5228,7 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         return MIPSNES2_CPU_CYCLE_READY;
     case CPU_CYCLE_PHASE_STACK_PUSH_HIGH:
         write8(cpu, current.address, current.value);
-        if (stack_transfer_is_linear(state->opcode)) {
+        if (stack_push_is_linear(state->opcode)) {
             cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
         } else {
             stack_decrement(cpu);
@@ -5221,7 +5238,7 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         return MIPSNES2_CPU_CYCLE_READY;
     case CPU_CYCLE_PHASE_STACK_PUSH_LOW:
         write8(cpu, current.address, current.value);
-        if (stack_transfer_is_linear(state->opcode)) {
+        if (stack_push_is_linear(state->opcode)) {
             cpu->s = (uint16_t)(cpu->s - UINT16_C(1));
             apply_mode_invariants(cpu);
         } else {
@@ -5240,7 +5257,7 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
         state->phase = (uint8_t)CPU_CYCLE_PHASE_STACK_PULL_LOW;
         return MIPSNES2_CPU_CYCLE_READY;
     case CPU_CYCLE_PHASE_STACK_PULL_LOW:
-        if (stack_transfer_is_linear(state->opcode)) {
+        if (stack_pull_is_linear(state->opcode)) {
             cpu->s = (uint16_t)(cpu->s + UINT16_C(1));
         } else {
             stack_increment(cpu);
@@ -5251,19 +5268,22 @@ mipsnes2_cpu_cycle_result mipsnes2_cpu_cycle_commit(
             state->phase = (uint8_t)CPU_CYCLE_PHASE_STACK_PULL_HIGH;
             return MIPSNES2_CPU_CYCLE_READY;
         }
+        if (stack_pull_is_linear(state->opcode)) {
+            apply_mode_invariants(cpu);
+        }
         finish_stack_pull(cpu, state->opcode, state->operand);
         *instruction_result = MIPSNES2_CPU_OK;
         complete_cycle_state(state);
         return MIPSNES2_CPU_CYCLE_COMPLETE;
     case CPU_CYCLE_PHASE_STACK_PULL_HIGH:
-        if (stack_transfer_is_linear(state->opcode)) {
+        if (stack_pull_is_linear(state->opcode)) {
             cpu->s = (uint16_t)(cpu->s + UINT16_C(1));
         } else {
             stack_increment(cpu);
         }
         value = read8(cpu, current.address);
         state->operand |= (uint16_t)(value << 8);
-        if (stack_transfer_is_linear(state->opcode)) {
+        if (stack_pull_is_linear(state->opcode)) {
             apply_mode_invariants(cpu);
         }
         finish_stack_pull(cpu, state->opcode, state->operand);

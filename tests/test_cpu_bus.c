@@ -4984,6 +4984,30 @@ static int test_stack_push_pull_emulation(void)
     CHECK((cpu->p & MIPSNES2_CPU_FLAG_N) == 0U);
     CHECK(cpu->instruction_cycles == UINT64_C(4));
 
+    cpu->pc = UINT16_C(0x80b1);
+    cpu->instruction_cycles = 0U;
+    cpu->s = UINT16_C(0x01ff);
+    cpu->a = UINT16_C(0x1234);
+    cpu->x = UINT16_C(0x3456);
+    cpu->y = UINT16_C(0x5678);
+    cpu->d = UINT16_C(0x9abc);
+    cpu->dbr = UINT8_C(0x7f);
+    cpu->p = MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X;
+    bank00[0x0100] = UINT8_C(0xa5);
+    bank00[0x0200] = UINT8_C(0x3d);
+    bank7e[0x80b1] = UINT8_C(0xab); /* PLB linear E-mode pull */
+    CHECK(mipsnes2_cpu_step(cpu) == MIPSNES2_CPU_OK);
+    CHECK(cpu->a == UINT16_C(0x1234));
+    CHECK(cpu->x == UINT16_C(0x0056));
+    CHECK(cpu->y == UINT16_C(0x0078));
+    CHECK(cpu->d == UINT16_C(0x9abc));
+    CHECK(cpu->dbr == UINT8_C(0x3d));
+    CHECK(cpu->p == (MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X));
+    CHECK(cpu->s == UINT16_C(0x0100));
+    CHECK(bank00[0x0100] == UINT8_C(0xa5));
+    CHECK(cpu->pc == UINT16_C(0x80b2));
+    CHECK(cpu->instruction_cycles == UINT64_C(4));
+
     cpu->pc = UINT16_C(0x80c0);
     cpu->instruction_cycles = 0U;
     cpu->s = UINT16_C(0x01fe);

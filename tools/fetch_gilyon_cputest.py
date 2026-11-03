@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch and prepare the pinned MIT-licensed gilyon 65C816 basic test ROM."""
+"""Fetch and prepare one pinned MIT-licensed gilyon 65C816 test ROM."""
 from argparse import ArgumentParser
 import hashlib
 import json

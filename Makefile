@@ -220,6 +220,12 @@ licensed-rom-test: $(ROM_RUNNER)
 		--runner $(ROM_RUNNER) \
 		--rom build/test-roms/gilyon-snes-tests-v1.4/cputest-basic-checksummed.sfc \
 		--tests build/test-roms/gilyon-snes-tests-v1.4/tests-basic.txt
+	$(PYTHON) tools/fetch_gilyon_cputest.py --variant full
+	$(PYTHON) tools/run_gilyon_cputest.py \
+		--runner $(ROM_RUNNER) \
+		--rom build/test-roms/gilyon-snes-tests-v1.4/cputest-full-checksummed.sfc \
+		--tests build/test-roms/gilyon-snes-tests-v1.4/tests-full.txt \
+		--frames 240
 
 $(TEST): tests/test_contracts.c core/common/address.h core/common/log.h core/bus/interface.h $(LIB)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARNINGS) $(INCLUDES) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@

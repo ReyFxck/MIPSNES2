@@ -13,8 +13,9 @@ does not select behavior by title, CRC or ROM hash.
 
 `make licensed-rom-test` fetches the exact MIT-licensed gilyon `snes-tests` v1.4
 archive, verifies its archive/ROM/text/license hashes, normalizes only the released
-checksum placeholder in ignored build output and runs all 1,107 `cputest-basic`
-cases. No external test asset is stored in the repository. See the
+checksum placeholders in ignored build output and runs all 1,107 `cputest-basic`
+cases followed by all 1,610 `cputest-full` cases. No external test asset is stored
+in the repository. See the
 [licensed-ROM runner audit](65c816-licensed-rom-runner-audit.md).
 
 Future host audio work is for deterministic offline sample tests and diagnostics

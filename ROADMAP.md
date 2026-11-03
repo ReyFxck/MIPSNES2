@@ -82,7 +82,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Direct Page edge cases
 - [ ] [IN PROGRESS] Timing model — resumable 5A22 operation timing is integrated; exact dummy/electrical sequencing pending
 - [x] CPU automated tests for all 256 opcode values
-- [ ] [IN PROGRESS] CPU regression tests — pinned basic 65C816 ROM passes 1,107 cases; the full ROM passes corrected `(direct,X)`, emulation-mode `COP` and `PEI` cases before stopping at undocumented `PLB` `$03D9`; broader independent vectors/test ROM completion pending
+- [ ] [IN PROGRESS] CPU regression tests — pinned basic/full 65C816 ROMs pass 1,107/1,107 and 1,610/1,610 cases after corrected `(direct,X)`, emulation-mode `COP`, `PEI` and undocumented `PLB` behavior; broader independent vectors/test ROM completion pending
 - [ ] [IN PROGRESS] Complete interpreter integration — all 256 opcode values, boundary IRQ/NMI/ABORT entry, RESET vector reads and scheduler/5A22 cursor wiring are resumable; signal-level RESET, exact dummy cycles and full mid-instruction ABORT remain pending
 
 ## Phase 3 — Bus and Cartridge
@@ -180,7 +180,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] CGRAM ports — address, paired writes and reads; active-display and mixed-port behavior pending
 - [ ] [IN PROGRESS] OAM ports — CPU read/write, scheduled VBlank reload, first-line forced-blank release, `$2101` storage, sprite descriptor decode and priority rotation; display access windows pending
 - [ ] [IN PROGRESS] Tile decode fixtures — 4bpp OBJ and BG1 2bpp scanlines verified; 8bpp and final output absent
-- [ ] [IN PROGRESS] Reference scanline buffers — scheduled OBJ, four Mode 0 or three Mode 1 BG lines, main/sub priority and layer/color windows, CGRAM lookup, fixed-color backdrop, color math and optional line handoff exist; PS2 has unverified single-frame GS submission but no continuous display
+- [ ] [IN PROGRESS] Reference scanline buffers — scheduled OBJ, four Mode 0 or three Mode 1 BG lines, main/sub priority and layer/color windows, CGRAM lookup, fixed-color backdrop, color math and optional line handoff exist; PS2 has continuous frame submission without target display validation
 - [ ] Basic Mode 0/1 output
 - [ ] Scheduler scanline integration
 
@@ -296,7 +296,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] Synthetic cartridge boot integration — one generated LoROM drives 65C816 reset, S-SMP upload and a complete Mode 1 frame through the shared machine
 - [x] Input integration — the machine API drives manual/automatic reads and a PS2 `libpad` mapper now feeds it; PS2 runtime and PSP mapping remain platform work
 - [ ] [IN PROGRESS] SRAM persistence integration — machine dirty-view/exact-acknowledgement boundary verified; durable platform file backends absent
-- [x] Licensed test-ROM execution — pinned MIT basic 65C816 ROM completes 1,107 cases through the shared machine; full-suite conformance remains CPU work
+- [x] Licensed test-ROM execution — pinned MIT basic/full 65C816 ROMs complete 1,107/1,107 and 1,610/1,610 cases through the shared machine
 - [ ] Real PS2 runtime smoke
 - [ ] Real PSP runtime smoke
 - [x] Base regression suite — focused machine lifecycle, APU/PCM, recurring PPU, input, SRAM-handoff, WAI idle/wake and cartridge-boot tests pass deterministically

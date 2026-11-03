@@ -2702,6 +2702,42 @@ static int test_stack_pull_cycles(void)
             CHECK(cpu.x == UINT16_C(0x8001));
         }
     }
+
+    CHECK(initialize_cpu(&cpu, &trace, UINT16_C(0x8380)) == 0);
+    cpu.s = UINT16_C(0x01ff);
+    cpu.a = UINT16_C(0x1234);
+    cpu.x = UINT16_C(0x3456);
+    cpu.y = UINT16_C(0x5678);
+    cpu.d = UINT16_C(0x9abc);
+    cpu.dbr = UINT8_C(0x7f);
+    cpu.p = MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X;
+    bank7e[0x8380] = UINT8_C(0xab);
+    bank00[0x0100] = UINT8_C(0xa5);
+    bank00[0x0200] = UINT8_C(0x3d);
+    expected[0] = (expected_operation){
+        MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x7e8380), 0U
+    };
+    expected[1] = (expected_operation){
+        MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 1U
+    };
+    expected[2] = (expected_operation){
+        MIPSNES2_CPU_OPERATION_INTERNAL, 0U, 2U
+    };
+    expected[3] = (expected_operation){
+        MIPSNES2_CPU_OPERATION_READ, UINT32_C(0x000200), 0U
+    };
+    CHECK(run_expected_instruction(&cpu, expected, 4U) == 0);
+    CHECK(cpu.a == UINT16_C(0x1234));
+    CHECK(cpu.x == UINT16_C(0x0056));
+    CHECK(cpu.y == UINT16_C(0x0078));
+    CHECK(cpu.d == UINT16_C(0x9abc));
+    CHECK(cpu.dbr == UINT8_C(0x3d));
+    CHECK(cpu.p == (MIPSNES2_CPU_FLAG_M | MIPSNES2_CPU_FLAG_X));
+    CHECK(cpu.s == UINT16_C(0x0100));
+    CHECK(bank00[0x0100] == UINT8_C(0xa5));
+    CHECK(cpu.pc == UINT16_C(0x8381));
+    CHECK(cpu.instruction_cycles == UINT64_C(4));
+    CHECK(trace.count == 2U);
     return 0;
 }
 

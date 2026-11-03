@@ -32,9 +32,10 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable plus bounded shared-machine ROM runner |
 
 Directories without source contain an explicit scope README, not stub functions.
-There is a partial machine instance, an explicit-path PS2 ROM-file adapter and a
-host-verified PS2 audio transport contract and a bounded host test-ROM runner, but no product runtime loop, complete renderer
-or device binding. `mipsnes2_machine_init` validates an image and constructs the
+There is a partial machine instance, an explicit-path PS2 ROM-file adapter, a
+host-verified continuous PS2 frame loop, a PS2 audio transport contract and a bounded
+host test-ROM runner, but no target-validated product runtime, complete renderer or
+device binding. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
 optional VRAM/CGRAM/OAM/ARAM bytes while resetting optional PCM queue state. The
@@ -578,8 +579,9 @@ same core sources; a separate logging-disabled build checks that configuration.
 The Python standard-library consistency checker checks foundation files, license,
 local Markdown links, checkbox syntax and forbidden core dependencies. It is a
 heuristic guard, not proof of emulation correctness. Synthetic integration tests and
-one pinned licensed 65C816 ROM now exercise the shared machine; the full suite remains
-an explicit failure frontier. Console cross-compilation is distinct from runtime and
+both variants of one pinned licensed 65C816 ROM exercise the shared machine; the
+basic/full variants complete 1,107/1,107 and 1,610/1,610 cases. Console
+cross-compilation is distinct from runtime and
 real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
 
 ## Decisions
@@ -835,9 +837,9 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   validation gate.
 - 2026-11-03: a bounded host runner executes hash-verified redistributable test ROMs
   through the shared machine without adding a desktop backend. The pinned gilyon
-  basic suite completes 1,107 cases. Its full suite exposed and now passes the first
+  basic suite completes 1,107 cases. Its 1,610-case full suite exposed and now passes
   E-mode `(direct,X)` pointer-high page-wrap failure and the emulation-mode `COP`
-  pushed-status failure plus WDC's `PEI` linear pointer-high exception. Undocumented
-  emulation-mode `PLB` test `$03D9` is the next documented frontier.
+  pushed-status failure, WDC's `PEI` linear pointer-high exception and the separately
+  observed emulation-mode `PLB` linear pull exception.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

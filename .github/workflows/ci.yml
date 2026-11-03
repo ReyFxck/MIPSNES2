@@ -24,7 +24,7 @@ jobs:
         run: make CC=${{ matrix.compiler }} BUILD_DIR=build/release CFLAGS='-O2 -g -DNDEBUG' test
       - name: Build and test with sanitizers
         run: make CC=${{ matrix.compiler }} BUILD_DIR=build/sanitize CFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer' test
-      - name: Run pinned licensed 65C816 test ROM
+      - name: Run pinned licensed 65C816 test ROMs
         if: matrix.compiler == 'gcc'
         run: make CC=gcc BUILD_DIR=build/release licensed-rom-test
       - name: Stage host development artifact
