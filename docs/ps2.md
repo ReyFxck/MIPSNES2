@@ -142,6 +142,37 @@ Target execution, continuous streaming and real-hardware underrun/backpressure
 validation remain. See the
 [PS2 audio-adapter audit](ps2-audio-adapter-audit.md).
 
+With `MIPSNES2_RFAUDS2=1`, opening the ELF without arguments runs a ROM-free
+RFAuds2 lifecycle diagnostic. It feeds 2,048 fixed signed stereo frames into the
+native FIFO, makes at most 32 launch/poll attempts, and reports init, accepted
+prebuffer, start, queue/underrun statistics and shutdown on screen and stdout.
+`--audio-diag` selects the same path explicitly; `--core-diag` selects the original
+five-case CPU screen. The standalone build without RFAuds2 keeps its original
+default. The ROM path remains `--rom PATH`; the synthetic diagnostic does not
+execute the machine or prove its S-DSP output. A pending RPC at the attempt limit
+leaves the device bound and reports `BUSY`, retaining the static buffers until exit.
+After the first NetherSX2 capture failed at RFAuds2 RPC bind (`-2000`), the
+diagnostic also records the first error, the IOP module search result and up to
+two delayed bind attempts against the same loaded IRX. This is a bounded probe;
+the second NetherSX2 screen still showed `-2000` after both retries and an IOP
+name lookup of zero. The current diagnostic records the IRX load ID, its `_start`
+result and name lookups before load, immediately after load and after bind. It
+loads once and uses the bind-only runtime path. A failed load/start skips bind.
+The third NetherSX2 capture reported a large load value (`282624`), a zero
+start result, zero for each name search, and another `-2000` bind failure.
+The optional launcher now calls PS2SDK's `sbv_patch_enable_lmb()` once after
+SIF RPC initialization and before loading the embedded IRX in either entry.
+Its return code is displayed; a nonzero result stops the IRX load. A user
+capture on NetherSX2 Turnip subsequently showed `LMB patch: 0`, IRX ID `25`,
+`Init: 0`, 1,920 accepted synthetic frames, start/statistics/shutdown success
+and `RESULT: PASS`. This validates the bounded RFAuds2 RPC lifecycle in that
+emulator, not audible output, the SNES audio path, sustained streaming or a
+physical PS2. See the capture audit for all displayed values and limits.
+For Android capture, record emulator build/version, BIOS region, settings, ELF
+SHA-256 and the screen/log. `PASS` reports lifecycle completion only; audible
+output and continuous SNES-audio compatibility still require observation. See
+[the ROM-free capture audit](ps2-audio-lifecycle-diagnostic-audit.md).
+
 ## Dedicated optimization candidates
 
 No optimization below has been implemented or benchmarked. These are research gates.

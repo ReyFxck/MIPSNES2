@@ -27,7 +27,7 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
-| platform/ps2 | EE lifecycle, I/O, pad acquisition, GS presentation, final SPU2 output | Default five-case diagnostic; explicit ROM path, bounded `libpad` sampling, persistent single-buffer GS uploads and bounded 48 kHz accepted-prefix/RFAuds2 lifecycle diagnostic; target runtime unverified |
+| platform/ps2 | EE lifecycle, I/O, pad acquisition, GS presentation, final SPU2 output | Default five-case diagnostic in standalone build; optional RFAuds2 build defaults to a ROM-free fixed-PCM lifecycle diagnostic, retains explicit ROM path, bounded `libpad` sampling and persistent single-buffer GS uploads; bounded RFAuds2 RPC lifecycle passed in one NetherSX2 capture, while continuous audio and real hardware remain unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable |
 
@@ -532,7 +532,14 @@ optional RFAuds2 binding is PS2-only and maps exactly this two-phase contract; m
 lifecycle and prebuffer/start policy are coordinated by fixed-storage PS2 code. The
 IRX is a generated build input, playback starts only after accepted-frame accounting,
 and stop/flush/shutdown remain outside core. The bounded diagnostic uses fixed
-absolute emulation horizons; target and physical-device behavior remain unverified.
+absolute emulation horizons; the bounded ROM-free RPC path passed in one
+NetherSX2 capture, while audible output and physical-device behavior remain
+unverified.
+The optional ROM-free loader probe records the IRX ID and `_start` result before
+entering the same bind-only coordinator; it never loads the IRX a second time.
+The optional PS2 launcher prepares the ROM LOADFILE buffer-loading RPC through
+SBV once before either entry loads the embedded IRX. A failed preparation
+blocks that load; this platform step has no effect on emulated time or core.
 
 ## Cartridge and enhancement boundaries
 

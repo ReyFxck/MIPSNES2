@@ -6,6 +6,7 @@
 #include <rfauds2/rfauds2.h>
 
 #include "platform/ps2/rfauds2_runtime.h"
+#include "platform/ps2/audio_diagnostic.h"
 
 #define CHECK(value) do { if (!(value)) { \
     (void)fprintf(stderr, "line %d: %s\n", __LINE__, #value); \
@@ -13,6 +14,7 @@
 
 enum mock_call {
     MOCK_INIT = 1,
+    MOCK_BIND,
     MOCK_LATENCY,
     MOCK_VOLUME,
     MOCK_RESET_STATS,
@@ -28,6 +30,7 @@ enum mock_call {
 static enum mock_call call_log[64];
 static size_t call_count;
 static int init_result;
+static int bind_result;
 static int latency_result;
 static int volume_result;
 static int reset_stats_result;
@@ -40,6 +43,14 @@ static int flush_result;
 static int shutdown_result;
 static u32 launched_frames;
 static rfauds2_stats mock_stats;
+static int inspect_diagnostic_samples;
+static unsigned int pause_count;
+
+static void pause_pending(void *context)
+{
+    (void)context;
+    ++pause_count;
+}
 
 static void record(enum mock_call call)
 {
@@ -53,6 +64,7 @@ static void reset_mocks(void)
     (void)memset(call_log, 0, sizeof(call_log));
     call_count = 0U;
     init_result = 0;
+    bind_result = 0;
     latency_result = 0;
     volume_result = 0;
     reset_stats_result = 0;
@@ -64,6 +76,8 @@ static void reset_mocks(void)
     flush_result = 0;
     shutdown_result = 0;
     launched_frames = 0U;
+    inspect_diagnostic_samples = 0;
+    pause_count = 0U;
     (void)memset(&mock_stats, 0, sizeof(mock_stats));
 }
 
@@ -72,6 +86,12 @@ int rfauds2_init(const void *irx, u32 irx_size)
     record(MOCK_INIT);
     CHECK(irx != NULL && irx_size == 4U);
     return init_result;
+}
+
+int rfauds2_bind(void)
+{
+    record(MOCK_BIND);
+    return bind_result;
 }
 
 int rfauds2_set_latency_ms(u32 latency_ms)
@@ -100,6 +120,10 @@ int rfauds2_submit_s16_async(const s16 *samples, u32 frames)
     CHECK(samples != NULL && frames != 0U &&
           frames <= RFAUDS2_ASYNC_MAX_FRAMES);
     launched_frames = frames;
+    if (inspect_diagnostic_samples) {
+        CHECK(samples[0] == INT16_MIN && samples[1] == INT16_MAX);
+        inspect_diagnostic_samples = 0;
+    }
     return launch_result;
 }
 
@@ -307,10 +331,118 @@ static int test_begin_and_start_failures(void)
     return 0;
 }
 
+static int test_rom_free_diagnostic(void)
+{
+    static const unsigned char irx[4] = {1U, 2U, 3U, 4U};
+    mipsnes2_ps2_audio_diagnostic_report report;
+    mipsnes2_pcm_frame source[MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES];
+    mipsnes2_pcm_frame staging[MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES];
+    size_t i;
+
+    reset_mocks();
+    inspect_diagnostic_samples = 1;
+    mock_stats.queued_frames = 1536U;
+    mock_stats.started = 1U;
+    CHECK(mipsnes2_ps2_audio_diagnostic_run(
+        irx, sizeof(irx), source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(report.begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK);
+    CHECK(report.pump == MIPSNES2_PS2_RFAUDS2_RUNTIME_STARTED);
+    CHECK(report.pump_attempts == 4U && report.report.started);
+    CHECK(report.report.accepted_frames == 1920U);
+    CHECK(report.snapshot == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK &&
+          report.diagnostics.valid && report.diagnostics.queued_frames == 1536U);
+    CHECK(report.end == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK &&
+          !report.device_bound);
+    CHECK(call_log[call_count - 4U] == MOCK_STATS &&
+          call_log[call_count - 3U] == MOCK_STOP &&
+          call_log[call_count - 2U] == MOCK_FLUSH &&
+          call_log[call_count - 1U] == MOCK_SHUTDOWN);
+
+    reset_mocks();
+    poll_result = 0;
+    CHECK(mipsnes2_ps2_audio_diagnostic_run(
+        irx, sizeof(irx), source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(report.pump_attempts == MIPSNES2_PS2_AUDIO_DIAG_MAX_PUMPS);
+    CHECK(report.pump == MIPSNES2_PS2_RFAUDS2_RUNTIME_PENDING);
+    CHECK(report.snapshot == MIPSNES2_PS2_RFAUDS2_RUNTIME_BUSY);
+    CHECK(report.end == MIPSNES2_PS2_RFAUDS2_RUNTIME_BUSY &&
+          report.device_bound && !report.report.started);
+    CHECK(pause_count == 7U);
+    for (i = 0U; i < call_count; ++i) {
+        CHECK(call_log[i] != MOCK_SHUTDOWN && call_log[i] != MOCK_START);
+    }
+
+    reset_mocks();
+    latency_result = -8;
+    CHECK(mipsnes2_ps2_audio_diagnostic_run(
+        irx, sizeof(irx), source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(report.begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_DEVICE_ERROR);
+    CHECK(report.pump_attempts == 0U &&
+          report.snapshot == MIPSNES2_PS2_RFAUDS2_RUNTIME_NOT_READY);
+    CHECK(report.end == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK &&
+          !report.device_bound && call_log[call_count - 1U] == MOCK_SHUTDOWN);
+
+    reset_mocks();
+    CHECK(!mipsnes2_ps2_audio_diagnostic_run(
+        irx, sizeof(irx), source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES - 1U,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(call_count == 0U);
+
+    reset_mocks();
+    init_result = -2000;
+    CHECK(mipsnes2_ps2_audio_diagnostic_run(
+        irx, sizeof(irx), source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(report.initial_device_result == -2000 &&
+          report.rebind_attempts == 1U && pause_count == 1U);
+    CHECK(report.begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK &&
+          report.report.started && report.end == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK);
+    CHECK(call_log[0] == MOCK_INIT && call_log[1] == MOCK_BIND);
+
+    reset_mocks();
+    init_result = -2000;
+    bind_result = -2000;
+    CHECK(mipsnes2_ps2_audio_diagnostic_run(
+        irx, sizeof(irx), source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(report.initial_device_result == -2000 &&
+          report.rebind_attempts == 2U && pause_count == 2U);
+    CHECK(report.begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_DEVICE_ERROR &&
+          report.device_result == -2000 && report.pump_attempts == 0U &&
+          !report.device_bound);
+    CHECK(call_count == 3U && call_log[0] == MOCK_INIT &&
+          call_log[1] == MOCK_BIND && call_log[2] == MOCK_BIND);
+
+    reset_mocks();
+    mock_stats.queued_frames = 1536U;
+    mock_stats.started = 1U;
+    CHECK(mipsnes2_ps2_audio_diagnostic_run(
+        NULL, 0U, source, MIPSNES2_PS2_AUDIO_DIAG_SOURCE_FRAMES,
+        staging, MIPSNES2_PS2_AUDIO_DIAG_STAGING_FRAMES,
+        pause_pending, NULL, &report));
+    CHECK(report.begin == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK &&
+          report.report.started && report.end == MIPSNES2_PS2_RFAUDS2_RUNTIME_OK);
+    CHECK(call_log[0] == MOCK_BIND);
+    for (i = 0U; i < call_count; ++i) {
+        CHECK(call_log[i] != MOCK_INIT);
+    }
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_normal_lifecycle() == 0);
     CHECK(test_begin_and_start_failures() == 0);
+    CHECK(test_rom_free_diagnostic() == 0);
     (void)puts("PS2 RFAuds2 lifecycle coordinator: OK");
     return 0;
 }

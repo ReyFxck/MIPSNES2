@@ -31,6 +31,7 @@ typedef struct {
 } rfauds2_stats;
 
 int rfauds2_init(const void *irx, u32 irx_size);
+int rfauds2_bind(void);
 int rfauds2_submit_s16_async(const s16 *interleaved_stereo, u32 frames);
 int rfauds2_submit_poll(u32 *accepted_frames);
 int rfauds2_start(void);

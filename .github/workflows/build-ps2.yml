@@ -66,7 +66,7 @@ jobs:
           mkdir -p dist
           cp platform/ps2/mipsnes2-ps2.elf dist/
           cp LICENSE tools/toolchains.json dist/
-          printf '%s\n' "Commit: $GITHUB_SHA" "Five on-screen core checks; bounded ROM path includes an unverified RFAuds2 lifecycle diagnostic." > dist/BUILD.txt
+          printf '%s\n' "Commit: $GITHUB_SHA" "No-argument ROM-free RFAuds2 lifecycle diagnostic; --core-diag runs five core checks; --rom PATH is bounded and unverified on target." > dist/BUILD.txt
           cd dist
           sha256sum mipsnes2-ps2.elf LICENSE toolchains.json BUILD.txt > SHA256SUMS
           sha256sum -c SHA256SUMS

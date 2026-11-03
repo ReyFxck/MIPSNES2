@@ -23,11 +23,11 @@ RFAUDS2_CHECKOUT_COMMIT = $(shell git -C $(RFAUDS2_ROOT) rev-parse HEAD 2>/dev/n
 ifneq ($(RFAUDS2_CHECKOUT_COMMIT),$(RFAUDS2_REQUIRED_COMMIT))
 $(error RFAUDS2_ROOT must be exact commit $(RFAUDS2_REQUIRED_COMMIT))
 endif
-EE_OBJS += rfauds2_transport.o rfauds2_runtime.o rfauds2_irx.o
+EE_OBJS += rfauds2_transport.o rfauds2_runtime.o audio_diagnostic.o iop_module_loader.o rfauds2_irx.o
 EE_INCS += -I$(RFAUDS2_ROOT)/include
 EE_CFLAGS += -DMIPSNES2_RFAUDS2=1
 EE_LDFLAGS += -L$(RFAUDS2_ROOT)/build
-EE_LIBS := -lrfauds2 $(EE_LIBS)
+EE_LIBS := -lrfauds2 -lpatches $(EE_LIBS)
 endif
 
 .PHONY: all clean
@@ -52,6 +52,12 @@ rfauds2_transport.o: rfauds2_transport.c rfauds2_transport.h audio_adapter.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 rfauds2_runtime.o: rfauds2_runtime.c rfauds2_runtime.h rfauds2_transport.h audio_adapter.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+audio_diagnostic.o: audio_diagnostic.c audio_diagnostic.h rfauds2_runtime.h
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
+iop_module_loader.o: iop_module_loader.c iop_module_loader.h
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 rfauds2_irx.c: $(RFAUDS2_ROOT)/build/rfauds2.irx

@@ -1082,8 +1082,98 @@ busy rules, diagnostics and shutdown. Revision `5c0a8c7` passed
 only SDK build/link portability: no target IRX/RPC/SPU2 execution, pacing, sustained
 delivery or audible output result is claimed.
 
-Next primary block: capture the bounded IRX init/prebuffer/start/statistics/shutdown
-diagnostic on an Android PS2 emulator with version/settings and ELF checksum.
+The optional RFAuds2 build now exposes a bounded ROM-free lifecycle diagnostic
+as its no-argument ELF entry. It uses 2,048 synthetic native PCM frames and at
+most 32 asynchronous attempts to report init, accepted prebuffer/start,
+statistics and shutdown on screen and stdout. The standalone five-case default
+is unchanged, and `--core-diag` selects it in the optional build. Host fixtures
+cover success, permanently pending RPC, init failure and invalid capacity;
+see [the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+The implementation tree in PR #51 passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996434),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996433) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41481996438).
+At that revision, the audio lifecycle on Android and real PS2 remained unverified.
+
+The first user-provided NetherSX2 v2.2n-4248 (Patched) screen/log shows that
+the optional ELF reaches the diagnostic but RFAuds2 returns `-2000` while
+binding its RPC server: no pump or PCM acceptance occurs. This does not
+implicate the SNES audio core. The follow-up diagnostic records the first
+result and resident IOP module ID, then makes at most two delayed bind-only
+attempts without reloading the IRX. Host coverage simulates late and persistent
+binding; actual target recovery remains unverified. See the
+[capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+The follow-up implementation tree passed
+[host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559468),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559662) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41485559447).
+The PS2 artifact ELF SHA-256 is
+`af8eed4ec399a85eb6c9ccbac60233d5a71bf3739337fcc084cada5e31f0353c`.
+
+The user-supplied second NetherSX2 Turnip screen shows that both delayed
+rebinds still returned `-2000`: no PCM pump or device start occurred. Its IOP
+name lookup displayed zero, but this single value lacks the IRX load ID,
+`_start` result and immediate post-load search needed to isolate the failure.
+The updated ROM-free launcher records those values and the search result before
+load and after bind, then calls the bind-only runtime after exactly one IRX
+load. A failed load/start skips binding. The host fixture verifies the loaded
+path never calls the load mock. Local `make BUILD_DIR=build/audio-load-full -j2
+test`, the focused fixture, GCC `-fanalyzer`, `tools/check_repository.py` and
+`git diff --check` passed. The full ASan/UBSan suite passed after restoring the
+execute bit on one generated `test-ppu-window-mask` ELF that had been created
+non-executable in this workspace. PS2/PSP toolchains are unavailable locally;
+a new target capture remains pending. See
+[the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+The implementation tree in PR #51 passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138888),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138639)
+and [PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41493138633).
+The PS2 artifact ELF SHA-256, checked against its uploaded `SHA256SUMS`, is
+`58e50f0d50bd06f8789168701c39f86aaeaf3e57b21897d682bd7b04fbfa3eda`.
+No Android or physical-PS2 execution of this revision has been observed.
+
+The user then ran this exact diagnostic layout in NetherSX2 Turnip: it printed
+load value `282624`, `_start` result `0`, name searches `0 > 0 > 0`, and
+another `-2000` after two rebinds. No PCM was submitted. The PS2SDK documents
+an SBV patch needed to enable ROM LOADFILE's EE-buffer module load RPC on
+affected BIOS versions. The optional PS2 launcher now calls
+`sbv_patch_enable_lmb()` once after SIF RPC init and before either embedded IRX
+load path. A nonzero patch result is displayed and prevents loading. The
+buffer-load boundary is isolated to `platform/ps2`; a host SDK mock checks
+patch-before-load order and failure gating. This is a plausible correction
+from SDK documentation and target evidence, not a verified target fix. See
+[the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+The local `make BUILD_DIR=build/lmb-full -j2 test` suite and focused
+`test-ps2-iop-module-loader` passed; the full ASan/UBSan suite also passed
+after restoring the execute permission on one generated `test-ppu-oam` ELF
+and rerunning. GCC `-fanalyzer` compiled the changed loader and fixture;
+`tools/check_repository.py` and `git diff --check` passed. No PS2/PSP compiler
+is installed locally; cross-build evidence follows, while target behavior is pending.
+PS2 CI run `41501817629` failed at link because the archive was named
+`libpatches.a`, not `libsbv.a`; the Makefile has been corrected to
+`-lpatches`. That failed run produced no ELF. PSP CI run `41501817662` passed.
+The corrected implementation tree passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163448),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163364) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41502163536).
+The extracted PS2 artifact ELF matches its uploaded `SHA256SUMS`:
+`cc569d603dd7d10e1298bad36c702d7167510aa6bdcb7fc14c53ea30da7f0dcc`.
+The cross-build alone proves SDK/link portability. The user subsequently
+captured the corrected no-argument ELF in NetherSX2 v2.2n-4248 (Patched) on
+Motorola fogos: `LMB patch: 0`, `IRX load: 25`, `start: 0`,
+`IOP name: 2 > 0 > 52`, `Init: 0`, `first: 0`, `retry: 0`,
+`Pump: 5 (9 calls)`, 1,920 accepted synthetic frames, `started: 1`,
+`Stats: 0`, 896 queued, zero underruns, `End: 0`, `device: 0`,
+`bound: 0`, `RESULT: PASS`. This explicitly verifies a bounded IRX/RPC
+load, submission, start, statistics and shutdown lifecycle in that emulator.
+The name-search sequence is only a raw observation; the screenshot does not
+provide an on-device SHA-256. It does not verify audible output, actual SNES
+audio, sustained streaming, device latency, physical PS2 or full speed. The
+earlier bind failure is resolved within this synthetic NetherSX2 diagnostic.
+See [the capture audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
+
+Next primary block: implement and verify bounded continuous SNES PCM delivery
+through the PS2 32-to-48 kHz/RFAuds2 path without device-driven emulated time.
 Refining DMA/HDMA
 electrical bus phases and post-HDMA CPU alignment remains
 evidence-dependent. PS2 GS emulator and physical-console checks remain separate.
@@ -2427,11 +2517,11 @@ platform persistence remains incomplete.
 - [ ] SPU2 output
 - [ ] [IN PROGRESS] Audio buffering — bounded 48 kHz staging, retained-tail ownership and accepted-frame prebuffer policy are host verified; target device buffering remains
 - [x] Pin a reviewed RFAuds2 version/revision — stable `0.1.0` commit `257ca54afb08b9c8c2197c03d96fd32d5b15b2bc`
-- [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — fixed-storage lifecycle diagnostic is connected; target execution and continuous streaming remain
+- [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — fixed-storage synthetic lifecycle passed one NetherSX2 capture; continuous SNES streaming and physical PS2 remain
 - [ ] [IN PROGRESS] RFAuds2 asynchronous accepted-tail/backpressure handling — two-phase launch/poll and ordered retry are host verified; target runtime remains
 - [ ] RFAuds2 FAT/Slim real-hardware and long-duration validation
-- [ ] [IN PROGRESS] IOP service initialization — embedded IRX init/bind path is modeled and built; target execution remains
-- [ ] [IN PROGRESS] Error reporting — bounded on-screen lifecycle/device/statistics results exist; user-facing recovery remains
+- [ ] [IN PROGRESS] IOP service initialization — embedded IRX load/bind/start/statistics/shutdown passed the bounded synthetic NetherSX2 diagnostic after SBV preparation; physical PS2 and sustained streaming remain
+- [ ] [IN PROGRESS] Error reporting — bounded on-screen lifecycle/device/statistics results captured the bind failure and subsequent NetherSX2 success; user-facing recovery remains
 - [ ] [IN PROGRESS] Memory budget enforcement — fixed capacities replace heap use; linked/IRX and target peak measurements remain
 - [ ] Real PS2 boot test
 - [ ] Real PS2 integrated runtime test
