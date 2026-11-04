@@ -11,8 +11,10 @@ using the PS2SDK debug screen and logs the same results to stdout. Its original 
 fixtures exercise CPU instructions, scheduler horizons and explicit ABORT write
 qualification; `tests/test_ps2_diagnostic.c` runs the identical suite on the host.
 The optional `--rom PATH` entry reads an image through `fopen` from a filesystem
-that the launcher has already made available, constructs the shared machine and
-runs one bounded reference frame in the standalone build. A known destination code
+that the launcher has already made available and constructs the shared machine.
+Without arguments, the launcher first tries same-basename `.sfc`/`.smc` sidecars
+next to `argv[0]`, then performs a bounded shallow scan of already-available current,
+`mass:`, memory-card and `host:` roots. A known destination code
 from the selected cartridge header chooses the shared machine's NTSC/PAL timing;
 unknown or ambiguous codes retain the explicit NTSC fallback. The path also enables
 the firmware-free shared S-SMP upload protocol, allowing
@@ -20,21 +22,22 @@ cartridge code to perform the standard `$2140-$2143` startup handshake without a
 embedded IPL image. This is deterministic core behavior, not a claim that a game
 boots on target.
 
-The RFAuds2-enabled
-diagnostic instead makes up to eight bounded calls. Before each call it queries the
+The ROM path continuously queries the
 shared H/V state for the exact next frame boundary, including the alternating NTSC
-short scanline, and supplies that absolute horizon with a 100,000-sequence bound. It prints CPU and timing
-status and captures bounded reference lines in a static RGBA32 texture. A persistent
+short scanline, and supplies that absolute horizon with a 100,000-sequence per-call
+bound. It captures reference lines in a static RGBA32 texture. A persistent
 single-buffer GS presenter may upload one capture after each completed horizon; its
 vertical-sync wait occurs only after machine advancement and cannot set emulated
 time. This path
 also attempts a nonblocking port-0 `libpad` sample before each frame horizon
-and injects the translated standard-pad word into the machine. It has no console
-runtime validation, continuous gameplay loop, verified input/audio or SRAM
-persistence. It does not
-mount a USB device or provide a file picker. The original five-case diagnostic
-still runs without arguments; it is not a game or the final GS/video backend.
-The new ROM path has no console runtime evidence. The default diagnostic has
+and injects the translated standard-pad word into the machine. This continuous loop
+has no console runtime validation, verified input/audio or SRAM persistence. It does
+not mount a USB device or provide an interactive picker; deterministic root priority
+and lexical selection are documented in the
+[ROM-discovery audit](ps2-rom-discovery-audit.md). The original five-case diagnostic
+remains available as `--core-diag` and is the standalone no-ROM fallback; it is not
+a game or the final GS/video backend. The ROM path has no console runtime evidence.
+The default diagnostic has
 user-captured emulator results, while physical PS2 validation remains open.
 The original scaffold record is in
 [bootstrap-audit.md](bootstrap-audit.md); see the
@@ -91,8 +94,9 @@ Unavailable reads inject a disconnected zero word rather than retaining stale in
 
 Host tests cover the complete active-low digital translation. Pinned PS2SDK
 cross-builds prove only API/link compatibility; ARMSX2/NetherSX2 and physical PS2
-runtime behavior, hotplug recovery, continuous gameplay polling, second port,
-multitap and PSP mapping remain open. See the
+runtime behavior, hotplug recovery, second port, multitap and PSP mapping remain
+open. Continuous per-frame polling is wired but has no target execution evidence.
+See the
 [PS2 pad-input audit](ps2-pad-input-audit.md).
 
 ## PCM backend: RFAuds2
@@ -143,20 +147,21 @@ CI builds the host tool from that same PS2SDK source checkout instead of assumin
 the binary toolchain archive installed it.
 `platform/ps2/rfauds2_runtime.c` coordinates init, latency/volume/stat reset,
 accepted-frame prebuffering, start, statistics, stop, flush and shutdown with fixed
-caller-owned storage. The ROM diagnostic advances eight predetermined emulated
-frame horizons regardless of device results; pumps and bounded final polls cannot
-advance the machine. Do not copy RFAuds2 source into unrelated `core/` directories.
-Target execution, continuous streaming and real-hardware underrun/backpressure
-validation remain. See the
+caller-owned storage. The ROM loop advances successive exact emulated frame horizons
+regardless of device results; pumps and bounded error-path final polls cannot advance
+the machine. Do not copy RFAuds2 source into unrelated `core/` directories. Target
+execution and real-hardware continuous-streaming/underrun/backpressure validation
+remain. See the
 [PS2 audio-adapter audit](ps2-audio-adapter-audit.md).
 
-With `MIPSNES2_RFAUDS2=1`, opening the ELF without arguments runs a ROM-free
-RFAuds2 lifecycle diagnostic. It feeds 2,048 fixed signed stereo frames into the
+With `MIPSNES2_RFAUDS2=1`, opening the ELF without arguments first searches for a
+sidecar or mounted-root ROM; if none is found it runs the ROM-free RFAuds2 lifecycle
+diagnostic. That fallback feeds 2,048 fixed signed stereo frames into the
 native FIFO, makes at most 32 launch/poll attempts, and reports init, accepted
 prebuffer, start, queue/underrun statistics and shutdown on screen and stdout.
-`--audio-diag` selects the same path explicitly; `--core-diag` selects the original
-five-case CPU screen. The standalone build without RFAuds2 keeps its original
-default. The ROM path remains `--rom PATH`; the synthetic diagnostic does not
+`--audio-diag` selects the same fallback explicitly; `--core-diag` selects the
+original five-case CPU screen. The standalone build without RFAuds2 falls back to
+that core diagnostic. The explicit ROM path remains `--rom PATH`; the synthetic diagnostic does not
 execute the machine or prove its S-DSP output. A pending RPC at the attempt limit
 leaves the device bound and reports `BUSY`, retaining the static buffers until exit.
 After the first NetherSX2 capture failed at RFAuds2 RPC bind (`-2000`), the
@@ -199,7 +204,7 @@ No optimization below has been implemented or benchmarked. These are research ga
 - [ ] VU1 candidate vector kernels and synchronization-cost review
 - [ ] SPU2 final audio buffering and underrun measurement
 - [x] Pin stable RFAuds2 `0.1.0` revision `257ca54afb08b9c8c2197c03d96fd32d5b15b2bc`
-- [ ] [IN PROGRESS] PS2-only audio adapter for the common PCM contract — fixed-storage lifecycle diagnostic is connected; target execution and continuous delivery remain
+- [ ] [IN PROGRESS] PS2-only audio adapter for the common PCM contract — fixed-storage lifecycle and continuous ROM-loop pumping are connected; target execution and sustained delivery remain
 - [ ] [IN PROGRESS] RFAuds2 asynchronous tail/backpressure handling — launch/poll and ordered retry are host verified; target validation remains
 - [ ] RFAuds2 FAT/Slim PS2 and long-duration validation
 - [ ] IOP platform services, storage and peripherals

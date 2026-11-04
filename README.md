@@ -52,9 +52,10 @@ agrees. A platform-neutral, allocation-free preparation contract then reports re
 SRAM and constructs the executable mapper over caller-owned buffers. Value-changing
 SRAM writes carry a revisioned dirty-state handoff so platform save backends cannot
 acknowledge stale asynchronous data.
-No-match and ambiguous images are rejected instead of guessed. PS2 has an
-explicit-path ROM adapter and a bounded CPU-only run; there is no file picker,
-unofficial ExLoROM, padded/board-specific irregular mapping or enhancement hardware.
+No-match and ambiguous images are rejected instead of guessed. PS2 has explicit-path
+and bounded automatic sidecar/mounted-root ROM selection plus a continuous frame
+loop; there is no interactive picker, filesystem mounting, unofficial ExLoROM,
+padded/board-specific irregular mapping or enhancement hardware.
 Only PPU counter registers, VRAM ports, CGRAM ports and OAM ports exist; there is no renderer or active-display access model.
 The caller-owned SPC700 foundation covers all 256 opcode values atomically and a
 nominal rational APU clock now advances it, the three S-SMP timers and a first

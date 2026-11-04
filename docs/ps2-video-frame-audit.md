@@ -21,6 +21,12 @@ The bounded CPU run may finish before a full frame, so a complete captured
 image is not guaranteed. Neither emulator runtime nor physical PS2 output
 was tested for this revision.
 
+Later platform blocks added the persistent GS presenter and, on 2026-11-04, a
+continuous exact-frame-horizon cartridge loop. Those changes do not alter this
+capture format or retroactively provide target visual evidence; see
+[the GS audit](ps2-gs-audit.md) and
+[the ROM-discovery/loop audit](ps2-rom-discovery-audit.md).
+
 The channel packing and transfer plan were checked against the
 [PS2SDK draw/texture sample](https://github.com/ps2dev/ps2sdk/blob/master/ee/draw/samples/texture/texture.c)
 and [PS2SDK GS graph sample](https://github.com/ps2dev/ps2sdk/blob/master/ee/graph/samples/graph.c)

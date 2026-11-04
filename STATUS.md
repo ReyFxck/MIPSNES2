@@ -1293,10 +1293,47 @@ checksum-verified `mipsnes2-ps2.elf` and `EBOOT.PBP`, and uploaded 952,452-byte 
 167,643-byte artifacts. These are cross-build and host-conformance results, not
 target-runtime validation.
 
-Next primary block: implement a bounded PS2 mounted-device ROM discovery and
-selection path around the existing continuous cartridge loop, outside `core/`, with
-deterministic host tests and pinned PS2 cross-build evidence so the ELF can start a
-user-supplied cartridge without launcher-only command-line arguments.
+Published PLB correction `5e05b0b` passed
+[Host CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41711481588),
+[PS2 CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41711481804) and
+[PSP CI](https://github.com/ReyFxck/MIPSNES2/actions/runs/41711481542). Host GCC
+and Clang release/sanitizer jobs passed; GCC completed the pinned basic/full ROMs at
+1,107/1,107 and 1,610/1,610 and checksum-verified both host executables. PS2 and PSP
+compiled the changed CPU, checksum-verified `mipsnes2-ps2.elf` and `EBOOT.PBP`, and
+uploaded 952,558-byte and 167,695-byte artifacts. These are cross-build and
+host-conformance results, not target-runtime validation.
+
+The 2026-11-04 PS2 launcher block keeps storage policy outside `core/` and removes
+the command-line-only cartridge dependency. With no arguments it first tries
+same-basename `.sfc`/`.smc` sidecars derived from `argv[0]`, including
+`host:content://` development-emulator paths. It then scans nine ordered
+already-available roots covering current, `mass:`, memory-card and `host:` paths.
+Enumeration is shallow, limited to 256 entries per root in the launcher, accepts
+only readable nonempty case-insensitive `.sfc`/`.smc` files and chooses the lexical
+minimum in the first root containing a match. The reusable platform adapter caps
+roots, entries and path length, exposes truncation/error counts and owns no heap.
+It neither mounts a device nor loads a storage driver. Explicit `--rom PATH` retains
+priority and the previous diagnostics remain fallbacks/explicit options.
+
+The same block corrects a more important runtime limit found during review: the PS2
+cartridge path no longer stops after one frame without RFAuds2 or eight with it. It
+repeats exact next-frame H/V horizons until a machine/timing error, polling pad,
+pumping already-produced PCM and submitting the captured GS frame once per completed
+horizon. Device waits still cannot advance emulated time. This is a continuous code
+path, not a target-runtime, compatibility, frame-rate or audible-output claim.
+
+Local verification on 2026-11-04 passed the focused ROM-discovery test, the clean
+`make BUILD_DIR=build/rom-discovery-clean -j2 test` host suite and repository checker,
+the pinned licensed basic/full ROMs at 1,107/1,107 and 1,610/1,610, a focused
+ASan/UBSan execution with leak inspection disabled, a focused GCC `-fanalyzer`
+build/execution and `git diff --check`. No local PS2SDK or PSPSDK toolchain is
+available; publication CI must supply the real cross-build evidence. See the
+[PS2 ROM-discovery audit](docs/ps2-rom-discovery-audit.md).
+
+Next primary block: execute the no-argument same-basename ROM path and continuous
+cartridge loop in NetherSX2 with a lawful redistributable/synthetic ROM, recording
+the exact ELF checksum, emulator build/settings, selected-path log, sustained frame
+count and first generic machine/video/input failure without claiming real hardware.
 
 The existing bounded DMA cursor already keeps A1B fixed while incrementing,
 decrementing or fixing the 16-bit A1T address, wraps A1T at `$0000/$FFFF`, and
@@ -2641,13 +2678,13 @@ platform persistence remains incomplete.
 - [ ] [IN PROGRESS] Video buffers and ownership — aligned EE capture plus presenter-owned packet/framebuffer exist; double buffering remains
 - [ ] [IN PROGRESS] GIF packet lifetime — one packet is reset/reused after DMA completion and freed at shutdown; target validation remains
 - [ ] [IN PROGRESS] DMA cache coherency — separately referenced pixels are flushed before each chain; target validation remains
-- [ ] [IN PROGRESS] Pad input — port-0 `libpad` acquisition and host-verified digital mapping feed the bounded ROM path; target runtime/hotplug/continuous polling remain
-- [ ] [IN PROGRESS] Storage and ROM selection — explicit PS2 path adapter exists; mount lifecycle and picker absent
+- [ ] [IN PROGRESS] Pad input — port-0 `libpad` acquisition and host-verified digital mapping feed every continuous ROM frame; target runtime/hotplug remain
+- [ ] [IN PROGRESS] Storage and ROM selection — explicit path plus bounded same-basename and mounted-root auto-selection exist; mount lifecycle, interactive picker and target validation remain
 - [ ] SRAM persistence
 - [ ] SPU2 output
 - [ ] [IN PROGRESS] Audio buffering — bounded 48 kHz staging, retained-tail ownership and accepted-frame prebuffer policy are host verified; target device buffering remains
 - [x] Pin a reviewed RFAuds2 version/revision — stable `0.1.0` commit `257ca54afb08b9c8c2197c03d96fd32d5b15b2bc`
-- [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — fixed-storage synthetic lifecycle passed one NetherSX2 capture; continuous SNES streaming and physical PS2 remain
+- [ ] [IN PROGRESS] PS2-only RFAuds2 adapter behind platform audio interface — fixed-storage synthetic lifecycle passed one NetherSX2 capture and continuous ROM-loop pumping is wired; sustained target streaming and physical PS2 remain
 - [ ] [IN PROGRESS] RFAuds2 asynchronous accepted-tail/backpressure handling — two-phase launch/poll and ordered retry are host verified; target runtime remains
 - [ ] RFAuds2 FAT/Slim real-hardware and long-duration validation
 - [ ] [IN PROGRESS] IOP service initialization — embedded IRX load/bind/start/statistics/shutdown passed the bounded synthetic NetherSX2 diagnostic after SBV preparation; physical PS2 and sustained streaming remain

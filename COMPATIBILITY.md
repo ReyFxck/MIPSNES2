@@ -18,7 +18,9 @@ A ROM-free synthetic RFAuds2 lifecycle diagnostic reported `PASS` in one
 NetherSX2 v2.2n-4248 (Patched) screenshot on Motorola fogos after SBV loader
 preparation: 1,920 PCM frames accepted, start/statistics/shutdown succeeded.
 This is not a game compatibility or audible-output result; there is no game
-entry, real-PS2 result or sustained timing claim. See
+entry, real-PS2 result or sustained timing claim. The automatic ROM selection and
+continuous cartridge loop have build/host-contract evidence only and have not been
+executed in NetherSX2, another PS2 emulator or physical hardware. See
 [the PS2 audio lifecycle audit](docs/ps2-audio-lifecycle-diagnostic-audit.md).
 
 | Game/test | Region | Enhancement chip | Revision | State | Issues | Real hardware/model | Evidence |

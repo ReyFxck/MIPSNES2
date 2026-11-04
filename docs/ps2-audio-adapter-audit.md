@@ -52,13 +52,12 @@ synchronous statistics snapshot refuses to collide with an outstanding asynchron
 request. End requires that request to be collected, then performs stop (when started),
 flush and shutdown in that order while preserving the first device error.
 
-The optional ROM diagnostic supplies a 4,096-frame native FIFO, 960-frame staging
-array and 1,536-frame prebuffer. It makes eight bounded machine calls with fixed
-absolute NTSC horizon targets and calls the pump once after each call. Up to eight final
-nonblocking polls may collect the last already-launched RPC, but none of those polls
-can run the machine or change its clock target. On-screen output reports lifecycle
-results, accepted frames, queue occupancy and underruns before shutdown. This is a
-bounded diagnostic, not a continuous audio loop.
+The optional ROM path supplies a 4,096-frame native FIFO, 960-frame staging array
+and 1,536-frame prebuffer. Since 2026-11-04 it advances successive exact frame
+horizons and calls the pump once after each completed frame. If the machine loop
+stops, up to eight final nonblocking polls may collect the last already-launched RPC;
+none can run the machine or change its clock target. This establishes a continuous
+code path, not target-validated sustained audio or pacing.
 
 ## Verification
 

@@ -16,6 +16,7 @@ revisioned SRAM dirty-state/acknowledgement tests,
 machine-level CPU-to-SRAM persistence-handoff tests,
 machine-level deterministic WAI NMI/IRQ/horizon tests,
 PS2 active-low digital-pad translation tests,
+PS2 bounded sidecar/mounted-root ROM-discovery tests,
 PS2 persistent GS presenter lifecycle tests,
 black-box host CLI smoke tests and repository
 consistency checks.

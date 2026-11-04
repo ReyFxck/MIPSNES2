@@ -12,6 +12,7 @@
 #include "platform/ps2/diagnostic_suite.h"
 #include "platform/ps2/gs_present.h"
 #include "platform/ps2/pad_input.h"
+#include "platform/ps2/rom_discovery.h"
 #include "platform/ps2/rom_file.h"
 #include "platform/ps2/video_frame.h"
 #ifdef MIPSNES2_RFAUDS2
@@ -26,15 +27,13 @@ enum {
     PS2_SRAM_CAPACITY = MIPSNES2_LOROM_SRAM_MAX_SIZE,
     PS2_CPU_STEP_LIMIT = 100000,
     PS2_EVENT_BUDGET = 64,
+    PS2_ROM_DISCOVERY_ENTRY_LIMIT = 256,
 #ifdef MIPSNES2_RFAUDS2
     PS2_AUDIO_PCM_CAPACITY = 4096,
     PS2_AUDIO_STAGING_CAPACITY = 960,
     PS2_AUDIO_PREBUFFER_FRAMES = 1536,
     PS2_AUDIO_LATENCY_MS = 43,
-    PS2_AUDIO_DIAGNOSTIC_FRAMES = 8,
     PS2_AUDIO_FINAL_POLLS = 8
-#else
-    PS2_AUDIO_DIAGNOSTIC_FRAMES = 1
 #endif
 };
 
@@ -52,6 +51,18 @@ static mipsnes2_ps2_video_frame video_frame;
 static mipsnes2_ps2_gs_presenter gs_presenter;
 static mipsnes2_machine machine;
 static mipsnes2_ps2_pad_input pad_input;
+static char discovered_rom_path[MIPSNES2_PS2_ROM_DISCOVERY_PATH_CAPACITY];
+static const char *const ps2_rom_roots[] = {
+    ".",
+    "mass:/MIPSNES2",
+    "mass:/",
+    "mass0:/MIPSNES2",
+    "mass0:/",
+    "mc0:/MIPSNES2",
+    "mc1:/MIPSNES2",
+    "host:MIPSNES2",
+    "host:"
+};
 #ifdef MIPSNES2_RFAUDS2
 static mipsnes2_pcm_frame pcm_frames[PS2_AUDIO_PCM_CAPACITY];
 static mipsnes2_pcm_frame audio_staging[PS2_AUDIO_STAGING_CAPACITY];
@@ -90,7 +101,6 @@ static void run_rom_path(const char *path)
     size_t rom_size;
     size_t steps;
     size_t total_steps = 0U;
-    unsigned frame_index;
     unsigned completed_frames = 0U;
     unsigned presented_frames = 0U;
     mipsnes2_ps2_pad_input_result pad_init_result;
@@ -181,9 +191,7 @@ static void run_rom_path(const char *path)
     run_result = MIPSNES2_MACHINE_RUN_HORIZON;
     timing_result = MIPSNES2_CPU_TIMING_HORIZON_REACHED;
     (void)memset(&report, 0, sizeof(report));
-    for (frame_index = 0U;
-         frame_index < PS2_AUDIO_DIAGNOSTIC_FRAMES;
-         ++frame_index) {
+    for (;;) {
         mipsnes2_master_clock clocks_to_boundary;
         mipsnes2_master_clock horizon;
 
@@ -200,7 +208,7 @@ static void run_rom_path(const char *path)
         }
         horizon = machine.scheduler.now + clocks_to_boundary;
 
-        if (frame_index != 0U) {
+        if (completed_frames != 0U) {
             if (!mipsnes2_ps2_video_frame_init(
                     &video_frame, video_pixels,
                     MIPSNES2_PS2_VIDEO_TEXTURE_PIXELS, 224U)) {
@@ -256,14 +264,13 @@ static void run_rom_path(const char *path)
                pad_connected ? 1U : 0U);
     scr_printf("GS frames submitted: %u / %u\n",
                presented_frames, completed_frames);
-    scr_printf("Frames completed: %u / %u\n", completed_frames,
-               (unsigned)PS2_AUDIO_DIAGNOSTIC_FRAMES);
+    scr_printf("Frames completed before stop: %u\n", completed_frames);
 #ifdef MIPSNES2_RFAUDS2
     if (audio_ready) {
         unsigned poll_count;
 
         /* These fixed attempts only collect an outstanding RPC after the
-         * fixed emulation horizons above; they cannot advance machine time. */
+         * emulation loop has stopped; they cannot advance machine time. */
         for (poll_count = 0U;
              poll_count < PS2_AUDIO_FINAL_POLLS &&
                  audio_runtime.adapter.request_in_flight;
@@ -307,9 +314,54 @@ static void run_rom_path(const char *path)
                  (unsigned)run_result, (unsigned)timing_result,
                  (unsigned)report.cpu_result);
     (void)fflush(stdout);
-    (void)printf("MIPSNES2 PS2 GS: %u/%u bounded frames submitted\n",
+    (void)printf("MIPSNES2 PS2 GS: %u/%u frames submitted before stop\n",
                  presented_frames, completed_frames);
     (void)fflush(stdout);
+}
+
+static bool run_discovered_rom(const char *executable_path)
+{
+    mipsnes2_ps2_rom_discovery_report report;
+    mipsnes2_ps2_rom_discovery_result result;
+
+    result = mipsnes2_ps2_rom_discover_sidecar(
+        executable_path, discovered_rom_path, sizeof(discovered_rom_path));
+    if (result == MIPSNES2_PS2_ROM_DISCOVERY_OK) {
+        scr_printf("Selected sidecar: %s\n\n", discovered_rom_path);
+        (void)printf("MIPSNES2 PS2 ROM SELECTED: %s (sidecar)\n",
+                     discovered_rom_path);
+        (void)fflush(stdout);
+        run_rom_path(discovered_rom_path);
+        return true;
+    }
+    result = mipsnes2_ps2_rom_discover(
+        ps2_rom_roots, sizeof(ps2_rom_roots) / sizeof(ps2_rom_roots[0]),
+        PS2_ROM_DISCOVERY_ENTRY_LIMIT, discovered_rom_path,
+        sizeof(discovered_rom_path), &report);
+    scr_printf("ROM scan: %u  roots %u/%u  entries %u\n",
+               (unsigned)result, (unsigned)report.roots_opened,
+               (unsigned)report.roots_attempted,
+               (unsigned)report.entries_examined);
+    scr_printf("Matches: %u readable, %u overlong, limit %u\n",
+               (unsigned)report.readable_matches,
+               (unsigned)report.overlong_matches,
+               report.entry_limit_reached ? 1U : 0U);
+    (void)printf("MIPSNES2 PS2 ROM SCAN: result=%u roots=%lu/%lu "
+                 "entries=%lu matches=%lu overlong=%lu limited=%u\n",
+                 (unsigned)result, (unsigned long)report.roots_opened,
+                 (unsigned long)report.roots_attempted,
+                 (unsigned long)report.entries_examined,
+                 (unsigned long)report.readable_matches,
+                 (unsigned long)report.overlong_matches,
+                 report.entry_limit_reached ? 1U : 0U);
+    if (result != MIPSNES2_PS2_ROM_DISCOVERY_OK) {
+        return false;
+    }
+    scr_printf("Selected: %s\n\n", discovered_rom_path);
+    (void)printf("MIPSNES2 PS2 ROM SELECTED: %s\n", discovered_rom_path);
+    (void)fflush(stdout);
+    run_rom_path(discovered_rom_path);
+    return true;
 }
 
 int main(int argc, char **argv)
@@ -326,6 +378,12 @@ int main(int argc, char **argv)
     if (argc == 3 && argv != NULL && argv[1] != NULL && argv[2] != NULL &&
         strcmp(argv[1], "--rom") == 0) {
         run_rom_path(argv[2]);
+        scr_printf("Use Android Back to exit.\n");
+        for (;;) {
+            (void)sleep(1);
+        }
+    }
+    if (argc == 1 && argv != NULL && run_discovered_rom(argv[0])) {
         scr_printf("Use Android Back to exit.\n");
         for (;;) {
             (void)sleep(1);
@@ -414,7 +472,7 @@ int main(int argc, char **argv)
 #ifdef MIPSNES2_RFAUDS2
         scr_printf("--core-diag or --audio-diag\n");
 #endif
-        scr_printf("No ROM path: default diagnostic.\n\n");
+        scr_printf("No valid ROM option: default diagnostic.\n\n");
     }
     scr_printf("MIPSNES2 PS2 DIAGNOSTIC v1\n\n");
     mipsnes2_ps2_diagnostic_run(&report, print_result, NULL);

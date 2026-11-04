@@ -4,14 +4,14 @@ Date: 2026-10-30
 
 ## Scope
 
-The PS2 backend now owns one packet and one 256×256 RGBA32 GS framebuffer across
-the fixed `--rom` diagnostic horizons. Initialization allocates both resources and
+The PS2 backend owns one packet and one 256×256 RGBA32 GS framebuffer across
+the cartridge horizons. Initialization allocates both resources and
 configures GIF DMA/GS once. Each upload resets and rebuilds the retained packet,
 flushes the separately referenced 64-byte-aligned EE texture, submits the chain,
 waits for DMA completion and then waits for vertical sync. Shutdown waits for the
 channel and releases the VRAM allocation, packet, graph state and DMA channel.
 
-The ROM path resets its capture bookkeeping before each fixed absolute emulated
+The ROM path resets its capture bookkeeping before each absolute emulated
 frame horizon and presents only after `mipsnes2_machine_run_until` returns. GS/DMA
 waits therefore affect wall time only; they cannot request work from the machine or
 change its emulated clock.
@@ -49,8 +49,9 @@ the retained ownership and unmeasured upload cost. No compatibility result follo
 
 No ARMSX2, NetherSX2 or physical-PS2 execution of this revision is claimed. The
 presenter is still one framebuffer with no scaling, aspect policy, double buffering,
-field handling, overlay or continuous gameplay loop. Its real cache behavior,
-transfer latency, tearing and frame pacing remain unmeasured.
+field handling or overlay. A 2026-11-04 launcher update reuses it in a continuous
+cartridge loop, but its real cache behavior, transfer latency, tearing and frame
+pacing remain unmeasured and unvalidated on target.
 
 ## Primary next milestone
 

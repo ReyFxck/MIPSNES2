@@ -9,6 +9,12 @@ The default no-argument entry still displays the existing five-case diagnostic.
 The optional path runs at most one nominal NTSC CPU/H-V frame or 100,000 completed
 sequences and reports the stopping reason. It does not show game graphics.
 
+Update 2026-11-04: the fixed-storage file loader and explicit `--rom PATH` override
+remain unchanged, but the launcher now adds bounded same-basename/mounted-root
+discovery and repeats exact next-frame horizons continuously. The original one-frame
+limit above describes revision `8261563`; current behavior and limits are in the
+[ROM-discovery audit](ps2-rom-discovery-audit.md).
+
 Source for the SDK file API: the PS2SDK
 [EE sample](https://github.com/ps2dev/ps2sdk/blob/2c670453980fcc3fe46ead6399b730b12c8556eb/ee/rpc/audsrv/samples/playwav/playwav.c)
 uses `sceSifInitRpc`, `fopen` and `fread` for a `host:` path. No SNES emulator
@@ -27,4 +33,4 @@ completed successfully, including GCC/Clang sanitizer jobs. The PS2 build
 published a nonexpired ELF artifact archive (683,603 bytes). The optional
 PS2 command-line path, file
 availability, SRAM initialization policy, full reset, controller input, PPU,
-DMA, APU and sustained execution remain unverified or unimplemented as named.
+DMA, APU and sustained target execution remain unverified or unimplemented as named.

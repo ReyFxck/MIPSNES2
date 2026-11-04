@@ -102,6 +102,6 @@ pins stable source version `0.1.0` commit
 `257ca54afb08b9c8c2197c03d96fd32d5b15b2bc`. Hardware references and independently
 authored regression evidence remain mandatory for emulated behavior.
 The PS2 coordinator embeds the pinned IRX, prebuffers only frames reported accepted,
-and performs start/statistics/stop/flush/shutdown outside `core/`. Its bounded ROM
-diagnostic advances predetermined machine horizons before pumping; no device result
-can select an emulated deadline or request more samples.
+and performs start/statistics/stop/flush/shutdown outside `core/`. Its continuous ROM
+loop advances exact successive machine horizons before pumping; no device result can
+select an emulated deadline or request more samples.

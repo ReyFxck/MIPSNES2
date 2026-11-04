@@ -4,12 +4,13 @@ Date: 2026-10-30
 
 ## Scope
 
-This block adds the first PS2 physical-controller path to the bounded `--rom`
+This block added the first PS2 physical-controller path to the then-bounded `--rom`
 diagnostic. A PS2-only adapter loads `rom0:SIO2MAN` and `rom0:PADMAN`, initializes
 `libpad`, opens connector 1/slot 0 over a fixed 256-byte aligned buffer and performs
-one nonblocking sample before each fixed emulated frame horizon. Successful samples
-feed `mipsnes2_machine_set_joypad`; unavailable states inject a disconnected zero
-word so stale buttons are not retained.
+one nonblocking sample before each emulated frame horizon. Successful samples feed
+`mipsnes2_machine_set_joypad`; unavailable states inject a disconnected zero word so
+stale buttons are not retained. Since 2026-11-04 the launcher repeats those horizons
+continuously; target behavior remains unverified.
 
 The shared core contains no PS2SDK header, type, address or lifecycle policy.
 
@@ -65,11 +66,11 @@ published revision; no CI result is claimed before those runs finish.
 
 ## Limits
 
-No target execution is claimed. The current ROM diagnostic remains bounded to one
-frame without RFAuds2 or eight frames with it, so this is not continuous gameplay
-input. Hotplug recovery, module-conflict recovery, port 1, multitap, pressure/analog
-policies, rumble, UI remapping, PSP input and physical-console validation remain
-open. The PS2 backend pad item stays in progress.
+No target execution is claimed. A 2026-11-04 launcher update now polls this adapter
+once per exact frame horizon in a continuous cartridge loop, but that integration is
+not target-validated. Hotplug recovery, module-conflict recovery, port 1, multitap,
+pressure/analog policies, rumble, UI remapping, PSP input and physical-console
+validation remain open. The PS2 backend pad item stays in progress.
 
 ## Next primary milestone
 

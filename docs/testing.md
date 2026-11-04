@@ -85,6 +85,13 @@ selection, aggregate cycles and missing-write-bus stops. A tracing bus verifies 
 meaningful operand/stack/pointer callback order and count for JSL and JSR
 `(absolute,X)`; the
 current contract still omits internal dummy reads and signal-level bus cycles.
+
+`test-ps2-rom-discovery` uses temporary original bytes to verify same-basename
+`.sfc`/`.smc` sidecar priority, ordered mounted-root fallback, case-insensitive
+extension filtering, readable/nonempty probing, order-independent lexical choice,
+fixed path capacity and root/entry bounds. It invokes only the PS2 platform adapter;
+no ROM or filesystem policy enters the shared core. See the
+[PS2 ROM-discovery audit](ps2-rom-discovery-audit.md).
 Final-dispatch regressions cover BRK/COP/RTI/WDM/MVP/MVN/WAI/STP, software and
 hardware interrupt vectors, native/emulation stack layouts, signature bytes,
 block-move repetition and index wrapping, IRQ/NMI wake/priority behavior, STP reset
@@ -363,6 +370,8 @@ Machine-level SRAM handoff evidence is recorded in
 [machine-sram-persistence-audit.md](machine-sram-persistence-audit.md).
 PS2 pad acquisition/mapping evidence is recorded in
 [ps2-pad-input-audit.md](ps2-pad-input-audit.md).
+PS2 automatic ROM selection and continuous-loop evidence is recorded in
+[ps2-rom-discovery-audit.md](ps2-rom-discovery-audit.md).
 
 ## End-of-task audit
 

@@ -27,15 +27,15 @@ PSPSDK, GS/GU, SPU2, controller, filesystem, DMA or host-window APIs.
 | core/enhancement | Future chip state/bus/timing integration | Directory only |
 | core/debug | Optional tracing and introspection | Directory only |
 | core/machine | Stable instance composition and timed power-on/CPU/APU execution | Caller-owned ROM/WRAM/SRAM/optional VRAM/CGRAM/OAM/ARAM/IPL/PCM storage, cartridge, CPUs, DSP register state, bus, CPU-I/O, counters, H/V and scheduler |
-| platform/ps2 | EE lifecycle, I/O, pad acquisition, GS presentation, final SPU2 output | Default five-case diagnostic in standalone build; optional RFAuds2 build defaults to a ROM-free fixed-PCM lifecycle diagnostic, retains explicit ROM path, bounded `libpad` sampling and persistent single-buffer GS uploads; bounded RFAuds2 RPC lifecycle passed in one NetherSX2 capture, while continuous audio and real hardware remain unverified |
+| platform/ps2 | EE lifecycle, I/O, pad acquisition, GS presentation, final SPU2 output | No-argument sidecar/mounted-root ROM discovery with diagnostic fallback, explicit ROM override, continuous frame/pad/GS/audio loop and persistent single-buffer GS uploads; bounded RFAuds2 RPC lifecycle passed in one NetherSX2 capture, while integrated cartridge runtime and real hardware remain unverified |
 | platform/psp | Allegrex lifecycle, GU presentation, final audio output | Build probe only |
 | platform/host | Headless tests/tools, never product architecture | Foundation smoke executable plus bounded shared-machine ROM runner |
 
 Directories without source contain an explicit scope README, not stub functions.
-There is a partial machine instance, an explicit-path PS2 ROM-file adapter, a
-host-verified continuous PS2 frame loop, a PS2 audio transport contract and a bounded
+There is a partial machine instance, explicit-path plus bounded mounted-root PS2 ROM
+adapters, a continuous PS2 frame loop, a PS2 audio transport contract and a bounded
 host test-ROM runner, but no target-validated product runtime, complete renderer or
-device binding. `mipsnes2_machine_init` validates an image and constructs the
+storage-device mounting. `mipsnes2_machine_init` validates an image and constructs the
 cartridge in place; `power_on` reinitializes CPU/I-O, H/V, bus, scheduler and
 interrupts, APU communication latches and VRAM/CGRAM/OAM port registers, retaining caller-owned WRAM, SRAM and
 optional VRAM/CGRAM/OAM/ARAM bytes while resetting optional PCM queue state. The
@@ -219,10 +219,9 @@ buffer stays machine-owned and can be reused after the callback returns.
 The PS2 ROM adapter copies that callback into a PS2-only RGBA32 frame;
 PSP remains independent and has no presentation path yet.
 The PS2 backend queries the shared H/V state for each exact next-frame boundary,
-then owns one GS packet/framebuffer across those bounded diagnostic horizons and
-can upload each completed capture without reallocating either;
-there is no verified runtime display or continuous gameplay loop. PSP still has no
-presentation path. On the bounded PS2 ROM path, a PS2-only `libpad` adapter samples
+then owns one GS packet/framebuffer across the continuous cartridge loop and can
+upload each completed capture without reallocating either; there is no verified
+runtime display. PSP still has no presentation path. On the PS2 ROM path, a PS2-only `libpad` adapter samples
 port 0 once before each emulated frame horizon and translates the digital face,
 direction, shoulder, Start and Select buttons into the machine's standard-pad word.
 The core contains no PS2SDK type or call, and target input execution remains
@@ -841,5 +840,10 @@ real-hardware validation. See docs/testing.md and docs/bootstrap-audit.md.
   E-mode `(direct,X)` pointer-high page-wrap failure and the emulation-mode `COP`
   pushed-status failure, WDC's `PEI` linear pointer-high exception and the separately
   observed emulation-mode `PLB` linear pull exception.
+- 2026-11-04: the PS2 launcher keeps filesystem policy outside `core/`, first tries
+  a same-basename `.sfc`/`.smc` sidecar, then scans a fixed ordered set of already
+  mounted roots with bounded shallow enumeration and deterministic lexical choice.
+  The selected cartridge uses a continuous exact-frame-boundary loop; filesystem
+  mounting and integrated target runtime remain separate validation work.
 - Changes to these decisions require rationale, tests, status updates and measurements
   if performance is used as justification.

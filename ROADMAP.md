@@ -105,7 +105,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [ ] [IN PROGRESS] Access timing — meaningful accesses integrated; exact cycle placement/refresh/arbitration pending
 - [ ] [IN PROGRESS] Mapping boundaries and mirror tests — WRAM/MMIO plus base and Mode 25/35 ExHiROM maps verified; padded/ExLoROM/enhancement pending
 - [ ] Page/block mapping benchmark
-- [ ] [IN PROGRESS] ROM loading — core construction and explicit PS2 path adapter exist; mounted-device/PSP adapters and selection remain
+- [ ] [IN PROGRESS] ROM loading — core construction plus explicit and bounded automatic PS2 sidecar/mounted-root selection exist; device mounting, interactive selection and PSP adapters remain
 - [ ] [IN PROGRESS] ROM metadata — standard and 16-byte registration fields parsed; special variants pending
 - [ ] [IN PROGRESS] Header analysis — conservative LoROM/HiROM/ExHiROM selection verified; special variants pending
 - [ ] [IN PROGRESS] LoROM — power-of-two and unambiguous two-region base mapping plus conservative detection verified; broader boards pending
@@ -294,7 +294,7 @@ Optional advanced work requires a measured go/no-go decision, not automatic adop
 - [x] PPU event integration — two recurring machine frames deliver 448 ordered reference lines with a chunk-independent pixel hash
 - [x] APU sample integration — machine-clocked SPC700 register programming reaches deterministic non-zero DSP PCM with chunk-independent long hash
 - [x] Synthetic cartridge boot integration — one generated LoROM drives 65C816 reset, S-SMP upload and a complete Mode 1 frame through the shared machine
-- [x] Input integration — the machine API drives manual/automatic reads and a PS2 `libpad` mapper now feeds it; PS2 runtime and PSP mapping remain platform work
+- [x] Input integration — the machine API drives manual/automatic reads and a PS2 `libpad` mapper feeds each continuous cartridge frame; target validation and PSP mapping remain platform work
 - [ ] [IN PROGRESS] SRAM persistence integration — machine dirty-view/exact-acknowledgement boundary verified; durable platform file backends absent
 - [x] Licensed test-ROM execution — pinned MIT basic/full 65C816 ROMs complete 1,107/1,107 and 1,610/1,610 cases through the shared machine
 - [ ] Real PS2 runtime smoke
